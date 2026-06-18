@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
+  AI_ACTIVE,
+  AI_RETIRED,
   AI_SHORT,
   aiSummaries,
   formatPercent,
@@ -8,7 +10,14 @@ import {
   type AiSummary,
 } from '../lib/data';
 
-function MedalBadge({ rank }: { rank: number }) {
+function MedalBadge({ rank, retired }: { rank: number; retired?: boolean }) {
+  if (retired) {
+    return (
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-miss font-semibold text-sm border border-divider">
+        ×
+      </span>
+    );
+  }
   if (rank === 1) {
     return (
       <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gold text-night font-bold text-lg shadow-gold">
@@ -80,6 +89,7 @@ function ChampionCard({ s }: { s: AiSummary }) {
 }
 
 function RankCard({ s }: { s: AiSummary }) {
+  const noConfirmed = s.totalConfirmed === 0;
   return (
     <Link
       to={`/ai/${encodeURIComponent(s.ai)}`}
@@ -87,14 +97,49 @@ function RankCard({ s }: { s: AiSummary }) {
     >
       <MedalBadge rank={s.rank} />
       <div className="min-w-0 flex-1">
-        <div className="text-base font-semibold text-ink truncate group-hover:text-gold transition-colors">
-          {AI_SHORT[s.ai]}
+        <div className="flex items-center gap-2">
+          <span className="text-base font-semibold text-ink truncate group-hover:text-gold transition-colors">
+            {AI_SHORT[s.ai]}
+          </span>
+          {noConfirmed && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded border border-gold/30 text-gold/80 bg-gold-soft">
+              新加入
+            </span>
+          )}
         </div>
         <div className="text-xs text-muted mt-0.5 truncate">{s.ai}</div>
       </div>
       <div className="text-right">
-        <div className="font-mono text-2xl font-bold text-ink">{formatPercent(s.hitRate)}</div>
+        <div className="font-mono text-2xl font-bold text-ink">
+          {noConfirmed ? '—' : formatPercent(s.hitRate)}
+        </div>
         <div className="font-mono text-[11px] text-muted mt-0.5">
+          {noConfirmed ? `参赛 ${s.participatedMatches} 场` : `${s.totalHits} / ${s.totalSlots}`}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function RetiredCard({ s }: { s: AiSummary }) {
+  return (
+    <Link
+      to={`/ai/${encodeURIComponent(s.ai)}`}
+      className="rounded-xl border border-divider bg-deep/60 px-5 py-4 flex items-center gap-4 opacity-60 hover:opacity-90 transition-opacity"
+    >
+      <MedalBadge rank={s.rank} retired />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-miss truncate">{AI_SHORT[s.ai]}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded border border-divider text-miss bg-white/[0.02]">
+            已退赛
+          </span>
+        </div>
+        <div className="text-[11px] text-miss/70 mt-0.5 truncate">{s.ai}</div>
+      </div>
+      <div className="text-right">
+        <div className="font-mono text-lg font-semibold text-miss">{formatPercent(s.hitRate)}</div>
+        <div className="font-mono text-[11px] text-miss/70 mt-0.5">
           {s.totalHits} / {s.totalSlots}
         </div>
       </div>
@@ -103,8 +148,10 @@ function RankCard({ s }: { s: AiSummary }) {
 }
 
 export default function LeaderboardPage() {
-  const champion = aiSummaries[0];
-  const rest = aiSummaries.slice(1);
+  const activeList = aiSummaries.filter(s => !s.retired);
+  const retiredList = aiSummaries.filter(s => s.retired);
+  const champion = activeList[0];
+  const rest = activeList.slice(1);
 
   return (
     <div className="space-y-10">
@@ -116,7 +163,8 @@ export default function LeaderboardPage() {
           AI <span className="text-gold">赛事预测</span>大竞赛
         </h1>
         <p className="mt-3 text-sm sm:text-base text-muted max-w-2xl mx-auto">
-          7 个主流大模型，{totalConfirmed} 场已确认比赛，4 个预测维度，谁的"足球嗅觉"最敏锐？
+          {AI_ACTIVE.length} 个活跃 AI（{AI_RETIRED.length} 已退赛），{totalConfirmed} 场已确认比赛，
+          4 个预测维度，谁的"足球嗅觉"最敏锐？
         </p>
       </section>
 
@@ -131,16 +179,24 @@ export default function LeaderboardPage() {
         </div>
       </section>
 
+      {retiredList.length > 0 && (
+        <section>
+          <h2 className="text-sm tracking-[0.18em] uppercase text-muted mb-4">
+            已退赛 · Retired
+          </h2>
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {retiredList.map(s => (
+              <RetiredCard key={s.ai} s={s} />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatBlock label="参与 AI" value={`${aiSummaries.length}`} unit="个" />
+        <StatBlock label="活跃 AI" value={`${AI_ACTIVE.length}`} unit="个" />
+        <StatBlock label="已退赛 AI" value={`${AI_RETIRED.length}`} unit="个" />
         <StatBlock label="收录比赛" value={`${totalMatches}`} unit="场" />
         <StatBlock label="已确认比赛" value={`${totalConfirmed}`} unit="场" />
-        <StatBlock
-          label="预测维度"
-          value="4"
-          unit="项"
-          hint="让球胜平负 / 比分 / 总进球 / 半全场"
-        />
       </section>
     </div>
   );

@@ -4,42 +4,65 @@ import rawData from '../data/data.json';
 
 export type AiName =
   | 'AI-豆包'
-  | 'AI-千问'
+  | 'AI-DeepSeek'
+  | 'AI-扣子（皮皮）'
   | 'AI-文心'
   | 'AI-智谱清言'
-  | 'AI-Kimi'
+  | 'AI-天工'
+  | 'AI-MiniMax'
   | 'AI-混元'
-  | 'AI-扣子（皮皮）';
+  | 'AI-千问'
+  | 'AI-Kimi';
 
-export const AI_LIST: AiName[] = [
+// 8 active AIs in the order requested by the product team:
+// 豆包 → DeepSeek → 扣子 → 文心 → 智谱 → 天工 → MiniMax → 混元
+export const AI_ACTIVE: AiName[] = [
   'AI-豆包',
-  'AI-千问',
+  'AI-DeepSeek',
+  'AI-扣子（皮皮）',
   'AI-文心',
   'AI-智谱清言',
-  'AI-Kimi',
+  'AI-天工',
+  'AI-MiniMax',
   'AI-混元',
-  'AI-扣子（皮皮）',
 ];
+
+// Retired (greyed) AIs displayed at the tail of every list.
+export const AI_RETIRED: AiName[] = ['AI-千问', 'AI-Kimi'];
+
+// Canonical display order: 8 active first, then retired at the bottom.
+export const AI_LIST: AiName[] = [...AI_ACTIVE, ...AI_RETIRED];
 
 export const AI_SHORT: Record<AiName, string> = {
   'AI-豆包': '豆包',
-  'AI-千问': '千问',
+  'AI-DeepSeek': 'DeepSeek',
+  'AI-扣子（皮皮）': '扣子皮皮',
   'AI-文心': '文心',
   'AI-智谱清言': '智谱',
-  'AI-Kimi': 'Kimi',
+  'AI-天工': '天工',
+  'AI-MiniMax': 'MiniMax',
   'AI-混元': '混元',
-  'AI-扣子（皮皮）': '扣子皮皮',
+  'AI-千问': '千问',
+  'AI-Kimi': 'Kimi',
 };
 
 export const AI_ACCENT: Record<AiName, string> = {
   'AI-豆包': '#60A5FA',
-  'AI-千问': '#A78BFA',
+  'AI-DeepSeek': '#818CF8',
+  'AI-扣子（皮皮）': '#FB923C',
   'AI-文心': '#F472B6',
   'AI-智谱清言': '#34D399',
-  'AI-Kimi': '#FBBF24',
+  'AI-天工': '#FACC15',
+  'AI-MiniMax': '#F87171',
   'AI-混元': '#22D3EE',
-  'AI-扣子（皮皮）': '#FB923C',
+  'AI-千问': '#A78BFA',
+  'AI-Kimi': '#FBBF24',
 };
+
+const RETIRED_SET = new Set<string>(AI_RETIRED);
+export function isRetiredAi(ai: string): boolean {
+  return RETIRED_SET.has(ai);
+}
 
 export type HitMark = '✅' | '❌' | null;
 
@@ -59,13 +82,13 @@ export interface Prediction {
 }
 
 export interface OddsEntry {
-  win: number;
-  draw: number;
-  lose: number;
-  handicap: string | number;
-  handicap_win: number;
-  handicap_draw: number;
-  handicap_lose: number;
+  win: number | string;
+  draw: number | string;
+  lose: number | string;
+  handicap?: string | number;
+  handicap_win: number | string;
+  handicap_draw: number | string;
+  handicap_lose: number | string;
   actual_score: string | null;
   status: '已确认' | '待比赛';
 }
@@ -182,6 +205,8 @@ export interface AiSummary {
   hitRate: number; // 0-1
   perDim: Record<DimensionKey, { hits: number; total: number; rate: number }>;
   rank: number;
+  retired: boolean;
+  participatedMatches: number; // total matches this AI predicted (confirmed + pending)
 }
 
 function isHit(mark: HitMark): boolean {
@@ -205,7 +230,18 @@ export function buildAiSummaries(): AiSummary[] {
       hitRate: 0,
       perDim,
       rank: 0,
+      retired: isRetiredAi(ai),
+      participatedMatches: 0,
     });
+  }
+
+  // Count total matches each AI participated in (confirmed + pending).
+  for (const m of matches) {
+    for (const p of m.predictions) {
+      const summary = map.get(p.ai);
+      if (!summary) continue;
+      summary.participatedMatches += 1;
+    }
   }
 
   for (const m of confirmedMatches) {
@@ -232,8 +268,13 @@ export function buildAiSummaries(): AiSummary[] {
     }
   }
 
+  // Active AIs sorted by hit rate desc; retired AIs always at the tail
+  // (they keep their own hit-rate ordering among themselves).
   const list = Array.from(map.values());
-  list.sort((a, b) => b.hitRate - a.hitRate);
+  list.sort((a, b) => {
+    if (a.retired !== b.retired) return a.retired ? 1 : -1;
+    return b.hitRate - a.hitRate;
+  });
   list.forEach((s, idx) => {
     s.rank = idx + 1;
   });

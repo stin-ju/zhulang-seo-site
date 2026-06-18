@@ -7,6 +7,7 @@ import {
   formatPnl,
   getBettingSummary,
   getMatchById,
+  isRetiredAi,
   type AiName,
   type DimensionKey,
   type OddsEntry,
@@ -99,6 +100,15 @@ function actualSpfFromScore(score: string | null): '胜' | '平' | '负' | null 
   return '平';
 }
 
+function toOdd(value: number | string | undefined): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 function spfHitInfo(
   pred: Prediction,
   odds: OddsEntry | undefined,
@@ -107,13 +117,14 @@ function spfHitInfo(
   if (!odds || !actualScore) return null;
   const actual = actualSpfFromScore(actualScore);
   if (!actual) return null;
-  const map: Record<'胜' | '平' | '负', number> = {
-    胜: odds.win,
-    平: odds.draw,
-    负: odds.lose,
+  const map: Record<'胜' | '平' | '负', number | null> = {
+    胜: toOdd(odds.win),
+    平: toOdd(odds.draw),
+    负: toOdd(odds.lose),
   };
   const predSide = pred.spf as '胜' | '平' | '负' | undefined;
-  const odd = predSide && predSide in map ? map[predSide] : 0;
+  const odd = predSide && predSide in map ? map[predSide] : null;
+  if (odd == null) return null;
   const hit = predSide === actual;
   const pnl = hit ? odd * 2 - 2 : -2;
   return { hit, pnl, odd };
@@ -124,12 +135,13 @@ function handicapHitInfo(
   odds: OddsEntry | undefined
 ): { hit: boolean; pnl: number; odd: number } | null {
   if (!odds) return null;
-  const map: Record<string, number> = {
-    让胜: odds.handicap_win,
-    让平: odds.handicap_draw,
-    让负: odds.handicap_lose,
+  const map: Record<string, number | null> = {
+    让胜: toOdd(odds.handicap_win),
+    让平: toOdd(odds.handicap_draw),
+    让负: toOdd(odds.handicap_lose),
   };
-  const odd = map[pred.handicap_spf] ?? 0;
+  const odd = map[pred.handicap_spf] ?? null;
+  if (odd == null) return null;
   const hit = pred.hit_handicap === '✅';
   if (pred.hit_handicap === null) return null;
   const pnl = hit ? odd * 2 - 2 : -2;
@@ -174,7 +186,7 @@ function OddsCard({
   if (!odds) return null;
 
   const actual = actualSpfFromScore(match.actualScore);
-  const handicapStr = formatHandicap(odds.handicap);
+  const handicapStr = formatHandicap(odds.handicap ?? match.handicap);
 
   return (
     <section className="rounded-2xl border border-divider bg-deep">
@@ -397,20 +409,36 @@ export default function MatchDetailPage() {
               {rows.map(({ ai, pred }) => {
                 const hits = pred?.total_hits ?? null;
                 const isBest = !isPending && hits !== null && hits === bestHits && hits > 0;
+                const retired = isRetiredAi(ai);
                 return (
                   <tr
                     key={ai}
-                    className="border-t border-divider hover:bg-white/[0.02] transition-colors"
+                    className={`border-t border-divider hover:bg-white/[0.02] transition-colors ${
+                      retired ? 'opacity-60' : ''
+                    }`}
                   >
                     <td className="px-4 py-3 align-middle">
                       <Link
                         to={`/ai/${encodeURIComponent(ai)}`}
                         className="flex items-center gap-2 group"
                       >
-                        <span className="text-ink font-medium group-hover:text-gold transition-colors">
+                        <span
+                          className={`font-medium transition-colors ${
+                            retired
+                              ? 'text-miss group-hover:text-miss/90'
+                              : 'text-ink group-hover:text-gold'
+                          }`}
+                        >
                           {AI_SHORT[ai]}
                         </span>
-                        <span className="text-[11px] text-muted">{ai}</span>
+                        {retired && (
+                          <span className="text-[10px] px-1 py-0.5 rounded border border-divider text-miss bg-white/[0.02]">
+                            退赛
+                          </span>
+                        )}
+                        <span className={`text-[11px] ${retired ? 'text-miss/70' : 'text-muted'}`}>
+                          {ai}
+                        </span>
                       </Link>
                     </td>
                     {pred ? (
@@ -440,8 +468,8 @@ export default function MatchDetailPage() {
                         </td>
                       </>
                     ) : (
-                      <td colSpan={6} className="px-4 py-3 text-center text-muted">
-                        无数据
+                      <td colSpan={6} className="px-4 py-3 text-center text-muted text-xs">
+                        {retired ? '已退赛 · 未参与本场预测' : '本场未参赛'}
                       </td>
                     )}
                   </tr>
@@ -473,10 +501,13 @@ export default function MatchDetailPage() {
             const spfInfo = pred ? spfHitInfo(pred, match.odds, match.actualScore) : null;
             const handicapInfo = pred ? handicapHitInfo(pred, match.odds) : null;
             const aiBetting = getBettingSummary(ai);
+            const retired = isRetiredAi(ai);
             return (
               <article
                 key={ai}
-                className="px-5 py-5 hover:bg-white/[0.02] transition-colors"
+                className={`px-5 py-5 hover:bg-white/[0.02] transition-colors ${
+                  retired ? 'opacity-65' : ''
+                }`}
               >
                 <header className="flex items-center justify-between gap-3 mb-3">
                   <Link
@@ -485,17 +516,36 @@ export default function MatchDetailPage() {
                   >
                     <span
                       className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-[11px] font-bold border ${
-                        isBest
-                          ? 'border-gold/60 text-gold bg-gold-soft'
-                          : 'border-divider text-muted bg-white/[0.03]'
+                        retired
+                          ? 'border-divider text-miss bg-white/[0.02]'
+                          : isBest
+                            ? 'border-gold/60 text-gold bg-gold-soft'
+                            : 'border-divider text-muted bg-white/[0.03]'
                       }`}
                     >
                       {AI_SHORT[ai].slice(0, 2)}
                     </span>
-                    <span className="text-ink font-medium truncate group-hover:text-gold transition-colors">
+                    <span
+                      className={`font-medium truncate transition-colors ${
+                        retired
+                          ? 'text-miss group-hover:text-miss/90'
+                          : 'text-ink group-hover:text-gold'
+                      }`}
+                    >
                       {AI_SHORT[ai]}
                     </span>
-                    <span className="text-[11px] text-muted truncate">{ai}</span>
+                    {retired && (
+                      <span className="text-[10px] px-1 py-0.5 rounded border border-divider text-miss bg-white/[0.02] shrink-0">
+                        退赛
+                      </span>
+                    )}
+                    <span
+                      className={`text-[11px] truncate ${
+                        retired ? 'text-miss/70' : 'text-muted'
+                      }`}
+                    >
+                      {ai}
+                    </span>
                   </Link>
                   <div className="flex items-center gap-2 shrink-0">
                     {aiBetting && (

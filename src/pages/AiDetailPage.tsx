@@ -113,19 +113,36 @@ export default function AiDetailPage() {
           <div className="flex items-center gap-5">
             <div
               className={`h-16 w-16 rounded-xl flex items-center justify-center text-2xl font-bold ${
-                summary.rank === 1
-                  ? 'bg-gold text-night'
-                  : 'bg-elevated text-ink border border-divider'
+                summary.retired
+                  ? 'bg-elevated text-miss border border-divider'
+                  : summary.rank === 1
+                    ? 'bg-gold text-night'
+                    : 'bg-elevated text-ink border border-divider'
               }`}
             >
-              #{summary.rank}
+              {summary.retired ? '×' : `#${summary.rank}`}
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-muted">AI 选手</div>
-              <div className="text-2xl sm:text-3xl font-bold text-ink mt-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase tracking-[0.18em] text-muted">AI 选手</span>
+                {summary.retired && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded border border-divider text-miss bg-white/[0.02]">
+                    已退赛
+                  </span>
+                )}
+              </div>
+              <div
+                className={`text-2xl sm:text-3xl font-bold mt-1 ${
+                  summary.retired ? 'text-miss' : 'text-ink'
+                }`}
+              >
                 {AI_SHORT[summary.ai]}
               </div>
-              <div className="text-sm text-muted">{summary.ai}</div>
+              <div
+                className={`text-sm ${summary.retired ? 'text-miss/70' : 'text-muted'}`}
+              >
+                {summary.ai}
+              </div>
             </div>
           </div>
 
@@ -134,10 +151,14 @@ export default function AiDetailPage() {
               <div className="text-[11px] uppercase tracking-widest text-muted">综合命中率</div>
               <div
                 className={`font-mono text-4xl sm:text-5xl font-bold mt-1 leading-none ${
-                  summary.rank === 1 ? 'text-gold' : 'text-ink'
+                  summary.retired
+                    ? 'text-miss'
+                    : summary.rank === 1
+                      ? 'text-gold'
+                      : 'text-ink'
                 }`}
               >
-                {formatPercent(summary.hitRate)}
+                {summary.totalConfirmed === 0 ? '—' : formatPercent(summary.hitRate)}
               </div>
             </div>
             <div>
@@ -148,9 +169,10 @@ export default function AiDetailPage() {
               </div>
             </div>
             <div>
-              <div className="text-[11px] uppercase tracking-widest text-muted">已确认场次</div>
+              <div className="text-[11px] uppercase tracking-widest text-muted">参赛场次</div>
               <div className="font-mono text-2xl sm:text-3xl text-ink mt-1">
-                {summary.totalConfirmed}
+                {summary.participatedMatches}
+                <span className="text-muted text-base"> / 已确认 {summary.totalConfirmed}</span>
               </div>
             </div>
           </div>

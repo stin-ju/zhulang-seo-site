@@ -378,8 +378,9 @@ export default function BettingPage() {
           模拟<span className="text-gold">投注</span>盈亏对比
         </h1>
         <p className="text-sm text-muted max-w-2xl leading-relaxed">
-          7 个 AI 在 {totals.totalBets} 注模拟下注（每注固定 2 元、共投入{' '}
-          {totals.totalInvest} 元）的真实盈亏复盘。仅作 AI 预测能力评测，与真实投注无关。
+          {bettingSummaries.length} 个 AI 在 {totals.totalBets} 注模拟下注（每注固定 2 元、共投入{' '}
+          {totals.totalInvest} 元）的真实盈亏复盘。仅作 AI 预测能力评测，与真实投注无关。新加入的
+          DeepSeek / 天工 / MiniMax 暂未参与本期投注挑战。
         </p>
       </header>
 
