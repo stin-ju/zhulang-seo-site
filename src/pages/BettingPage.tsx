@@ -110,14 +110,14 @@ function ChampionCard({ s }: { s: BettingSummaryEntry }) {
         </div>
         <div className="text-right shrink-0">
           <div className="text-[11px] uppercase tracking-widest text-gold/80 mb-0.5">
-            总盈亏
+            模拟净收益
           </div>
           <PnlText value={s.total_pnl} size="xl" />
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-gold/15 text-sm">
         <div>
-          <div className="text-[11px] text-muted">总投入</div>
+          <div className="text-[11px] text-muted">虚拟投入</div>
           <div className="font-mono text-ink mt-0.5">{formatYuan(investTotal)}</div>
         </div>
         <div>
@@ -125,7 +125,7 @@ function ChampionCard({ s }: { s: BettingSummaryEntry }) {
           <div className="font-mono text-ink mt-0.5">{s.win_rate}</div>
         </div>
         <div>
-          <div className="text-[11px] text-muted">中奖注</div>
+          <div className="text-[11px] text-muted">命中次数</div>
           <div className="font-mono text-ink mt-0.5">
             {hitsTotal}
             <span className="text-muted text-xs"> / {betsTotal}</span>
@@ -162,12 +162,12 @@ function StandardCard({ s }: { s: BettingSummaryEntry }) {
         </div>
       </div>
       <div className="flex items-baseline justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-widest text-muted">总盈亏</span>
+        <span className="text-[11px] uppercase tracking-widest text-muted">模拟净收益</span>
         <PnlText value={s.total_pnl} size="lg" />
       </div>
       <div className="grid grid-cols-3 gap-2 text-[11px] pt-3 border-t border-divider">
         <div>
-          <div className="text-muted">投入</div>
+          <div className="text-muted">虚拟投入</div>
           <div className="font-mono text-ink mt-0.5">{investTotal}</div>
         </div>
         <div>
@@ -175,7 +175,7 @@ function StandardCard({ s }: { s: BettingSummaryEntry }) {
           <div className="font-mono text-ink mt-0.5">{s.win_rate}</div>
         </div>
         <div>
-          <div className="text-muted">中奖</div>
+          <div className="text-muted">命中</div>
           <div className="font-mono text-ink mt-0.5">
             {hitsTotal}/{betsTotal}
           </div>
@@ -372,38 +372,38 @@ export default function BettingPage() {
       <header className="space-y-3">
         <div className="flex items-center gap-2 text-xs text-muted">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
-          <span className="uppercase tracking-widest">Simulated Betting Arena</span>
+          <span className="uppercase tracking-widest">AI Forecast Scoreboard</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-ink">
-          模拟<span className="text-gold">投注</span>盈亏对比
+          AI <span className="text-gold">竞猜战绩</span>对比
         </h1>
         <p className="text-sm text-muted max-w-2xl leading-relaxed">
-          {bettingSummaries.length} 个 AI 在 {totals.totalBets} 注模拟下注（每注固定 2 元、共投入{' '}
-          {totals.totalInvest} 元）的真实盈亏复盘。仅作 AI 预测能力评测，与真实投注无关。新加入的
-          DeepSeek / 天工 / MiniMax 暂未参与本期投注挑战。
+          {bettingSummaries.length} 个 AI 在 {totals.totalBets} 次模拟竞猜（每次按 2 元为虚拟计算单位、累计虚拟投入{' '}
+          {totals.totalInvest} 元）下的预测命中复盘。所有数据仅作 AI 预测能力评测使用，与任何真实彩票/投注无关。新加入的
+          DeepSeek / 天工 / MiniMax 暂未参与本期竞猜挑战。
         </p>
       </header>
 
       {/* KPI strip */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-divider bg-deep px-4 py-4">
-          <div className="text-[11px] uppercase tracking-widest text-muted">总投入</div>
+          <div className="text-[11px] uppercase tracking-widest text-muted">虚拟投入</div>
           <div className="font-mono text-2xl font-bold text-ink mt-1">
             {totals.totalInvest}
             <span className="text-sm text-muted font-normal"> 元</span>
           </div>
-          <div className="text-[11px] text-muted mt-1">{totals.totalBets} 注 × 2 元</div>
+          <div className="text-[11px] text-muted mt-1">{totals.totalBets} 次 × 2 元单位</div>
         </div>
         <div className="rounded-xl border border-divider bg-deep px-4 py-4">
-          <div className="text-[11px] uppercase tracking-widest text-muted">总返奖</div>
+          <div className="text-[11px] uppercase tracking-widest text-muted">虚拟返奖</div>
           <div className="font-mono text-2xl font-bold text-ink mt-1">
             {totals.totalReturn.toFixed(0)}
             <span className="text-sm text-muted font-normal"> 元</span>
           </div>
-          <div className="text-[11px] text-muted mt-1">中奖 {totals.totalHits} 注</div>
+          <div className="text-[11px] text-muted mt-1">命中 {totals.totalHits} 次</div>
         </div>
         <div className="rounded-xl border border-divider bg-deep px-4 py-4">
-          <div className="text-[11px] uppercase tracking-widest text-muted">总盈亏</div>
+          <div className="text-[11px] uppercase tracking-widest text-muted">模拟净收益</div>
           <div className="mt-1">
             <PnlText value={totals.totalPnl} size="xl" />
             <span className="text-sm text-muted font-normal"> 元</span>
@@ -426,8 +426,8 @@ export default function BettingPage() {
       {/* Leaderboard */}
       <section>
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">投注盈亏排行榜</h2>
-          <span className="text-xs text-muted">按总盈亏倒序</span>
+          <h2 className="text-lg font-semibold text-ink">竞猜战绩排行榜</h2>
+          <span className="text-xs text-muted">按模拟净收益倒序</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-3">
@@ -442,7 +442,7 @@ export default function BettingPage() {
       {/* Per-dimension comparison */}
       <section>
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">分维度盈亏对比</h2>
+          <h2 className="text-lg font-semibold text-ink">分维度战绩对比</h2>
           <span className="text-xs text-muted">
             5 个维度：胜平负 / 让球 / 比分 / 总进球 / 半全场
           </span>
@@ -452,22 +452,39 @@ export default function BettingPage() {
         </div>
         <div className="flex items-center gap-4 text-[11px] text-muted mt-3">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-3 rounded bg-turf/70" /> 盈利
+            <span className="h-2 w-3 rounded bg-turf/70" /> 净收益
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-3 rounded bg-[#F87171]/70" /> 亏损
+            <span className="h-2 w-3 rounded bg-[#F87171]/70" /> 净亏损
           </span>
-          <span>条形长度反映该维度上各 AI 间的相对盈亏</span>
+          <span>条形长度反映该维度上各 AI 间的相对竞猜净收益</span>
         </div>
       </section>
 
       {/* Daily timeline */}
       <section>
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">每日盈亏走势</h2>
+          <h2 className="text-lg font-semibold text-ink">每日战绩走势</h2>
           <span className="text-xs text-muted">共 {bettingDates.length} 个比赛日</span>
         </div>
         <DailyTimeline />
+      </section>
+
+      {/* Disclaimer */}
+      <section
+        role="note"
+        aria-label="免责声明"
+        className="rounded-2xl border-l-4 border-gold bg-gold-soft/40 px-5 py-4"
+      >
+        <div className="flex items-center gap-2 text-gold mb-2">
+          <span className="inline-block h-2 w-2 rounded-full bg-gold" />
+          <span className="text-xs uppercase tracking-widest font-semibold">免责声明</span>
+        </div>
+        <p className="text-[13px] leading-[1.7] text-ink/85">
+          本站所有数据仅用于 AI
+          预测能力对比研究，每注 2
+          元为虚拟模拟计算单位，与任何真实彩票投注无关。足球赛事临场变量极多，赛果存在高度不确定性，请理性观赛、远离非法购彩。
+        </p>
       </section>
     </div>
   );

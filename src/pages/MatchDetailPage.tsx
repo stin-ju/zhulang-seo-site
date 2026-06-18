@@ -194,14 +194,14 @@ function OddsCard({
         <div>
           <h2 className="text-base font-semibold text-ink">赔率与赛果</h2>
           <p className="text-xs text-muted mt-0.5">
-            每注固定 2 元，命中按"赔率 × 2"返奖。亮金色表示与实际赛果一致的选项。
+            模拟竞猜每注 2 元为虚拟单位，命中按"赔率 × 2"返奖。亮金色表示与实际赛果一致的选项。
           </p>
         </div>
         <Link
           to="/betting"
           className="text-[11px] text-muted hover:text-gold transition-colors"
         >
-          模拟投注总览 →
+          竞猜战绩总览 →
         </Link>
       </div>
       <div className="p-5 space-y-5">
@@ -377,7 +377,7 @@ export default function MatchDetailPage() {
       <section className="rounded-2xl border border-divider bg-deep overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between border-b border-divider">
           <div>
-            <h2 className="text-base font-semibold text-ink">7 AI 预测对比</h2>
+            <h2 className="text-base font-semibold text-ink">10 AI 预测对比</h2>
             <p className="text-xs text-muted mt-0.5">
               {isPending
                 ? '本场尚未开赛，暂无命中标记。'
@@ -551,10 +551,10 @@ export default function MatchDetailPage() {
                     {aiBetting && (
                       <Link
                         to="/betting"
-                        title="查看模拟投注总览"
+                        title="查看竞猜战绩总览"
                         className="hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] border border-divider bg-white/[0.02] text-muted hover:text-gold hover:border-gold/30 transition-colors font-mono"
                       >
-                        <span className="font-sans">投注 #{aiBetting.rank}</span>
+                        <span className="font-sans">竞猜 #{aiBetting.rank}</span>
                         <span
                           className={
                             aiBetting.total_pnl > 0
@@ -641,6 +641,23 @@ export default function MatchDetailPage() {
             );
           })}
         </div>
+      </section>
+
+      {/* Disclaimer */}
+      <section
+        role="note"
+        aria-label="免责声明"
+        className="rounded-2xl border-l-4 border-gold bg-gold-soft/40 px-5 py-4"
+      >
+        <div className="flex items-center gap-2 text-gold mb-2">
+          <span className="inline-block h-2 w-2 rounded-full bg-gold" />
+          <span className="text-xs uppercase tracking-widest font-semibold">免责声明</span>
+        </div>
+        <p className="text-[13px] leading-[1.7] text-ink/85">
+          本站所有数据仅用于 AI
+          预测能力对比研究，每注 2
+          元为虚拟模拟计算单位，与任何真实彩票投注无关。足球赛事临场变量极多，赛果存在高度不确定性，请理性观赛、远离非法购彩。
+        </p>
       </section>
     </div>
   );
