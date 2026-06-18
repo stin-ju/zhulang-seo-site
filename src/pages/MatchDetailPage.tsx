@@ -268,6 +268,83 @@ export default function MatchDetailPage() {
           </table>
         </div>
       </section>
+
+      {/* AI prediction analysis */}
+      <section className="rounded-2xl border border-divider bg-deep overflow-hidden">
+        <div className="px-5 py-4 border-b border-divider flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-ink">AI 预测分析</h2>
+            <p className="text-xs text-muted mt-0.5">
+              各模型给出的预测推理逻辑原文
+            </p>
+          </div>
+          <span className="text-[11px] text-muted">
+            共 {rows.filter(r => r.pred?.analysis).length} 份分析
+          </span>
+        </div>
+        <div className="divide-y divide-divider">
+          {rows.map(({ ai, pred }) => {
+            const analysis = pred?.analysis?.trim() ?? '';
+            const hits = pred?.total_hits ?? null;
+            const isBest = !isPending && hits !== null && hits === bestHits && hits > 0;
+            return (
+              <article
+                key={ai}
+                className="px-5 py-5 hover:bg-white/[0.02] transition-colors"
+              >
+                <header className="flex items-center justify-between gap-3 mb-3">
+                  <Link
+                    to={`/ai/${encodeURIComponent(ai)}`}
+                    className="flex items-center gap-2 group min-w-0"
+                  >
+                    <span
+                      className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-[11px] font-bold border ${
+                        isBest
+                          ? 'border-gold/60 text-gold bg-gold-soft'
+                          : 'border-divider text-muted bg-white/[0.03]'
+                      }`}
+                    >
+                      {AI_SHORT[ai].slice(0, 2)}
+                    </span>
+                    <span className="text-ink font-medium truncate group-hover:text-gold transition-colors">
+                      {AI_SHORT[ai]}
+                    </span>
+                    <span className="text-[11px] text-muted truncate">{ai}</span>
+                  </Link>
+                  {!isPending && hits !== null && (
+                    <span
+                      className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] border font-mono ${
+                        isBest
+                          ? 'border-gold/40 text-gold bg-gold-soft'
+                          : hits > 0
+                          ? 'border-turf/30 text-turf bg-turf-soft'
+                          : 'border-divider text-miss bg-white/[0.02]'
+                      }`}
+                    >
+                      命中 {hits} / 4
+                    </span>
+                  )}
+                </header>
+                {pred ? (
+                  analysis ? (
+                    <p className="text-[14px] leading-[1.7] text-ink/85 whitespace-pre-wrap">
+                      {analysis}
+                    </p>
+                  ) : (
+                    <p className="text-[13px] leading-relaxed text-muted italic">
+                      该模型未提供分析逻辑文本。
+                    </p>
+                  )
+                ) : (
+                  <p className="text-[13px] leading-relaxed text-muted italic">
+                    无该模型的本场预测数据。
+                  </p>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

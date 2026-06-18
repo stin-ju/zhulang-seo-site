@@ -55,6 +55,7 @@ export interface Prediction {
   hit_goals: HitMark;
   hit_half: HitMark;
   total_hits: number | null;
+  analysis?: string;
 }
 
 export interface MatchEntry {
