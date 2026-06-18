@@ -5,15 +5,19 @@ import type { Application, Request, Response } from 'express';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
-import viteConfig from '../vite.config';
 
 const isDev = process.env.COZE_PROJECT_ENV !== 'PROD';
 
 /**
  * 集成 Vite 开发服务器（中间件模式）
+ * 注意：vite 与 vite.config（含 plugin-react-swc → @swc/core）只在 dev 模式动态加载，
+ *       避免生产模式启动时无谓地拉起 SWC 原生绑定，也避免被 bundler 静态追踪。
  */
 export async function setupViteMiddleware(app: Application) {
+  const { createServer: createViteServer } = await import('vite');
+  const viteConfigModule = await import('../vite.config');
+  const viteConfig = viteConfigModule.default;
+
   const vite = await createViteServer({
     ...viteConfig,
     // 关键：禁止 Vite 再次自动加载 vite.config.ts，否则 plugins 会被合并两份，
