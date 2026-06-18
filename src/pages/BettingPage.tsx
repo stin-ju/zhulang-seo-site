@@ -375,12 +375,12 @@ export default function BettingPage() {
           <span className="uppercase tracking-widest">AI Forecast Scoreboard</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-ink">
-          AI <span className="text-gold">竞猜战绩</span>对比
+          AI <span className="text-gold">模拟盈亏</span>对比
         </h1>
         <p className="text-sm text-muted max-w-2xl leading-relaxed">
-          {bettingSummaries.length} 个 AI 在 {totals.totalBets} 次模拟竞猜（每次按 2 元为虚拟计算单位、累计虚拟投入{' '}
+          {bettingSummaries.length} 个 AI 在 {totals.totalBets} 次模拟下注（每次按 2 元为虚拟计算单位、累计虚拟投入{' '}
           {totals.totalInvest} 元）下的预测命中复盘。所有数据仅作 AI 预测能力评测使用，与任何真实彩票/投注无关。新加入的
-          DeepSeek / 天工 / MiniMax 暂未参与本期竞猜挑战。
+          DeepSeek / 天工 / MiniMax 暂未参与本期模拟盈亏统计。
         </p>
       </header>
 
@@ -426,7 +426,7 @@ export default function BettingPage() {
       {/* Leaderboard */}
       <section>
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">竞猜战绩排行榜</h2>
+          <h2 className="text-lg font-semibold text-ink">模拟盈亏排行榜</h2>
           <span className="text-xs text-muted">按模拟净收益倒序</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -442,7 +442,7 @@ export default function BettingPage() {
       {/* Per-dimension comparison */}
       <section>
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">分维度战绩对比</h2>
+          <h2 className="text-lg font-semibold text-ink">分维度盈亏对比</h2>
           <span className="text-xs text-muted">
             5 个维度：胜平负 / 让球 / 比分 / 总进球 / 半全场
           </span>
@@ -457,14 +457,14 @@ export default function BettingPage() {
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-3 rounded bg-[#F87171]/70" /> 净亏损
           </span>
-          <span>条形长度反映该维度上各 AI 间的相对竞猜净收益</span>
+          <span>条形长度反映该维度上各 AI 间相对的模拟净收益差距</span>
         </div>
       </section>
 
       {/* Daily timeline */}
       <section>
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">每日战绩走势</h2>
+          <h2 className="text-lg font-semibold text-ink">每日盈亏走势</h2>
           <span className="text-xs text-muted">共 {bettingDates.length} 个比赛日</span>
         </div>
         <DailyTimeline />
@@ -481,9 +481,7 @@ export default function BettingPage() {
           <span className="text-xs uppercase tracking-widest font-semibold">免责声明</span>
         </div>
         <p className="text-[13px] leading-[1.7] text-ink/85">
-          本站所有数据仅用于 AI
-          预测能力对比研究，每注 2
-          元为虚拟模拟计算单位，与任何真实彩票投注无关。足球赛事临场变量极多，赛果存在高度不确定性，请理性观赛、远离非法购彩。
+          本站所有数据仅用于AI预测能力对比研究，每注2元为虚拟模拟计算单位，与任何真实彩票投注无关。足球赛事临场变量极多，赛果存在高度不确定性，请理性观赛、远离非法购彩。
         </p>
       </section>
     </div>

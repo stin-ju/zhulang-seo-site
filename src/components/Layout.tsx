@@ -5,7 +5,7 @@ const NAV_ITEMS: { to: string; label: string; end?: boolean }[] = [
   { to: '/', label: '排行榜', end: true },
   { to: '/matches', label: '比赛' },
   { to: '/ai', label: 'AI' },
-  { to: '/betting', label: '竞猜战绩' },
+  { to: '/betting', label: '模拟盈亏' },
 ];
 
 export default function Layout() {
