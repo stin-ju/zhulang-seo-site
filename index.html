@@ -10,7 +10,32 @@
     <title>AI 赛事预测大竞赛</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div style="padding:32px;color:#94A3B8;font-family:system-ui,sans-serif">
+        正在加载 AI 赛事预测大竞赛&hellip;
+      </div>
+    </div>
+    <script>
+      (function () {
+        function showError(msg) {
+          var el = document.getElementById('app');
+          if (!el) return;
+          el.innerHTML =
+            '<div style="padding:24px;background:#1f1320;color:#fca5a5;border:1px solid #7f1d1d;border-radius:12px;margin:32px;font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;line-height:1.6;font-size:13px">' +
+            '<div style="font-size:15px;font-weight:700;margin-bottom:12px;color:#f87171">页面初始化失败</div>' +
+            String(msg).replace(/[<&]/g, function (c) {
+              return c === '<' ? '&lt;' : '&amp;';
+            }) +
+            '</div>';
+        }
+        window.addEventListener('error', function (e) {
+          showError((e.error && e.error.stack) || e.message || 'Unknown error');
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          showError((e.reason && e.reason.stack) || e.reason || 'Unhandled rejection');
+        });
+      })();
+    </script>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
