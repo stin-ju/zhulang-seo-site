@@ -58,12 +58,25 @@ export interface Prediction {
   analysis?: string;
 }
 
+export interface OddsEntry {
+  win: number;
+  draw: number;
+  lose: number;
+  handicap: string | number;
+  handicap_win: number;
+  handicap_draw: number;
+  handicap_lose: number;
+  actual_score: string | null;
+  status: '已确认' | '待比赛';
+}
+
 export interface MatchEntry {
   id: string;
   teams: string;
   time: string;
   handicap: string | number;
   predictions: Prediction[];
+  odds?: OddsEntry;
 }
 
 export interface ResourceEntry {
@@ -75,10 +88,44 @@ export interface ResourceEntry {
   status: '已确认' | '待比赛';
 }
 
+export interface BettingDimensionStats {
+  invest: number;
+  hits: number;
+  pnl: number;
+}
+
+export type BettingDimensionKey = 'spf' | 'handicap' | 'score' | 'goals' | 'half_full';
+
+export interface BettingSummaryEntry {
+  ai: string;
+  rank: number;
+  dimensions: Record<BettingDimensionKey, BettingDimensionStats>;
+  total_pnl: number;
+  win_rate: string;
+  total_matches: number;
+}
+
+export interface BettingDailyEntry {
+  date: string;
+  ai: string;
+  spf: BettingDimensionStats;
+  handicap: BettingDimensionStats;
+  score: BettingDimensionStats;
+  goals: BettingDimensionStats;
+  half_full: BettingDimensionStats;
+  daily_pnl: number;
+  win_rate: string;
+  rank_change: string;
+}
+
 interface RawData {
   matches: MatchEntry[];
   resources: ResourceEntry[];
   stats: { ai: string; rank: number; total_hits: string; total_matches: number }[];
+  betting_stats?: {
+    summary: BettingSummaryEntry[];
+    daily: BettingDailyEntry[];
+  };
 }
 
 const data = rawData as RawData;
@@ -91,6 +138,7 @@ export interface MatchView {
   status: '已确认' | '待比赛';
   actualScore: string | null;
   predictions: Prediction[];
+  odds?: OddsEntry;
 }
 
 const resourceMap = new Map<string, ResourceEntry>();
@@ -108,6 +156,7 @@ export const matches: MatchView[] = data.matches.map(m => {
     status: res?.status ?? '待比赛',
     actualScore: res?.score ?? null,
     predictions: m.predictions,
+    odds: m.odds,
   };
 });
 
@@ -227,3 +276,77 @@ export function formatPercent(rate: number): string {
 
 export const totalMatches = matches.length;
 export const totalConfirmed = confirmedMatches.length;
+
+// ===== Betting stats =====
+
+export const BETTING_DIMENSIONS: { key: BettingDimensionKey; label: string }[] = [
+  { key: 'spf', label: '胜平负' },
+  { key: 'handicap', label: '让球胜平负' },
+  { key: 'score', label: '全场比分' },
+  { key: 'goals', label: '总进球' },
+  { key: 'half_full', label: '半全场' },
+];
+
+const rawBetting = data.betting_stats;
+
+export const bettingSummaries: BettingSummaryEntry[] = (rawBetting?.summary ?? [])
+  .slice()
+  .sort((a, b) => b.total_pnl - a.total_pnl)
+  .map((s, idx) => ({ ...s, rank: idx + 1 }));
+
+export const bettingDaily: BettingDailyEntry[] = rawBetting?.daily ?? [];
+
+export const bettingDates: string[] = Array.from(
+  new Set(bettingDaily.map(d => d.date))
+);
+
+export interface BettingTotals {
+  totalInvest: number;
+  totalReturn: number;
+  totalPnl: number;
+  totalHits: number;
+  totalBets: number;
+}
+
+export function getBettingTotals(): BettingTotals {
+  let totalInvest = 0;
+  let totalPnl = 0;
+  let totalHits = 0;
+  let totalBets = 0;
+  for (const s of bettingSummaries) {
+    for (const dim of BETTING_DIMENSIONS) {
+      const stat = s.dimensions[dim.key];
+      totalInvest += stat.invest;
+      totalPnl += stat.pnl;
+      totalHits += stat.hits;
+      totalBets += stat.invest / 2; // each bet is 2 yuan
+    }
+  }
+  return {
+    totalInvest,
+    totalReturn: totalInvest + totalPnl,
+    totalPnl,
+    totalHits,
+    totalBets,
+  };
+}
+
+export function getBettingSummary(ai: string): BettingSummaryEntry | undefined {
+  return bettingSummaries.find(s => s.ai === ai);
+}
+
+export function getBettingDailyByDate(date: string): BettingDailyEntry[] {
+  return bettingDaily
+    .filter(d => d.date === date)
+    .slice()
+    .sort((a, b) => b.daily_pnl - a.daily_pnl);
+}
+
+export function formatPnl(pnl: number): string {
+  const sign = pnl > 0 ? '+' : pnl < 0 ? '' : '';
+  return `${sign}${pnl.toFixed(1)}`;
+}
+
+export function formatYuan(value: number): string {
+  return `${value.toFixed(0)} 元`;
+}

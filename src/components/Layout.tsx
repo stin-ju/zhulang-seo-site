@@ -5,6 +5,7 @@ const NAV_ITEMS: { to: string; label: string; end?: boolean }[] = [
   { to: '/', label: '排行榜', end: true },
   { to: '/matches', label: '比赛' },
   { to: '/ai', label: 'AI' },
+  { to: '/betting', label: '模拟投注' },
 ];
 
 export default function Layout() {
@@ -48,7 +49,7 @@ export default function Layout() {
       <footer className="border-t border-divider mt-12">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted">
           <span>共收录 {totalMatches} 场比赛 · 已确认 {totalConfirmed} 场</span>
-          <span className="opacity-70">仅作 AI 能力评测展示，与任何投注/赔率/赌博无关。</span>
+          <span className="opacity-70">仅作 AI 能力评测展示。模拟投注每注固定 2 元，与真实投注/赔率/赌博无关。</span>
         </div>
       </footer>
     </div>

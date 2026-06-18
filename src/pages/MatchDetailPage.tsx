@@ -4,9 +4,12 @@ import {
   AI_SHORT,
   DIMENSIONS,
   formatHandicap,
+  formatPnl,
+  getBettingSummary,
   getMatchById,
   type AiName,
   type DimensionKey,
+  type OddsEntry,
   type Prediction,
 } from '../lib/data';
 
@@ -83,6 +86,183 @@ function dimValue(p: Prediction, key: DimensionKey): string | number {
     case 'hit_half':
       return p.half_full;
   }
+}
+
+function actualSpfFromScore(score: string | null): '胜' | '平' | '负' | null {
+  if (!score) return null;
+  const m = /^\s*(\d+)\s*[:：-]\s*(\d+)\s*$/.exec(score);
+  if (!m) return null;
+  const home = Number(m[1]);
+  const away = Number(m[2]);
+  if (home > away) return '胜';
+  if (home < away) return '负';
+  return '平';
+}
+
+function spfHitInfo(
+  pred: Prediction,
+  odds: OddsEntry | undefined,
+  actualScore: string | null
+): { hit: boolean; pnl: number; odd: number } | null {
+  if (!odds || !actualScore) return null;
+  const actual = actualSpfFromScore(actualScore);
+  if (!actual) return null;
+  const map: Record<'胜' | '平' | '负', number> = {
+    胜: odds.win,
+    平: odds.draw,
+    负: odds.lose,
+  };
+  const predSide = pred.spf as '胜' | '平' | '负' | undefined;
+  const odd = predSide && predSide in map ? map[predSide] : 0;
+  const hit = predSide === actual;
+  const pnl = hit ? odd * 2 - 2 : -2;
+  return { hit, pnl, odd };
+}
+
+function handicapHitInfo(
+  pred: Prediction,
+  odds: OddsEntry | undefined
+): { hit: boolean; pnl: number; odd: number } | null {
+  if (!odds) return null;
+  const map: Record<string, number> = {
+    让胜: odds.handicap_win,
+    让平: odds.handicap_draw,
+    让负: odds.handicap_lose,
+  };
+  const odd = map[pred.handicap_spf] ?? 0;
+  const hit = pred.hit_handicap === '✅';
+  if (pred.hit_handicap === null) return null;
+  const pnl = hit ? odd * 2 - 2 : -2;
+  return { hit, pnl, odd };
+}
+
+function OddsBlock({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string | number;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-md px-3 py-2 border text-center ${
+        highlight
+          ? 'border-gold/40 bg-gold-soft text-gold'
+          : 'border-divider bg-white/[0.02] text-ink'
+      }`}
+    >
+      <div
+        className={`text-[10px] uppercase tracking-widest ${
+          highlight ? 'text-gold/80' : 'text-muted'
+        }`}
+      >
+        {label}
+      </div>
+      <div className="font-mono text-lg font-semibold mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function OddsCard({
+  match,
+}: {
+  match: { handicap: string; actualScore: string | null; status: '已确认' | '待比赛'; odds?: OddsEntry };
+}) {
+  const odds = match.odds;
+  if (!odds) return null;
+
+  const actual = actualSpfFromScore(match.actualScore);
+  const handicapStr = formatHandicap(odds.handicap);
+
+  return (
+    <section className="rounded-2xl border border-divider bg-deep">
+      <div className="px-5 py-4 border-b border-divider flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-ink">赔率与赛果</h2>
+          <p className="text-xs text-muted mt-0.5">
+            每注固定 2 元，命中按"赔率 × 2"返奖。亮金色表示与实际赛果一致的选项。
+          </p>
+        </div>
+        <Link
+          to="/betting"
+          className="text-[11px] text-muted hover:text-gold transition-colors"
+        >
+          模拟投注总览 →
+        </Link>
+      </div>
+      <div className="p-5 space-y-5">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] uppercase tracking-widest text-muted">
+              胜平负赔率
+            </span>
+            {actual && (
+              <span className="text-[11px] text-muted">
+                实际：<span className="text-gold font-semibold">{actual}</span>
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <OddsBlock label="主胜" value={odds.win} highlight={actual === '胜'} />
+            <OddsBlock label="平" value={odds.draw} highlight={actual === '平'} />
+            <OddsBlock label="客胜" value={odds.lose} highlight={actual === '负'} />
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] uppercase tracking-widest text-muted">
+              让球赔率
+            </span>
+            <span className="text-[11px] text-muted">
+              让球 <span className="text-ink font-mono">{handicapStr}</span>
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <OddsBlock label="让胜" value={odds.handicap_win} />
+            <OddsBlock label="让平" value={odds.handicap_draw} />
+            <OddsBlock label="让负" value={odds.handicap_lose} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BettingChip({
+  label,
+  hit,
+  pnl,
+  odd,
+  pending,
+}: {
+  label: string;
+  hit: boolean | null;
+  pnl: number | null;
+  odd: number | null;
+  pending: boolean;
+}) {
+  if (pending || hit === null) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] border border-divider bg-white/[0.02] text-muted">
+        {label} —
+      </span>
+    );
+  }
+  const cls = hit
+    ? 'border-turf/30 bg-turf-soft text-turf'
+    : 'border-divider bg-white/[0.02] text-miss';
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] border font-mono ${cls}`}
+    >
+      <span className="opacity-80 font-sans">{label}</span>
+      <span>{hit ? '中' : '挂'}</span>
+      {odd != null && odd > 0 && <span className="opacity-70">@{odd.toFixed(2)}</span>}
+      {pnl != null && <span className="font-semibold">{formatPnl(pnl)}</span>}
+    </span>
+  );
 }
 
 export default function MatchDetailPage() {
@@ -177,6 +357,9 @@ export default function MatchDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* Odds & actual */}
+      <OddsCard match={match} />
 
       {/* Prediction matrix */}
       <section className="rounded-2xl border border-divider bg-deep overflow-hidden">
@@ -287,6 +470,9 @@ export default function MatchDetailPage() {
             const analysis = pred?.analysis?.trim() ?? '';
             const hits = pred?.total_hits ?? null;
             const isBest = !isPending && hits !== null && hits === bestHits && hits > 0;
+            const spfInfo = pred ? spfHitInfo(pred, match.odds, match.actualScore) : null;
+            const handicapInfo = pred ? handicapHitInfo(pred, match.odds) : null;
+            const aiBetting = getBettingSummary(ai);
             return (
               <article
                 key={ai}
@@ -311,20 +497,81 @@ export default function MatchDetailPage() {
                     </span>
                     <span className="text-[11px] text-muted truncate">{ai}</span>
                   </Link>
-                  {!isPending && hits !== null && (
-                    <span
-                      className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] border font-mono ${
-                        isBest
-                          ? 'border-gold/40 text-gold bg-gold-soft'
-                          : hits > 0
-                          ? 'border-turf/30 text-turf bg-turf-soft'
-                          : 'border-divider text-miss bg-white/[0.02]'
-                      }`}
-                    >
-                      命中 {hits} / 4
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {aiBetting && (
+                      <Link
+                        to="/betting"
+                        title="查看模拟投注总览"
+                        className="hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] border border-divider bg-white/[0.02] text-muted hover:text-gold hover:border-gold/30 transition-colors font-mono"
+                      >
+                        <span className="font-sans">投注 #{aiBetting.rank}</span>
+                        <span
+                          className={
+                            aiBetting.total_pnl > 0
+                              ? 'text-turf'
+                              : aiBetting.total_pnl < 0
+                              ? 'text-[#F87171]'
+                              : 'text-muted'
+                          }
+                        >
+                          {formatPnl(aiBetting.total_pnl)}
+                        </span>
+                      </Link>
+                    )}
+                    {!isPending && hits !== null && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] border font-mono ${
+                          isBest
+                            ? 'border-gold/40 text-gold bg-gold-soft'
+                            : hits > 0
+                            ? 'border-turf/30 text-turf bg-turf-soft'
+                            : 'border-divider text-miss bg-white/[0.02]'
+                        }`}
+                      >
+                        命中 {hits} / 4
+                      </span>
+                    )}
+                  </div>
                 </header>
+                {pred && !isPending && (spfInfo || handicapInfo) && (
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    <BettingChip
+                      label="胜平负"
+                      hit={spfInfo?.hit ?? null}
+                      pnl={spfInfo?.pnl ?? null}
+                      odd={spfInfo?.odd ?? null}
+                      pending={isPending}
+                    />
+                    <BettingChip
+                      label="让球"
+                      hit={handicapInfo?.hit ?? null}
+                      pnl={handicapInfo?.pnl ?? null}
+                      odd={handicapInfo?.odd ?? null}
+                      pending={isPending}
+                    />
+                    <BettingChip
+                      label="比分"
+                      hit={pred.hit_score === '✅'}
+                      pnl={pred.hit_score === null ? null : pred.hit_score === '✅' ? null : -2}
+                      odd={null}
+                      pending={isPending}
+                    />
+                    <BettingChip
+                      label="总进球"
+                      hit={pred.hit_goals === '✅'}
+                      pnl={pred.hit_goals === null ? null : pred.hit_goals === '✅' ? null : -2}
+                      odd={null}
+                      pending={isPending}
+                    />
+                    <BettingChip
+                      label="半全场"
+                      hit={pred.hit_half === '✅'}
+                      pnl={pred.hit_half === null ? null : pred.hit_half === '✅' ? null : -2}
+                      odd={null}
+                      pending={isPending}
+                    />
+                  </div>
+                )}
                 {pred ? (
                   analysis ? (
                     <p className="text-[14px] leading-[1.7] text-ink/85 whitespace-pre-wrap">
