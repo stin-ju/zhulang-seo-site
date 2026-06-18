@@ -16,6 +16,10 @@ const isDev = process.env.COZE_PROJECT_ENV !== 'PROD';
 export async function setupViteMiddleware(app: Application) {
   const vite = await createViteServer({
     ...viteConfig,
+    // 关键：禁止 Vite 再次自动加载 vite.config.ts，否则 plugins 会被合并两份，
+    // 导致 @vitejs/plugin-react-swc 的 transform 与 transformIndexHtml 各跑两次，
+    // 最终 App.tsx 里出现两个 `import * as RefreshRuntime` —— SyntaxError "已声明"。
+    configFile: false,
     server: {
       ...viteConfig.server,
       middlewareMode: true,
