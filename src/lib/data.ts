@@ -237,8 +237,8 @@ export const matches: MatchView[] = data.matches.map(m => {
   };
 });
 
-// Sort by time desc (ISO-like string sort works because of YYYY-MM-DD HH:mm)
-matches.sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
+// 按 JSON 源顺序展示（最新比赛日在前，同一比赛日内按 match id 升序排列：029 → 030 → 031 → 032）
+// 不再做二次 sort——data.json 已经是用户期望的展示顺序
 
 export const confirmedMatches = matches.filter(m => m.status === '已确认');
 
