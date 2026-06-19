@@ -10,6 +10,7 @@ import {
   getAiMatches,
   getAiSummary,
   getChainBetsForAi,
+  matches as allMatches,
   type AiMatchRow,
   type ChainBet,
   type ChainBetSelection,
@@ -446,6 +447,14 @@ function AiChainBetsSection({ ai }: { ai: string }) {
   const empty = totals.totalBets === 0;
   const shortName = (AI_SHORT as Record<string, string>)[ai] ?? ai.replace(/^AI-/, '');
 
+  // 推算最新比赛日（来自 matches.time 前缀），用于检测是否缺少最新日期的串关数据
+  const latestMatchDate = allMatches.reduce((max, m) => {
+    const d = (m.time || '').slice(0, 10);
+    return d && d > max ? d : max;
+  }, '');
+  const hasLatestDay = days.some((d) => d.date === latestMatchDate);
+  const showPendingPlaceholder = !!latestMatchDate && !hasLatestDay;
+
   return (
     <section className="rounded-xl border border-divider bg-deep px-5 py-6 sm:px-7 sm:py-8">
       <header className="mb-5 flex flex-col gap-3 border-b border-divider/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
@@ -476,14 +485,19 @@ function AiChainBetsSection({ ai }: { ai: string }) {
         ) : null}
       </header>
 
-      {empty ? (
+      {empty && !showPendingPlaceholder ? (
         <div className="rounded-lg border border-dashed border-divider bg-night/40 px-5 py-8 text-center text-sm text-text-secondary">
           暂未参与串关追踪
         </div>
       ) : (
         <div className="space-y-3">
-          {days.map((day) => (
-            <AiChainDay key={day.date} day={day} />
+          {showPendingPlaceholder ? <AiChainPendingDay date={latestMatchDate} /> : null}
+          {days.map((day, idx) => (
+            <AiChainDay
+              key={day.date}
+              day={day}
+              defaultOpen={!showPendingPlaceholder && idx === 0}
+            />
           ))}
         </div>
       )}
@@ -491,12 +505,40 @@ function AiChainBetsSection({ ai }: { ai: string }) {
   );
 }
 
-interface AiChainDayProps {
-  day: { date: string; matches: string[]; bets: ChainBet[] };
+function AiChainPendingDay({ date }: { date: string }) {
+  const display = formatChainDate(date);
+  return (
+    <article className="rounded-lg border border-dashed border-gold/40 bg-gold-soft/40 px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-6 min-w-[2.25rem] items-center justify-center rounded-full bg-gold/20 px-2 text-[11px] font-semibold uppercase tracking-wide text-gold">
+            待生成
+          </span>
+          <h3 className="text-sm font-semibold text-text-primary sm:text-base">{display} · 串关预测即将生成</h3>
+        </div>
+        <span className="text-xs text-text-secondary">系统将在赛前发布该日期的 2 串 1 / 3 串 1 / 4 串 1 推荐</span>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-text-secondary sm:text-sm">
+        当前对应日期还未录入串关组合，赛前补充后会自动出现在此处，请稍后再来查看。
+      </p>
+    </article>
+  );
 }
 
-function AiChainDay({ day }: AiChainDayProps) {
-  const [open, setOpen] = useState<boolean>(false);
+function formatChainDate(d: string) {
+  if (!d) return '';
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return d;
+  return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}`;
+}
+
+interface AiChainDayProps {
+  day: { date: string; matches: string[]; bets: ChainBet[] };
+  defaultOpen?: boolean;
+}
+
+function AiChainDay({ day, defaultOpen = false }: AiChainDayProps) {
+  const [open, setOpen] = useState<boolean>(defaultOpen);
   const dayBets = day.bets.length;
   const dayHits = day.bets.filter((b) => b.hit).length;
   const dayPnl = day.bets.reduce((sum, b) => sum + b.pnl, 0);
