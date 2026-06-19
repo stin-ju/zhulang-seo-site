@@ -1,6 +1,8 @@
 // Data type definitions and helpers for AI prediction dataset.
-
-import rawData from '../data/data.json';
+// Data source has been migrated from a static JSON file to Supabase.
+// `data` (and all derived module-level exports) start empty and are
+// populated by `initializeData(raw)`, which is invoked once during the
+// app bootstrap (see src/index.tsx) after `fetchAppData()` resolves.
 
 export type AiName =
   | 'AI-豆包'
@@ -114,21 +116,6 @@ export interface ResourceEntry {
   status: '已确认' | '待比赛';
 }
 
-// Raw shape of an entry inside `data.stats[]` (v9):
-//   { name, rank, total_pnl, hit_rate, matches, let_hit, score_hit, retired?, retired_range?, new? }
-interface RawStatsEntry {
-  name: string;
-  rank: number | null;
-  total_pnl: string | number;
-  hit_rate: string;
-  matches: number;
-  let_hit: string;
-  score_hit: string;
-  retired?: boolean;
-  retired_range?: string;
-  new?: boolean;
-}
-
 export interface BettingDimensionStats {
   invest: number;
   hits: number;
@@ -193,18 +180,10 @@ export interface ChainBetDay {
   ai_bets: ChainAiBets[];
 }
 
-interface RawData {
-  matches: MatchEntry[];
-  resources: ResourceEntry[];
-  stats: RawStatsEntry[];
-  betting_stats?: {
-    summary: BettingSummaryEntry[];
-    daily: BettingDailyEntry[];
-  };
-  chain_bets?: ChainBetDay[];
-}
+export type { RawData } from './dataFetcher';
+import type { RawData } from './dataFetcher';
 
-const data = rawData as RawData;
+let data: RawData = { matches: [], resources: [], stats: [] };
 
 export interface MatchView {
   id: string;
@@ -217,30 +196,14 @@ export interface MatchView {
   odds?: OddsEntry;
 }
 
-const resourceMap = new Map<string, ResourceEntry>();
-for (const r of data.resources) {
-  resourceMap.set(r.id, r);
-}
+let _resourceMap = new Map<string, never>();
 
-export const matches: MatchView[] = data.matches.map(m => {
-  const res = resourceMap.get(m.id);
-  const actualScore = res?.result ?? res?.score ?? null;
-  return {
-    id: m.id,
-    teams: m.teams,
-    time: m.time,
-    handicap: String(m.handicap),
-    status: res?.status ?? '待比赛',
-    actualScore,
-    predictions: m.predictions,
-    odds: m.odds,
-  };
-});
+export let matches: MatchView[] = [];
 
 // 按 JSON 源顺序展示（最新比赛日在前，同一比赛日内按 match id 升序排列：029 → 030 → 031 → 032）
-// 不再做二次 sort——data.json 已经是用户期望的展示顺序
+// 不再做二次 sort——dataFetcher 中已统一以 match_time desc + id asc 排序
 
-export const confirmedMatches = matches.filter(m => m.status === '已确认');
+export let confirmedMatches: MatchView[] = [];
 
 const DIMENSION_KEYS = ['hit_handicap', 'hit_score', 'hit_goals', 'hit_half'] as const;
 export type DimensionKey = (typeof DIMENSION_KEYS)[number];
@@ -440,7 +403,7 @@ export function buildAiSummaries(): AiSummary[] {
   return ordered;
 }
 
-export const aiSummaries: AiSummary[] = buildAiSummaries();
+export let aiSummaries: AiSummary[] = [];
 
 export function getMatchById(id: string): MatchView | undefined {
   return matches.find(m => m.id === id);
@@ -474,8 +437,8 @@ export function formatPercent(rate: number): string {
   return `${(rate * 100).toFixed(1)}%`;
 }
 
-export const totalMatches = matches.length;
-export const totalConfirmed = confirmedMatches.length;
+export let totalMatches = 0;
+export let totalConfirmed = 0;
 
 // ===== Betting stats =====
 
@@ -488,26 +451,15 @@ export const BETTING_DIMENSIONS: { key: BettingDimensionKey; label: string }[] =
   { key: 'chain', label: '串关' },
 ];
 
-const rawBetting = data.betting_stats;
+export let bettingSummaries: BettingSummaryEntry[] = [];
 
-export const bettingSummaries: BettingSummaryEntry[] = (rawBetting?.summary ?? [])
-  .slice()
-  .sort((a, b) => b.total_pnl - a.total_pnl)
-  .map((s, idx) => ({ ...s, rank: idx + 1 }));
+export let bettingDaily: BettingDailyEntry[] = [];
 
-export const bettingDaily: BettingDailyEntry[] = rawBetting?.daily ?? [];
-
-export const bettingDates: string[] = Array.from(
-  new Set(bettingDaily.map(d => d.date))
-);
+export let bettingDates: string[] = [];
 
 // ===== Chain bets (串关推荐) =====
-const rawChainBets = (rawData as RawData).chain_bets ?? [];
-
 /** 串关推荐按日期降序（6/19 → 6/18 → 6/17）展示，最新的日期排在最上面 */
-export const chainBets: ChainBetDay[] = [...rawChainBets].sort((a, b) =>
-  b.date.localeCompare(a.date)
-);
+export let chainBets: ChainBetDay[] = [];
 
 export interface ChainBetTotals {
   totalBets: number;
@@ -622,3 +574,54 @@ export function formatPnl(pnl: number): string {
 export function formatYuan(value: number): string {
   return `${value.toFixed(0)} 元`;
 }
+
+// ===== Runtime initialization =====
+// 由 entry 在 Supabase 数据加载完成后调用一次，把 raw 数据塞入模块级 let 绑定。
+// 因为各页面通过 `import { matches, aiSummaries, ... }` 拿到的是 ESM 实时绑定，
+// 当此函数完成赋值后再触发 React 渲染，下游读到的就是真实数据。
+export function initializeData(raw: RawData) {
+  data = raw;
+
+  // resources comes from dataFetcher (may be empty array if table is empty)
+  const resArr = (raw as unknown as Record<string, unknown[]>)['resources'] ?? [];
+  const resMap = new Map<string, { home_score?: number | null; away_score?: number | null; status?: string }>();
+  for (const r of resArr) {
+    const rr = r as { id?: string; home_score?: number | null; away_score?: number | null; status?: string };
+    if (rr.id) resMap.set(rr.id, rr);
+  }
+
+  matches = raw.matches.map((m): MatchView => {
+    const res = resMap.get(m.id);
+    const actualScore = (res && res.home_score != null && res.away_score != null)
+      ? `${res.home_score}-${res.away_score}`
+      : (m.odds as unknown as Record<string, unknown>)['actual_score'] as string | null ?? null;
+    return {
+      id: m.id,
+      teams: m.teams,
+      time: m.time,
+      handicap: String(m.handicap),
+      status: m.odds?.status ?? res?.status ?? '待比赛',
+      actualScore,
+      predictions: m.predictions as unknown as Prediction[],
+      odds: m.odds as unknown as OddsEntry,
+    };
+  });
+
+  confirmedMatches = matches.filter(m => m.status === '已确认');
+  totalMatches = matches.length;
+  totalConfirmed = confirmedMatches.length;
+
+  aiSummaries = buildAiSummaries();
+
+  const rawBetting = raw.betting_stats;
+  bettingSummaries = (rawBetting?.summary ?? [])
+    .slice()
+    .sort((a, b) => b.total_pnl - a.total_pnl)
+    .map((s, idx) => ({ ...s, rank: idx + 1 }));
+  bettingDaily = rawBetting?.daily ?? [];
+  bettingDates = Array.from(new Set(bettingDaily.map(d => d.date)));
+
+  const rawChainBets = raw.chain_bets ?? [];
+  chainBets = [...rawChainBets].sort((a, b) => b.date.localeCompare(a.date));
+}
+
