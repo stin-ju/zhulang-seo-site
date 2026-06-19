@@ -234,35 +234,19 @@ export default function AiDetailPage() {
         </section>
       )}
 
-      {/* Per-match table */}
+      {/* Per-match accordion list */}
       <section className="rounded-2xl border border-divider bg-deep overflow-hidden">
         <div className="px-5 py-4 border-b border-divider">
           <h2 className="text-base font-semibold text-ink">所有场次预测明细</h2>
           <p className="text-xs text-muted mt-0.5">
-            绿色 = 命中实际赛果 · 灰色 = 未命中。点击行首 + 查看该 AI 对该场比赛的预测分析。
+            默认展开最新 4 场。点击行首 +/− 切换详情；展开后可查看各维度命中情况与该 AI 的本场分析。
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-elevated text-[11px] uppercase tracking-wider text-muted">
-                <th className="text-left px-4 py-3 font-medium">比赛</th>
-                <th className="text-center px-3 py-3 font-medium">胜平负</th>
-                {DIMENSIONS.map(d => (
-                  <th key={d.key} className="text-center px-3 py-3 font-medium">
-                    {d.label}
-                  </th>
-                ))}
-                <th className="text-center px-4 py-3 font-medium">命中</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <AiMatchRowItem key={row.match.id} row={row} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="divide-y divide-divider/60">
+          {rows.map((row, idx) => (
+            <AiMatchAccordionItem key={row.match.id} row={row} defaultOpen={idx < 4} />
+          ))}
+        </ul>
       </section>
 
       <AiChainBetsSection ai={decoded} />
@@ -270,140 +254,180 @@ export default function AiDetailPage() {
   );
 }
 
-function AiMatchRowItem({ row }: { row: AiMatchRow }) {
+function AiMatchAccordionItem({ row, defaultOpen }: { row: AiMatchRow; defaultOpen: boolean }) {
   const { match, prediction } = row;
-  const [open, setOpen] = useState<boolean>(false);
+  const [open, setOpen] = useState<boolean>(defaultOpen);
   const isPending = match.status === '待比赛';
   const hits = prediction?.total_hits ?? null;
   const analysisText = prediction?.analysis?.trim() ?? '';
-  const totalCols = 1 /* match */ + 1 /* spf */ + DIMENSIONS.length + 1 /* hits */;
+  const hasPrediction = prediction !== undefined && prediction !== null;
 
   return (
-    <>
-      <tr
-        className={`border-t border-divider transition-colors ${
-          open ? 'bg-white/[0.03]' : 'hover:bg-white/[0.02]'
-        }`}
+    <li className={`transition-colors ${open ? 'bg-white/[0.03]' : 'hover:bg-white/[0.02]'}`}>
+      <button
+        type="button"
+        onClick={() => hasPrediction && setOpen((v) => !v)}
+        className="flex w-full items-start gap-3 px-4 py-3 text-left sm:px-5"
+        disabled={!hasPrediction}
       >
-        <td className="px-4 py-3 align-middle">
-          <div className="flex items-start gap-2">
-            {prediction ? (
-              <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                title={open ? '折叠分析' : '查看分析'}
-                aria-label={open ? '折叠分析' : '查看分析'}
-                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition-colors ${
-                  open
-                    ? 'border-gold/50 bg-gold/10 text-gold'
-                    : 'border-divider text-muted hover:border-gold/40 hover:text-gold'
-                }`}
-              >
-                {open ? '−' : '+'}
-              </button>
+        {hasPrediction ? (
+          <span
+            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition-colors ${
+              open
+                ? 'border-gold/50 bg-gold/10 text-gold'
+                : 'border-divider text-muted'
+            }`}
+            aria-label={open ? '折叠' : '展开'}
+          >
+            {open ? '−' : '+'}
+          </span>
+        ) : (
+          <span className="mt-0.5 inline-block h-6 w-6 shrink-0" />
+        )}
+
+        {/* Left: match info */}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="font-mono text-[11px] text-muted">{match.id}</span>
+            <span className="text-ink">{match.teams}</span>
+            {match.actualScore ? (
+              <span className="font-mono text-sm font-bold text-gold tabular-nums">
+                {match.actualScore.replace(':', '-')}
+              </span>
             ) : (
-              <span className="mt-0.5 inline-block h-6 w-6 shrink-0" />
+              <span className="text-[11px] text-muted">待比赛</span>
             )}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted">{match.time}</div>
+        </div>
+
+        {/* Middle: prediction summary (always visible) */}
+        {hasPrediction ? (
+          <div className="hidden shrink-0 sm:flex sm:flex-col sm:items-end sm:gap-1 text-xs text-muted">
+            <span>
+              <span className="text-muted">预测：</span>
+              <span className="font-medium text-ink">{prediction.spf}</span>
+              <span className="mx-1 text-text-secondary/60">·</span>
+              <span className="font-mono text-ink tabular-nums">{prediction.score}</span>
+            </span>
+            <span className="text-[10px] text-muted">
+              让球 {prediction.handicap_spf} · 总进球 {prediction.goals} · 半全场 {prediction.half_full}
+            </span>
+          </div>
+        ) : (
+          <span className="hidden text-xs text-muted sm:inline">无数据</span>
+        )}
+
+        {/* Right: hit count badge */}
+        <div className="shrink-0 self-center">
+          {!hasPrediction ? (
+            <span className="text-xs text-muted">—</span>
+          ) : hits === null ? (
+            <span className="rounded-md border border-divider px-2 py-1 text-[11px] text-muted">
+              {isPending ? '待赛后录入' : '—'}
+            </span>
+          ) : (
+            <span
+              className={`inline-flex min-w-[44px] items-center justify-center rounded-md border px-2 py-1 font-mono text-sm font-bold tabular-nums ${
+                hits >= 3
+                  ? 'border-gold/40 bg-gold-soft text-gold'
+                  : hits >= 1
+                  ? 'border-turf/30 bg-turf-soft text-turf'
+                  : 'border-divider text-miss'
+              }`}
+            >
+              {hits}/4
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Mobile-only summary line (since md+ summary is in row) */}
+      {hasPrediction && (
+        <div className="px-4 pb-2 sm:hidden -mt-1">
+          <div className="text-[11px] text-muted">
+            预测：<span className="text-ink">{prediction.spf}</span>
+            <span className="mx-1 text-text-secondary/60">·</span>
+            <span className="font-mono text-ink tabular-nums">{prediction.score}</span>
+            <span className="mx-1 text-text-secondary/60">·</span>
+            让球 {prediction.handicap_spf}
+          </div>
+        </div>
+      )}
+
+      {/* Expanded detail */}
+      {open && hasPrediction && (
+        <div className="border-t border-divider/60 bg-night/40 px-4 py-4 sm:px-5">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {DIMENSIONS.map((d) => (
+              <DimensionPill key={d.key} prediction={prediction} dim={d} isPending={isPending} />
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-lg border border-divider/70 bg-deep/60 px-4 py-3">
+            <div className="mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+              AI 预测分析
+            </div>
+            {analysisText.length > 0 ? (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">{analysisText}</p>
+            ) : (
+              <p className="text-sm text-muted">该 AI 暂未提供本场分析说明，后续补充。</p>
+            )}
+          </div>
+
+          <div className="mt-3 text-right">
             <Link
               to={`/matches/${encodeURIComponent(match.id)}`}
-              className="block group min-w-0 flex-1"
+              className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-gold"
             >
-              <div className="text-ink group-hover:text-gold transition-colors">
-                {match.teams}
-              </div>
-              <div className="text-[11px] text-muted mt-0.5">
-                {match.id} · {match.time}
-                {match.actualScore ? ` · ${match.actualScore}` : ' · 待比赛'}
-              </div>
+              查看完整命中矩阵 →
             </Link>
           </div>
-        </td>
-        {prediction ? (
-          <>
-            <td className="px-3 py-3 align-middle text-center text-ink">{prediction.spf}</td>
-            {DIMENSIONS.map((d) => {
-              const hit = prediction[d.key];
-              const v = dimValue(prediction, d.key);
-              if (isPending || hit === null) {
-                return (
-                  <td
-                    key={d.key}
-                    className="px-3 py-3 align-middle text-center text-muted"
-                  >
-                    {String(v)}
-                  </td>
-                );
-              }
-              if (hit === '✅') {
-                return (
-                  <td key={d.key} className="px-3 py-3 align-middle">
-                    <div className="rounded-md mx-auto inline-flex items-center gap-1.5 px-2 py-1 text-turf bg-turf-soft border border-turf/30">
-                      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-                        <path
-                          d="M2 6.5l2.6 2.5L10 3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <span className="font-mono">{String(v)}</span>
-                    </div>
-                  </td>
-                );
-              }
-              return (
-                <td
-                  key={d.key}
-                  className="px-3 py-3 align-middle text-center text-miss font-mono"
-                >
-                  {String(v)}
-                </td>
-              );
-            })}
-            <td className="px-4 py-3 align-middle text-center">
-              {hits === null ? (
-                <span className="text-muted text-xs">—</span>
-              ) : (
-                <span
-                  className={`font-mono font-bold ${
-                    hits >= 3 ? 'text-gold' : hits >= 1 ? 'text-turf' : 'text-miss'
-                  }`}
-                >
-                  {hits}/4
-                </span>
-              )}
-            </td>
-          </>
-        ) : (
-          <td colSpan={totalCols - 1} className="px-4 py-3 text-center text-muted">
-            无数据
-          </td>
-        )}
-      </tr>
-      {open && prediction && (
-        <tr className="border-t border-divider/40 bg-night/40">
-          <td colSpan={totalCols} className="px-5 py-4">
-            <div className="rounded-lg border border-divider/70 bg-deep/60 px-4 py-3">
-              <div className="mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
-                AI 预测分析
-              </div>
-              {analysisText.length > 0 ? (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">
-                  {analysisText}
-                </p>
-              ) : (
-                <p className="text-sm text-muted">
-                  该 AI 暂未提供本场分析说明，后续补充。
-                </p>
-              )}
-            </div>
-          </td>
-        </tr>
+        </div>
       )}
-    </>
+    </li>
+  );
+}
+
+function DimensionPill({
+  prediction,
+  dim,
+  isPending,
+}: {
+  prediction: Prediction;
+  dim: { key: DimensionKey; label: string };
+  isPending: boolean;
+}) {
+  const hit = prediction[dim.key];
+  const v = dimValue(prediction, dim.key);
+  const muted = isPending || hit === null;
+  const isHit = hit === '✅';
+
+  let cls = 'border-divider bg-deep/60 text-ink';
+  if (muted) cls = 'border-divider/60 bg-deep/40 text-muted';
+  else if (isHit) cls = 'border-turf/30 bg-turf-soft text-turf';
+  else cls = 'border-divider/60 bg-deep/40 text-miss';
+
+  return (
+    <div className={`flex items-center justify-between gap-2 rounded-md border px-3 py-2 ${cls}`}>
+      <span className="text-[11px] uppercase tracking-wider text-muted">{dim.label}</span>
+      <span className="flex items-center gap-1.5 font-mono text-sm tabular-nums">
+        {String(v)}
+        {!muted && isHit && (
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+            <path
+              d="M2 6.5l2.6 2.5L10 3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+      </span>
+    </div>
   );
 }
 
