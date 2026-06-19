@@ -238,7 +238,9 @@ export default function AiDetailPage() {
       <section className="rounded-2xl border border-divider bg-deep overflow-hidden">
         <div className="px-5 py-4 border-b border-divider">
           <h2 className="text-base font-semibold text-ink">所有场次预测明细</h2>
-          <p className="text-xs text-muted mt-0.5">绿色 = 命中实际赛果 · 灰色 = 未命中。</p>
+          <p className="text-xs text-muted mt-0.5">
+            绿色 = 命中实际赛果 · 灰色 = 未命中。点击行首 + 查看该 AI 对该场比赛的预测分析。
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -255,96 +257,9 @@ export default function AiDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ match, prediction }) => {
-                const isPending = match.status === '待比赛';
-                const hits = prediction?.total_hits ?? null;
-                return (
-                  <tr
-                    key={match.id}
-                    className="border-t border-divider hover:bg-white/[0.02] transition-colors"
-                  >
-                    <td className="px-4 py-3 align-middle">
-                      <Link
-                        to={`/matches/${encodeURIComponent(match.id)}`}
-                        className="block group"
-                      >
-                        <div className="text-ink group-hover:text-gold transition-colors">
-                          {match.teams}
-                        </div>
-                        <div className="text-[11px] text-muted mt-0.5">
-                          {match.id} · {match.time}
-                          {match.actualScore ? ` · ${match.actualScore}` : ' · 待比赛'}
-                        </div>
-                      </Link>
-                    </td>
-                    {prediction ? (
-                      <>
-                        <td className="px-3 py-3 align-middle text-center text-ink">
-                          {prediction.spf}
-                        </td>
-                        {DIMENSIONS.map(d => {
-                          const hit = prediction[d.key];
-                          const v = dimValue(prediction, d.key);
-                          if (isPending || hit === null) {
-                            return (
-                              <td
-                                key={d.key}
-                                className="px-3 py-3 align-middle text-center text-muted"
-                              >
-                                {String(v)}
-                              </td>
-                            );
-                          }
-                          if (hit === '✅') {
-                            return (
-                              <td key={d.key} className="px-3 py-3 align-middle">
-                                <div className="rounded-md mx-auto inline-flex items-center gap-1.5 px-2 py-1 text-turf bg-turf-soft border border-turf/30">
-                                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-                                    <path
-                                      d="M2 6.5l2.6 2.5L10 3.5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                  <span className="font-mono">{String(v)}</span>
-                                </div>
-                              </td>
-                            );
-                          }
-                          return (
-                            <td
-                              key={d.key}
-                              className="px-3 py-3 align-middle text-center text-miss font-mono"
-                            >
-                              {String(v)}
-                            </td>
-                          );
-                        })}
-                        <td className="px-4 py-3 align-middle text-center">
-                          {hits === null ? (
-                            <span className="text-muted text-xs">—</span>
-                          ) : (
-                            <span
-                              className={`font-mono font-bold ${
-                                hits >= 3 ? 'text-gold' : hits >= 1 ? 'text-turf' : 'text-miss'
-                              }`}
-                            >
-                              {hits}/4
-                            </span>
-                          )}
-                        </td>
-                      </>
-                    ) : (
-                      <td colSpan={6} className="px-4 py-3 text-center text-muted">
-                        无数据
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
+              {rows.map((row) => (
+                <AiMatchRowItem key={row.match.id} row={row} />
+              ))}
             </tbody>
           </table>
         </div>
@@ -352,6 +267,143 @@ export default function AiDetailPage() {
 
       <AiChainBetsSection ai={decoded} />
     </div>
+  );
+}
+
+function AiMatchRowItem({ row }: { row: AiMatchRow }) {
+  const { match, prediction } = row;
+  const [open, setOpen] = useState<boolean>(false);
+  const isPending = match.status === '待比赛';
+  const hits = prediction?.total_hits ?? null;
+  const analysisText = prediction?.analysis?.trim() ?? '';
+  const totalCols = 1 /* match */ + 1 /* spf */ + DIMENSIONS.length + 1 /* hits */;
+
+  return (
+    <>
+      <tr
+        className={`border-t border-divider transition-colors ${
+          open ? 'bg-white/[0.03]' : 'hover:bg-white/[0.02]'
+        }`}
+      >
+        <td className="px-4 py-3 align-middle">
+          <div className="flex items-start gap-2">
+            {prediction ? (
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                title={open ? '折叠分析' : '查看分析'}
+                aria-label={open ? '折叠分析' : '查看分析'}
+                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition-colors ${
+                  open
+                    ? 'border-gold/50 bg-gold/10 text-gold'
+                    : 'border-divider text-muted hover:border-gold/40 hover:text-gold'
+                }`}
+              >
+                {open ? '−' : '+'}
+              </button>
+            ) : (
+              <span className="mt-0.5 inline-block h-6 w-6 shrink-0" />
+            )}
+            <Link
+              to={`/matches/${encodeURIComponent(match.id)}`}
+              className="block group min-w-0 flex-1"
+            >
+              <div className="text-ink group-hover:text-gold transition-colors">
+                {match.teams}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">
+                {match.id} · {match.time}
+                {match.actualScore ? ` · ${match.actualScore}` : ' · 待比赛'}
+              </div>
+            </Link>
+          </div>
+        </td>
+        {prediction ? (
+          <>
+            <td className="px-3 py-3 align-middle text-center text-ink">{prediction.spf}</td>
+            {DIMENSIONS.map((d) => {
+              const hit = prediction[d.key];
+              const v = dimValue(prediction, d.key);
+              if (isPending || hit === null) {
+                return (
+                  <td
+                    key={d.key}
+                    className="px-3 py-3 align-middle text-center text-muted"
+                  >
+                    {String(v)}
+                  </td>
+                );
+              }
+              if (hit === '✅') {
+                return (
+                  <td key={d.key} className="px-3 py-3 align-middle">
+                    <div className="rounded-md mx-auto inline-flex items-center gap-1.5 px-2 py-1 text-turf bg-turf-soft border border-turf/30">
+                      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+                        <path
+                          d="M2 6.5l2.6 2.5L10 3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span className="font-mono">{String(v)}</span>
+                    </div>
+                  </td>
+                );
+              }
+              return (
+                <td
+                  key={d.key}
+                  className="px-3 py-3 align-middle text-center text-miss font-mono"
+                >
+                  {String(v)}
+                </td>
+              );
+            })}
+            <td className="px-4 py-3 align-middle text-center">
+              {hits === null ? (
+                <span className="text-muted text-xs">—</span>
+              ) : (
+                <span
+                  className={`font-mono font-bold ${
+                    hits >= 3 ? 'text-gold' : hits >= 1 ? 'text-turf' : 'text-miss'
+                  }`}
+                >
+                  {hits}/4
+                </span>
+              )}
+            </td>
+          </>
+        ) : (
+          <td colSpan={totalCols - 1} className="px-4 py-3 text-center text-muted">
+            无数据
+          </td>
+        )}
+      </tr>
+      {open && prediction && (
+        <tr className="border-t border-divider/40 bg-night/40">
+          <td colSpan={totalCols} className="px-5 py-4">
+            <div className="rounded-lg border border-divider/70 bg-deep/60 px-4 py-3">
+              <div className="mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+                AI 预测分析
+              </div>
+              {analysisText.length > 0 ? (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">
+                  {analysisText}
+                </p>
+              ) : (
+                <p className="text-sm text-muted">
+                  该 AI 暂未提供本场分析说明，后续补充。
+                </p>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 

@@ -247,6 +247,8 @@ function MatchAccordion({ match, open, onToggle }: MatchAccordionProps) {
     .map((p) => (typeof p.total_hits === 'number' ? p.total_hits : null))
     .filter((v): v is number => v !== null);
   const hasHits = summaryHits.length > 0;
+  const [analysisOpen, setAnalysisOpen] = useState<boolean>(false);
+  const analysisCount = match.predictions.filter((p) => p.analysis && p.analysis.trim().length > 0).length;
 
   return (
     <article
@@ -323,9 +325,84 @@ function MatchAccordion({ match, open, onToggle }: MatchAccordionProps) {
             </p>
           )}
           <PredictionTable match={match} bestHits={bestHits} />
+
+          {/* AI 分析详情 toggle */}
+          <div className="mt-4 rounded-lg border border-divider/70 bg-night/30">
+            <button
+              type="button"
+              onClick={() => setAnalysisOpen((v) => !v)}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left"
+            >
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-sm font-bold transition-colors ${
+                  analysisOpen
+                    ? 'border-gold/50 bg-gold/10 text-gold'
+                    : 'border-divider text-text-secondary'
+                }`}
+              >
+                {analysisOpen ? '−' : '+'}
+              </span>
+              <span className="text-sm font-medium text-text-primary">AI 分析详情</span>
+              <span className="text-xs text-text-secondary">
+                {analysisCount > 0
+                  ? `${analysisCount} / ${match.predictions.length} 位 AI 已给出分析`
+                  : '暂未补充分析'}
+              </span>
+              <span className="ml-auto text-[11px] text-text-secondary/70">
+                {analysisOpen ? '点击折叠' : '点击展开'}
+              </span>
+            </button>
+            {analysisOpen && (
+              <div className="space-y-2 border-t border-divider/60 px-4 pb-4 pt-3">
+                {AI_LIST.map((ai) => {
+                  const pred = match.predictions.find((p) => p.ai === ai);
+                  if (!pred) return null;
+                  return <AnalysisRow key={ai} ai={ai} pred={pred} />;
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </article>
+  );
+}
+
+function AnalysisRow({ ai, pred }: { ai: string; pred: Prediction }) {
+  const retired = isRetiredAi(ai);
+  const short = (AI_SHORT as Record<string, string>)[ai] ?? ai.replace(/^AI-/, '');
+  const text = pred.analysis?.trim() ?? '';
+  return (
+    <div
+      className={`rounded-md border border-divider/60 bg-deep/40 px-3.5 py-3 ${retired ? 'opacity-70' : ''}`}
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
+        <Link
+          to={`/ai/${encodeURIComponent(ai)}`}
+          className="text-sm font-semibold text-text-primary transition-colors hover:text-gold"
+        >
+          {short}
+        </Link>
+        {retired && <span className="text-[10px] text-text-secondary">已退赛</span>}
+        <span className="text-[11px]">
+          预测：
+          <span className="text-text-primary">{pred.spf}</span>
+          <span className="mx-1 text-text-secondary/60">·</span>
+          <span className="text-text-primary">{pred.handicap_spf}</span>
+          <span className="mx-1 text-text-secondary/60">·</span>
+          <span className="font-mono text-text-primary tabular-nums">{pred.score}</span>
+          <span className="mx-1 text-text-secondary/60">·</span>
+          <span className="font-mono text-text-primary tabular-nums">总进球 {pred.goals}</span>
+          <span className="mx-1 text-text-secondary/60">·</span>
+          <span className="text-text-primary">{pred.half_full}</span>
+        </span>
+      </div>
+      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-text-primary/90">
+        {text.length > 0 ? text : (
+          <span className="text-text-secondary/70">该 AI 暂未提供本场分析说明，后续补充。</span>
+        )}
+      </p>
+    </div>
   );
 }
 
