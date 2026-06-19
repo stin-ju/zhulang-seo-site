@@ -4,13 +4,20 @@ import {
   BETTING_DIMENSIONS,
   bettingDates,
   bettingSummaries,
+  chainBets,
   formatPnl,
   formatYuan,
   getBettingDailyByDate,
   getBettingTotals,
+  getChainBetTotals,
+  isRetiredAi,
   type AiName,
   type BettingDimensionKey,
   type BettingSummaryEntry,
+  type ChainBet,
+  type ChainBetSelection,
+  type ChainAiBets,
+  type ChainBetDay,
 } from '../lib/data';
 
 function PnlText({
@@ -474,6 +481,15 @@ export default function BettingPage() {
         <DailyTimeline />
       </section>
 
+      {/* Chain bets recommendations */}
+      <section>
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-lg font-semibold text-ink">串关推荐明细</h2>
+          <span className="text-xs text-muted">共 {chainBets.length} 个比赛日 · 7 AI × 3 串关组合</span>
+        </div>
+        <ChainBetsSection />
+      </section>
+
       {/* Disclaimer */}
       <section
         role="note"
@@ -488,6 +504,188 @@ export default function BettingPage() {
           本站所有数据仅用于AI预测能力对比研究，每注2元为虚拟模拟计算单位，与任何真实彩票投注无关。足球赛事临场变量极多，赛果存在高度不确定性，请理性观赛、远离非法购彩。
         </p>
       </section>
+    </div>
+  );
+}
+
+// ===== Chain bets section =====
+function ChainBetsSection() {
+  const totals = getChainBetTotals();
+  return (
+    <div className="space-y-5">
+      {/* KPI top */}
+      <div className="rounded-xl bg-deep ring-1 ring-divider px-5 py-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+          <ChainStat label="总推荐" value={totals.totalBets.toString()} sub={`${chainBets.length} 个比赛日`} />
+          <ChainStat
+            label="命中"
+            value={totals.totalHits.toString()}
+            sub={`${totals.totalBets - totals.totalHits} 未中`}
+          />
+          <ChainStat
+            label="命中率"
+            value={`${(totals.hitRate * 100).toFixed(1)}%`}
+            tone={totals.hitRate >= 0.3 ? 'turf' : 'gold'}
+          />
+          <ChainStat
+            label="模拟净收益"
+            value={(totals.totalPnl >= 0 ? '+' : '') + totals.totalPnl.toFixed(2)}
+            sub={`虚拟投入 ${totals.totalInvest.toFixed(0)} 元`}
+            tone={totals.totalPnl >= 0 ? 'turf' : 'miss'}
+          />
+        </div>
+      </div>
+
+      {/* Day cards */}
+      {chainBets.map((day) => (
+        <ChainDayCard key={day.date} day={day} />
+      ))}
+    </div>
+  );
+}
+
+function ChainStat({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: 'turf' | 'gold' | 'miss';
+}) {
+  const toneCls = tone === 'turf' ? 'text-turf' : tone === 'gold' ? 'text-gold' : tone === 'miss' ? 'text-miss' : 'text-ink';
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-widest text-muted mb-1">{label}</div>
+      <div className={`text-2xl font-bold tabular-nums ${toneCls}`}>{value}</div>
+      {sub ? <div className="text-[11px] text-muted mt-1">{sub}</div> : null}
+    </div>
+  );
+}
+
+function ChainDayCard({ day }: { day: ChainBetDay }) {
+  const dayBets = day.ai_bets.flatMap((ab) => ab.bets);
+  const dayHits = dayBets.filter((b) => b.hit).length;
+  const dayPnl = dayBets.reduce((s, b) => s + b.pnl, 0);
+
+  return (
+    <div className="rounded-xl bg-deep ring-1 ring-divider overflow-hidden">
+      {/* Day header */}
+      <header className="flex items-baseline justify-between px-5 py-3 bg-elevated/40 border-b border-divider">
+        <div className="flex items-baseline gap-3">
+          <h3 className="text-base font-semibold text-ink">{day.date}</h3>
+          <span className="text-xs text-muted">{day.matches.length} 场比赛</span>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-muted">命中</span>
+          <span className="font-semibold text-ink tabular-nums">
+            {dayHits}/{dayBets.length}
+          </span>
+          <span className={`font-semibold tabular-nums ${dayPnl >= 0 ? 'text-turf' : 'text-miss'}`}>
+            {dayPnl >= 0 ? '+' : ''}
+            {dayPnl.toFixed(2)}
+          </span>
+        </div>
+      </header>
+
+      {/* Match list strip */}
+      <div className="px-5 py-2 text-[11px] text-muted border-b border-divider/50 flex flex-wrap gap-x-3 gap-y-1">
+        <span className="text-text-secondary">本日比赛：</span>
+        {day.matches.map((mid) => (
+          <span key={mid} className="tabular-nums text-ink/70">
+            {mid}
+          </span>
+        ))}
+      </div>
+
+      {/* AI bet rows */}
+      <div className="divide-y divide-divider">
+        {day.ai_bets.map((ab) => (
+          <AiChainBets key={ab.ai} aiBets={ab} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AiChainBets({ aiBets }: { aiBets: ChainAiBets }) {
+  const aiKey = aiBets.ai;
+  const display = aiKey.startsWith('AI-') ? aiKey.slice(3) : aiKey;
+
+  return (
+    <div className="px-5 py-4">
+      <div className="flex items-baseline justify-between mb-3">
+        <Link to={`/ai/${encodeURIComponent(aiKey)}`} className="text-sm font-semibold text-ink hover:text-gold transition-colors">
+          {display}
+        </Link>
+        <span className="text-[11px] text-muted">
+          {aiBets.bets.filter((b) => b.hit).length}/{aiBets.bets.length} 命中
+        </span>
+      </div>
+      <div className="grid md:grid-cols-3 gap-3">
+        {aiBets.bets.map((bet, i) => (
+          <ChainBetCard key={i} bet={bet} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChainBetCard({ bet }: { bet: ChainBet }) {
+  const hit = bet.hit;
+  const ringCls = hit ? 'ring-turf/60 bg-turf-soft/50' : 'ring-divider bg-night/40';
+  const pnlCls = bet.pnl >= 0 ? 'text-turf' : 'text-miss';
+
+  return (
+    <div className={`rounded-lg ring-1 ${ringCls} p-3 space-y-2`}>
+      {/* Header: type + odds + result */}
+      <div className="flex items-center justify-between">
+        <span className={`text-[11px] font-semibold tracking-wider px-2 py-0.5 rounded ${hit ? 'bg-turf/15 text-turf' : 'bg-divider/40 text-muted'}`}>
+          {bet.type}
+        </span>
+        <span className="text-[11px] tabular-nums text-muted">@ {bet.odds.toFixed(2)}</span>
+      </div>
+
+      {/* Selections */}
+      <div className="space-y-1">
+        {bet.selections.map((sel, i) => (
+          <ChainSelectionLine key={i} sel={sel} />
+        ))}
+      </div>
+
+      {/* Footer: result + pnl */}
+      <div className="flex items-center justify-between pt-1.5 border-t border-divider/50">
+        <span className={`text-[11px] font-semibold ${hit ? 'text-turf' : 'text-miss'}`}>
+          {hit ? '✓ 命中' : '✗ 未中'}
+        </span>
+        <span className={`text-sm font-bold tabular-nums ${pnlCls}`}>
+          {bet.pnl >= 0 ? '+' : ''}
+          {bet.pnl.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ChainSelectionLine({ sel }: { sel: ChainBetSelection }) {
+  const hitMark = sel.hit;
+  const teams = sel.teams;
+  const dim = sel.dimension;
+  const pred = sel.prediction;
+
+  return (
+    <div className="flex items-baseline justify-between gap-2 text-[12px]">
+      <div className="min-w-0 flex-1 truncate text-ink/85">
+        <span className="text-muted text-[10px] mr-1">{sel.match_id}</span>
+        <span className="truncate">{teams}</span>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="text-muted text-[10px]">{dim}</span>
+        <span className="font-semibold text-ink tabular-nums">{pred}</span>
+        <span className={hitMark ? 'text-turf' : 'text-miss'}>{hitMark ? '✓' : '✗'}</span>
+      </div>
     </div>
   );
 }

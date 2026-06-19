@@ -166,6 +166,33 @@ export interface BettingDailyEntry {
   rank_change: string;
 }
 
+export interface ChainBetSelection {
+  match_id: string;
+  teams: string;
+  dimension: string;
+  prediction: string;
+  hit: boolean;
+}
+
+export interface ChainBet {
+  type: string;
+  selections: ChainBetSelection[];
+  odds: number;
+  hit: boolean;
+  pnl: number;
+}
+
+export interface ChainAiBets {
+  ai: string;
+  bets: ChainBet[];
+}
+
+export interface ChainBetDay {
+  date: string;
+  matches: string[];
+  ai_bets: ChainAiBets[];
+}
+
 interface RawData {
   matches: MatchEntry[];
   resources: ResourceEntry[];
@@ -174,6 +201,7 @@ interface RawData {
     summary: BettingSummaryEntry[];
     daily: BettingDailyEntry[];
   };
+  chain_bets?: ChainBetDay[];
 }
 
 const data = rawData as RawData;
@@ -464,6 +492,44 @@ export const bettingDaily: BettingDailyEntry[] = rawBetting?.daily ?? [];
 export const bettingDates: string[] = Array.from(
   new Set(bettingDaily.map(d => d.date))
 );
+
+// ===== Chain bets (串关推荐) =====
+const rawChainBets = (rawData as RawData).chain_bets ?? [];
+
+/** 串关推荐按日期升序（6/17 → 6/18 → 6/19）展示 */
+export const chainBets: ChainBetDay[] = [...rawChainBets].sort((a, b) =>
+  a.date.localeCompare(b.date)
+);
+
+export interface ChainBetTotals {
+  totalBets: number;
+  totalHits: number;
+  totalPnl: number;
+  totalInvest: number; // 每注 2 元
+  hitRate: number; // 0-1
+}
+
+export function getChainBetTotals(): ChainBetTotals {
+  let totalBets = 0;
+  let totalHits = 0;
+  let totalPnl = 0;
+  for (const day of chainBets) {
+    for (const ai of day.ai_bets) {
+      for (const b of ai.bets) {
+        totalBets += 1;
+        if (b.hit) totalHits += 1;
+        totalPnl += b.pnl;
+      }
+    }
+  }
+  return {
+    totalBets,
+    totalHits,
+    totalPnl,
+    totalInvest: totalBets * 2,
+    hitRate: totalBets > 0 ? totalHits / totalBets : 0,
+  };
+}
 
 export interface BettingTotals {
   totalInvest: number;
