@@ -4,9 +4,14 @@ import {
   AI_SHORT,
   DIMENSIONS,
   formatPercent,
+  formatPnl,
+  formatYuan,
   getAiMatches,
   getAiSummary,
+  getChainBetsForAi,
   type AiMatchRow,
+  type ChainBet,
+  type ChainBetSelection,
   type DimensionKey,
   type Prediction,
 } from '../lib/data';
@@ -343,6 +348,8 @@ export default function AiDetailPage() {
           </table>
         </div>
       </section>
+
+      <AiChainBetsSection ai={decoded} />
     </div>
   );
 }
@@ -353,5 +360,135 @@ function Legend({ className, label }: { className: string; label: string }) {
       <span className={`h-2.5 w-2.5 rounded-sm ${className}`} />
       <span>{label}</span>
     </span>
+  );
+}
+
+function AiChainBetsSection({ ai }: { ai: string }) {
+  const data = getChainBetsForAi(ai);
+  const { totals, days } = data;
+  const empty = totals.totalBets === 0;
+  const shortName = (AI_SHORT as Record<string, string>)[ai] ?? ai.replace(/^AI-/, '');
+
+  return (
+    <section className="rounded-xl border border-divider bg-deep px-5 py-6 sm:px-7 sm:py-8">
+      <header className="mb-5 flex flex-col gap-3 border-b border-divider/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-text-primary sm:text-xl">串关推荐明细</h2>
+          <p className="mt-1 text-xs text-text-secondary sm:text-sm">
+            {shortName} 在 2 串 1（稳胆串）/ 3 串 1（均衡串）/ 4 串 1（博高串）三种类型上的逐场推荐与命中情况。
+          </p>
+        </div>
+        {!empty ? (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs sm:text-sm">
+            <span className="text-text-secondary">
+              推荐 <span className="font-semibold text-text-primary">{totals.totalBets}</span> 次
+            </span>
+            <span className="text-text-secondary">
+              命中 <span className="font-semibold text-turf">{totals.totalHits}</span> 次
+            </span>
+            <span className="text-text-secondary">
+              命中率 <span className="font-semibold text-text-primary">{formatPercent(totals.hitRate)}</span>
+            </span>
+            <span className="text-text-secondary">
+              净盈亏{' '}
+              <span className={`font-semibold ${totals.totalPnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
+                {formatPnl(totals.totalPnl)}
+              </span>
+            </span>
+          </div>
+        ) : null}
+      </header>
+
+      {empty ? (
+        <div className="rounded-lg border border-dashed border-divider bg-night/40 px-5 py-8 text-center text-sm text-text-secondary">
+          暂未参与串关追踪
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {days.map((day) => (
+            <article key={day.date} className="rounded-lg border border-divider/70 bg-night/40 px-4 py-4 sm:px-5 sm:py-5">
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-divider/60 pb-2">
+                <span className="text-base font-semibold text-text-primary tabular-nums">{day.date}</span>
+                {day.matches.length > 0 ? (
+                  <span className="text-xs text-text-secondary">参考赛事：{day.matches.join('、')}</span>
+                ) : null}
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {day.bets.map((bet, i) => (
+                  <AiChainBetCard key={`${bet.type}-${i}`} bet={bet} />
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AiChainBetCard({ bet }: { bet: ChainBet }) {
+  const hit = bet.hit;
+  return (
+    <div
+      className={`flex h-full flex-col gap-3 rounded-md border px-3.5 py-3 transition-colors ${
+        hit
+          ? 'border-gold/55 bg-gold-soft/40 shadow-[0_0_0_1px_rgba(245,194,66,0.18)_inset]'
+          : 'border-divider bg-night/30'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-0.5">
+          <div className={`text-sm font-semibold ${hit ? 'text-gold' : 'text-text-secondary'}`}>{bet.type}</div>
+          <div className="text-[11px] tabular-nums text-text-secondary">
+            赔率 {bet.odds.toFixed(2)} × 2 元
+          </div>
+        </div>
+        <span
+          className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
+            hit ? 'bg-turf text-night' : 'bg-divider text-text-secondary'
+          }`}
+        >
+          {hit ? '✓' : '✗'}
+        </span>
+      </div>
+
+      <ul className="space-y-1.5">
+        {bet.selections.map((s, idx) => (
+          <AiChainSelectionRow key={idx} selection={s} />
+        ))}
+      </ul>
+
+      <div className="mt-auto flex items-center justify-between border-t border-divider/60 pt-2 text-xs">
+        <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${hit ? 'bg-turf-soft text-turf' : 'bg-night/60 text-text-secondary'}`}>
+          {hit ? '命中' : '未中'}
+        </span>
+        <span className={`tabular-nums font-semibold ${bet.pnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
+          {formatPnl(bet.pnl)} ({formatYuan(bet.pnl)})
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function AiChainSelectionRow({ selection }: { selection: ChainBetSelection }) {
+  const ok = selection.hit === true;
+  return (
+    <li className="flex items-start gap-2 text-[11px] leading-snug text-text-secondary">
+      <span
+        className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
+          ok ? 'bg-turf-soft text-turf' : 'bg-night/60 text-text-secondary line-through decoration-divider'
+        }`}
+      >
+        {ok ? '✓' : '✗'}
+      </span>
+      <span className="flex-1">
+        <span className={ok ? 'text-text-primary' : ''}>{selection.teams}</span>
+        <span className="mx-1 text-text-secondary/60">·</span>
+        <span className="text-text-secondary">
+          {selection.dimension}
+          <span className="ml-1 text-text-primary">{selection.prediction}</span>
+        </span>
+      </span>
+    </li>
   );
 }

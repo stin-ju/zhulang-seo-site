@@ -531,6 +531,38 @@ export function getChainBetTotals(): ChainBetTotals {
   };
 }
 
+export interface AiChainBetsView {
+  days: { date: string; matches: string[]; bets: ChainBet[] }[];
+  totals: ChainBetTotals;
+}
+
+export function getChainBetsForAi(ai: string): AiChainBetsView {
+  const days: AiChainBetsView['days'] = [];
+  let totalBets = 0;
+  let totalHits = 0;
+  let totalPnl = 0;
+  for (const day of chainBets) {
+    const aiEntry = day.ai_bets.find((a) => a.ai === ai);
+    if (!aiEntry || aiEntry.bets.length === 0) continue;
+    days.push({ date: day.date, matches: day.matches, bets: aiEntry.bets });
+    for (const b of aiEntry.bets) {
+      totalBets += 1;
+      if (b.hit) totalHits += 1;
+      totalPnl += b.pnl;
+    }
+  }
+  return {
+    days,
+    totals: {
+      totalBets,
+      totalHits,
+      totalPnl,
+      totalInvest: totalBets * 2,
+      hitRate: totalBets > 0 ? totalHits / totalBets : 0,
+    },
+  };
+}
+
 export interface BettingTotals {
   totalInvest: number;
   totalReturn: number;
