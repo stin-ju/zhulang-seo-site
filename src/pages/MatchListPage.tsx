@@ -10,6 +10,7 @@ import {
   formatPnl,
   formatYuan,
   formatPercent,
+  isoToCnDate,
   chainBets,
   getChainBetTotals,
   getChainBetsForAi,
@@ -358,7 +359,7 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
     return { ai, pred };
   });
 
-  const matchDate = (match.time || '').slice(0, 10);
+  const matchDate = isoToCnDate(match.time || '');
 
   return (
     <div className="overflow-x-auto">

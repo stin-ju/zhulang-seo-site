@@ -11,6 +11,7 @@ import {
   getAiMatches,
   getAiSummary,
   getChainBetsForAi,
+  isoToCnDate,
   matches as allMatches,
   type AiMatchRow,
   type ChainBet,
@@ -623,14 +624,6 @@ function formatChainDate(d: string) {
   const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return d;
   return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}`;
-}
-
-/** 把 '2026-06-17 03:00' 或 '2026-06-17' 转成 '6月17日'（与 chain_bets.date 字段一致） */
-function isoToCnDate(t: string): string {
-  if (!t) return '';
-  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return '';
-  return `${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日`;
 }
 
 interface AiChainDayProps {

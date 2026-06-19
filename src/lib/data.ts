@@ -433,6 +433,18 @@ export function formatHandicap(h: string | number): string {
   return String(h);
 }
 
+/**
+ * 把 ISO 时间前缀（如 '2026-06-17 03:00' / '2026-06-17'）归一化为
+ * chain_bets[].date 使用的中文格式（如 '6月17日'），用于跨表日期匹配。
+ * 解析失败返回空串。
+ */
+export function isoToCnDate(t: string): string {
+  if (!t) return '';
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return '';
+  return `${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日`;
+}
+
 export function formatPercent(rate: number): string {
   return `${(rate * 100).toFixed(1)}%`;
 }
