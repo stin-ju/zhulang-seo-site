@@ -481,11 +481,24 @@ function DimensionPill({
 }
 
 function AiMatchInlineChainBets({ ai, matchTime }: { ai: string; matchTime: string }) {
-  const date = (matchTime || '').slice(0, 10);
-  if (!date) return null;
+  const cnDate = isoToCnDate(matchTime);
+  if (!cnDate) return null;
   const data = getChainBetsForAi(ai);
-  const day = data.days.find((d) => d.date === date);
-  if (!day || day.bets.length === 0) return null;
+  const day = data.days.find((d) => d.date === cnDate);
+
+  if (!day || day.bets.length === 0) {
+    return (
+      <div className="mt-4 rounded-lg border border-divider/60 bg-deep/40 px-4 py-3">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-text-secondary">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-miss" />
+          当日串关方案 · {cnDate}
+        </div>
+        <div className="mt-1.5 text-[11px] text-text-secondary/80 normal-case tracking-normal">
+          暂无串关数据
+        </div>
+      </div>
+    );
+  }
 
   const hits = day.bets.filter((b) => b.hit).length;
   const pnl = day.bets.reduce((acc, b) => acc + b.pnl, 0);
@@ -495,7 +508,7 @@ function AiMatchInlineChainBets({ ai, matchTime }: { ai: string; matchTime: stri
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
-          当日串关方案 · {formatChainDate(date)}
+          当日串关方案 · {cnDate}
         </div>
         <div className="flex items-center gap-x-4 gap-y-1 text-[11px] text-text-secondary">
           <span>
@@ -526,9 +539,12 @@ function AiChainBetsSection({ ai }: { ai: string }) {
 
   // 推算最新比赛日（来自 matches.time 前缀），用于检测是否缺少最新日期的串关数据
   const latestMatchDate = allMatches.reduce((max, m) => {
-    const d = (m.time || '').slice(0, 10);
-    return d && d > max ? d : max;
-  }, '');
+    const d = isoToCnDate(m.time || '');
+    if (!d) return max;
+    // 比较时用 ISO 前缀更可靠（'2026-06-20' > '2026-06-19'）
+    const iso = (m.time || '').slice(0, 10);
+    return iso > max.iso ? { cn: d, iso } : max;
+  }, { cn: '', iso: '' }).cn;
   const hasLatestDay = days.some((d) => d.date === latestMatchDate);
   const showPendingPlaceholder = !!latestMatchDate && !hasLatestDay;
 
@@ -607,6 +623,14 @@ function formatChainDate(d: string) {
   const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return d;
   return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}`;
+}
+
+/** 把 '2026-06-17 03:00' 或 '2026-06-17' 转成 '6月17日'（与 chain_bets.date 字段一致） */
+function isoToCnDate(t: string): string {
+  if (!t) return '';
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return '';
+  return `${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日`;
 }
 
 interface AiChainDayProps {
