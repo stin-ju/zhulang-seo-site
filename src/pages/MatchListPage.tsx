@@ -371,9 +371,9 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
                 {d.label}
               </th>
             ))}
-            <th className="px-2 py-2 text-center font-medium">命中</th>
             <th className="px-2 py-2 text-center font-medium">串关</th>
-            <th className="pl-2 py-2 text-center font-medium">分析</th>
+            <th className="px-2 py-2 text-center font-medium">分析</th>
+            <th className="pl-2 py-2 text-center font-medium">命中</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-divider/40">
@@ -419,15 +419,6 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
                 {DIM_LABELS.map((d) => (
                   <DimCell key={d.key} pred={pred} dim={d} />
                 ))}
-                <td className="px-2 py-2 text-center font-mono tabular-nums">
-                  {pred.total_hits === null ? (
-                    <span className="text-text-secondary/50">—</span>
-                  ) : (
-                    <span className={isBest ? 'text-gold font-bold' : 'text-text-primary'}>
-                      {pred.total_hits}
-                    </span>
-                  )}
-                </td>
                 <td className="px-2 py-2 text-center">
                   {retired || !hasChainForDay ? (
                     <span className="text-text-secondary/50">—</span>
@@ -436,11 +427,11 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
                       to={`/ai/${aiSlug}#chain`}
                       className="inline-flex items-center rounded-md border border-gold/30 bg-gold-soft px-2 py-0.5 text-[11px] font-medium text-gold transition-colors hover:border-gold/60 hover:bg-gold/15"
                     >
-                      详情
+                      串关
                     </Link>
                   )}
                 </td>
-                <td className="pl-2 py-2 text-center">
+                <td className="px-2 py-2 text-center">
                   {retired ? (
                     <span className="text-text-secondary/50">—</span>
                   ) : (
@@ -450,6 +441,15 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
                     >
                       详情
                     </Link>
+                  )}
+                </td>
+                <td className="pl-2 py-2 text-center font-mono tabular-nums">
+                  {pred.total_hits === null ? (
+                    <span className="text-text-secondary/50">—</span>
+                  ) : (
+                    <span className={isBest ? 'text-gold font-bold' : 'text-text-primary'}>
+                      {pred.total_hits}
+                    </span>
                   )}
                 </td>
               </tr>
