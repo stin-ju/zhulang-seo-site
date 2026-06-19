@@ -641,14 +641,15 @@ function AiChainBets({ aiBets }: { aiBets: ChainAiBets }) {
 
 function ChainBetCard({ bet }: { bet: ChainBet }) {
   const hit = bet.hit;
-  const ringCls = hit ? 'ring-turf/60 bg-turf-soft/50' : 'ring-divider bg-night/40';
-  const pnlCls = bet.pnl >= 0 ? 'text-turf' : 'text-miss';
+  const pending = hit === null;
+  const ringCls = hit === true ? 'ring-turf/60 bg-turf-soft/50' : 'ring-divider bg-night/40';
+  const pnlCls = pending ? 'text-muted' : bet.pnl >= 0 ? 'text-turf' : 'text-miss';
 
   return (
     <div className={`rounded-lg ring-1 ${ringCls} p-3 space-y-2`}>
       {/* Header: type + odds + result */}
       <div className="flex items-center justify-between">
-        <span className={`text-[11px] font-semibold tracking-wider px-2 py-0.5 rounded ${hit ? 'bg-turf/15 text-turf' : 'bg-divider/40 text-muted'}`}>
+        <span className={`text-[11px] font-semibold tracking-wider px-2 py-0.5 rounded ${hit === true ? 'bg-turf/15 text-turf' : 'bg-divider/40 text-muted'}`}>
           {bet.type}
         </span>
         <span className="text-[11px] tabular-nums text-muted">@ {bet.odds.toFixed(2)}</span>
@@ -663,12 +664,11 @@ function ChainBetCard({ bet }: { bet: ChainBet }) {
 
       {/* Footer: result + pnl */}
       <div className="flex items-center justify-between pt-1.5 border-t border-divider/50">
-        <span className={`text-[11px] font-semibold ${hit ? 'text-turf' : 'text-miss'}`}>
-          {hit ? '✓ 命中' : '✗ 未中'}
+        <span className={`text-[11px] font-semibold ${hit === true ? 'text-turf' : 'text-miss'}`}>
+          {hit === true ? '✓ 命中' : pending ? '— 待定' : '♡ 未中'}
         </span>
         <span className={`text-sm font-bold tabular-nums ${pnlCls}`}>
-          {bet.pnl >= 0 ? '+' : ''}
-          {bet.pnl.toFixed(2)}
+          {pending ? '—' : `${bet.pnl >= 0 ? '+' : ''}${bet.pnl.toFixed(2)}`}
         </span>
       </div>
     </div>
@@ -677,6 +677,7 @@ function ChainBetCard({ bet }: { bet: ChainBet }) {
 
 function ChainSelectionLine({ sel }: { sel: ChainBetSelection }) {
   const hitMark = sel.hit;
+  const pending = hitMark === null;
   const teams = sel.teams;
   const dim = sel.dimension;
   const pred = sel.prediction;
@@ -690,7 +691,9 @@ function ChainSelectionLine({ sel }: { sel: ChainBetSelection }) {
       <div className="flex items-center gap-1.5 shrink-0">
         <span className="text-muted text-[10px]">{dim}</span>
         <span className="font-semibold text-ink tabular-nums">{pred}</span>
-        <span className={hitMark ? 'text-turf' : 'text-miss'}>{hitMark ? '✓' : '✗'}</span>
+        <span className={hitMark === true ? 'text-turf' : pending ? 'text-muted' : 'text-miss'}>
+          {hitMark === true ? '✓' : pending ? '—' : '♡'}
+        </span>
       </div>
     </div>
   );

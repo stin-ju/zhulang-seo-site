@@ -482,6 +482,7 @@ function DimensionPill({
 }
 
 function AiMatchInlineChainBets({ ai, matchTime }: { ai: string; matchTime: string }) {
+  const [open, setOpen] = useState(false);
   const cnDate = isoToCnDate(matchTime);
   if (!cnDate) return null;
   const data = getChainBetsForAi(ai);
@@ -501,33 +502,48 @@ function AiMatchInlineChainBets({ ai, matchTime }: { ai: string; matchTime: stri
     );
   }
 
-  const hits = day.bets.filter((b) => b.hit).length;
-  const pnl = day.bets.reduce((acc, b) => acc + b.pnl, 0);
+  const settled = day.bets.filter((b) => b.hit !== null);
+  const hits = day.bets.filter((b) => b.hit === true).length;
+  const pnl = settled.reduce((acc, b) => acc + b.pnl, 0);
+  const allPending = settled.length === 0;
 
   return (
     <div className="mt-4 rounded-lg border border-gold/20 bg-gold-soft/20 px-4 py-3">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
+      >
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
           当日串关方案 · {cnDate}
         </div>
         <div className="flex items-center gap-x-4 gap-y-1 text-[11px] text-text-secondary">
-          <span>
-            命中 <span className="font-semibold text-turf">{hits}</span> / {day.bets.length}
-          </span>
-          <span>
-            盈亏{' '}
-            <span className={`font-semibold ${pnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
-              {formatPnl(pnl)}
-            </span>
-          </span>
+          {allPending ? (
+            <span className="rounded bg-night/60 px-2 py-0.5 text-text-secondary">待定 · {day.bets.length} 注</span>
+          ) : (
+            <>
+              <span>
+                命中 <span className="font-semibold text-turf">{hits}</span> / {settled.length}
+              </span>
+              <span>
+                盈亏{' '}
+                <span className={`font-semibold ${pnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
+                  {formatPnl(pnl)}
+                </span>
+              </span>
+            </>
+          )}
+          <span className="text-gold/80">{open ? '收起 ▴' : '展开 ▾'}</span>
         </div>
-      </div>
-      <div className="space-y-2">
-        {day.bets.map((bet, i) => (
-          <AiChainBetCard key={`${bet.type}-${i}`} bet={bet} />
-        ))}
-      </div>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {day.bets.map((bet, i) => (
+            <AiChainBetCard key={`${bet.type}-${i}`} bet={bet} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -694,27 +710,33 @@ function AiChainDay({ day, defaultOpen = false }: AiChainDayProps) {
 
 function AiChainBetCard({ bet }: { bet: ChainBet }) {
   const hit = bet.hit;
+  const pending = hit === null;
   return (
     <div
       className={`flex h-full flex-col gap-3 rounded-md border px-3.5 py-3 transition-colors ${
-        hit
+        hit === true
           ? 'border-gold/55 bg-gold-soft/40 shadow-[0_0_0_1px_rgba(245,194,66,0.18)_inset]'
           : 'border-divider bg-night/30'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5">
-          <div className={`text-sm font-semibold ${hit ? 'text-gold' : 'text-text-secondary'}`}>{bet.type}</div>
+          <div className={`text-sm font-semibold ${hit === true ? 'text-gold' : 'text-text-secondary'}`}>{bet.type}</div>
           <div className="text-[11px] tabular-nums text-text-secondary">
             赔率 {bet.odds.toFixed(2)} × 2 元
           </div>
         </div>
         <span
           className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
-            hit ? 'bg-turf text-night' : 'bg-divider text-text-secondary'
+            hit === true
+              ? 'bg-turf text-night'
+              : pending
+                ? 'bg-night/60 text-text-secondary border border-divider'
+                : 'bg-divider text-text-secondary'
           }`}
+          aria-label={hit === true ? '命中' : pending ? '待定' : '未命中'}
         >
-          {hit ? '✓' : '✗'}
+          {hit === true ? '✓' : pending ? '—' : '♡'}
         </span>
       </div>
 
@@ -725,11 +747,23 @@ function AiChainBetCard({ bet }: { bet: ChainBet }) {
       </ul>
 
       <div className="mt-auto flex items-center justify-between border-t border-divider/60 pt-2 text-xs">
-        <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${hit ? 'bg-turf-soft text-turf' : 'bg-night/60 text-text-secondary'}`}>
-          {hit ? '命中' : '未中'}
+        <span
+          className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+            hit === true
+              ? 'bg-turf-soft text-turf'
+              : pending
+                ? 'bg-night/60 text-text-secondary'
+                : 'bg-night/60 text-text-secondary'
+          }`}
+        >
+          {hit === true ? '命中' : pending ? '待定' : '未中'}
         </span>
-        <span className={`tabular-nums font-semibold ${bet.pnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
-          {formatPnl(bet.pnl)} ({formatYuan(bet.pnl)})
+        <span
+          className={`tabular-nums font-semibold ${
+            pending ? 'text-text-secondary' : bet.pnl >= 0 ? 'text-turf' : 'text-red-400'
+          }`}
+        >
+          {pending ? '—' : `${formatPnl(bet.pnl)} (${formatYuan(bet.pnl)})`}
         </span>
       </div>
     </div>
@@ -737,18 +771,27 @@ function AiChainBetCard({ bet }: { bet: ChainBet }) {
 }
 
 function AiChainSelectionRow({ selection }: { selection: ChainBetSelection }) {
-  const ok = selection.hit === true;
+  const hit = selection.hit;
+  const pending = hit === null;
+  const ok = hit === true;
   return (
     <li className="flex items-start gap-2 text-[11px] leading-snug text-text-secondary">
       <span
         className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
-          ok ? 'bg-turf-soft text-turf' : 'bg-night/60 text-text-secondary line-through decoration-divider'
+          ok
+            ? 'bg-turf-soft text-turf'
+            : pending
+              ? 'bg-night/60 text-text-secondary'
+              : 'bg-night/60 text-text-secondary'
         }`}
+        aria-label={ok ? '命中' : pending ? '待定' : '未命中'}
       >
-        {ok ? '✓' : '✗'}
+        {ok ? '✓' : pending ? '—' : '♡'}
       </span>
       <span className="flex-1">
-        <span className={ok ? 'text-text-primary' : ''}>{selection.teams}</span>
+        <span className={ok ? 'text-text-primary' : pending ? 'text-text-primary/80' : ''}>
+          {selection.teams}
+        </span>
         <span className="mx-1 text-text-secondary/60">·</span>
         <span className="text-text-secondary">
           {selection.dimension}

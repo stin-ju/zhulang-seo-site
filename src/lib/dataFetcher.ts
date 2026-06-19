@@ -103,14 +103,14 @@ export interface RawChainSelection {
   teams: string;
   dimension: string;
   prediction: string;
-  hit: boolean;
+  hit: boolean | null;
 }
 
 export interface RawChainBet {
   type: string;
   selections: RawChainSelection[];
   odds: number;
-  hit: boolean;
+  hit: boolean | null;
   pnl: number;
 }
 
@@ -170,6 +170,22 @@ function toBool(v: unknown): boolean {
   }
   if (typeof v === 'number') return v > 0;
   return false;
+}
+
+/**
+ * 把数据库 boolean 字段安全转换：null / undefined 保留为 null（待定状态）
+ * 用于尚未开赛比赛的 hit 字段。
+ */
+function toBoolOrNull(v: unknown): boolean | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') {
+    const t = v.trim().toLowerCase();
+    if (t === '' || t === 'null') return null;
+    return t === 'true' || t === '1' || t === 'yes' || t === '✅' || t === '✓';
+  }
+  if (typeof v === 'number') return v > 0;
+  return null;
 }
 
 function num(v: unknown, fallback = 0): number {
@@ -443,7 +459,7 @@ function buildChainBets(rows: DbChainBetRow[]): {
         teams: String(obj.teams ?? ''),
         dimension: String(obj.dimension ?? ''),
         prediction: String(obj.prediction ?? ''),
-        hit: toBool(obj.hit),
+        hit: toBoolOrNull(obj.hit),
       };
     });
 
@@ -451,7 +467,7 @@ function buildChainBets(rows: DbChainBetRow[]): {
       type: row.bet_type,
       selections,
       odds: num(row.odds),
-      hit: toBool(row.hit),
+      hit: toBoolOrNull(row.hit),
       pnl: num(row.pnl),
     };
 

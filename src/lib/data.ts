@@ -158,14 +158,14 @@ export interface ChainBetSelection {
   teams: string;
   dimension: string;
   prediction: string;
-  hit: boolean;
+  hit: boolean | null;
 }
 
 export interface ChainBet {
   type: string;
   selections: ChainBetSelection[];
   odds: number;
-  hit: boolean;
+  hit: boolean | null;
   pnl: number;
 }
 
