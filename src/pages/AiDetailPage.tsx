@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
   AI_LIST,
   AI_SHORT,
@@ -55,6 +56,16 @@ export default function AiDetailPage() {
   const decoded = name ? decodeURIComponent(name) : '';
   const summary = getAiSummary(decoded);
   const location = useLocation();
+
+  const aiShort = summary ? AI_SHORT[summary.ai] : '';
+  useDocumentMeta({
+    title: summary
+      ? `${aiShort}AI世界杯预测分析 | 命中率与模拟盈亏 - 大竞赛`
+      : 'AI 预测分析 | 命中率与模拟盈亏 - 大竞赛',
+    description: summary
+      ? `${aiShort} 对 2026 世界杯全部赛事的胜平负、让球、比分、总进球、半全场、串关 6 维度预测分析、命中率与模拟盈亏明细。`
+      : '查看各 AI 在 2026 世界杯赛事中的预测分析、命中率与模拟盈亏明细。',
+  });
 
   useEffect(() => {
     if (!summary) return;

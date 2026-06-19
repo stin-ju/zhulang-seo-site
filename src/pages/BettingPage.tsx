@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
   AI_SHORT,
   BETTING_DIMENSIONS,
@@ -373,6 +374,11 @@ function DailyTimeline() {
 }
 
 export default function BettingPage() {
+  useDocumentMeta({
+    title: 'AI预测模拟盈亏对比 | 串关与单注数据 - 大竞赛',
+    description:
+      '8 个 AI 在 2026 世界杯模拟盈亏排行榜，含让球、比分、总进球、半全场、串关 6 维度模拟净收益走势与命中率对比。',
+  });
   const totals = getBettingTotals();
   const champion = bettingSummaries[0];
   const others = bettingSummaries.slice(1);

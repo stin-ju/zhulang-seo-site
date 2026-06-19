@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
   AI_ACTIVE,
   AI_RETIRED,
@@ -179,6 +180,11 @@ function RetiredCard({ s }: { s: AiSummary }) {
 }
 
 export default function LeaderboardPage() {
+  useDocumentMeta({
+    title: '2026世界杯AI预测大竞赛 | 8个AI足球数据分析对比实验',
+    description:
+      '8个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析，AI预测分析逻辑与命中率排行，足球数据可视化实验。',
+  });
   const activeList = aiSummaries.filter(s => !s.retired);
   const retiredList = aiSummaries.filter(s => s.retired);
   const champion = activeList[0];

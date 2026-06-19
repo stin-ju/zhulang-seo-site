@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
   AI_ACTIVE,
   AI_RETIRED,
@@ -78,6 +79,11 @@ function AiCard({ s }: { s: AiSummary }) {
 }
 
 export default function AiListPage() {
+  useDocumentMeta({
+    title: 'AI 选手名册 | 8个AI世界杯预测对比 - 大竞赛',
+    description:
+      '2026 世界杯 AI 预测大竞赛 10 位选手（8 个活跃 + 2 个退赛）总览：综合命中率、模拟盈亏、参赛场次。',
+  });
   const active = aiSummaries.filter(s => !s.retired);
   const retired = aiSummaries.filter(s => s.retired);
   return (

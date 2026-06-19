@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
   matches,
   AI_LIST,
@@ -43,6 +44,11 @@ function teamPair(teams: string): { home: string; away: string } {
 }
 
 export default function MatchListPage() {
+  useDocumentMeta({
+    title: '世界杯赛事AI预测对比 | 8个AI胜平负让球分析 - 大竞赛',
+    description:
+      '逐场对比 8 个 AI 对 2026 世界杯赛事的胜平负、让球、比分、总进球、半全场预测与命中表现，含每日串关推荐与分析逻辑跳转。',
+  });
   // ---- top tab ----
   const [tab, setTab] = useState<'matches' | 'chains'>('matches');
 

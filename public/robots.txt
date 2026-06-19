@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://6hptg9csmc.coze.site/sitemap.xml

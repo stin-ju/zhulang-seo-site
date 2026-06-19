@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
   AI_LIST,
   AI_SHORT,
@@ -280,6 +281,15 @@ function BettingChip({
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const match = id ? getMatchById(decodeURIComponent(id)) : undefined;
+
+  useDocumentMeta({
+    title: match
+      ? `${match.id} ${match.teams} AI预测对比 | 8个AI命中矩阵 - 大竞赛`
+      : '比赛预测对比 | 8个AI命中矩阵 - 大竞赛',
+    description: match
+      ? `${match.id} ${match.teams} 比赛 8 个 AI 的胜平负、让球、比分、总进球、半全场预测明细与命中矩阵。`
+      : '8 个 AI 对世界杯赛事的胜平负、让球、比分、总进球、半全场预测命中矩阵。',
+  });
 
   if (!match) {
     return (
