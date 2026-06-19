@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AI_ACTIVE,
@@ -228,7 +229,72 @@ export default function LeaderboardPage() {
         <StatBlock label="收录比赛" value={`${totalMatches}`} unit="场" />
         <StatBlock label="已确认比赛" value={`${totalConfirmed}`} unit="场" />
       </section>
+
+      <VisitCounter />
     </div>
+  );
+}
+
+const VISIT_COUNT_KEY = 'coze:visitCount';
+const VISIT_DATE_KEY = 'coze:lastVisitDate';
+
+function todayString(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function VisitCounter() {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(VISIT_COUNT_KEY);
+      const lastDate = window.localStorage.getItem(VISIT_DATE_KEY);
+      const today = todayString();
+      const parsed = raw === null ? 0 : Number.parseInt(raw, 10);
+      const current = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+
+      let next = current;
+      if (lastDate !== today) {
+        next = current + 1;
+        window.localStorage.setItem(VISIT_COUNT_KEY, String(next));
+        window.localStorage.setItem(VISIT_DATE_KEY, today);
+      } else if (current === 0) {
+        // 极端情况：本地有日期但计数被清空，至少补 1
+        next = 1;
+        window.localStorage.setItem(VISIT_COUNT_KEY, String(next));
+      }
+      setCount(next);
+    } catch {
+      // 隐私模式 / 禁用 localStorage：静默降级，不展示数字
+      setCount(null);
+    }
+  }, []);
+
+  return (
+    <section className="rounded-xl border border-divider bg-card-gradient px-5 py-5 sm:px-6 sm:py-6">
+      <div className="flex flex-col items-center justify-center gap-2 text-center">
+        <span className="text-[11px] tracking-[0.3em] uppercase text-muted">Site Visits</span>
+        <p className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-sm text-muted">
+          <span>本站已被访问</span>
+          {count === null ? (
+            <span className="font-mono text-2xl font-bold text-muted">—</span>
+          ) : (
+            <span className="font-mono text-3xl font-bold tabular-nums text-gold sm:text-4xl">
+              {count.toLocaleString('en-US')}
+            </span>
+          )}
+          <span>次</span>
+        </p>
+        <span className="text-[11px] text-muted/80">
+          数据保存在你本地浏览器中，同一天内多次访问不重复计数。
+        </span>
+      </div>
+    </section>
   );
 }
 
