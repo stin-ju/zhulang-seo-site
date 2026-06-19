@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   AI_LIST,
   AI_SHORT,
@@ -54,6 +54,22 @@ export default function AiDetailPage() {
   const { name } = useParams<{ name: string }>();
   const decoded = name ? decodeURIComponent(name) : '';
   const summary = getAiSummary(decoded);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!summary) return;
+    const hash = location.hash;
+    if (!hash || hash.length < 2) return;
+    // 等本页所有 section 渲染完
+    const id = hash.slice(1);
+    const tries = [0, 60, 200, 500];
+    tries.forEach((delay) => {
+      window.setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, delay);
+    });
+  }, [location.hash, summary]);
 
   if (!summary || !AI_LIST.includes(summary.ai)) {
     return (
@@ -194,7 +210,15 @@ export default function AiDetailPage() {
 
 function AiMatchAccordionSection({ rows, ai }: { rows: AiMatchRow[]; ai: string }) {
   const VISIBLE_BY_DEFAULT = 4;
-  const [showAll, setShowAll] = useState<boolean>(false);
+  const location = useLocation();
+  // 当 hash 命中的目标场次落在 VISIBLE_BY_DEFAULT 之外时，自动展开全部
+  const initialShowAll = (() => {
+    if (!location.hash.startsWith('#match-')) return false;
+    const targetId = location.hash.slice(1); // match-周五029
+    const idx = rows.findIndex((r) => `match-${encodeURIComponent(r.match.id)}` === targetId);
+    return idx >= VISIBLE_BY_DEFAULT;
+  })();
+  const [showAll, setShowAll] = useState<boolean>(initialShowAll);
   const visibleRows = showAll ? rows : rows.slice(0, VISIBLE_BY_DEFAULT);
   const hiddenCount = Math.max(0, rows.length - VISIBLE_BY_DEFAULT);
 
@@ -235,14 +259,28 @@ function AiMatchAccordionSection({ rows, ai }: { rows: AiMatchRow[]; ai: string 
 
 function AiMatchAccordionItem({ row, defaultOpen, ai }: { row: AiMatchRow; defaultOpen: boolean; ai: string }) {
   const { match, prediction } = row;
-  const [open, setOpen] = useState<boolean>(defaultOpen);
+  const location = useLocation();
+  const targetHash = `#match-${encodeURIComponent(match.id)}`;
+  const [open, setOpen] = useState<boolean>(defaultOpen || location.hash === targetHash);
   const isPending = match.status === '待比赛';
   const hits = prediction?.total_hits ?? null;
   const analysisText = prediction?.analysis?.trim() ?? '';
   const hasPrediction = prediction !== undefined && prediction !== null;
 
+  useEffect(() => {
+    if (location.hash === targetHash) {
+      setOpen(true);
+      const id = `match-${encodeURIComponent(match.id)}`;
+      const el = document.getElementById(id);
+      if (el) {
+        // 等折叠区渲染完成
+        requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      }
+    }
+  }, [location.hash, targetHash, match.id]);
+
   return (
-    <li className={`transition-colors ${open ? 'bg-white/[0.03]' : 'hover:bg-white/[0.02]'}`}>
+    <li id={`match-${encodeURIComponent(match.id)}`} className={`scroll-mt-24 transition-colors ${open ? 'bg-white/[0.03]' : 'hover:bg-white/[0.02]'}`}>
       <button
         type="button"
         onClick={() => hasPrediction && setOpen((v) => !v)}
@@ -465,7 +503,7 @@ function AiChainBetsSection({ ai }: { ai: string }) {
   const showPendingPlaceholder = !!latestMatchDate && !hasLatestDay;
 
   return (
-    <section className="rounded-xl border border-divider bg-deep px-5 py-6 sm:px-7 sm:py-8">
+    <section id="chain" className="scroll-mt-24 rounded-xl border border-divider bg-deep px-5 py-6 sm:px-7 sm:py-8">
       <header className="mb-5 flex flex-col gap-3 border-b border-divider/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-text-primary sm:text-xl">串关推荐明细</h2>
