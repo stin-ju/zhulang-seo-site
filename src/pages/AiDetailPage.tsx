@@ -273,6 +273,7 @@ function AiMatchAccordionItem({ row, defaultOpen, ai }: { row: AiMatchRow; defau
   const location = useLocation();
   const targetHash = `#match-${encodeURIComponent(match.id)}`;
   const [open, setOpen] = useState<boolean>(defaultOpen || location.hash === targetHash);
+  const [analysisExpanded, setAnalysisExpanded] = useState<boolean>(false);
   const isPending = match.status === '待比赛';
   const hits = prediction?.total_hits ?? null;
   const analysisText = prediction?.analysis?.trim() ?? '';
@@ -392,13 +393,33 @@ function AiMatchAccordionItem({ row, defaultOpen, ai }: { row: AiMatchRow; defau
             ))}
           </div>
 
+          <AiMatchInlineChainBets ai={ai} matchTime={match.time} />
+
           <div className="mt-4 rounded-lg border border-divider/70 bg-deep/60 px-4 py-3">
-            <div className="mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
-              AI 预测分析
+            <div className="mb-1.5 flex items-center justify-between gap-2 text-xs uppercase tracking-wider text-muted">
+              <span className="flex items-center gap-2">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+                AI 预测分析
+              </span>
+              {analysisText.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAnalysisExpanded((v) => !v)}
+                  className="rounded-md border border-divider/70 px-2 py-0.5 text-[11px] font-medium normal-case tracking-normal text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                >
+                  {analysisExpanded ? '收起' : '展开分析'}
+                </button>
+              )}
             </div>
             {analysisText.length > 0 ? (
-              <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">{analysisText}</p>
+              <p
+                className={`text-sm leading-relaxed text-ink/90 ${
+                  analysisExpanded ? 'whitespace-pre-line' : 'line-clamp-1'
+                }`}
+                title={!analysisExpanded ? analysisText : undefined}
+              >
+                {analysisText}
+              </p>
             ) : (
               <p className="text-sm text-muted">该 AI 暂未提供本场分析说明，后续补充。</p>
             )}
@@ -412,8 +433,6 @@ function AiMatchAccordionItem({ row, defaultOpen, ai }: { row: AiMatchRow; defau
               查看完整命中矩阵 →
             </Link>
           </div>
-
-          <AiMatchInlineChainBets ai={ai} matchTime={match.time} />
         </div>
       )}
     </li>
