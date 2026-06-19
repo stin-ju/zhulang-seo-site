@@ -381,10 +381,12 @@ export default function MatchDetailPage() {
             <p className="text-xs text-muted mt-0.5">
               {isPending
                 ? '本场尚未开赛，暂无命中标记。'
+                : bestHits === 0 && !rows.some(r => r.pred?.total_hits != null)
+                ? '比赛已确认，逐项命中数据待录入，预测内容以灰色展示。'
                 : '绿色 = 命中实际赛果，灰色 = 未命中。'}
             </p>
           </div>
-          {!isPending && (
+          {!isPending && rows.some(r => r.pred?.total_hits != null) && (
             <div className="text-xs text-muted">
               本场最佳：<span className="font-mono text-gold">{bestHits} / 4</span>
             </div>

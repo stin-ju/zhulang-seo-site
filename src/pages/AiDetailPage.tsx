@@ -182,7 +182,19 @@ export default function AiDetailPage() {
       {/* Per-dimension stats */}
       <section className="rounded-2xl border border-divider bg-deep p-5 sm:p-6">
         <h2 className="text-base font-semibold text-ink">各维度命中率</h2>
-        <p className="text-xs text-muted mt-1">基于 {summary.totalConfirmed} 场已确认比赛统计。</p>
+        <p className="text-xs text-muted mt-1">
+          基于 {summary.totalConfirmed} 场已确认比赛
+          {(() => {
+            const dimTotal = Math.max(
+              ...Object.values(summary.perDim).map(d => d.total)
+            );
+            const gap = summary.totalConfirmed - dimTotal;
+            return gap > 0
+              ? `（其中 ${gap} 场逐项命中数据待录入，仅汇总赔率/胜率不受影响）`
+              : '统计';
+          })()}
+          。
+        </p>
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
           {DIMENSIONS.map(d => {
             const stat = summary.perDim[d.key];

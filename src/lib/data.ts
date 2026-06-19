@@ -107,8 +107,26 @@ export interface ResourceEntry {
   teams: string;
   time: string;
   handicap: string | number;
-  score: string | null;
+  // v9 of the dataset stores the actual score in `result`; older shapes used
+  // `score`. Both can be null/undefined for not-yet-played matches.
+  score?: string | null;
+  result?: string | null;
   status: '已确认' | '待比赛';
+}
+
+// Raw shape of an entry inside `data.stats[]` (v9):
+//   { name, rank, total_pnl, hit_rate, matches, let_hit, score_hit, retired?, retired_range?, new? }
+interface RawStatsEntry {
+  name: string;
+  rank: number | null;
+  total_pnl: string;
+  hit_rate: string;
+  matches: number;
+  let_hit: string;
+  score_hit: string;
+  retired?: boolean;
+  retired_range?: string;
+  new?: boolean;
 }
 
 export interface BettingDimensionStats {
@@ -144,7 +162,7 @@ export interface BettingDailyEntry {
 interface RawData {
   matches: MatchEntry[];
   resources: ResourceEntry[];
-  stats: { ai: string; rank: number; total_hits: string; total_matches: number }[];
+  stats: RawStatsEntry[];
   betting_stats?: {
     summary: BettingSummaryEntry[];
     daily: BettingDailyEntry[];
@@ -171,13 +189,14 @@ for (const r of data.resources) {
 
 export const matches: MatchView[] = data.matches.map(m => {
   const res = resourceMap.get(m.id);
+  const actualScore = res?.result ?? res?.score ?? null;
   return {
     id: m.id,
     teams: m.teams,
     time: m.time,
     handicap: String(m.handicap),
     status: res?.status ?? '待比赛',
-    actualScore: res?.score ?? null,
+    actualScore,
     predictions: m.predictions,
     odds: m.odds,
   };
@@ -201,16 +220,57 @@ export interface AiSummary {
   ai: AiName;
   totalConfirmed: number;
   totalHits: number;
-  totalSlots: number; // 4 dims × confirmed matches
-  hitRate: number; // 0-1
+  totalSlots: number; // 4 dims × confirmed matches that have hit data
+  hitRate: number; // 0-1, computed from match data (24 matches that have hit data)
   perDim: Record<DimensionKey, { hits: number; total: number; rate: number }>;
   rank: number;
   retired: boolean;
+  isNewcomer: boolean;
   participatedMatches: number; // total matches this AI predicted (confirmed + pending)
+  // ----- Overlay from data.stats[] (v9 official aggregated numbers) -----
+  // These are the headline / rank-driving figures shown on the leaderboard.
+  officialRank: number | null; // null = newcomer (not yet ranked)
+  officialPnl: number; // parsed from "+51.8" / "-37.0" / "0"
+  officialHitRate: number | null; // 0-1 or null when stats says "N/A"
+  officialMatches: number;
+  officialLetHitText: string; // e.g. "13/28(46%)"
+  officialScoreHitText: string; // e.g. "4/28(14%)"
+  retiredRange?: string;
 }
 
 function isHit(mark: HitMark): boolean {
   return mark === '✅';
+}
+
+// stats[] uses bare display names ("混元", "扣子(皮皮)") whereas predictions
+// keys use the canonical "AI-…" form (with full-width parens). Map both.
+const STATS_NAME_TO_AI: Record<string, AiName> = {
+  豆包: 'AI-豆包',
+  DeepSeek: 'AI-DeepSeek',
+  '扣子(皮皮)': 'AI-扣子（皮皮）',
+  '扣子（皮皮）': 'AI-扣子（皮皮）',
+  文心: 'AI-文心',
+  智谱清言: 'AI-智谱清言',
+  天工: 'AI-天工',
+  MiniMax: 'AI-MiniMax',
+  混元: 'AI-混元',
+  千问: 'AI-千问',
+  Kimi: 'AI-Kimi',
+};
+
+function parseSignedNumber(s: string): number {
+  if (!s) return 0;
+  const trimmed = s.trim();
+  if (trimmed === '0' || trimmed === '+0' || trimmed === '-0') return 0;
+  const n = Number(trimmed.replace(/^\+/, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parsePercent(s: string): number | null {
+  if (!s || s === 'N/A') return null;
+  const m = s.match(/(-?\d+(?:\.\d+)?)\s*%/);
+  if (!m) return null;
+  return Number(m[1]) / 100;
 }
 
 export function buildAiSummaries(): AiSummary[] {
@@ -231,7 +291,15 @@ export function buildAiSummaries(): AiSummary[] {
       perDim,
       rank: 0,
       retired: isRetiredAi(ai),
+      isNewcomer: false,
       participatedMatches: 0,
+      officialRank: null,
+      officialPnl: 0,
+      officialHitRate: null,
+      officialMatches: 0,
+      officialLetHitText: '0/0(0%)',
+      officialScoreHitText: '0/0(0%)',
+      retiredRange: undefined,
     });
   }
 
@@ -244,10 +312,22 @@ export function buildAiSummaries(): AiSummary[] {
     }
   }
 
+  // Per-dim hits computed from match data — only the matches with hit_*
+  // populated will contribute (newly confirmed 025-028 leave hits as null
+  // → they simply don't add to the denominator, keeping the rate honest).
   for (const m of confirmedMatches) {
     for (const p of m.predictions) {
       const summary = map.get(p.ai);
       if (!summary) continue;
+      // skip predictions whose hits are not yet recorded
+      if (
+        p.hit_handicap === null &&
+        p.hit_score === null &&
+        p.hit_goals === null &&
+        p.hit_half === null
+      ) {
+        continue;
+      }
       summary.totalConfirmed += 1;
       for (const k of DIMENSION_KEYS) {
         summary.perDim[k].total += 1;
@@ -268,12 +348,46 @@ export function buildAiSummaries(): AiSummary[] {
     }
   }
 
-  // Active AIs sorted by hit rate desc; retired AIs always at the tail
-  // (they keep their own hit-rate ordering among themselves).
+  // Overlay v9 official stats from data.stats[].
+  for (const raw of data.stats) {
+    const ai = STATS_NAME_TO_AI[raw.name];
+    if (!ai) continue;
+    const summary = map.get(ai);
+    if (!summary) continue;
+    summary.officialRank = raw.rank;
+    summary.officialPnl = parseSignedNumber(raw.total_pnl);
+    summary.officialHitRate = parsePercent(raw.hit_rate);
+    summary.officialMatches = raw.matches;
+    summary.officialLetHitText = raw.let_hit;
+    summary.officialScoreHitText = raw.score_hit;
+    summary.retired = !!raw.retired || summary.retired;
+    summary.retiredRange = raw.retired_range;
+    summary.isNewcomer = !!raw.new;
+
+    // Overlay headline numbers used across views to come from the official
+    // 28-match aggregate (data.stats), so leaderboard / AI list / AI detail
+    // all show the canonical numbers regardless of how many matches have
+    // detail-level hit data filled in.
+    if (raw.matches > 0) {
+      summary.totalConfirmed = raw.matches;
+      summary.participatedMatches = raw.matches;
+      summary.totalSlots = raw.matches * 4;
+      summary.hitRate = summary.officialHitRate ?? 0;
+      summary.totalHits = Math.round(summary.totalSlots * summary.hitRate);
+    }
+  }
+
+  // Ordering: by officialRank ascending. Retired AIs keep their official rank
+  // (their final ranking is preserved as a memorial of where they were when
+  // they retired) but are styled grey at the view layer. Newcomers
+  // (officialRank=null) sink to the very tail.
   const list = Array.from(map.values());
   list.sort((a, b) => {
-    if (a.retired !== b.retired) return a.retired ? 1 : -1;
-    return b.hitRate - a.hitRate;
+    if (a.isNewcomer !== b.isNewcomer) return a.isNewcomer ? 1 : -1;
+    const ra = a.officialRank ?? 999;
+    const rb = b.officialRank ?? 999;
+    if (ra !== rb) return ra - rb;
+    return b.officialPnl - a.officialPnl;
   });
   list.forEach((s, idx) => {
     s.rank = idx + 1;
