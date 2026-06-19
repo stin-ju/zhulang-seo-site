@@ -414,22 +414,30 @@ export function buildAiSummaries(): AiSummary[] {
     }
   }
 
-  // Ordering: by officialRank ascending. Retired AIs keep their official rank
-  // (their final ranking is preserved as a memorial of where they were when
-  // they retired) but are styled grey at the view layer. Newcomers
-  // (officialRank=null) sink to the very tail.
+  // Ordering:
+  //   Active AIs first, sorted by officialPnl descending; then retired AIs at
+  //   the tail. Newcomers (no data yet) sink to the bottom of the active group.
+  // Display rank: active AIs get sequential 1–N (no gaps from retired ranks);
+  // retired AIs get a sentinel -1 so the view layer can show "×" instead of a
+  // number.
   const list = Array.from(map.values());
-  list.sort((a, b) => {
+  const activeList = list.filter(s => !s.retired);
+  const retiredList = list.filter(s => s.retired);
+
+  activeList.sort((a, b) => {
     if (a.isNewcomer !== b.isNewcomer) return a.isNewcomer ? 1 : -1;
-    const ra = a.officialRank ?? 999;
-    const rb = b.officialRank ?? 999;
-    if (ra !== rb) return ra - rb;
     return b.officialPnl - a.officialPnl;
   });
-  list.forEach((s, idx) => {
+  activeList.forEach((s, idx) => {
     s.rank = idx + 1;
   });
-  return list;
+
+  retiredList.forEach(s => {
+    s.rank = -1; // sentinel → view shows "×"
+  });
+
+  const ordered = [...activeList, ...retiredList];
+  return ordered;
 }
 
 export const aiSummaries: AiSummary[] = buildAiSummaries();
