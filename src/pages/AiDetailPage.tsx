@@ -736,7 +736,7 @@ function AiChainBetCard({ bet }: { bet: ChainBet }) {
           }`}
           aria-label={hit === true ? '命中' : pending ? '待定' : '未命中'}
         >
-          {hit === true ? '✓' : pending ? '—' : '♡'}
+          {hit === true ? '✓' : pending ? '○' : '♡'}
         </span>
       </div>
 
@@ -756,7 +756,7 @@ function AiChainBetCard({ bet }: { bet: ChainBet }) {
                 : 'bg-night/60 text-text-secondary'
           }`}
         >
-          {hit === true ? '命中' : pending ? '待定' : '未中'}
+          {hit === true ? '命中' : pending ? '○ 待定' : '未中'}
         </span>
         <span
           className={`tabular-nums font-semibold ${
@@ -786,7 +786,7 @@ function AiChainSelectionRow({ selection }: { selection: ChainBetSelection }) {
         }`}
         aria-label={ok ? '命中' : pending ? '待定' : '未命中'}
       >
-        {ok ? '✓' : pending ? '—' : '♡'}
+        {ok ? '✓' : pending ? '○' : '♡'}
       </span>
       <span className="flex-1">
         <span className={ok ? 'text-text-primary' : pending ? 'text-text-primary/80' : ''}>

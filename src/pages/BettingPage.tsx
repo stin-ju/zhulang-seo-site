@@ -665,7 +665,7 @@ function ChainBetCard({ bet }: { bet: ChainBet }) {
       {/* Footer: result + pnl */}
       <div className="flex items-center justify-between pt-1.5 border-t border-divider/50">
         <span className={`text-[11px] font-semibold ${hit === true ? 'text-turf' : 'text-miss'}`}>
-          {hit === true ? '✓ 命中' : pending ? '— 待定' : '♡ 未中'}
+          {hit === true ? '✓ 命中' : pending ? '○ 待定' : '♡ 未中'}
         </span>
         <span className={`text-sm font-bold tabular-nums ${pnlCls}`}>
           {pending ? '—' : `${bet.pnl >= 0 ? '+' : ''}${bet.pnl.toFixed(2)}`}
@@ -692,7 +692,7 @@ function ChainSelectionLine({ sel }: { sel: ChainBetSelection }) {
         <span className="text-muted text-[10px]">{dim}</span>
         <span className="font-semibold text-ink tabular-nums">{pred}</span>
         <span className={hitMark === true ? 'text-turf' : pending ? 'text-muted' : 'text-miss'}>
-          {hitMark === true ? '✓' : pending ? '—' : '♡'}
+          {hitMark === true ? '✓' : pending ? '○' : '♡'}
         </span>
       </div>
     </div>
