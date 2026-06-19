@@ -5,10 +5,27 @@ import {
   AI_SHORT,
   aiSummaries,
   formatPercent,
+  formatPnl,
   totalConfirmed,
   totalMatches,
   type AiSummary,
 } from '../lib/data';
+
+function PnlBadge({ pnl, size = 'md' }: { pnl: number; size?: 'sm' | 'md' | 'lg' }) {
+  const tone =
+    pnl > 0 ? 'text-turf' : pnl < 0 ? 'text-rose-300' : 'text-text-secondary';
+  const sizeCls =
+    size === 'lg'
+      ? 'text-2xl font-bold tracking-tight'
+      : size === 'sm'
+        ? 'text-sm font-semibold tabular-nums'
+        : 'text-base font-semibold tabular-nums';
+  return (
+    <span className={`${sizeCls} ${tone}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+      {formatPnl(pnl)}
+    </span>
+  );
+}
 
 function MedalBadge({ rank, retired }: { rank: number; retired?: boolean }) {
   if (retired) {
@@ -74,13 +91,16 @@ function ChampionCard({ s }: { s: AiSummary }) {
             <div className="font-mono text-4xl sm:text-5xl font-bold text-gold leading-none mt-1">
               {formatPercent(s.hitRate)}
             </div>
-          </div>
-          <div className="text-right hidden sm:block">
-            <div className="text-[11px] tracking-widest text-muted">命中 / 预测</div>
-            <div className="font-mono text-2xl text-ink mt-1">
-              {s.totalHits}
-              <span className="text-muted text-base"> / {s.totalSlots}</span>
+            <div className="font-mono text-[11px] text-muted mt-2">
+              命中 {s.totalHits} / {s.totalSlots}
             </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] tracking-widest text-muted">模拟盈亏</div>
+            <div className="leading-none mt-1">
+              <PnlBadge pnl={s.officialPnl} size="lg" />
+            </div>
+            <div className="font-mono text-[11px] text-muted mt-2">每注 2 元 · 虚拟模拟</div>
           </div>
         </div>
       </div>
@@ -110,11 +130,15 @@ function RankCard({ s }: { s: AiSummary }) {
         <div className="text-xs text-muted mt-0.5 truncate">{s.ai}</div>
       </div>
       <div className="text-right">
-        <div className="font-mono text-2xl font-bold text-ink">
+        <div className="font-mono text-xl font-bold text-ink leading-none">
           {noConfirmed ? '—' : formatPercent(s.hitRate)}
         </div>
-        <div className="font-mono text-[11px] text-muted mt-0.5">
-          {noConfirmed ? `参赛 ${s.participatedMatches} 场` : `${s.totalHits} / ${s.totalSlots}`}
+        <div className="font-mono text-[11px] text-muted mt-1">
+          {noConfirmed ? `参赛 ${s.participatedMatches} 场` : `命中 ${s.totalHits} / ${s.totalSlots}`}
+        </div>
+        <div className="mt-2 pt-2 border-t border-divider/60 flex items-center justify-end gap-2">
+          <span className="text-[10px] tracking-widest text-muted">盈亏</span>
+          <PnlBadge pnl={s.officialPnl} size="sm" />
         </div>
       </div>
     </Link>
@@ -138,9 +162,15 @@ function RetiredCard({ s }: { s: AiSummary }) {
         <div className="text-[11px] text-miss/70 mt-0.5 truncate">{s.ai}</div>
       </div>
       <div className="text-right">
-        <div className="font-mono text-lg font-semibold text-miss">{formatPercent(s.hitRate)}</div>
-        <div className="font-mono text-[11px] text-miss/70 mt-0.5">
-          {s.totalHits} / {s.totalSlots}
+        <div className="font-mono text-base font-semibold text-miss leading-none">
+          {formatPercent(s.hitRate)}
+        </div>
+        <div className="font-mono text-[11px] text-miss/70 mt-1">
+          命中 {s.totalHits} / {s.totalSlots}
+        </div>
+        <div className="mt-2 pt-2 border-t border-divider/40 flex items-center justify-end gap-2 opacity-90">
+          <span className="text-[10px] tracking-widest text-miss/70">历史盈亏</span>
+          <PnlBadge pnl={s.officialPnl} size="sm" />
         </div>
       </div>
     </Link>
