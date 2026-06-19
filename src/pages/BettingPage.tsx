@@ -71,11 +71,11 @@ function MedalBadge({ rank }: { rank: number }) {
 
 function ChampionCard({ s }: { s: BettingSummaryEntry }) {
   const investTotal = BETTING_DIMENSIONS.reduce(
-    (sum, d) => sum + s.dimensions[d.key].invest,
+    (sum, d) => sum + (s.dimensions[d.key]?.invest ?? 0),
     0
   );
   const hitsTotal = BETTING_DIMENSIONS.reduce(
-    (sum, d) => sum + s.dimensions[d.key].hits,
+    (sum, d) => sum + (s.dimensions[d.key]?.hits ?? 0),
     0
   );
   const betsTotal = investTotal / 2;
@@ -138,11 +138,11 @@ function ChampionCard({ s }: { s: BettingSummaryEntry }) {
 
 function StandardCard({ s }: { s: BettingSummaryEntry }) {
   const investTotal = BETTING_DIMENSIONS.reduce(
-    (sum, d) => sum + s.dimensions[d.key].invest,
+    (sum, d) => sum + (s.dimensions[d.key]?.invest ?? 0),
     0
   );
   const hitsTotal = BETTING_DIMENSIONS.reduce(
-    (sum, d) => sum + s.dimensions[d.key].hits,
+    (sum, d) => sum + (s.dimensions[d.key]?.hits ?? 0),
     0
   );
   const betsTotal = investTotal / 2;
@@ -193,10 +193,11 @@ function DimensionTable() {
     score: 0,
     goals: 0,
     half_full: 0,
+    chain: 0,
   };
   for (const s of sorted) {
     for (const d of BETTING_DIMENSIONS) {
-      const a = Math.abs(s.dimensions[d.key].pnl);
+      const a = Math.abs(s.dimensions[d.key]?.pnl ?? 0);
       if (a > dimMaxAbs[d.key]) dimMaxAbs[d.key] = a;
     }
   }
@@ -234,18 +235,21 @@ function DimensionTable() {
               </td>
               {BETTING_DIMENSIONS.map(d => {
                 const stat = s.dimensions[d.key];
+                const pnl = stat?.pnl ?? 0;
+                const hits = stat?.hits ?? 0;
+                const invest = stat?.invest ?? 0;
                 const max = dimMaxAbs[d.key] || 1;
-                const ratio = Math.min(1, Math.abs(stat.pnl) / max);
-                const positive = stat.pnl > 0;
-                const negative = stat.pnl < 0;
+                const ratio = Math.min(1, Math.abs(pnl) / max);
+                const positive = pnl > 0;
+                const negative = pnl < 0;
                 return (
                   <td key={d.key} className="px-3 py-3 align-middle">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-muted font-mono">
-                          {stat.hits}/{stat.invest / 2}
+                          {hits}/{invest / 2}
                         </span>
-                        <PnlText value={stat.pnl} size="sm" />
+                        <PnlText value={pnl} size="sm" />
                       </div>
                       <div className="relative h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
                         <div
@@ -307,7 +311,7 @@ function DailyTimeline() {
                 const positive = r.daily_pnl > 0;
                 const negative = r.daily_pnl < 0;
                 const investTotal = BETTING_DIMENSIONS.reduce(
-                  (sum, d) => sum + r[d.key].invest,
+                  (sum, d) => sum + (r[d.key]?.invest ?? 0),
                   0
                 );
                 return (

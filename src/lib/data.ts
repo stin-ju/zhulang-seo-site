@@ -119,7 +119,7 @@ export interface ResourceEntry {
 interface RawStatsEntry {
   name: string;
   rank: number | null;
-  total_pnl: string;
+  total_pnl: string | number;
   hit_rate: string;
   matches: number;
   let_hit: string;
@@ -135,12 +135,18 @@ export interface BettingDimensionStats {
   pnl: number;
 }
 
-export type BettingDimensionKey = 'spf' | 'handicap' | 'score' | 'goals' | 'half_full';
+export type BettingDimensionKey =
+  | 'spf'
+  | 'handicap'
+  | 'score'
+  | 'goals'
+  | 'half_full'
+  | 'chain';
 
 export interface BettingSummaryEntry {
   ai: string;
   rank: number;
-  dimensions: Record<BettingDimensionKey, BettingDimensionStats>;
+  dimensions: Partial<Record<BettingDimensionKey, BettingDimensionStats>>;
   total_pnl: number;
   win_rate: string;
   total_matches: number;
@@ -154,6 +160,7 @@ export interface BettingDailyEntry {
   score: BettingDimensionStats;
   goals: BettingDimensionStats;
   half_full: BettingDimensionStats;
+  chain?: BettingDimensionStats;
   daily_pnl: number;
   win_rate: string;
   rank_change: string;
@@ -258,9 +265,11 @@ const STATS_NAME_TO_AI: Record<string, AiName> = {
   Kimi: 'AI-Kimi',
 };
 
-function parseSignedNumber(s: string): number {
-  if (!s) return 0;
+function parseSignedNumber(s: string | number | null | undefined): number {
+  if (s === null || s === undefined) return 0;
+  if (typeof s === 'number') return Number.isFinite(s) ? s : 0;
   const trimmed = s.trim();
+  if (!trimmed) return 0;
   if (trimmed === '0' || trimmed === '+0' || trimmed === '-0') return 0;
   const n = Number(trimmed.replace(/^\+/, ''));
   return Number.isFinite(n) ? n : 0;
@@ -440,6 +449,7 @@ export const BETTING_DIMENSIONS: { key: BettingDimensionKey; label: string }[] =
   { key: 'score', label: '全场比分' },
   { key: 'goals', label: '总进球' },
   { key: 'half_full', label: '半全场' },
+  { key: 'chain', label: '串关' },
 ];
 
 const rawBetting = data.betting_stats;
@@ -471,6 +481,7 @@ export function getBettingTotals(): BettingTotals {
   for (const s of bettingSummaries) {
     for (const dim of BETTING_DIMENSIONS) {
       const stat = s.dimensions[dim.key];
+      if (!stat) continue;
       totalInvest += stat.invest;
       totalPnl += stat.pnl;
       totalHits += stat.hits;
