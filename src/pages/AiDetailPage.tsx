@@ -50,36 +50,6 @@ function DimBar({ rate, hits, total }: { rate: number; hits: number; total: numb
   );
 }
 
-function MatchStrip({ rows }: { rows: AiMatchRow[] }) {
-  // chronological from earliest to latest, left -> right
-  const ordered = rows.slice().reverse();
-  return (
-    <div className="flex gap-1.5">
-      {ordered.map(({ match, prediction }) => {
-        const hits = prediction?.total_hits ?? null;
-        const isPending = match.status === '待比赛';
-        let bg = 'bg-white/[0.06]';
-        let title = `${match.id} · ${match.teams} · ${isPending ? '待比赛' : '未命中'}`;
-        if (!isPending && hits !== null) {
-          if (hits >= 3) bg = 'bg-gold';
-          else if (hits === 2) bg = 'bg-turf';
-          else if (hits === 1) bg = 'bg-turf/40';
-          else bg = 'bg-miss';
-          title = `${match.id} · ${match.teams} · 命中 ${hits}/4`;
-        }
-        return (
-          <Link
-            key={match.id}
-            to={`/matches/${encodeURIComponent(match.id)}`}
-            title={title}
-            className={`h-7 flex-1 rounded-sm ${bg} hover:ring-2 hover:ring-gold/60 transition-shadow`}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 export default function AiDetailPage() {
   const { name } = useParams<{ name: string }>();
   const decoded = name ? decodeURIComponent(name) : '';
@@ -97,7 +67,6 @@ export default function AiDetailPage() {
   }
 
   const rows = getAiMatches(summary.ai);
-  const confirmedRows = rows.filter(r => r.match.status === '已确认');
 
   return (
     <div className="space-y-8">
@@ -215,47 +184,56 @@ export default function AiDetailPage() {
         </div>
       </section>
 
-      {/* Strip */}
-      {confirmedRows.length > 0 && (
-        <section className="rounded-2xl border border-divider bg-deep p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-ink">已确认场次命中分布</h2>
-            <div className="flex items-center gap-3 text-[11px] text-muted">
-              <Legend className="bg-gold" label="3+" />
-              <Legend className="bg-turf" label="2" />
-              <Legend className="bg-turf/40" label="1" />
-              <Legend className="bg-miss" label="0" />
-            </div>
-          </div>
-          <MatchStrip rows={confirmedRows} />
-          <div className="mt-2 flex justify-between text-[11px] text-muted">
-            <span>较早</span>
-            <span>较新</span>
-          </div>
-        </section>
-      )}
-
       {/* Per-match accordion list */}
-      <section className="rounded-2xl border border-divider bg-deep overflow-hidden">
-        <div className="px-5 py-4 border-b border-divider">
-          <h2 className="text-base font-semibold text-ink">所有场次预测明细</h2>
-          <p className="text-xs text-muted mt-0.5">
-            默认展开最新 4 场。点击行首 +/− 切换详情；展开后可查看各维度命中情况与该 AI 的本场分析。
-          </p>
-        </div>
-        <ul className="divide-y divide-divider/60">
-          {rows.map((row, idx) => (
-            <AiMatchAccordionItem key={row.match.id} row={row} defaultOpen={idx < 4} />
-          ))}
-        </ul>
-      </section>
+      <AiMatchAccordionSection rows={rows} ai={decoded} />
 
       <AiChainBetsSection ai={decoded} />
     </div>
   );
 }
 
-function AiMatchAccordionItem({ row, defaultOpen }: { row: AiMatchRow; defaultOpen: boolean }) {
+function AiMatchAccordionSection({ rows, ai }: { rows: AiMatchRow[]; ai: string }) {
+  const VISIBLE_BY_DEFAULT = 4;
+  const [showAll, setShowAll] = useState<boolean>(false);
+  const visibleRows = showAll ? rows : rows.slice(0, VISIBLE_BY_DEFAULT);
+  const hiddenCount = Math.max(0, rows.length - VISIBLE_BY_DEFAULT);
+
+  return (
+    <section className="rounded-2xl border border-divider bg-deep overflow-hidden">
+      <div className="px-5 py-4 border-b border-divider">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-ink">所有场次预测明细</h2>
+            <p className="text-xs text-muted mt-0.5">
+              默认仅展示最新 {VISIBLE_BY_DEFAULT} 场，点击底部按钮展开全部 {rows.length} 场。每行点击 +/− 查看维度命中、AI 分析及当日串关。
+            </p>
+          </div>
+          <span className="text-[11px] text-muted">
+            当前显示 {visibleRows.length} / {rows.length} 场
+          </span>
+        </div>
+      </div>
+      <ul className="divide-y divide-divider/60">
+        {visibleRows.map((row, idx) => (
+          <AiMatchAccordionItem key={row.match.id} row={row} defaultOpen={idx < VISIBLE_BY_DEFAULT} ai={ai} />
+        ))}
+      </ul>
+      {hiddenCount > 0 && (
+        <div className="border-t border-divider/60 px-5 py-3 text-center">
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-divider bg-night/40 px-4 py-1.5 text-xs text-text-secondary transition-colors hover:border-gold/50 hover:text-gold"
+          >
+            {showAll ? '收起较早场次' : `展开全部场次（还有 ${hiddenCount} 场）`}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AiMatchAccordionItem({ row, defaultOpen, ai }: { row: AiMatchRow; defaultOpen: boolean; ai: string }) {
   const { match, prediction } = row;
   const [open, setOpen] = useState<boolean>(defaultOpen);
   const isPending = match.status === '待比赛';
@@ -385,6 +363,8 @@ function AiMatchAccordionItem({ row, defaultOpen }: { row: AiMatchRow; defaultOp
               查看完整命中矩阵 →
             </Link>
           </div>
+
+          <AiMatchInlineChainBets ai={ai} matchTime={match.time} />
         </div>
       )}
     </li>
@@ -432,12 +412,41 @@ function DimensionPill({
   );
 }
 
-function Legend({ className, label }: { className: string; label: string }) {
+function AiMatchInlineChainBets({ ai, matchTime }: { ai: string; matchTime: string }) {
+  const date = (matchTime || '').slice(0, 10);
+  if (!date) return null;
+  const data = getChainBetsForAi(ai);
+  const day = data.days.find((d) => d.date === date);
+  if (!day || day.bets.length === 0) return null;
+
+  const hits = day.bets.filter((b) => b.hit).length;
+  const pnl = day.bets.reduce((acc, b) => acc + b.pnl, 0);
+
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={`h-2.5 w-2.5 rounded-sm ${className}`} />
-      <span>{label}</span>
-    </span>
+    <div className="mt-4 rounded-lg border border-gold/20 bg-gold-soft/20 px-4 py-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+          当日串关方案 · {formatChainDate(date)}
+        </div>
+        <div className="flex items-center gap-x-4 gap-y-1 text-[11px] text-text-secondary">
+          <span>
+            命中 <span className="font-semibold text-turf">{hits}</span> / {day.bets.length}
+          </span>
+          <span>
+            盈亏{' '}
+            <span className={`font-semibold ${pnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
+              {formatPnl(pnl)}
+            </span>
+          </span>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {day.bets.map((bet, i) => (
+          <AiChainBetCard key={`${bet.type}-${i}`} bet={bet} />
+        ))}
+      </div>
+    </div>
   );
 }
 
