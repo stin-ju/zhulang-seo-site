@@ -504,9 +504,9 @@ export const bettingDates: string[] = Array.from(
 // ===== Chain bets (串关推荐) =====
 const rawChainBets = (rawData as RawData).chain_bets ?? [];
 
-/** 串关推荐按日期升序（6/17 → 6/18 → 6/19）展示 */
+/** 串关推荐按日期降序（6/19 → 6/18 → 6/17）展示，最新的日期排在最上面 */
 export const chainBets: ChainBetDay[] = [...rawChainBets].sort((a, b) =>
-  a.date.localeCompare(b.date)
+  b.date.localeCompare(a.date)
 );
 
 export interface ChainBetTotals {

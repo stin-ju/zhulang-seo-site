@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   AI_LIST,
@@ -404,25 +405,78 @@ function AiChainBetsSection({ ai }: { ai: string }) {
           暂未参与串关追踪
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-3">
           {days.map((day) => (
-            <article key={day.date} className="rounded-lg border border-divider/70 bg-night/40 px-4 py-4 sm:px-5 sm:py-5">
-              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-divider/60 pb-2">
-                <span className="text-base font-semibold text-text-primary tabular-nums">{day.date}</span>
-                {day.matches.length > 0 ? (
-                  <span className="text-xs text-text-secondary">参考赛事：{day.matches.join('、')}</span>
-                ) : null}
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                {day.bets.map((bet, i) => (
-                  <AiChainBetCard key={`${bet.type}-${i}`} bet={bet} />
-                ))}
-              </div>
-            </article>
+            <AiChainDay key={day.date} day={day} />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+interface AiChainDayProps {
+  day: { date: string; matches: string[]; bets: ChainBet[] };
+}
+
+function AiChainDay({ day }: AiChainDayProps) {
+  const [open, setOpen] = useState<boolean>(false);
+  const dayBets = day.bets.length;
+  const dayHits = day.bets.filter((b) => b.hit).length;
+  const dayPnl = day.bets.reduce((sum, b) => sum + b.pnl, 0);
+
+  return (
+    <article
+      className={`rounded-lg border bg-night/40 transition-colors ${
+        open ? 'border-gold/40 shadow-[0_0_0_1px_rgba(245,194,66,0.15)]' : 'border-divider/70'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left sm:px-5"
+      >
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-base font-bold transition-colors ${
+            open ? 'border-gold/50 bg-gold/10 text-gold' : 'border-divider text-text-secondary'
+          }`}
+          aria-label={open ? '折叠' : '展开'}
+        >
+          {open ? '−' : '+'}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-base font-semibold text-text-primary tabular-nums">{day.date}</span>
+            {day.matches.length > 0 ? (
+              <span className="text-xs text-text-secondary">参考赛事：{day.matches.join('、')}</span>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary">
+          <span>
+            推荐 <span className="font-semibold text-text-primary">{dayBets}</span>
+          </span>
+          <span>
+            命中 <span className="font-semibold text-turf">{dayHits}</span>
+          </span>
+          <span>
+            盈亏{' '}
+            <span className={`font-semibold tabular-nums ${dayPnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
+              {formatPnl(dayPnl)}
+            </span>
+          </span>
+        </div>
+      </button>
+      {open && (
+        <div className="border-t border-divider/60 px-4 pb-4 pt-3 sm:px-5">
+          <div className="grid gap-3 md:grid-cols-3">
+            {day.bets.map((bet, i) => (
+              <AiChainBetCard key={`${bet.type}-${i}`} bet={bet} />
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
   );
 }
 

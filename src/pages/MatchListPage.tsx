@@ -6,8 +6,17 @@ import {
   AI_SHORT,
   isRetiredAi,
   formatHandicap,
+  formatPnl,
+  formatYuan,
+  formatPercent,
+  chainBets,
+  getChainBetTotals,
   type MatchView,
   type Prediction,
+  type ChainBet,
+  type ChainBetSelection,
+  type ChainAiBets,
+  type ChainBetDay,
 } from '../lib/data';
 
 const DIM_LABELS: Array<{
@@ -33,6 +42,9 @@ function teamPair(teams: string): { home: string; away: string } {
 }
 
 export default function MatchListPage() {
+  // ---- top tab ----
+  const [tab, setTab] = useState<'matches' | 'chains'>('matches');
+
   // ---- filters ----
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | '待比赛' | '已确认'>('all');
@@ -59,10 +71,12 @@ export default function MatchListPage() {
     });
   }, [dateFilter, statusFilter, search]);
 
-  // ---- expand state: default open the first 2 matches in filtered list ----
+  // ---- expand state: default open every 待比赛 match, collapse all 已确认 ones ----
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const s = new Set<string>();
-    matches.slice(0, 2).forEach((m) => s.add(m.id));
+    for (const m of matches) {
+      if (m.status === '待比赛') s.add(m.id);
+    }
     return s;
   });
 
@@ -92,93 +106,125 @@ export default function MatchListPage() {
           </p>
         </div>
 
-        {/* Filter bar */}
-        <div className="rounded-xl border border-divider bg-deep/70 p-3 backdrop-blur">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Date filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-text-secondary">日期</span>
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="rounded-lg border border-divider bg-elevated/80 px-3 py-1.5 text-sm text-text-primary outline-none transition-colors hover:border-gold/40 focus:border-gold/60"
+        {/* Tab switcher */}
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-divider bg-deep/70 p-1.5 backdrop-blur">
+          {([
+            { key: 'matches', label: '比赛日程', sub: `${matches.length} 场` },
+            { key: 'chains', label: '串关推荐', sub: `${chainBets.length} 个比赛日` },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                tab === t.key
+                  ? 'bg-gold/15 text-gold ring-1 ring-gold/40 shadow-[0_0_0_1px_rgba(245,194,66,0.15)]'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <span>{t.label}</span>
+              <span
+                className={`text-[10px] tabular-nums ${
+                  tab === t.key ? 'text-gold/80' : 'text-text-secondary/70'
+                }`}
               >
-                <option value="all">全部日期</option>
-                {dates.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status pills */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-divider bg-elevated/80 p-1">
-              {(['all', '待比赛', '已确认'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatusFilter(s)}
-                  className={`rounded-md px-3 py-1 text-xs transition-colors ${
-                    statusFilter === s
-                      ? 'bg-gold/20 text-gold ring-1 ring-gold/40'
-                      : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  {s === 'all' ? '全部' : s}
-                </button>
-              ))}
-            </div>
-
-            {/* Search */}
-            <div className="flex flex-1 items-center gap-2 min-w-[200px]">
-              <span className="text-xs text-text-secondary">搜索</span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="输入队名或比赛 ID（如 周五029）"
-                className="flex-1 rounded-lg border border-divider bg-elevated/80 px-3 py-1.5 text-sm text-text-primary placeholder:text-text-secondary/60 outline-none transition-colors hover:border-gold/40 focus:border-gold/60"
-              />
-            </div>
-
-            {/* Expand controls */}
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={expandAll}
-                className="rounded-md border border-divider bg-elevated/80 px-2.5 py-1 text-xs text-text-secondary transition-colors hover:border-gold/40 hover:text-text-primary"
-              >
-                全部展开
-              </button>
-              <button
-                type="button"
-                onClick={collapseAll}
-                className="rounded-md border border-divider bg-elevated/80 px-2.5 py-1 text-xs text-text-secondary transition-colors hover:border-gold/40 hover:text-text-primary"
-              >
-                全部折叠
-              </button>
-            </div>
-          </div>
-          <div className="mt-2 text-xs text-text-secondary">
-            匹配 {filtered.length} 场比赛
-            {dateFilter !== 'all' || statusFilter !== 'all' || search ? '（已应用筛选）' : ''}
-          </div>
+                {t.sub}
+              </span>
+            </button>
+          ))}
         </div>
+
+        {tab === 'matches' && (
+          <div className="rounded-xl border border-divider bg-deep/70 p-3 backdrop-blur">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Date filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-secondary">日期</span>
+                <select
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="rounded-lg border border-divider bg-elevated/80 px-3 py-1.5 text-sm text-text-primary outline-none transition-colors hover:border-gold/40 focus:border-gold/60"
+                >
+                  <option value="all">全部日期</option>
+                  {dates.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status pills */}
+              <div className="flex items-center gap-1.5 rounded-lg border border-divider bg-elevated/80 p-1">
+                {(['all', '待比赛', '已确认'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatusFilter(s)}
+                    className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                      statusFilter === s
+                        ? 'bg-gold/20 text-gold ring-1 ring-gold/40'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    {s === 'all' ? '全部' : s}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search */}
+              <div className="flex flex-1 items-center gap-2 min-w-[200px]">
+                <span className="text-xs text-text-secondary">搜索</span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="输入队名或比赛 ID（如 周五029）"
+                  className="flex-1 rounded-lg border border-divider bg-elevated/80 px-3 py-1.5 text-sm text-text-primary placeholder:text-text-secondary/60 outline-none transition-colors hover:border-gold/40 focus:border-gold/60"
+                />
+              </div>
+
+              {/* Expand controls */}
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={expandAll}
+                  className="rounded-md border border-divider bg-elevated/80 px-2.5 py-1 text-xs text-text-secondary transition-colors hover:border-gold/40 hover:text-text-primary"
+                >
+                  全部展开
+                </button>
+                <button
+                  type="button"
+                  onClick={collapseAll}
+                  className="rounded-md border border-divider bg-elevated/80 px-2.5 py-1 text-xs text-text-secondary transition-colors hover:border-gold/40 hover:text-text-primary"
+                >
+                  全部折叠
+                </button>
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-text-secondary">
+              匹配 {filtered.length} 场比赛
+              {dateFilter !== 'all' || statusFilter !== 'all' || search ? '（已应用筛选）' : ''}
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Match list */}
-      <section className="space-y-3">
-        {filtered.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-divider bg-deep/40 p-8 text-center text-sm text-text-secondary">
-            没有匹配的比赛，试试调整筛选条件。
-          </div>
-        ) : (
-          filtered.map((m) => (
-            <MatchAccordion key={m.id} match={m} open={expanded.has(m.id)} onToggle={() => toggle(m.id)} />
-          ))
-        )}
-      </section>
+      {tab === 'matches' ? (
+        <section className="space-y-3">
+          {filtered.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-divider bg-deep/40 p-8 text-center text-sm text-text-secondary">
+              没有匹配的比赛，试试调整筛选条件。
+            </div>
+          ) : (
+            filtered.map((m) => (
+              <MatchAccordion key={m.id} match={m} open={expanded.has(m.id)} onToggle={() => toggle(m.id)} />
+            ))
+          )}
+        </section>
+      ) : (
+        <ChainTab />
+      )}
     </div>
   );
 }
@@ -399,5 +445,269 @@ function DimCell({
         {isHitTrue && <span className="ml-1 text-[11px]">✓</span>}
       </span>
     </td>
+  );
+}
+
+// ===========================================================================
+// 串关推荐 Tab
+// ===========================================================================
+
+function ChainTab() {
+  const totals = getChainBetTotals();
+  const days = chainBets; // already sorted desc in data.ts
+
+  if (days.length === 0) {
+    return (
+      <section className="rounded-xl border border-dashed border-divider bg-deep/40 p-8 text-center text-sm text-text-secondary">
+        暂无串关推荐数据。
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-5">
+      {/* Totals strip */}
+      <div className="grid gap-3 rounded-xl border border-divider bg-deep/70 p-4 backdrop-blur sm:grid-cols-4">
+        <ChainStat label="总推荐" value={totals.totalBets.toString()} sub={`${days.length} 个比赛日`} />
+        <ChainStat label="命中次数" value={totals.totalHits.toString()} sub={formatPercent(totals.hitRate)} accent="turf" />
+        <ChainStat
+          label="净盈亏"
+          value={formatPnl(totals.totalPnl)}
+          sub={formatYuan(totals.totalPnl)}
+          accent={totals.totalPnl >= 0 ? 'turf' : 'red'}
+        />
+        <ChainStat label="虚拟投入" value={`${totals.totalInvest}`} sub="每注 2 元 × 总推荐" />
+      </div>
+
+      <div className="space-y-3">
+        {days.map((day) => (
+          <ChainDayCollapse key={day.date} day={day} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ChainStat({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: 'turf' | 'red';
+}) {
+  const accentClass = accent === 'turf' ? 'text-turf' : accent === 'red' ? 'text-red-400' : 'text-text-primary';
+  return (
+    <div className="rounded-lg border border-divider/60 bg-night/40 px-4 py-3">
+      <div className="text-xs uppercase tracking-wider text-text-secondary">{label}</div>
+      <div className={`mt-1 font-mono text-2xl font-semibold tabular-nums ${accentClass}`}>{value}</div>
+      {sub ? <div className="mt-0.5 text-xs text-text-secondary">{sub}</div> : null}
+    </div>
+  );
+}
+
+function ChainDayCollapse({ day }: { day: ChainBetDay }) {
+  // collapse the entire day; default close
+  const [openDay, setOpenDay] = useState<boolean>(false);
+
+  const dayBets = day.ai_bets.reduce((sum, ab) => sum + ab.bets.length, 0);
+  const dayHits = day.ai_bets.reduce(
+    (sum, ab) => sum + ab.bets.filter((b) => b.hit).length,
+    0,
+  );
+  const dayPnl = day.ai_bets.reduce(
+    (sum, ab) => sum + ab.bets.reduce((s, b) => s + b.pnl, 0),
+    0,
+  );
+
+  return (
+    <article
+      className={`rounded-xl border bg-deep/70 backdrop-blur transition-colors ${
+        openDay
+          ? 'border-gold/40 shadow-[0_0_0_1px_rgba(245,194,66,0.15)]'
+          : 'border-divider hover:border-gold/30'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpenDay((v) => !v)}
+        className="flex w-full items-center gap-3 p-4 text-left"
+      >
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-base font-bold transition-colors ${
+            openDay ? 'border-gold/50 bg-gold/10 text-gold' : 'border-divider text-text-secondary'
+          }`}
+          aria-label={openDay ? '折叠' : '展开'}
+        >
+          {openDay ? '−' : '+'}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-base font-semibold text-text-primary tabular-nums sm:text-lg">{day.date}</span>
+            {day.matches.length > 0 ? (
+              <span className="text-xs text-text-secondary">参考赛事：{day.matches.join('、')}</span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary">
+          <span>
+            参与 <span className="font-semibold text-text-primary">{day.ai_bets.length}</span> AI
+          </span>
+          <span>
+            推荐 <span className="font-semibold text-text-primary">{dayBets}</span>
+          </span>
+          <span>
+            命中 <span className="font-semibold text-turf">{dayHits}</span>
+          </span>
+          <span>
+            盈亏{' '}
+            <span className={`font-semibold tabular-nums ${dayPnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
+              {formatPnl(dayPnl)}
+            </span>
+          </span>
+        </div>
+      </button>
+
+      {openDay && (
+        <div className="space-y-2 border-t border-divider/60 bg-night/40 px-4 pb-4 pt-3">
+          {day.ai_bets.map((ab) => (
+            <ChainAiCollapse key={ab.ai} aiBets={ab} />
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function ChainAiCollapse({ aiBets }: { aiBets: ChainAiBets }) {
+  const [open, setOpen] = useState<boolean>(false);
+  const total = aiBets.bets.length;
+  const hits = aiBets.bets.filter((b) => b.hit).length;
+  const pnl = aiBets.bets.reduce((sum, b) => sum + b.pnl, 0);
+  const retired = isRetiredAi(aiBets.ai);
+  const short = (AI_SHORT as Record<string, string>)[aiBets.ai] ?? aiBets.ai.replace(/^AI-/, '');
+
+  return (
+    <div
+      className={`rounded-lg border bg-night/30 transition-colors ${
+        open ? 'border-gold/40' : 'border-divider/70'
+      } ${retired ? 'opacity-70' : ''}`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+      >
+        <span
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-sm font-bold transition-colors ${
+            open ? 'border-gold/50 bg-gold/10 text-gold' : 'border-divider text-text-secondary'
+          }`}
+        >
+          {open ? '−' : '+'}
+        </span>
+        <Link
+          to={`/ai/${encodeURIComponent(aiBets.ai)}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-sm font-semibold text-text-primary transition-colors hover:text-gold"
+        >
+          {short}
+        </Link>
+        {retired && <span className="text-[10px] text-text-secondary">已退赛</span>}
+
+        <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary">
+          <span>
+            <span className="font-semibold text-turf">{hits}</span>
+            <span className="text-text-secondary/70"> / {total}</span>
+            <span className="ml-1 text-text-secondary/70">命中</span>
+          </span>
+          <span className="tabular-nums">
+            <span className={`font-semibold ${pnl >= 0 ? 'text-turf' : 'text-red-400'}`}>{formatPnl(pnl)}</span>
+            <span className="ml-1 text-text-secondary/70">({formatYuan(pnl)})</span>
+          </span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="grid gap-3 border-t border-divider/60 px-3 py-3 md:grid-cols-3">
+          {aiBets.bets.map((bet, i) => (
+            <ChainBetMiniCard key={`${bet.type}-${i}`} bet={bet} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChainBetMiniCard({ bet }: { bet: ChainBet }) {
+  const hit = bet.hit;
+  return (
+    <div
+      className={`flex h-full flex-col gap-3 rounded-md border px-3.5 py-3 transition-colors ${
+        hit
+          ? 'border-gold/55 bg-gold-soft/40 shadow-[0_0_0_1px_rgba(245,194,66,0.18)_inset]'
+          : 'border-divider bg-night/30'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-0.5">
+          <div className={`text-sm font-semibold ${hit ? 'text-gold' : 'text-text-secondary'}`}>{bet.type}</div>
+          <div className="text-[11px] tabular-nums text-text-secondary">赔率 {bet.odds.toFixed(2)} × 2 元</div>
+        </div>
+        <span
+          className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
+            hit ? 'bg-turf text-night' : 'bg-divider text-text-secondary'
+          }`}
+        >
+          {hit ? '✓' : '✗'}
+        </span>
+      </div>
+
+      <ul className="space-y-1.5">
+        {bet.selections.map((s, idx) => (
+          <ChainSelectionMini key={idx} selection={s} />
+        ))}
+      </ul>
+
+      <div className="mt-auto flex items-center justify-between border-t border-divider/60 pt-2 text-xs">
+        <span
+          className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+            hit ? 'bg-turf-soft text-turf' : 'bg-night/60 text-text-secondary'
+          }`}
+        >
+          {hit ? '命中' : '未中'}
+        </span>
+        <span className={`tabular-nums font-semibold ${bet.pnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
+          {formatPnl(bet.pnl)} ({formatYuan(bet.pnl)})
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ChainSelectionMini({ selection }: { selection: ChainBetSelection }) {
+  const ok = selection.hit === true;
+  return (
+    <li className="flex items-start gap-2 text-[11px] leading-snug text-text-secondary">
+      <span
+        className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
+          ok ? 'bg-turf-soft text-turf' : 'bg-night/60 text-text-secondary line-through decoration-divider'
+        }`}
+      >
+        {ok ? '✓' : '✗'}
+      </span>
+      <span className="flex-1">
+        <span className={ok ? 'text-text-primary' : ''}>{selection.teams}</span>
+        <span className="mx-1 text-text-secondary/60">·</span>
+        <span className="text-text-secondary">
+          {selection.dimension}
+          <span className="ml-1 text-text-primary">{selection.prediction}</span>
+        </span>
+      </span>
+    </li>
   );
 }
