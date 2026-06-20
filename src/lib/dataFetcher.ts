@@ -334,12 +334,31 @@ function buildMatchesAndResources(
       m.home_score !== null && m.away_score !== null
         ? `${m.home_score}-${m.away_score}`
         : null;
+
+    // DB 中"未开始"等未结算比赛的 predictions.hit_* 可能被错误录入为 false（应为 null），
+    // 导致前端 DimCell 把未结算预测渲染为"未命中"暗灰色。
+    // 此处兜底：未结束比赛一律把 hit 字段强制置 null，表示"待定"。
+    const rawPreds = predByMatch.get(m.id) ?? [];
+    const predictions: RawPrediction[] = isFinished
+      ? rawPreds
+      : rawPreds.map(
+          (p) =>
+            ({
+              ...p,
+              hit_handicap: null,
+              hit_score: null,
+              hit_goals: null,
+              hit_half: null,
+              total_hits: null,
+            }) as RawPrediction,
+        );
+
     matches.push({
       id: m.id,
       teams: m.teams,
       time: m.match_time,
       handicap: m.handicap ?? '',
-      predictions: predByMatch.get(m.id) ?? [],
+      predictions,
       odds: {
         win: m.win_odds ?? undefined,
         draw: m.draw_odds ?? undefined,
