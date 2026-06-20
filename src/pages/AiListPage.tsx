@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
   AI_ACTIVE,
-  AI_RETIRED,
   AI_SHORT,
   aiSummaries,
   formatProfitRate,
@@ -86,7 +85,6 @@ export default function AiListPage() {
       '2026 世界杯 AI 预测大竞赛 10 位选手（8 个活跃 + 2 个退赛）总览：盈利率、模拟盈亏、参赛场次。',
   });
   const active = aiSummaries.filter(s => !s.retired);
-  const retired = aiSummaries.filter(s => s.retired);
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -97,8 +95,7 @@ export default function AiListPage() {
           </p>
         </div>
         <div className="text-xs text-muted">
-          活跃 <span className="text-gold font-semibold">{AI_ACTIVE.length}</span> · 退赛{' '}
-          <span className="text-miss font-semibold">{AI_RETIRED.length}</span>
+          活跃 <span className="text-gold font-semibold">{AI_ACTIVE.length}</span>
         </div>
       </header>
 
@@ -110,17 +107,6 @@ export default function AiListPage() {
           ))}
         </div>
       </section>
-
-      {retired.length > 0 && (
-        <section>
-          <h2 className="text-xs tracking-[0.18em] uppercase text-muted mb-3">已退赛</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {retired.map(s => (
-              <AiCard key={s.ai} s={s} />
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

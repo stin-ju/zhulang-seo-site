@@ -196,12 +196,12 @@ function StandardCard({ s }: { s: BettingSummaryEntry }) {
 
 function DailyTimeline() {
   const [showAll, setShowAll] = useState(false);
-  const visibleDates = showAll ? bettingDates : bettingDates.slice(0, 4);
-  const hasMore = bettingDates.length > 4;
+  const visibleDates = showAll ? bettingDates : bettingDates.slice(0, 1);
+  const hasMore = bettingDates.length > 1;
   return (
     <div className="space-y-6">
       {visibleDates.map(date => {
-        const rows = getBettingDailyByDate(date);
+        const rows = getBettingDailyByDate(date).filter(r => !isRetiredAi(r.ai));
         const dayMax = rows.reduce(
           (m, r) => Math.max(m, Math.abs(r.daily_pnl)),
           1
@@ -279,8 +279,8 @@ function DailyTimeline() {
             className="text-xs px-4 py-1.5 rounded-full border border-divider text-muted hover:text-gold hover:border-gold/40 transition-colors"
           >
             {showAll
-              ? `收起（仅显示最新 4 天）`
-              : `展开全部（共 ${bettingDates.length} 天，已隐藏 ${bettingDates.length - 4} 天）`}
+              ? `收起（仅显示最新 1 天）`
+              : `展开全部（共 ${bettingDates.length} 天，已隐藏 ${bettingDates.length - 1} 天）`}
           </button>
         </div>
       )}
@@ -295,8 +295,9 @@ export default function BettingPage() {
       '8 个 AI 在 2026 世界杯模拟盈亏排行榜，每日总盈亏与胜率走势对比。',
   });
   const totals = getBettingTotals();
-  const champion = bettingSummaries[0];
-  const others = bettingSummaries.slice(1);
+  const activeSummaries = bettingSummaries.filter(s => !isRetiredAi(s.ai));
+  const champion = activeSummaries[0];
+  const others = activeSummaries.slice(1);
 
   return (
     <div className="space-y-10">
@@ -362,9 +363,11 @@ export default function BettingPage() {
           <span className="text-xs text-muted">按模拟净收益倒序</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-3">
-            <ChampionCard s={champion} />
-          </div>
+          {champion ? (
+            <div className="lg:col-span-3">
+              <ChampionCard s={champion} />
+            </div>
+          ) : null}
           {others.map(s => (
             <StandardCard key={s.ai} s={s} />
           ))}

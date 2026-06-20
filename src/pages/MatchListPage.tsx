@@ -495,7 +495,17 @@ function DimCell({
 
 function ChainTab() {
   const totals = getChainBetTotals();
-  const days = chainBets; // already sorted desc in data.ts
+  // 过滤掉退赛 AI 的串关；空 ai_bets 的日期一并去掉
+  const days = chainBets
+    .map((d) => ({
+      ...d,
+      ai_bets: d.ai_bets.filter((ab) => !isRetiredAi(ab.ai)),
+    }))
+    .filter((d) => d.ai_bets.length > 0);
+
+  const [showAll, setShowAll] = useState(false);
+  const visibleDays = showAll ? days : days.slice(0, 1);
+  const hasMore = days.length > 1;
 
   if (days.length === 0) {
     return (
@@ -521,10 +531,24 @@ function ChainTab() {
       </div>
 
       <div className="space-y-3">
-        {days.map((day) => (
-          <ChainDayCollapse key={day.date} day={day} />
+        {visibleDays.map((day, idx) => (
+          <ChainDayCollapse key={day.date} day={day} defaultOpen={idx === 0} />
         ))}
       </div>
+
+      {hasMore && (
+        <div className="flex justify-center pt-1">
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs px-4 py-1.5 rounded-full border border-divider text-muted hover:text-gold hover:border-gold/40 transition-colors"
+          >
+            {showAll
+              ? `收起（仅显示最新 1 天）`
+              : `展开全部（共 ${days.length} 天，已隐藏 ${days.length - 1} 天）`}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
@@ -550,9 +574,9 @@ function ChainStat({
   );
 }
 
-function ChainDayCollapse({ day }: { day: ChainBetDay }) {
-  // collapse the entire day; default close
-  const [openDay, setOpenDay] = useState<boolean>(false);
+function ChainDayCollapse({ day, defaultOpen = false }: { day: ChainBetDay; defaultOpen?: boolean }) {
+  // collapse the entire day; default close (除非 defaultOpen=true)
+  const [openDay, setOpenDay] = useState<boolean>(defaultOpen);
 
   const dayBets = day.ai_bets.reduce((sum, ab) => sum + ab.bets.length, 0);
   const dayHits = day.ai_bets.reduce(

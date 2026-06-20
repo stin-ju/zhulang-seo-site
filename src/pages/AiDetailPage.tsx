@@ -66,10 +66,12 @@ export default function AiDetailPage() {
     });
   }, [location.hash, summary]);
 
-  if (!summary || !AI_LIST.includes(summary.ai)) {
+  if (!summary || !AI_LIST.includes(summary.ai) || summary.retired) {
     return (
       <div className="text-center py-16">
-        <div className="text-2xl text-ink">未找到该 AI 选手</div>
+        <div className="text-2xl text-ink">
+          {summary?.retired ? '该 AI 选手已退赛' : '未找到该 AI 选手'}
+        </div>
         <Link to="/ai" className="inline-block mt-4 text-gold hover:underline">
           ← 返回 AI 列表
         </Link>
