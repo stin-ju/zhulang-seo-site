@@ -16,6 +16,9 @@ export default {
         ink: '#E8EEF7',
         muted: '#94A3B8',
         divider: 'rgba(255,255,255,0.08)',
+        // 兼容代码里大量使用的 text-text-primary / text-text-secondary 命名
+        'text-primary': '#E8EEF7',
+        'text-secondary': '#94A3B8',
       },
       fontFamily: {
         sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
