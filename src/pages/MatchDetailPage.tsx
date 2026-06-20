@@ -27,7 +27,7 @@ function HitCell({
   if (isPending || hit === null) {
     return (
       <td className="px-3 py-3 align-middle">
-        <div className="rounded-md px-2 py-1.5 text-center text-sm text-muted bg-white/[0.02] border border-divider">
+        <div className="rounded-md px-2 py-1.5 text-center text-sm text-ink bg-white/[0.02] border border-divider">
           {String(value)}
         </div>
       </td>
@@ -258,8 +258,9 @@ function BettingChip({
 }) {
   if (pending || hit === null) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] border border-divider bg-white/[0.02] text-muted">
-        {label} —
+      <span className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] border border-divider bg-white/[0.02] text-ink">
+        <span className="font-sans">{label}</span>
+        <span className="text-muted">—</span>
       </span>
     );
   }

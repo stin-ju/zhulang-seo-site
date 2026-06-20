@@ -413,7 +413,7 @@ function DimensionPill({
   const isHit = hit === '✅';
 
   let cls = 'border-divider bg-deep/60 text-ink';
-  if (muted) cls = 'border-divider/60 bg-deep/40 text-muted';
+  if (muted) cls = 'border-divider/60 bg-deep/40 text-ink';
   else if (isHit) cls = 'border-turf/30 bg-turf-soft text-turf';
   else cls = 'border-divider/60 bg-deep/40 text-miss';
 
