@@ -5,7 +5,8 @@ import {
   AI_RETIRED,
   AI_SHORT,
   aiSummaries,
-  formatPercent,
+  formatProfitRate,
+  profitRateToneClass,
   type AiSummary,
 } from '../lib/data';
 
@@ -64,14 +65,14 @@ function AiCard({ s }: { s: AiSummary }) {
       </div>
       <div className="mt-4 flex items-baseline gap-2">
         <span
-          className={`font-mono text-3xl font-bold ${s.retired ? 'text-miss' : 'text-ink'}`}
+          className={`font-mono text-3xl font-bold ${s.retired ? 'text-miss' : noConfirmed ? 'text-ink' : profitRateToneClass(s.hitRate)}`}
         >
-          {noConfirmed ? '—' : formatPercent(s.hitRate)}
+          {noConfirmed ? '—' : formatProfitRate(s.hitRate)}
         </span>
         <span className={`text-xs ${s.retired ? 'text-miss/70' : 'text-muted'}`}>
           {noConfirmed
             ? `参赛 ${s.participatedMatches} 场`
-            : `${s.totalHits} / ${s.totalSlots} 命中`}
+            : `参赛 ${s.participatedMatches} 场`}
         </span>
       </div>
     </Link>
@@ -82,7 +83,7 @@ export default function AiListPage() {
   useDocumentMeta({
     title: 'AI 选手名册 | 8个AI世界杯预测对比 - 大竞赛',
     description:
-      '2026 世界杯 AI 预测大竞赛 10 位选手（8 个活跃 + 2 个退赛）总览：综合命中率、模拟盈亏、参赛场次。',
+      '2026 世界杯 AI 预测大竞赛 10 位选手（8 个活跃 + 2 个退赛）总览：盈利率、模拟盈亏、参赛场次。',
   });
   const active = aiSummaries.filter(s => !s.retired);
   const retired = aiSummaries.filter(s => s.retired);
@@ -92,7 +93,7 @@ export default function AiListPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-ink">AI 选手</h1>
           <p className="text-muted text-sm mt-1">
-            点击任一选手查看其在所有比赛中的预测明细与各维度命中率。
+            点击任一选手查看其在所有比赛中的预测明细与盈利率。
           </p>
         </div>
         <div className="text-xs text-muted">

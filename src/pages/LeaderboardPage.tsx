@@ -6,7 +6,8 @@ import {
   AI_RETIRED,
   AI_SHORT,
   aiSummaries,
-  formatPercent,
+  formatProfitRate,
+  profitRateToneClass,
   formatPnl,
   totalConfirmed,
   totalMatches,
@@ -89,12 +90,12 @@ function ChampionCard({ s }: { s: AiSummary }) {
         </div>
         <div className="flex items-end gap-6 sm:gap-10">
           <div className="text-right">
-            <div className="text-[11px] tracking-widest text-muted">综合命中率</div>
-            <div className="font-mono text-4xl sm:text-5xl font-bold text-gold leading-none mt-1">
-              {formatPercent(s.hitRate)}
+            <div className="text-[11px] tracking-widest text-muted">盈利率</div>
+            <div className={`font-mono text-4xl sm:text-5xl font-bold leading-none mt-1 ${profitRateToneClass(s.hitRate)}`}>
+              {formatProfitRate(s.hitRate)}
             </div>
             <div className="font-mono text-[11px] text-muted mt-2">
-              命中 {s.totalHits} / {s.totalSlots}
+              参赛 {s.participatedMatches} 场
             </div>
           </div>
           <div className="text-right">
@@ -132,11 +133,11 @@ function RankCard({ s }: { s: AiSummary }) {
         <div className="text-xs text-muted mt-0.5 truncate">{s.ai}</div>
       </div>
       <div className="text-right">
-        <div className="font-mono text-xl font-bold text-ink leading-none">
-          {noConfirmed ? '—' : formatPercent(s.hitRate)}
+        <div className={`font-mono text-xl font-bold leading-none ${noConfirmed ? 'text-ink' : profitRateToneClass(s.hitRate)}`}>
+          {noConfirmed ? '—' : formatProfitRate(s.hitRate)}
         </div>
         <div className="font-mono text-[11px] text-muted mt-1">
-          {noConfirmed ? `参赛 ${s.participatedMatches} 场` : `命中 ${s.totalHits} / ${s.totalSlots}`}
+          {noConfirmed ? `参赛 ${s.participatedMatches} 场` : `参赛 ${s.participatedMatches} 场`}
         </div>
         <div className="mt-2 pt-2 border-t border-divider/60 flex items-center justify-end gap-2">
           <span className="text-[10px] tracking-widest text-muted">盈亏</span>
@@ -165,10 +166,10 @@ function RetiredCard({ s }: { s: AiSummary }) {
       </div>
       <div className="text-right">
         <div className="font-mono text-base font-semibold text-miss leading-none">
-          {formatPercent(s.hitRate)}
+          {formatProfitRate(s.hitRate)}
         </div>
         <div className="font-mono text-[11px] text-miss/70 mt-1">
-          命中 {s.totalHits} / {s.totalSlots}
+          参赛 {s.participatedMatches} 场
         </div>
         <div className="mt-2 pt-2 border-t border-divider/40 flex items-center justify-end gap-2 opacity-90">
           <span className="text-[10px] tracking-widest text-miss/70">历史盈亏</span>
@@ -183,7 +184,7 @@ export default function LeaderboardPage() {
   useDocumentMeta({
     title: '2026世界杯AI预测大竞赛 | 8个AI足球数据分析对比实验',
     description:
-      '8个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析，AI预测分析逻辑与命中率排行，足球数据可视化实验。',
+      '8个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析，AI预测分析逻辑与盈利率排行，足球数据可视化实验。',
   });
   const activeList = aiSummaries.filter(s => !s.retired);
   const retiredList = aiSummaries.filter(s => s.retired);

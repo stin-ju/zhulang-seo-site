@@ -459,6 +459,23 @@ export function formatPercent(rate: number): string {
   return `${(rate * 100).toFixed(1)}%`;
 }
 
+/**
+ * 盈利率（profit rate）展示：正数加 +、负数加 -、0 为 0.0%
+ * 输入与 hitRate 相同——0.243 表示 +24.3%，-0.141 表示 -14.1%
+ */
+export function formatProfitRate(rate: number): string {
+  const pct = rate * 100;
+  if (pct > 0) return `+${pct.toFixed(1)}%`;
+  if (pct < 0) return `${pct.toFixed(1)}%`;
+  return '0.0%';
+}
+
+export function profitRateToneClass(rate: number): string {
+  if (rate > 0) return 'text-turf';
+  if (rate < 0) return 'text-rose-300';
+  return 'text-text-secondary';
+}
+
 export let totalMatches = 0;
 export let totalConfirmed = 0;
 

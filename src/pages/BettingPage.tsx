@@ -194,100 +194,6 @@ function StandardCard({ s }: { s: BettingSummaryEntry }) {
   );
 }
 
-function DimensionTable() {
-  const sorted = bettingSummaries;
-  const dimMaxAbs: Record<BettingDimensionKey, number> = {
-    spf: 0,
-    handicap: 0,
-    score: 0,
-    goals: 0,
-    half_full: 0,
-    chain: 0,
-  };
-  for (const s of sorted) {
-    for (const d of BETTING_DIMENSIONS) {
-      const a = Math.abs(s.dimensions[d.key]?.pnl ?? 0);
-      if (a > dimMaxAbs[d.key]) dimMaxAbs[d.key] = a;
-    }
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-elevated text-[11px] uppercase tracking-wider text-muted">
-            <th className="text-left px-4 py-3 font-medium w-[170px]">AI 模型</th>
-            {BETTING_DIMENSIONS.map(d => (
-              <th key={d.key} className="text-center px-3 py-3 font-medium">
-                {d.label}
-              </th>
-            ))}
-            <th className="text-center px-4 py-3 font-medium w-[120px]">合计</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(s => (
-            <tr
-              key={s.ai}
-              className="border-t border-divider hover:bg-white/[0.02] transition-colors"
-            >
-              <td className="px-4 py-3 align-middle">
-                <Link
-                  to={`/ai/${encodeURIComponent(s.ai)}`}
-                  className="flex items-center gap-2 group"
-                >
-                  <MedalBadge rank={s.rank} />
-                  <span className="text-ink font-medium group-hover:text-gold transition-colors">
-                    {AI_SHORT[s.ai as AiName] ?? s.ai}
-                  </span>
-                </Link>
-              </td>
-              {BETTING_DIMENSIONS.map(d => {
-                const stat = s.dimensions[d.key];
-                const pnl = stat?.pnl ?? 0;
-                const hits = stat?.hits ?? 0;
-                const invest = stat?.invest ?? 0;
-                const max = dimMaxAbs[d.key] || 1;
-                const ratio = Math.min(1, Math.abs(pnl) / max);
-                const positive = pnl > 0;
-                const negative = pnl < 0;
-                return (
-                  <td key={d.key} className="px-3 py-3 align-middle">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted font-mono">
-                          {hits}/{invest / 2}
-                        </span>
-                        <PnlText value={pnl} size="sm" />
-                      </div>
-                      <div className="relative h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                        <div
-                          className={`absolute inset-y-0 ${
-                            positive
-                              ? 'left-1/2 bg-turf/70'
-                              : negative
-                              ? 'right-1/2 bg-[#F87171]/70'
-                              : ''
-                          }`}
-                          style={{ width: `${ratio * 50}%` }}
-                        />
-                        <div className="absolute inset-y-0 left-1/2 w-px bg-divider/80" />
-                      </div>
-                    </div>
-                  </td>
-                );
-              })}
-              <td className="px-4 py-3 align-middle text-center">
-                <PnlText value={s.total_pnl} size="base" />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function DailyTimeline() {
   const [showAll, setShowAll] = useState(false);
   const visibleDates = showAll ? bettingDates : bettingDates.slice(0, 4);
@@ -322,10 +228,6 @@ function DailyTimeline() {
                 const ratio = Math.min(1, Math.abs(r.daily_pnl) / dayMax);
                 const positive = r.daily_pnl > 0;
                 const negative = r.daily_pnl < 0;
-                const investTotal = BETTING_DIMENSIONS.reduce(
-                  (sum, d) => sum + (r[d.key]?.invest ?? 0),
-                  0
-                );
                 return (
                   <div
                     key={r.ai}
@@ -355,16 +257,12 @@ function DailyTimeline() {
                           />
                         )}
                       </div>
-                      <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted font-mono">
-                        <span>投入 {investTotal}</span>
+                      <div className="mt-1.5 flex items-center justify-end text-[11px] text-muted font-mono">
                         <span>胜率 {r.win_rate}</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0 min-w-[80px]">
                       <PnlText value={r.daily_pnl} size="base" />
-                      <div className="text-[10px] text-muted mt-0.5">
-                        排名变化 {r.rank_change}
-                      </div>
                     </div>
                   </div>
                 );
@@ -394,7 +292,7 @@ export default function BettingPage() {
   useDocumentMeta({
     title: 'AI预测模拟盈亏对比 | 串关与单注数据 - 大竞赛',
     description:
-      '8 个 AI 在 2026 世界杯模拟盈亏排行榜，含让球、比分、总进球、半全场、串关 6 维度模拟净收益走势与命中率对比。',
+      '8 个 AI 在 2026 世界杯模拟盈亏排行榜，每日总盈亏与胜率走势对比。',
   });
   const totals = getBettingTotals();
   const champion = bettingSummaries[0];
@@ -470,28 +368,6 @@ export default function BettingPage() {
           {others.map(s => (
             <StandardCard key={s.ai} s={s} />
           ))}
-        </div>
-      </section>
-
-      {/* Per-dimension comparison */}
-      <section>
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">分维度盈亏对比</h2>
-          <span className="text-xs text-muted">
-            5 个维度：胜平负 / 让球 / 比分 / 总进球 / 半全场
-          </span>
-        </div>
-        <div className="rounded-2xl border border-divider bg-deep overflow-hidden">
-          <DimensionTable />
-        </div>
-        <div className="flex items-center gap-4 text-[11px] text-muted mt-3">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-3 rounded bg-turf/70" /> 净收益
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-3 rounded bg-[#F87171]/70" /> 净亏损
-          </span>
-          <span>条形长度反映该维度上各 AI 间相对的模拟净收益差距</span>
         </div>
       </section>
 

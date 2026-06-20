@@ -7,12 +7,14 @@ import {
   DIMENSIONS,
   formatPercent,
   formatPnl,
+  formatProfitRate,
   formatYuan,
   getAiMatches,
   getAiSummary,
   getChainBetsForAi,
   isoToCnDate,
   matches as allMatches,
+  profitRateToneClass,
   type AiMatchRow,
   type ChainBet,
   type ChainBetSelection,
@@ -33,25 +35,6 @@ function dimValue(p: Prediction, key: DimensionKey): string | number {
   }
 }
 
-function DimBar({ rate, hits, total }: { rate: number; hits: number; total: number }) {
-  return (
-    <div>
-      <div className="flex items-center justify-between text-xs text-muted">
-        <span className="font-mono text-ink">{formatPercent(rate)}</span>
-        <span>
-          {hits} / {total}
-        </span>
-      </div>
-      <div className="mt-2 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-turf to-emerald-300"
-          style={{ width: `${Math.max(0, Math.min(1, rate)) * 100}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 export default function AiDetailPage() {
   const { name } = useParams<{ name: string }>();
   const decoded = name ? decodeURIComponent(name) : '';
@@ -61,11 +44,11 @@ export default function AiDetailPage() {
   const aiShort = summary ? AI_SHORT[summary.ai] : '';
   useDocumentMeta({
     title: summary
-      ? `${aiShort}AI世界杯预测分析 | 命中率与模拟盈亏 - 大竞赛`
-      : 'AI 预测分析 | 命中率与模拟盈亏 - 大竞赛',
+      ? `${aiShort}AI世界杯预测分析 | 盈利率与模拟盈亏 - 大竞赛`
+      : 'AI 预测分析 | 盈利率与模拟盈亏 - 大竞赛',
     description: summary
-      ? `${aiShort} 对 2026 世界杯全部赛事的胜平负、让球、比分、总进球、半全场、串关 6 维度预测分析、命中率与模拟盈亏明细。`
-      : '查看各 AI 在 2026 世界杯赛事中的预测分析、命中率与模拟盈亏明细。',
+      ? `${aiShort} 对 2026 世界杯全部赛事的胜平负、让球、比分、总进球、半全场、串关 6 维度预测分析、盈利率与模拟盈亏明细。`
+      : '查看各 AI 在 2026 世界杯赛事中的预测分析、盈利率与模拟盈亏明细。',
   });
 
   useEffect(() => {
@@ -152,24 +135,21 @@ export default function AiDetailPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
-              <div className="text-[11px] uppercase tracking-widest text-muted">综合命中率</div>
+              <div className="text-[11px] uppercase tracking-widest text-muted">盈利率</div>
               <div
                 className={`font-mono text-4xl sm:text-5xl font-bold mt-1 leading-none ${
-                  summary.retired
-                    ? 'text-miss'
-                    : summary.rank === 1
-                      ? 'text-gold'
-                      : 'text-ink'
+                  summary.totalConfirmed === 0
+                    ? 'text-ink'
+                    : profitRateToneClass(summary.hitRate)
                 }`}
               >
-                {summary.totalConfirmed === 0 ? '—' : formatPercent(summary.hitRate)}
+                {summary.totalConfirmed === 0 ? '—' : formatProfitRate(summary.hitRate)}
               </div>
             </div>
             <div>
-              <div className="text-[11px] uppercase tracking-widest text-muted">命中 / 预测</div>
-              <div className="font-mono text-2xl sm:text-3xl text-ink mt-1">
-                {summary.totalHits}
-                <span className="text-muted text-base"> / {summary.totalSlots}</span>
+              <div className="text-[11px] uppercase tracking-widest text-muted">累计盈亏</div>
+              <div className="font-mono text-2xl sm:text-3xl mt-1">
+                <PnlInline pnl={summary.officialPnl} />
               </div>
             </div>
             <div>
@@ -183,41 +163,17 @@ export default function AiDetailPage() {
         </div>
       </section>
 
-      {/* Per-dimension stats */}
-      <section className="rounded-2xl border border-divider bg-deep p-5 sm:p-6">
-        <h2 className="text-base font-semibold text-ink">各维度命中率</h2>
-        <p className="text-xs text-muted mt-1">
-          基于 {summary.totalConfirmed} 场已确认比赛
-          {(() => {
-            const dimTotal = Math.max(
-              ...Object.values(summary.perDim).map(d => d.total)
-            );
-            const gap = summary.totalConfirmed - dimTotal;
-            return gap > 0
-              ? `（其中 ${gap} 场逐项命中数据待录入，仅汇总赔率/胜率不受影响）`
-              : '统计';
-          })()}
-          。
-        </p>
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-          {DIMENSIONS.map(d => {
-            const stat = summary.perDim[d.key];
-            return (
-              <div key={d.key}>
-                <div className="text-sm text-ink mb-1">{d.label}</div>
-                <DimBar rate={stat.rate} hits={stat.hits} total={stat.total} />
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {/* Per-match accordion list */}
       <AiMatchAccordionSection rows={rows} ai={decoded} />
 
       <AiChainBetsSection ai={decoded} />
     </div>
   );
+}
+
+function PnlInline({ pnl }: { pnl: number }) {
+  const tone = pnl > 0 ? 'text-turf' : pnl < 0 ? 'text-rose-300' : 'text-text-secondary';
+  return <span className={tone}>{formatPnl(pnl)}</span>;
 }
 
 function AiMatchAccordionSection({ rows, ai }: { rows: AiMatchRow[]; ai: string }) {
