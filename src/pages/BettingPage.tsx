@@ -413,6 +413,13 @@ export default function BettingPage() {
 // ===== Chain bets section =====
 function ChainBetsSection() {
   const totals = getChainBetTotals();
+  // 过滤退赛 AI 后的天数
+  const days = chainBets
+    .map((d) => ({ ...d, ai_bets: d.ai_bets.filter((ab) => !isRetiredAi(ab.ai)) }))
+    .filter((d) => d.ai_bets.length > 0);
+  const [showAll, setShowAll] = useState(false);
+  const visibleDays = showAll ? days : days.slice(0, 1);
+  const hasMore = days.length > 1;
   return (
     <div className="space-y-5">
       {/* KPI top */}
@@ -439,9 +446,23 @@ function ChainBetsSection() {
       </div>
 
       {/* Day cards */}
-      {chainBets.map((day) => (
-        <ChainDayCard key={day.date} day={day} />
+      {visibleDays.map((day, idx) => (
+        <ChainDayCard key={day.date} day={day} defaultOpen={idx === 0} />
       ))}
+
+      {hasMore && (
+        <div className="flex justify-center pt-1">
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs px-4 py-1.5 rounded-full border border-divider text-muted hover:text-gold hover:border-gold/40 transition-colors"
+          >
+            {showAll
+              ? `收起（仅显示最新 1 天）`
+              : `展开全部（共 ${days.length} 天，已隐藏 ${days.length - 1} 天）`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -467,15 +488,21 @@ function ChainStat({
   );
 }
 
-function ChainDayCard({ day }: { day: ChainBetDay }) {
+function ChainDayCard({ day, defaultOpen = false }: { day: ChainBetDay; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const dayBets = day.ai_bets.flatMap((ab) => ab.bets);
   const dayHits = dayBets.filter((b) => b.hit).length;
   const dayPnl = dayBets.reduce((s, b) => s + b.pnl, 0);
 
   return (
     <div className="rounded-xl bg-deep ring-1 ring-divider overflow-hidden">
-      {/* Day header */}
-      <header className="flex items-baseline justify-between px-5 py-3 bg-elevated/40 border-b border-divider">
+      {/* Day header (clickable) */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-baseline justify-between px-5 py-3 bg-elevated/40 border-b border-divider hover:bg-elevated/60 transition-colors text-left"
+        aria-expanded={open}
+      >
         <div className="flex items-baseline gap-3">
           <h3 className="text-base font-semibold text-ink">{day.date}</h3>
           <span className="text-xs text-muted">{day.matches.length} 场比赛</span>
@@ -489,25 +516,30 @@ function ChainDayCard({ day }: { day: ChainBetDay }) {
             {dayPnl >= 0 ? '+' : ''}
             {dayPnl.toFixed(2)}
           </span>
+          <span className="text-muted ml-1">{open ? '收起 ▴' : '展开 ▾'}</span>
         </div>
-      </header>
+      </button>
 
-      {/* Match list strip */}
-      <div className="px-5 py-2 text-[11px] text-muted border-b border-divider/50 flex flex-wrap gap-x-3 gap-y-1">
-        <span className="text-text-secondary">本日比赛：</span>
-        {day.matches.map((mid) => (
-          <span key={mid} className="tabular-nums text-ink/70">
-            {mid}
-          </span>
-        ))}
-      </div>
+      {open && (
+        <>
+          {/* Match list strip */}
+          <div className="px-5 py-2 text-[11px] text-muted border-b border-divider/50 flex flex-wrap gap-x-3 gap-y-1">
+            <span className="text-text-secondary">本日比赛：</span>
+            {day.matches.map((mid) => (
+              <span key={mid} className="tabular-nums text-ink/70">
+                {mid}
+              </span>
+            ))}
+          </div>
 
-      {/* AI bet rows */}
-      <div className="divide-y divide-divider">
-        {day.ai_bets.map((ab) => (
-          <AiChainBets key={ab.ai} aiBets={ab} />
-        ))}
-      </div>
+          {/* AI bet rows */}
+          <div className="divide-y divide-divider">
+            {day.ai_bets.map((ab) => (
+              <AiChainBets key={ab.ai} aiBets={ab} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
