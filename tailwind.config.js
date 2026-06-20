@@ -12,7 +12,7 @@ export default {
         'turf-soft': 'rgba(16,185,129,0.15)',
         gold: '#F5C242',
         'gold-soft': 'rgba(245,194,66,0.12)',
-        miss: '#3F4A60',
+        miss: '#94A3B8',
         ink: '#E8EEF7',
         muted: '#94A3B8',
         divider: 'rgba(255,255,255,0.08)',
