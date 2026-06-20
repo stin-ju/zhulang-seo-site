@@ -277,8 +277,8 @@ function parsePercent(s: string): number | null {
   if (bare) {
     const n = Number(t);
     if (!Number.isFinite(n)) return null;
-    // 0~1 视作小数命中率，>1 视作百分制
-    return n > 1 ? n / 100 : n;
+    // |n| > 1 视作百分制（如 24.3 / -14.1），|n| ≤ 1 视作小数（如 0.442 / -0.013）
+    return Math.abs(n) > 1 ? n / 100 : n;
   }
   return null;
 }
