@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDocumentMeta } from '../lib/useDocumentMeta';
+import { supabase } from '../lib/supabase';
 import {
   AI_ACTIVE,
   AI_RETIRED,
@@ -242,21 +243,7 @@ export default function LeaderboardPage() {
   );
 }
 
-const VISIT_COUNT_KEY = 'coze:visitCount';
 const VISIT_DATE_KEY = 'coze:lastVisitDate';
-// 站点级别基线访客数：根据上线时间动态推算，让每位访客看到的不只是自己设备上的本地计数。
-// 起算时间：2026-06-12 00:00（赛事开赛日），平均每分钟约 0.42 次，单天约 600 次。
-const SITE_BASELINE_ANCHOR_MS = new Date('2026-06-12T00:00:00+08:00').getTime();
-const SITE_BASELINE_INITIAL = 1287;
-const SITE_BASELINE_PER_MIN = 0.42;
-
-function siteBaseline(): number {
-  const elapsedMin = Math.max(
-    0,
-    (Date.now() - SITE_BASELINE_ANCHOR_MS) / 60000
-  );
-  return Math.floor(SITE_BASELINE_INITIAL + elapsedMin * SITE_BASELINE_PER_MIN);
-}
 
 function todayString(): string {
   const d = new Date();
@@ -266,33 +253,91 @@ function todayString(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+async function fetchTotalVisits(): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('site_visits')
+    .select('total_visits')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error || !data) return null;
+  const n = Number(data.total_visits);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+async function tryIncrementVisit(): Promise<number | null> {
+  // 优先尝试 RPC（如果数据库部署了 increment_site_visit 函数，直接拿到原子结果）。
+  const rpc = await supabase.rpc('increment_site_visit');
+  if (!rpc.error && rpc.data != null) {
+    const n = Number(rpc.data);
+    if (Number.isFinite(n) && n >= 0) return n;
+  }
+  // 降级：先读后写。RLS 若禁止匿名 UPDATE，会失败但不会抛异常，前端继续显示读到的值。
+  const current = await fetchTotalVisits();
+  if (current === null) {
+    // 表里还没有 id=1 的种子行：尝试 insert 一条 total_visits=1。
+    const ins = await supabase
+      .from('site_visits')
+      .insert({ id: 1, total_visits: 1, updated_at: new Date().toISOString() })
+      .select('total_visits')
+      .maybeSingle();
+    if (!ins.error && ins.data) {
+      const n = Number(ins.data.total_visits);
+      if (Number.isFinite(n) && n >= 0) return n;
+    }
+    return null;
+  }
+  const next = current + 1;
+  const upd = await supabase
+    .from('site_visits')
+    .update({ total_visits: next, updated_at: new Date().toISOString() })
+    .eq('id', 1)
+    .select('total_visits')
+    .maybeSingle();
+  if (upd.error || !upd.data) {
+    // 写失败：依然返回 current，UI 不再做 +1，避免本地虚高。
+    return current;
+  }
+  const n = Number(upd.data.total_visits);
+  return Number.isFinite(n) && n >= 0 ? n : current;
+}
+
 function VisitCounter() {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = window.localStorage.getItem(VISIT_COUNT_KEY);
-      const lastDate = window.localStorage.getItem(VISIT_DATE_KEY);
-      const today = todayString();
-      const parsed = raw === null ? NaN : Number.parseInt(raw, 10);
-      const personalCount = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-
-      let nextPersonal = personalCount;
-      if (lastDate !== today) {
-        nextPersonal = personalCount + 1;
-        window.localStorage.setItem(VISIT_COUNT_KEY, String(nextPersonal));
-        window.localStorage.setItem(VISIT_DATE_KEY, today);
-      } else if (personalCount === 0) {
-        nextPersonal = 1;
-        window.localStorage.setItem(VISIT_COUNT_KEY, String(nextPersonal));
+    let cancelled = false;
+    (async () => {
+      let lastDate: string | null = null;
+      try {
+        lastDate =
+          typeof window !== 'undefined'
+            ? window.localStorage.getItem(VISIT_DATE_KEY)
+            : null;
+      } catch {
+        lastDate = null;
       }
-      // 显示值 = 站点基线 + 个人累计访问次数（让单设备访问也能体现到总数里）。
-      setCount(siteBaseline() + nextPersonal);
-    } catch {
-      // 隐私模式 / 禁用 localStorage：仍显示站点基线，避免占位。
-      setCount(siteBaseline());
-    }
+      const today = todayString();
+      const isFirstToday = lastDate !== today;
+
+      let total: number | null;
+      if (isFirstToday) {
+        total = await tryIncrementVisit();
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(VISIT_DATE_KEY, today);
+          }
+        } catch {
+          // 隐私模式：写入失败也不影响展示。
+        }
+      } else {
+        total = await fetchTotalVisits();
+      }
+
+      if (!cancelled) setCount(total);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -300,7 +345,7 @@ function VisitCounter() {
       <div className="flex flex-col items-center justify-center gap-2 text-center">
         <span className="text-[11px] tracking-[0.3em] uppercase text-muted">Site Visits</span>
         <p className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-sm text-muted">
-          <span>本站已被访问</span>
+          <span>本站累计访问次数</span>
           {count === null ? (
             <span className="font-mono text-2xl font-bold text-muted">—</span>
           ) : (
@@ -311,7 +356,7 @@ function VisitCounter() {
           <span>次</span>
         </p>
         <span className="text-[11px] text-muted/80">
-          站点累计访问数（站点基线 + 你本地的访问次数；同日多次访问不重复计数）。
+          数据来自数据库实时计数；同一设备同日多次访问只计 1 次。
         </span>
       </div>
     </section>
