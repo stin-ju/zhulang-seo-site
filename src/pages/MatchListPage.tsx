@@ -477,7 +477,8 @@ function DimCell({
   let className = 'text-text-primary';
   if (isHitTrue) className = 'rounded-md bg-turf-soft text-turf font-medium';
   else if (isMiss) className = 'text-miss';
-  else if (hit === null) className = 'text-text-secondary/70';
+  // hit === null 表示未结算（待比赛或赛后未录入），保持正常亮色文本，不再降亮
+
 
   return (
     <td className="px-2 py-2 text-center">
