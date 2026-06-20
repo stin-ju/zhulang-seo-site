@@ -174,7 +174,7 @@ export default function AiDetailPage() {
 }
 
 function PnlInline({ pnl }: { pnl: number }) {
-  const tone = pnl > 0 ? 'text-turf' : pnl < 0 ? 'text-rose-300' : 'text-text-secondary';
+  const tone = pnl > 0 ? 'text-turf' : pnl < 0 ? 'text-rose-300' : 'text-muted';
   return <span className={tone}>{formatPnl(pnl)}</span>;
 }
 
@@ -217,7 +217,7 @@ function AiMatchAccordionSection({ rows, ai }: { rows: AiMatchRow[]; ai: string 
           <button
             type="button"
             onClick={() => setShowAll((v) => !v)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-divider bg-night/40 px-4 py-1.5 text-xs text-text-secondary transition-colors hover:border-gold/50 hover:text-gold"
+            className="inline-flex items-center gap-1.5 rounded-md border border-divider bg-night/40 px-4 py-1.5 text-xs text-muted transition-colors hover:border-gold/50 hover:text-gold"
           >
             {showAll ? '收起较早场次' : `展开全部场次（还有 ${hiddenCount} 场）`}
           </button>
@@ -295,7 +295,7 @@ function AiMatchAccordionItem({ row, defaultOpen, ai }: { row: AiMatchRow; defau
             <span>
               <span className="text-muted">预测：</span>
               <span className="font-medium text-ink">{prediction.spf}</span>
-              <span className="mx-1 text-text-secondary/60">·</span>
+              <span className="mx-1 text-muted/60">·</span>
               <span className="font-mono text-ink tabular-nums">{prediction.score}</span>
             </span>
             <span className="text-[10px] text-muted">
@@ -335,9 +335,9 @@ function AiMatchAccordionItem({ row, defaultOpen, ai }: { row: AiMatchRow; defau
         <div className="px-4 pb-2 sm:hidden -mt-1">
           <div className="text-[11px] text-muted">
             预测：<span className="text-ink">{prediction.spf}</span>
-            <span className="mx-1 text-text-secondary/60">·</span>
+            <span className="mx-1 text-muted/60">·</span>
             <span className="font-mono text-ink tabular-nums">{prediction.score}</span>
-            <span className="mx-1 text-text-secondary/60">·</span>
+            <span className="mx-1 text-muted/60">·</span>
             让球 {prediction.handicap_spf}
           </div>
         </div>
@@ -449,11 +449,11 @@ function AiMatchInlineChainBets({ ai, matchTime }: { ai: string; matchTime: stri
   if (!day || day.bets.length === 0) {
     return (
       <div className="mt-4 rounded-lg border border-divider/60 bg-deep/40 px-4 py-3">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-text-secondary">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-miss" />
           当日串关方案 · {cnDate}
         </div>
-        <div className="mt-1.5 text-[11px] text-text-secondary/80 normal-case tracking-normal">
+        <div className="mt-1.5 text-[11px] text-muted/80 normal-case tracking-normal">
           暂无串关数据
         </div>
       </div>
@@ -476,9 +476,9 @@ function AiMatchInlineChainBets({ ai, matchTime }: { ai: string; matchTime: stri
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
           当日串关方案 · {cnDate}
         </div>
-        <div className="flex items-center gap-x-4 gap-y-1 text-[11px] text-text-secondary">
+        <div className="flex items-center gap-x-4 gap-y-1 text-[11px] text-muted">
           {allPending ? (
-            <span className="rounded bg-night/60 px-2 py-0.5 text-text-secondary">待定 · {day.bets.length} 注</span>
+            <span className="rounded bg-night/60 px-2 py-0.5 text-muted">待定 · {day.bets.length} 注</span>
           ) : (
             <>
               <span>
@@ -527,23 +527,23 @@ function AiChainBetsSection({ ai }: { ai: string }) {
     <section id="chain" className="scroll-mt-24 rounded-xl border border-divider bg-deep px-5 py-6 sm:px-7 sm:py-8">
       <header className="mb-5 flex flex-col gap-3 border-b border-divider/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary sm:text-xl">串关推荐明细</h2>
-          <p className="mt-1 text-xs text-text-secondary sm:text-sm">
+          <h2 className="text-lg font-semibold text-ink sm:text-xl">串关推荐明细</h2>
+          <p className="mt-1 text-xs text-muted sm:text-sm">
             {shortName} 在 2 串 1（稳胆串）/ 3 串 1（均衡串）/ 4 串 1（博高串）三种类型上的逐场推荐与命中情况。
           </p>
         </div>
         {!empty ? (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs sm:text-sm">
-            <span className="text-text-secondary">
-              推荐 <span className="font-semibold text-text-primary">{totals.totalBets}</span> 次
+            <span className="text-muted">
+              推荐 <span className="font-semibold text-ink">{totals.totalBets}</span> 次
             </span>
-            <span className="text-text-secondary">
+            <span className="text-muted">
               命中 <span className="font-semibold text-turf">{totals.totalHits}</span> 次
             </span>
-            <span className="text-text-secondary">
-              命中率 <span className="font-semibold text-text-primary">{formatPercent(totals.hitRate)}</span>
+            <span className="text-muted">
+              命中率 <span className="font-semibold text-ink">{formatPercent(totals.hitRate)}</span>
             </span>
-            <span className="text-text-secondary">
+            <span className="text-muted">
               净盈亏{' '}
               <span className={`font-semibold ${totals.totalPnl >= 0 ? 'text-turf' : 'text-red-400'}`}>
                 {formatPnl(totals.totalPnl)}
@@ -554,7 +554,7 @@ function AiChainBetsSection({ ai }: { ai: string }) {
       </header>
 
       {empty && !showPendingPlaceholder ? (
-        <div className="rounded-lg border border-dashed border-divider bg-night/40 px-5 py-8 text-center text-sm text-text-secondary">
+        <div className="rounded-lg border border-dashed border-divider bg-night/40 px-5 py-8 text-center text-sm text-muted">
           暂未参与串关追踪
         </div>
       ) : (
@@ -582,11 +582,11 @@ function AiChainPendingDay({ date }: { date: string }) {
           <span className="inline-flex h-6 min-w-[2.25rem] items-center justify-center rounded-full bg-gold/20 px-2 text-[11px] font-semibold uppercase tracking-wide text-gold">
             待生成
           </span>
-          <h3 className="text-sm font-semibold text-text-primary sm:text-base">{display} · 串关预测即将生成</h3>
+          <h3 className="text-sm font-semibold text-ink sm:text-base">{display} · 串关预测即将生成</h3>
         </div>
-        <span className="text-xs text-text-secondary">系统将在赛前发布该日期的 2 串 1 / 3 串 1 / 4 串 1 推荐</span>
+        <span className="text-xs text-muted">系统将在赛前发布该日期的 2 串 1 / 3 串 1 / 4 串 1 推荐</span>
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-text-secondary sm:text-sm">
+      <p className="mt-3 text-xs leading-relaxed text-muted sm:text-sm">
         当前对应日期还未录入串关组合，赛前补充后会自动出现在此处，请稍后再来查看。
       </p>
     </article>
@@ -624,7 +624,7 @@ function AiChainDay({ day, defaultOpen = false }: AiChainDayProps) {
       >
         <span
           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-base font-bold transition-colors ${
-            open ? 'border-gold/50 bg-gold/10 text-gold' : 'border-divider text-text-secondary'
+            open ? 'border-gold/50 bg-gold/10 text-gold' : 'border-divider text-muted'
           }`}
           aria-label={open ? '折叠' : '展开'}
         >
@@ -632,15 +632,15 @@ function AiChainDay({ day, defaultOpen = false }: AiChainDayProps) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="text-base font-semibold text-text-primary tabular-nums">{day.date}</span>
+            <span className="text-base font-semibold text-ink tabular-nums">{day.date}</span>
             {day.matches.length > 0 ? (
-              <span className="text-xs text-text-secondary">参考赛事：{day.matches.join('、')}</span>
+              <span className="text-xs text-muted">参考赛事：{day.matches.join('、')}</span>
             ) : null}
           </div>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary">
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
           <span>
-            推荐 <span className="font-semibold text-text-primary">{dayBets}</span>
+            推荐 <span className="font-semibold text-ink">{dayBets}</span>
           </span>
           <span>
             命中 <span className="font-semibold text-turf">{dayHits}</span>
@@ -679,8 +679,8 @@ function AiChainBetCard({ bet }: { bet: ChainBet }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5">
-          <div className={`text-sm font-semibold ${hit === true ? 'text-gold' : 'text-text-secondary'}`}>{bet.type}</div>
-          <div className="text-[11px] tabular-nums text-text-secondary">
+          <div className={`text-sm font-semibold ${hit === true ? 'text-gold' : 'text-muted'}`}>{bet.type}</div>
+          <div className="text-[11px] tabular-nums text-muted">
             赔率 {bet.odds.toFixed(2)} × 2 元
           </div>
         </div>
@@ -689,8 +689,8 @@ function AiChainBetCard({ bet }: { bet: ChainBet }) {
             hit === true
               ? 'bg-turf text-night'
               : pending
-                ? 'bg-night/60 text-text-secondary border border-divider'
-                : 'bg-divider text-text-secondary'
+                ? 'bg-night/60 text-muted border border-divider'
+                : 'bg-divider text-muted'
           }`}
           aria-label={hit === true ? '命中' : pending ? '待定' : '未命中'}
         >
@@ -710,15 +710,15 @@ function AiChainBetCard({ bet }: { bet: ChainBet }) {
             hit === true
               ? 'bg-turf-soft text-turf'
               : pending
-                ? 'bg-night/60 text-text-secondary'
-                : 'bg-night/60 text-text-secondary'
+                ? 'bg-night/60 text-muted'
+                : 'bg-night/60 text-muted'
           }`}
         >
           {hit === true ? '命中' : pending ? '○ 待定' : '未中'}
         </span>
         <span
           className={`tabular-nums font-semibold ${
-            pending ? 'text-text-secondary' : bet.pnl >= 0 ? 'text-turf' : 'text-red-400'
+            pending ? 'text-muted' : bet.pnl >= 0 ? 'text-turf' : 'text-red-400'
           }`}
         >
           {pending ? '—' : `${formatPnl(bet.pnl)} (${formatYuan(bet.pnl)})`}
@@ -733,27 +733,27 @@ function AiChainSelectionRow({ selection }: { selection: ChainBetSelection }) {
   const pending = hit === null;
   const ok = hit === true;
   return (
-    <li className="flex items-start gap-2 text-[11px] leading-snug text-text-secondary">
+    <li className="flex items-start gap-2 text-[11px] leading-snug text-muted">
       <span
         className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
           ok
             ? 'bg-turf-soft text-turf'
             : pending
-              ? 'bg-night/60 text-text-secondary'
-              : 'bg-night/60 text-text-secondary'
+              ? 'bg-night/60 text-muted'
+              : 'bg-night/60 text-muted'
         }`}
         aria-label={ok ? '命中' : pending ? '待定' : '未命中'}
       >
         {ok ? '✓' : pending ? '○' : '♡'}
       </span>
       <span className="flex-1">
-        <span className={ok ? 'text-text-primary' : pending ? 'text-text-primary/80' : ''}>
+        <span className={ok ? 'text-ink' : pending ? 'text-ink/80' : ''}>
           {selection.teams}
         </span>
-        <span className="mx-1 text-text-secondary/60">·</span>
-        <span className="text-text-secondary">
+        <span className="mx-1 text-muted/60">·</span>
+        <span className="text-muted">
           {selection.dimension}
-          <span className="ml-1 text-text-primary">{selection.prediction}</span>
+          <span className="ml-1 text-ink">{selection.prediction}</span>
         </span>
       </span>
     </li>

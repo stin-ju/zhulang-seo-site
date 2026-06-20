@@ -473,7 +473,7 @@ export function formatProfitRate(rate: number): string {
 export function profitRateToneClass(rate: number): string {
   if (rate > 0) return 'text-turf';
   if (rate < 0) return 'text-rose-300';
-  return 'text-text-secondary';
+  return 'text-muted';
 }
 
 export let totalMatches = 0;

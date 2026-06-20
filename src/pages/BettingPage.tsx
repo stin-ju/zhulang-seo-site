@@ -524,7 +524,7 @@ function ChainDayCard({ day, defaultOpen = false }: { day: ChainBetDay; defaultO
         <>
           {/* Match list strip */}
           <div className="px-5 py-2 text-[11px] text-muted border-b border-divider/50 flex flex-wrap gap-x-3 gap-y-1">
-            <span className="text-text-secondary">本日比赛：</span>
+            <span className="text-muted">本日比赛：</span>
             {day.matches.map((mid) => (
               <span key={mid} className="tabular-nums text-ink/70">
                 {mid}

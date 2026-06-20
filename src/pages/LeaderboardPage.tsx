@@ -17,7 +17,7 @@ import {
 
 function PnlBadge({ pnl, size = 'md' }: { pnl: number; size?: 'sm' | 'md' | 'lg' }) {
   const tone =
-    pnl > 0 ? 'text-turf' : pnl < 0 ? 'text-rose-300' : 'text-text-secondary';
+    pnl > 0 ? 'text-turf' : pnl < 0 ? 'text-rose-300' : 'text-muted';
   const sizeCls =
     size === 'lg'
       ? 'text-2xl font-bold tracking-tight'
