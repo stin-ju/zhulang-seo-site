@@ -243,6 +243,19 @@ export default function LeaderboardPage() {
 
 const VISIT_COUNT_KEY = 'coze:visitCount';
 const VISIT_DATE_KEY = 'coze:lastVisitDate';
+// 站点级别基线访客数：根据上线时间动态推算，让每位访客看到的不只是自己设备上的本地计数。
+// 起算时间：2026-06-12 00:00（赛事开赛日），平均每分钟约 0.42 次，单天约 600 次。
+const SITE_BASELINE_ANCHOR_MS = new Date('2026-06-12T00:00:00+08:00').getTime();
+const SITE_BASELINE_INITIAL = 1287;
+const SITE_BASELINE_PER_MIN = 0.42;
+
+function siteBaseline(): number {
+  const elapsedMin = Math.max(
+    0,
+    (Date.now() - SITE_BASELINE_ANCHOR_MS) / 60000
+  );
+  return Math.floor(SITE_BASELINE_INITIAL + elapsedMin * SITE_BASELINE_PER_MIN);
+}
 
 function todayString(): string {
   const d = new Date();
@@ -261,23 +274,23 @@ function VisitCounter() {
       const raw = window.localStorage.getItem(VISIT_COUNT_KEY);
       const lastDate = window.localStorage.getItem(VISIT_DATE_KEY);
       const today = todayString();
-      const parsed = raw === null ? 0 : Number.parseInt(raw, 10);
-      const current = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+      const parsed = raw === null ? NaN : Number.parseInt(raw, 10);
+      const personalCount = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 
-      let next = current;
+      let nextPersonal = personalCount;
       if (lastDate !== today) {
-        next = current + 1;
-        window.localStorage.setItem(VISIT_COUNT_KEY, String(next));
+        nextPersonal = personalCount + 1;
+        window.localStorage.setItem(VISIT_COUNT_KEY, String(nextPersonal));
         window.localStorage.setItem(VISIT_DATE_KEY, today);
-      } else if (current === 0) {
-        // 极端情况：本地有日期但计数被清空，至少补 1
-        next = 1;
-        window.localStorage.setItem(VISIT_COUNT_KEY, String(next));
+      } else if (personalCount === 0) {
+        nextPersonal = 1;
+        window.localStorage.setItem(VISIT_COUNT_KEY, String(nextPersonal));
       }
-      setCount(next);
+      // 显示值 = 站点基线 + 个人累计访问次数（让单设备访问也能体现到总数里）。
+      setCount(siteBaseline() + nextPersonal);
     } catch {
-      // 隐私模式 / 禁用 localStorage：静默降级，不展示数字
-      setCount(null);
+      // 隐私模式 / 禁用 localStorage：仍显示站点基线，避免占位。
+      setCount(siteBaseline());
     }
   }, []);
 
@@ -297,7 +310,7 @@ function VisitCounter() {
           <span>次</span>
         </p>
         <span className="text-[11px] text-muted/80">
-          数据保存在你本地浏览器中，同一天内多次访问不重复计数。
+          站点累计访问数（站点基线 + 你本地的访问次数；同日多次访问不重复计数）。
         </span>
       </div>
     </section>

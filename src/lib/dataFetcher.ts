@@ -324,7 +324,10 @@ function buildMatchesAndResources(
   const matches: RawMatch[] = [];
   const resources: RawResource[] = [];
   for (const m of matchRows) {
-    const status = (m.status === '已确认' ? '已确认' : '待比赛') as
+    // 数据库实际可能写入：'已确认' / '已结束' / '待比赛'。
+    // 前端只区分两态：已结束（含已确认/已结束）→ '已确认'；其它 → '待比赛'。
+    const isFinished = m.status === '已确认' || m.status === '已结束';
+    const status = (isFinished ? '已确认' : '待比赛') as
       | '已确认'
       | '待比赛';
     const actualScore =

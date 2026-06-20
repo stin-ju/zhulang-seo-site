@@ -267,10 +267,20 @@ function parseSignedNumber(s: string | number | null | undefined): number {
 }
 
 function parsePercent(s: string): number | null {
-  if (!s || s === 'N/A') return null;
-  const m = s.match(/(-?\d+(?:\.\d+)?)\s*%/);
-  if (!m) return null;
-  return Number(m[1]) / 100;
+  if (s === null || s === undefined) return null;
+  const t = String(s).trim();
+  if (!t || t === 'N/A') return null;
+  // 兼容三种写法：'44.2%' / '44.2' / 0.442
+  const withPct = t.match(/(-?\d+(?:\.\d+)?)\s*%/);
+  if (withPct) return Number(withPct[1]) / 100;
+  const bare = t.match(/^-?\d+(?:\.\d+)?$/);
+  if (bare) {
+    const n = Number(t);
+    if (!Number.isFinite(n)) return null;
+    // 0~1 视作小数命中率，>1 视作百分制
+    return n > 1 ? n / 100 : n;
+  }
+  return null;
 }
 
 export function buildAiSummaries(): AiSummary[] {
@@ -631,9 +641,17 @@ export function initializeData(raw: RawData) {
     .sort((a, b) => b.total_pnl - a.total_pnl)
     .map((s, idx) => ({ ...s, rank: idx + 1 }));
   bettingDaily = rawBetting?.daily ?? [];
-  bettingDates = Array.from(new Set(bettingDaily.map(d => d.date)));
+  bettingDates = Array.from(new Set(bettingDaily.map(d => d.date)))
+    .sort((a, b) => cnDateToInt(b) - cnDateToInt(a));
 
   const rawChainBets = raw.chain_bets ?? [];
-  chainBets = [...rawChainBets].sort((a, b) => b.date.localeCompare(a.date));
+  chainBets = [...rawChainBets].sort((a, b) => cnDateToInt(b.date) - cnDateToInt(a.date));
+}
+
+/** 把 'M月D日' 转成可比较的整数 MMDD（如 '6月20日' → 620），无法解析返回 0 */
+function cnDateToInt(s: string): number {
+  const m = String(s).match(/(\d+)月(\d+)日/);
+  if (!m) return 0;
+  return Number(m[1]) * 100 + Number(m[2]);
 }
 

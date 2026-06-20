@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDocumentMeta } from '../lib/useDocumentMeta';
 import {
@@ -288,9 +289,12 @@ function DimensionTable() {
 }
 
 function DailyTimeline() {
+  const [showAll, setShowAll] = useState(false);
+  const visibleDates = showAll ? bettingDates : bettingDates.slice(0, 4);
+  const hasMore = bettingDates.length > 4;
   return (
     <div className="space-y-6">
-      {bettingDates.map(date => {
+      {visibleDates.map(date => {
         const rows = getBettingDailyByDate(date);
         const dayMax = rows.reduce(
           (m, r) => Math.max(m, Math.abs(r.daily_pnl)),
@@ -369,6 +373,19 @@ function DailyTimeline() {
           </article>
         );
       })}
+      {hasMore && (
+        <div className="flex justify-center pt-1">
+          <button
+            type="button"
+            onClick={() => setShowAll(v => !v)}
+            className="text-xs px-4 py-1.5 rounded-full border border-divider text-muted hover:text-gold hover:border-gold/40 transition-colors"
+          >
+            {showAll
+              ? `收起（仅显示最新 4 天）`
+              : `展开全部（共 ${bettingDates.length} 天，已隐藏 ${bettingDates.length - 4} 天）`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
