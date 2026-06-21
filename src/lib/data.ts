@@ -452,6 +452,92 @@ export function formatHandicap(h: string | number): string {
  * 计算某 AI 在某一天的串关命中数（hit === true 的注数）。
  * cnDate 形如 '6月20日'。最多 3（2串1 / 3串1 / 4串1 各 1 注）。
  */
+function actualSpfFromScore(score: string | null | undefined): '胜' | '平' | '负' | null {
+  if (!score) return null;
+  const m = /^\s*(\d+)\s*[:：-]\s*(\d+)\s*$/.exec(score);
+  if (!m) return null;
+  const home = Number(m[1]);
+  const away = Number(m[2]);
+  if (home > away) return '胜';
+  if (home < away) return '负';
+  return '平';
+}
+
+function normalizeSpf(s: string | null | undefined): '胜' | '平' | '负' | null {
+  if (!s) return null;
+  const t = String(s).trim();
+  if (t.includes('胜')) return '胜';
+  if (t.includes('平')) return '平';
+  if (t.includes('负')) return '负';
+  return null;
+}
+
+export interface DimensionInvestHits {
+  invest: number;
+  hits: number;
+}
+
+export interface DailyBreakdown {
+  spf: DimensionInvestHits;
+  handicap: DimensionInvestHits;
+  score: DimensionInvestHits;
+  goals: DimensionInvestHits;
+  half_full: DimensionInvestHits;
+  chain: DimensionInvestHits;
+}
+
+/**
+ * 实时计算指定 AI 在指定日期（"M月D日"）的 6 维度投入与命中数。
+ * 投入 = 该日该 AI 参与了预测的场次数（每场每维度 1 元）。
+ * 命中 = 已结算且 hit===true 的次数；SPF 由实际比分推断后比对预测得到。
+ * 串关 invest = 当日该 AI 的串关方案数；hits = hit===true 数。
+ */
+export function getAiDailyBreakdown(ai: string, cnDate: string): DailyBreakdown {
+  const empty: DimensionInvestHits = { invest: 0, hits: 0 };
+  const breakdown: DailyBreakdown = {
+    spf: { ...empty },
+    handicap: { ...empty },
+    score: { ...empty },
+    goals: { ...empty },
+    half_full: { ...empty },
+    chain: { ...empty },
+  };
+  if (!ai || !cnDate) return breakdown;
+
+  for (const m of matches) {
+    if (isoToCnDate(m.time) !== cnDate) continue;
+    const pred = m.predictions.find((p) => p.ai === ai);
+    if (!pred) continue;
+
+    breakdown.spf.invest += 1;
+    breakdown.handicap.invest += 1;
+    breakdown.score.invest += 1;
+    breakdown.goals.invest += 1;
+    breakdown.half_full.invest += 1;
+
+    // SPF 由实际比分推断
+    const actual = actualSpfFromScore(m.actualScore);
+    const predSpf = normalizeSpf(pred.spf);
+    if (actual && predSpf && actual === predSpf) breakdown.spf.hits += 1;
+
+    if (pred.hit_handicap === '✅') breakdown.handicap.hits += 1;
+    if (pred.hit_score === '✅') breakdown.score.hits += 1;
+    if (pred.hit_goals === '✅') breakdown.goals.hits += 1;
+    if (pred.hit_half === '✅') breakdown.half_full.hits += 1;
+  }
+
+  const chainDay = chainBets.find((d) => d.date === cnDate);
+  if (chainDay) {
+    const entry = chainDay.ai_bets.find((e) => e.ai === ai);
+    if (entry) {
+      breakdown.chain.invest = entry.bets.length;
+      breakdown.chain.hits = entry.bets.filter((b) => b.hit === true).length;
+    }
+  }
+
+  return breakdown;
+}
+
 export function getAiChainHitsForDate(ai: string, cnDate: string): number {
   if (!ai || !cnDate) return 0;
   const day = chainBets.find((d) => d.date === cnDate);

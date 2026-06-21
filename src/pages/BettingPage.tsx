@@ -9,6 +9,7 @@ import {
   chainBets,
   formatPnl,
   formatYuan,
+  getAiDailyBreakdown,
   getBettingDailyByDate,
   getBettingTotals,
   getChainBetTotals,
@@ -386,6 +387,7 @@ function DailyRow({ entry, dayMax }: { entry: BettingDailyEntry; dayMax: number 
   const ratio = Math.min(1, Math.abs(entry.daily_pnl) / dayMax);
   const positive = entry.daily_pnl > 0;
   const negative = entry.daily_pnl < 0;
+  const breakdown = getAiDailyBreakdown(entry.ai, entry.date);
   return (
     <div className="hover:bg-white/[0.02] transition-colors">
       <div className="px-5 py-3 grid grid-cols-[140px_1fr_auto] items-center gap-4">
@@ -438,8 +440,9 @@ function DailyRow({ entry, dayMax }: { entry: BettingDailyEntry; dayMax: number 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {DAILY_DIMENSIONS.map(dim => {
               const cell = entry[dim.key];
-              const invest = cell?.invest ?? 0;
-              const hits = cell?.hits ?? 0;
+              const live = breakdown[dim.key];
+              const invest = live?.invest ?? cell?.invest ?? 0;
+              const hits = live?.hits ?? cell?.hits ?? 0;
               const pnl = cell?.pnl ?? 0;
               const empty = invest === 0 && pnl === 0;
               return (
