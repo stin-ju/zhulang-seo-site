@@ -268,22 +268,31 @@ function DailyTimeline() {
           (m, r) => Math.max(m, Math.abs(r.daily_pnl)),
           1
         );
+        const dayTotal = rows.reduce((s, r) => s + r.daily_pnl, 0);
         return (
           <article key={date} className="rounded-2xl border border-divider bg-deep">
-            <header className="px-5 py-3 border-b border-divider flex items-center justify-between">
+            <header className="px-5 py-3 border-b border-divider flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-gold" />
                 <h3 className="text-sm font-semibold text-ink">{date}</h3>
               </div>
-              <span className="text-[11px] text-muted">
-                当日最佳：
-                <span className="text-turf font-mono ml-1">
-                  {AI_SHORT[rows[0]?.ai as AiName] ?? rows[0]?.ai}
+              <div className="flex items-center gap-4 text-[11px] text-muted">
+                <span>
+                  当日总盈亏：
+                  <span className="ml-1">
+                    <PnlText value={dayTotal} size="sm" />
+                  </span>
                 </span>
-                <span className="text-turf font-mono ml-1">
-                  {formatPnl(rows[0]?.daily_pnl ?? 0)}
+                <span>
+                  当日最佳：
+                  <span className="text-turf font-mono ml-1">
+                    {AI_SHORT[rows[0]?.ai as AiName] ?? rows[0]?.ai}
+                  </span>
+                  <span className="text-turf font-mono ml-1">
+                    {formatPnl(rows[0]?.daily_pnl ?? 0)}
+                  </span>
                 </span>
-              </span>
+              </div>
             </header>
             <div className="divide-y divide-divider">
               {rows.map(r => (
