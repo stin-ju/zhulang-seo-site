@@ -11,6 +11,7 @@ import {
   formatYuan,
   formatPercent,
   isoToCnDate,
+  getAiChainHitsForDate,
   chainBets,
   getChainBetTotals,
   getChainBetsForAi,
@@ -246,13 +247,21 @@ interface MatchAccordionProps {
 function MatchAccordion({ match, open, onToggle }: MatchAccordionProps) {
   const isPending = match.status === '待比赛';
   const { home, away } = teamPair(match.teams);
+  const cnDate = isoToCnDate(match.time);
   const hitsByAi = match.predictions.reduce<Record<string, number>>((acc, p) => {
-    if (typeof p.total_hits === 'number') acc[p.ai] = p.total_hits;
+    if (typeof p.total_hits === 'number') {
+      const chainHits = cnDate ? getAiChainHitsForDate(p.ai, cnDate) : 0;
+      acc[p.ai] = p.total_hits + chainHits;
+    }
     return acc;
   }, {});
   const bestHits = Math.max(0, ...Object.values(hitsByAi));
   const summaryHits = match.predictions
-    .map((p) => (typeof p.total_hits === 'number' ? p.total_hits : null))
+    .map((p) => {
+      if (typeof p.total_hits !== 'number') return null;
+      const chainHits = cnDate ? getAiChainHitsForDate(p.ai, cnDate) : 0;
+      return p.total_hits + chainHits;
+    })
     .filter((v): v is number => v !== null);
   const hasHits = summaryHits.length > 0;
 
@@ -301,7 +310,7 @@ function MatchAccordion({ match, open, onToggle }: MatchAccordionProps) {
             <span>让球 {formatHandicap(match.handicap)}</span>
             {hasHits && (
               <span>
-                最佳命中：<span className="text-turf">{bestHits}</span> / 4
+                最佳命中：<span className="text-turf">{bestHits}</span> / 8
               </span>
             )}
           </div>
@@ -399,8 +408,9 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
               );
             }
 
-            const isBest =
-              typeof pred.total_hits === 'number' && pred.total_hits > 0 && pred.total_hits === bestHits;
+            const chainHitsCount = getAiChainHitsForDate(ai, matchDate);
+            const combinedHits = (pred.total_hits ?? 0) + chainHitsCount;
+            const isBest = combinedHits > 0 && combinedHits === bestHits;
 
             const hasChainForDay = matchDate
               ? getChainBetsForAi(ai).days.some((d) => d.date === matchDate && d.bets.length > 0)
@@ -445,11 +455,11 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
                   )}
                 </td>
                 <td className="pl-2 py-2 text-center font-mono tabular-nums">
-                  {pred.total_hits === null ? (
+                  {pred.total_hits === null && chainHitsCount === 0 ? (
                     <span className="text-muted/50">—</span>
                   ) : (
                     <span className={isBest ? 'text-gold font-bold' : 'text-ink'}>
-                      {pred.total_hits}
+                      {combinedHits}
                     </span>
                   )}
                 </td>

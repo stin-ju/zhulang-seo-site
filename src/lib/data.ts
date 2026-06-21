@@ -448,6 +448,19 @@ export function formatHandicap(h: string | number): string {
  * chain_bets[].date 使用的中文格式（如 '6月17日'），用于跨表日期匹配。
  * 解析失败返回空串。
  */
+/**
+ * 计算某 AI 在某一天的串关命中数（hit === true 的注数）。
+ * cnDate 形如 '6月20日'。最多 3（2串1 / 3串1 / 4串1 各 1 注）。
+ */
+export function getAiChainHitsForDate(ai: string, cnDate: string): number {
+  if (!ai || !cnDate) return 0;
+  const day = chainBets.find((d) => d.date === cnDate);
+  if (!day) return 0;
+  const entry = day.ai_bets.find((e) => e.ai === ai);
+  if (!entry) return 0;
+  return entry.bets.filter((b) => b.hit === true).length;
+}
+
 export function isoToCnDate(t: string): string {
   if (!t) return '';
   const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);

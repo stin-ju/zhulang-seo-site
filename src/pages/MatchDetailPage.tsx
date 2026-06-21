@@ -6,9 +6,11 @@ import {
   DIMENSIONS,
   formatHandicap,
   formatPnl,
+  getAiChainHitsForDate,
   getBettingSummary,
   getMatchById,
   isRetiredAi,
+  isoToCnDate,
   type AiName,
   type DimensionKey,
   type OddsEntry,
@@ -67,11 +69,15 @@ function HitCell({
   );
 }
 
-function SpfCell({ value }: { value: string }) {
+function SpfCell({ value, hit }: { value: string; hit: boolean | null }) {
+  let inner = 'rounded-md px-2 py-1.5 text-center text-sm text-ink bg-white/[0.03] border border-divider';
+  if (hit === true) inner = 'rounded-md px-2 py-1.5 text-center text-sm font-semibold text-turf bg-turf-soft border border-turf/40';
+  else if (hit === false) inner = 'rounded-md px-2 py-1.5 text-center text-sm text-miss bg-white/[0.03] border border-divider';
   return (
     <td className="px-3 py-3 align-middle">
-      <div className="rounded-md px-2 py-1.5 text-center text-sm text-ink bg-white/[0.03] border border-divider">
+      <div className={inner}>
         {value}
+        {hit === true && <span className="ml-1 text-[10px]">✓</span>}
       </div>
     </td>
   );
@@ -315,7 +321,17 @@ export default function MatchDetailPage() {
     pred: predByAi.get(ai),
   }));
 
-  const bestHits = rows.reduce((max, r) => Math.max(max, r.pred?.total_hits ?? 0), 0);
+  const matchCnDate = isoToCnDate(match.time);
+  const chainHitsByAi = new Map<AiName, number>();
+  for (const ai of AI_LIST) {
+    chainHitsByAi.set(ai, matchCnDate ? getAiChainHitsForDate(ai, matchCnDate) : 0);
+  }
+  const totalHitsByAi = new Map<AiName, number>();
+  for (const r of rows) {
+    const base = r.pred?.total_hits ?? 0;
+    totalHitsByAi.set(r.ai, base + (chainHitsByAi.get(r.ai) ?? 0));
+  }
+  const bestHits = Array.from(totalHitsByAi.values()).reduce((max, v) => Math.max(max, v), 0);
 
   return (
     <div className="space-y-8">
@@ -399,7 +415,7 @@ export default function MatchDetailPage() {
           </div>
           {!isPending && rows.some(r => r.pred?.total_hits != null) && (
             <div className="text-xs text-muted">
-              本场最佳：<span className="font-mono text-gold">{bestHits} / 4</span>
+              本场最佳：<span className="font-mono text-gold">{bestHits} / 8</span>
             </div>
           )}
         </div>
@@ -420,7 +436,9 @@ export default function MatchDetailPage() {
             </thead>
             <tbody>
               {rows.map(({ ai, pred }) => {
-                const hits = pred?.total_hits ?? null;
+                const baseHits = pred?.total_hits ?? null;
+                const combinedHits = baseHits === null ? null : (totalHitsByAi.get(ai) ?? baseHits);
+                const hits = combinedHits;
                 const isBest = !isPending && hits !== null && hits === bestHits && hits > 0;
                 const retired = isRetiredAi(ai);
                 return (
@@ -456,7 +474,10 @@ export default function MatchDetailPage() {
                     </td>
                     {pred ? (
                       <>
-                        <SpfCell value={pred.spf} />
+                        <SpfCell
+                          value={pred.spf}
+                          hit={isPending ? null : (spfHitInfo(pred, match.odds, match.actualScore)?.hit ?? null)}
+                        />
                         {DIMENSIONS.map(d => (
                           <HitCell
                             key={d.key}
@@ -475,7 +496,7 @@ export default function MatchDetailPage() {
                               }`}
                             >
                               {hits}
-                              <span className="text-muted text-sm font-normal"> / 4</span>
+                              <span className="text-muted text-sm font-normal"> / 8</span>
                             </span>
                           )}
                         </td>
