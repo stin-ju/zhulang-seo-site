@@ -452,7 +452,7 @@ export function formatHandicap(h: string | number): string {
  * 计算某 AI 在某一天的串关命中数（hit === true 的注数）。
  * cnDate 形如 '6月20日'。最多 3（2串1 / 3串1 / 4串1 各 1 注）。
  */
-function actualSpfFromScore(score: string | null | undefined): '胜' | '平' | '负' | null {
+export function actualSpfFromScore(score: string | null | undefined): '胜' | '平' | '负' | null {
   if (!score) return null;
   const m = /^\s*(\d+)\s*[:：-]\s*(\d+)\s*$/.exec(score);
   if (!m) return null;
@@ -463,7 +463,7 @@ function actualSpfFromScore(score: string | null | undefined): '胜' | '平' | '
   return '平';
 }
 
-function normalizeSpf(s: string | null | undefined): '胜' | '平' | '负' | null {
+export function normalizeSpf(s: string | null | undefined): '胜' | '平' | '负' | null {
   if (!s) return null;
   const t = String(s).trim();
   if (t.includes('胜')) return '胜';

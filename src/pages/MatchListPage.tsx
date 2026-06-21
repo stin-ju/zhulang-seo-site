@@ -15,6 +15,8 @@ import {
   chainBets,
   getChainBetTotals,
   getChainBetsForAi,
+  actualSpfFromScore,
+  normalizeSpf,
   type MatchView,
   type Prediction,
   type ChainBet,
@@ -369,6 +371,7 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
   });
 
   const matchDate = isoToCnDate(match.time || '');
+  const actualSpf = actualSpfFromScore(match.actualScore);
 
   return (
     <div className="overflow-x-auto">
@@ -428,7 +431,7 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
                   {retired && <span className="ml-2 text-[10px] text-muted">退赛</span>}
                 </td>
                 {DIM_LABELS.map((d) => (
-                  <DimCell key={d.key} pred={pred} dim={d} />
+                  <DimCell key={d.key} pred={pred} dim={d} actualSpf={actualSpf} />
                 ))}
                 <td className="px-2 py-2 text-center">
                   {retired || !hasChainForDay ? (
@@ -475,19 +478,33 @@ function PredictionTable({ match, bestHits }: { match: MatchView; bestHits: numb
 function DimCell({
   pred,
   dim,
+  actualSpf,
 }: {
   pred: Prediction;
   dim: (typeof DIM_LABELS)[number];
+  actualSpf: '胜' | '平' | '负' | null;
 }) {
   const value = String(pred[dim.key]);
-  const hit = dim.hitKey ? pred[dim.hitKey] : null;
-  const isHitTrue = hit === '✅';
-  const isMiss = hit === '❌';
+
+  // SPF 维度的命中需要通过实际比分推断（predictions 表没有 hit_spf 字段）
+  let isHitTrue = false;
+  let isMiss = false;
+  if (dim.key === 'spf') {
+    const predSpf = normalizeSpf(pred.spf);
+    if (actualSpf && predSpf) {
+      if (predSpf === actualSpf) isHitTrue = true;
+      else isMiss = true;
+    }
+  } else if (dim.hitKey) {
+    const hit = pred[dim.hitKey];
+    isHitTrue = hit === '✅';
+    isMiss = hit === '❌';
+  }
 
   let className = 'text-ink';
   if (isHitTrue) className = 'rounded-md bg-turf-soft text-turf font-medium';
   else if (isMiss) className = 'text-miss';
-  // hit === null 表示未结算（待比赛或赛后未录入），保持正常亮色文本，不再降亮
+  // 未结算（待比赛或赛后未录入）保持正常亮色文本，不再降亮
 
 
   return (
