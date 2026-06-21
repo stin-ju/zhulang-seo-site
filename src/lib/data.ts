@@ -475,6 +475,8 @@ function normalizeSpf(s: string | null | undefined): '胜' | '平' | '负' | nul
 export interface DimensionInvestHits {
   invest: number;
   hits: number;
+  /** 仅 chain 维度会填，其它维度的盈亏来自 betting_daily 表 */
+  pnl?: number;
 }
 
 export interface DailyBreakdown {
@@ -500,7 +502,7 @@ export function getAiDailyBreakdown(ai: string, cnDate: string): DailyBreakdown 
     score: { ...empty },
     goals: { ...empty },
     half_full: { ...empty },
-    chain: { ...empty },
+    chain: { ...empty, pnl: 0 },
   };
   if (!ai || !cnDate) return breakdown;
 
@@ -532,6 +534,7 @@ export function getAiDailyBreakdown(ai: string, cnDate: string): DailyBreakdown 
     if (entry) {
       breakdown.chain.invest = entry.bets.length;
       breakdown.chain.hits = entry.bets.filter((b) => b.hit === true).length;
+      breakdown.chain.pnl = entry.bets.reduce((s, b) => s + (b.pnl ?? 0), 0);
     }
   }
 

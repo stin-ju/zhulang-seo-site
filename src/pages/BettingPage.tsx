@@ -443,7 +443,8 @@ function DailyRow({ entry, dayMax }: { entry: BettingDailyEntry; dayMax: number 
               const live = breakdown[dim.key];
               const invest = live?.invest ?? cell?.invest ?? 0;
               const hits = live?.hits ?? cell?.hits ?? 0;
-              const pnl = cell?.pnl ?? 0;
+              // 串关 pnl 优先使用 chainBets 实时累加，因为 betting_daily 表没有 chain_pnl 字段
+              const pnl = dim.key === 'chain' ? (live?.pnl ?? 0) : (cell?.pnl ?? 0);
               const empty = invest === 0 && pnl === 0;
               return (
                 <div
