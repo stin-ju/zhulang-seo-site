@@ -550,6 +550,66 @@ export function getAiChainHitsForDate(ai: string, cnDate: string): number {
   return entry.bets.filter((b) => b.hit === true).length;
 }
 
+export interface TotalBreakdownDim {
+  invest: number;
+  hits: number;
+  pnl: number;
+}
+
+export interface TotalBreakdown {
+  spf: TotalBreakdownDim;
+  handicap: TotalBreakdownDim;
+  score: TotalBreakdownDim;
+  goals: TotalBreakdownDim;
+  half_full: TotalBreakdownDim;
+  chain: TotalBreakdownDim;
+}
+
+/**
+ * 全周期维度盈亏汇总：
+ * - 五个单注维度（spf/handicap/score/goals/half_full）从 betting_summary 表汇总
+ * - 串关维度从 chainBets 累加（betting_summary 表无 chain_* 字段）
+ */
+export function getAiTotalBreakdown(ai: string): TotalBreakdown {
+  const empty: TotalBreakdownDim = { invest: 0, hits: 0, pnl: 0 };
+  const result: TotalBreakdown = {
+    spf: { ...empty },
+    handicap: { ...empty },
+    score: { ...empty },
+    goals: { ...empty },
+    half_full: { ...empty },
+    chain: { ...empty },
+  };
+  if (!ai) return result;
+
+  const summary = bettingSummaries.find((s) => s.ai === ai);
+  if (summary) {
+    const singleKeys: Array<Exclude<BettingDimensionKey, 'chain'>> = [
+      'spf',
+      'handicap',
+      'score',
+      'goals',
+      'half_full',
+    ];
+    for (const key of singleKeys) {
+      const d = summary.dimensions[key];
+      if (d) {
+        result[key] = { invest: d.invest, hits: d.hits, pnl: d.pnl };
+      }
+    }
+  }
+
+  for (const day of chainBets) {
+    const entry = day.ai_bets.find((e) => e.ai === ai);
+    if (!entry) continue;
+    result.chain.invest += entry.bets.length;
+    result.chain.hits += entry.bets.filter((b) => b.hit === true).length;
+    result.chain.pnl += entry.bets.reduce((s, b) => s + (b.pnl ?? 0), 0);
+  }
+
+  return result;
+}
+
 export function isoToCnDate(t: string): string {
   if (!t) return '';
   const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);

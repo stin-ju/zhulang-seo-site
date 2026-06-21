@@ -10,6 +10,7 @@ import {
   formatPnl,
   formatYuan,
   getAiDailyBreakdown,
+  getAiTotalBreakdown,
   getBettingDailyByDate,
   getBettingTotals,
   getChainBetTotals,
@@ -80,7 +81,43 @@ function MedalBadge({ rank }: { rank: number }) {
   );
 }
 
+function DimensionBreakdownPanel({ ai }: { ai: string }) {
+  const totals = getAiTotalBreakdown(ai);
+  return (
+    <div className="bg-night/40 border-t border-gold/15 px-5 py-4 sm:px-6">
+      <div className="text-[11px] uppercase tracking-wider text-muted mb-2">
+        全周期维度盈亏拆解
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {BETTING_DIMENSIONS.map(dim => {
+          const cell = totals[dim.key];
+          const empty = cell.invest === 0 && cell.pnl === 0;
+          return (
+            <div
+              key={dim.key}
+              className="rounded-md border border-divider/60 bg-deep/40 px-3 py-2 flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0">
+                <div className="text-xs text-ink">{dim.label}</div>
+                <div className="text-[11px] text-muted font-mono">
+                  投 {cell.invest} · 中 {cell.hits}
+                </div>
+              </div>
+              {empty ? (
+                <span className="text-xs text-muted">—</span>
+              ) : (
+                <PnlText value={cell.pnl} size="sm" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ChampionCard({ s }: { s: BettingSummaryEntry }) {
+  const [open, setOpen] = useState(false);
   const investTotal = BETTING_DIMENSIONS.reduce(
     (sum, d) => sum + (s.dimensions[d.key]?.invest ?? 0),
     0
@@ -92,62 +129,74 @@ function ChampionCard({ s }: { s: BettingSummaryEntry }) {
   const betsTotal = investTotal / 2;
 
   return (
-    <Link
-      to={`/ai/${encodeURIComponent(s.ai)}`}
-      className="relative overflow-hidden block rounded-2xl border-gold-hairline bg-gradient-to-br from-[#1c2742] to-[#0f1a2e] shadow-gold p-6 sm:p-8 group transition-transform duration-200 ease-soft hover:-translate-y-0.5"
-    >
+    <article className="relative overflow-hidden rounded-2xl border-gold-hairline bg-gradient-to-br from-[#1c2742] to-[#0f1a2e] shadow-gold transition-transform duration-200 ease-soft hover:-translate-y-0.5">
       <span
         className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-gold/25 to-transparent animate-shimmer"
         aria-hidden
       />
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-gold/80">
-          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-            <path
-              d="M7 1l1.5 4 4.2.4-3.2 2.9 1 4.2L7 10.4 3.5 12.5l1-4.2L1.3 5.4 5.5 5z"
-              fill="currentColor"
-            />
-          </svg>
-          <span>盈利冠军</span>
-        </div>
-        <MedalBadge rank={1} />
-      </div>
-      <div className="flex items-end justify-between gap-6">
-        <div className="min-w-0">
-          <div className="text-2xl sm:text-3xl font-bold text-ink truncate">
-            {AI_SHORT[s.ai as AiName] ?? s.ai}
+      <div className="p-6 sm:p-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-gold/80">
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
+              <path
+                d="M7 1l1.5 4 4.2.4-3.2 2.9 1 4.2L7 10.4 3.5 12.5l1-4.2L1.3 5.4 5.5 5z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>盈利冠军</span>
           </div>
-          <div className="text-xs text-muted mt-1 truncate">{s.ai}</div>
+          <MedalBadge rank={1} />
         </div>
-        <div className="text-right shrink-0">
-          <div className="text-[11px] uppercase tracking-widest text-gold/80 mb-0.5">
-            模拟净收益
+        <div className="flex items-end justify-between gap-6">
+          <Link to={`/ai/${encodeURIComponent(s.ai)}`} className="min-w-0 group/name">
+            <div className="text-2xl sm:text-3xl font-bold text-ink truncate group-hover/name:text-gold transition-colors">
+              {AI_SHORT[s.ai as AiName] ?? s.ai}
+            </div>
+            <div className="text-xs text-muted mt-1 truncate">{s.ai}</div>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(v => !v)}
+            className="text-right shrink-0 group/btn"
+            aria-expanded={open}
+            aria-label={open ? '收起维度盈亏' : '查看维度盈亏'}
+          >
+            <div className="text-[11px] uppercase tracking-widest text-gold/80 mb-0.5">
+              模拟净收益
+            </div>
+            <div className="inline-flex items-center gap-1">
+              <PnlText value={s.total_pnl} size="xl" />
+              <span className="text-xs text-gold/70 group-hover/btn:text-gold transition-colors">
+                {open ? '▴' : '▾'}
+              </span>
+            </div>
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-gold/15 text-sm">
+          <div>
+            <div className="text-[11px] text-muted">虚拟投入</div>
+            <div className="font-mono text-ink mt-0.5">{formatYuan(investTotal)}</div>
           </div>
-          <PnlText value={s.total_pnl} size="xl" />
+          <div>
+            <div className="text-[11px] text-muted">综合胜率</div>
+            <div className="font-mono text-ink mt-0.5">{s.win_rate}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted">命中次数</div>
+            <div className="font-mono text-ink mt-0.5">
+              {hitsTotal}
+              <span className="text-muted text-xs"> / {betsTotal}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-gold/15 text-sm">
-        <div>
-          <div className="text-[11px] text-muted">虚拟投入</div>
-          <div className="font-mono text-ink mt-0.5">{formatYuan(investTotal)}</div>
-        </div>
-        <div>
-          <div className="text-[11px] text-muted">综合胜率</div>
-          <div className="font-mono text-ink mt-0.5">{s.win_rate}</div>
-        </div>
-        <div>
-          <div className="text-[11px] text-muted">命中次数</div>
-          <div className="font-mono text-ink mt-0.5">
-            {hitsTotal}
-            <span className="text-muted text-xs"> / {betsTotal}</span>
-          </div>
-        </div>
-      </div>
-    </Link>
+      {open && <DimensionBreakdownPanel ai={s.ai} />}
+    </article>
   );
 }
 
 function StandardCard({ s }: { s: BettingSummaryEntry }) {
+  const [open, setOpen] = useState(false);
   const investTotal = BETTING_DIMENSIONS.reduce(
     (sum, d) => sum + (s.dimensions[d.key]?.invest ?? 0),
     0
@@ -159,40 +208,51 @@ function StandardCard({ s }: { s: BettingSummaryEntry }) {
   const betsTotal = investTotal / 2;
 
   return (
-    <Link
-      to={`/ai/${encodeURIComponent(s.ai)}`}
-      className="block rounded-2xl border border-divider bg-deep p-5 transition-colors duration-200 ease-soft hover:border-gold/30 hover:bg-elevated/50 group"
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <MedalBadge rank={s.rank} />
-        <div className="min-w-0 flex-1">
-          <div className="text-base font-semibold text-ink truncate group-hover:text-gold transition-colors">
-            {AI_SHORT[s.ai as AiName] ?? s.ai}
+    <article className="rounded-2xl border border-divider bg-deep transition-colors duration-200 ease-soft hover:border-gold/30 hover:bg-elevated/50">
+      <div className="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <MedalBadge rank={s.rank} />
+          <Link to={`/ai/${encodeURIComponent(s.ai)}`} className="min-w-0 flex-1 group/name">
+            <div className="text-base font-semibold text-ink truncate group-hover/name:text-gold transition-colors">
+              {AI_SHORT[s.ai as AiName] ?? s.ai}
+            </div>
+            <div className="text-[11px] text-muted truncate">{s.ai}</div>
+          </Link>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          className="w-full flex items-baseline justify-between mb-3 group/btn"
+          aria-expanded={open}
+          aria-label={open ? '收起维度盈亏' : '查看维度盈亏'}
+        >
+          <span className="text-[11px] uppercase tracking-widest text-muted">模拟净收益</span>
+          <span className="inline-flex items-center gap-1">
+            <PnlText value={s.total_pnl} size="lg" />
+            <span className="text-[10px] text-muted group-hover/btn:text-gold transition-colors">
+              {open ? '▴' : '▾'}
+            </span>
+          </span>
+        </button>
+        <div className="grid grid-cols-3 gap-2 text-[11px] pt-3 border-t border-divider">
+          <div>
+            <div className="text-muted">虚拟投入</div>
+            <div className="font-mono text-ink mt-0.5">{investTotal}</div>
           </div>
-          <div className="text-[11px] text-muted truncate">{s.ai}</div>
-        </div>
-      </div>
-      <div className="flex items-baseline justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-widest text-muted">模拟净收益</span>
-        <PnlText value={s.total_pnl} size="lg" />
-      </div>
-      <div className="grid grid-cols-3 gap-2 text-[11px] pt-3 border-t border-divider">
-        <div>
-          <div className="text-muted">虚拟投入</div>
-          <div className="font-mono text-ink mt-0.5">{investTotal}</div>
-        </div>
-        <div>
-          <div className="text-muted">胜率</div>
-          <div className="font-mono text-ink mt-0.5">{s.win_rate}</div>
-        </div>
-        <div>
-          <div className="text-muted">命中</div>
-          <div className="font-mono text-ink mt-0.5">
-            {hitsTotal}/{betsTotal}
+          <div>
+            <div className="text-muted">胜率</div>
+            <div className="font-mono text-ink mt-0.5">{s.win_rate}</div>
+          </div>
+          <div>
+            <div className="text-muted">命中</div>
+            <div className="font-mono text-ink mt-0.5">
+              {hitsTotal}/{betsTotal}
+            </div>
           </div>
         </div>
       </div>
-    </Link>
+      {open && <DimensionBreakdownPanel ai={s.ai} />}
+    </article>
   );
 }
 
