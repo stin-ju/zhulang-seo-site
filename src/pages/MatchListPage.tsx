@@ -52,6 +52,9 @@ export default function MatchListPage() {
     title: '世界杯赛事AI预测对比 | 8个AI胜平负让球分析 - 大竞赛',
     description:
       '逐场对比 8 个 AI 对 2026 世界杯赛事的胜平负、让球、比分、总进球、半全场预测与命中表现，含每日串关推荐与分析逻辑跳转。',
+    keywords: '2026世界杯,世界杯赛程,世界杯AI预测,AI足球分析,串关推荐,胜平负预测',
+    canonicalPath: '/matches',
+    ogType: 'website',
   });
   // ---- top tab ----
   const [tab, setTab] = useState<'matches' | 'chains'>('matches');
@@ -299,7 +302,14 @@ function MatchAccordion({ match, open, onToggle }: MatchAccordionProps) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="truncate text-base font-semibold text-ink md:text-lg">
-              {home} <span className="mx-1 text-muted">VS</span> {away}
+              <Link
+                to={`/matches/${encodeURIComponent(match.id)}`}
+                onClick={(e) => e.stopPropagation()}
+                className="hover:text-gold transition-colors"
+                aria-label={`查看 ${home}VS${away} 的 AI 预测详情`}
+              >
+                {home} <span className="mx-1 text-muted">VS</span> {away}
+              </Link>
             </h3>
             {match.actualScore && (
               <span className="font-mono text-base font-bold text-gold tabular-nums">

@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { useDocumentMeta } from '../lib/useDocumentMeta';
+import { useMemo } from 'react';
+import { useDocumentMeta, SITE_ORIGIN } from '../lib/useDocumentMeta';
 import {
   AI_LIST,
   AI_SHORT,
@@ -289,13 +290,60 @@ export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const match = id ? getMatchById(decodeURIComponent(id)) : undefined;
 
+  const [homeName, awayName] = match
+    ? match.teams.split(/\s*VS\s*/i)
+    : ['', ''];
+
+  const jsonLd = useMemo(() => {
+    if (!match) return undefined;
+    const homeT = homeName || match.teams;
+    const awayT = awayName || '';
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'SportsEvent',
+      name: `${homeT}VS${awayT}`,
+      sport: 'Soccer',
+      startDate: match.time,
+      eventStatus:
+        match.status === '待比赛'
+          ? 'https://schema.org/EventScheduled'
+          : 'https://schema.org/EventScheduled',
+      homeTeam: {
+        '@type': 'SportsTeam',
+        name: homeT,
+      },
+      awayTeam: {
+        '@type': 'SportsTeam',
+        name: awayT,
+      },
+      location: {
+        '@type': 'Place',
+        name: '2026 FIFA World Cup',
+      },
+      url: match
+        ? `${SITE_ORIGIN}/matches/${encodeURIComponent(match.id)}`
+        : undefined,
+    };
+  }, [match, homeName, awayName]);
+
+  const seoTitle = match
+    ? `2026世界杯 ${homeName}vs${awayName} AI预测分析 | 8个AI命中矩阵`
+    : '比赛预测对比 | 8个AI命中矩阵 - 大竞赛';
+  const seoDescription = match
+    ? `2026 世界杯 ${homeName} VS ${awayName}：8 个 AI 的胜平负、让球、比分、总进球、半全场预测命中矩阵与分析逻辑。`
+    : '8 个 AI 对世界杯赛事的胜平负、让球、比分、总进球、半全场预测命中矩阵。';
+
   useDocumentMeta({
-    title: match
-      ? `${match.id} ${match.teams} AI预测对比 | 8个AI命中矩阵 - 大竞赛`
-      : '比赛预测对比 | 8个AI命中矩阵 - 大竞赛',
-    description: match
-      ? `${match.id} ${match.teams} 比赛 8 个 AI 的胜平负、让球、比分、总进球、半全场预测明细与命中矩阵。`
-      : '8 个 AI 对世界杯赛事的胜平负、让球、比分、总进球、半全场预测命中矩阵。',
+    title: seoTitle,
+    description: seoDescription,
+    keywords: match
+      ? `2026世界杯,${homeName}vs${awayName},世界杯${homeName},世界杯预测,AI足球分析`
+      : '2026世界杯,世界杯预测,AI足球分析',
+    canonicalPath: match
+      ? `/matches/${encodeURIComponent(match.id)}`
+      : undefined,
+    ogType: 'article',
+    jsonLd,
   });
 
   if (!match) {
@@ -310,7 +358,8 @@ export default function MatchDetailPage() {
   }
 
   const isPending = match.status === '待比赛';
-  const [home, away] = match.teams.split(/\s*VS\s*/i);
+  const home = homeName;
+  const away = awayName;
 
   // Order predictions by AI_LIST
   const predByAi = new Map<string, Prediction>();
@@ -350,6 +399,9 @@ export default function MatchDetailPage() {
             : 'border-gold/30 bg-gradient-to-br from-[#1c2742] to-[#0f1a2e] shadow-gold'
         }`}
       >
+        <h1 className="sr-only">
+          2026世界杯 {home}vs{away} AI预测分析
+        </h1>
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 text-muted">
             <span className="font-mono">{match.id}</span>
@@ -676,6 +728,30 @@ export default function MatchDetailPage() {
           })}
         </div>
       </section>
+
+      {/* 相关 AI 分析 内链区块 */}
+      <nav
+        aria-label="相关 AI 分析"
+        className="rounded-2xl border border-divider bg-deep p-5"
+      >
+        <h2 className="text-base font-semibold text-ink mb-1">相关 AI 分析</h2>
+        <p className="text-xs text-muted mb-3">
+          深入了解每个 AI 的整体预测能力与历史命中表现
+        </p>
+        <ul className="flex flex-wrap gap-2">
+          {AI_LIST.map((ai) => (
+            <li key={ai}>
+              <Link
+                to={`/ai/${encodeURIComponent(ai)}`}
+                className="inline-flex items-center rounded-full border border-divider bg-white/[0.02] px-3 py-1 text-xs text-ink transition-colors hover:border-gold/40 hover:text-gold"
+                title={`查看 ${AI_SHORT[ai]} 的 2026 世界杯预测分析`}
+              >
+                {AI_SHORT[ai]} 预测分析
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {/* Disclaimer */}
       <section

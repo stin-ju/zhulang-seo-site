@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { useDocumentMeta } from '../lib/useDocumentMeta';
+import { useDocumentMeta, SITE_ORIGIN } from '../lib/useDocumentMeta';
 import {
   AI_LIST,
   AI_SHORT,
@@ -42,13 +42,33 @@ export default function AiDetailPage() {
   const location = useLocation();
 
   const aiShort = summary ? AI_SHORT[summary.ai] : '';
+
+  const jsonLd = useMemo(() => {
+    if (!summary) return undefined;
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: AI_SHORT[summary.ai] ?? summary.ai,
+      alternateName: summary.ai,
+      description: `${aiShort} 在 2026 世界杯 AI 预测大竞赛中的预测分析、盈利率与模拟盈亏明细。当前排名第 ${summary.rank} 名，参赛 ${summary.participatedMatches} 场。`,
+      jobTitle: '足球数据分析AI',
+      url: `${SITE_ORIGIN}/ai/${encodeURIComponent(summary.ai)}`,
+    };
+  }, [summary, aiShort]);
+
   useDocumentMeta({
     title: summary
-      ? `${aiShort}AI世界杯预测分析 | 盈利率与模拟盈亏 - 大竞赛`
+      ? `${aiShort} 2026世界杯预测分析 | 盈利率与模拟盈亏 - 大竞赛`
       : 'AI 预测分析 | 盈利率与模拟盈亏 - 大竞赛',
     description: summary
       ? `${aiShort} 对 2026 世界杯全部赛事的胜平负、让球、比分、总进球、半全场、串关 6 维度预测分析、盈利率与模拟盈亏明细。`
       : '查看各 AI 在 2026 世界杯赛事中的预测分析、盈利率与模拟盈亏明细。',
+    keywords: summary
+      ? `${aiShort},${summary.ai},世界杯AI,${aiShort}预测,2026世界杯,AI足球分析`
+      : '2026世界杯,AI足球分析,世界杯AI预测',
+    canonicalPath: summary ? `/ai/${encodeURIComponent(summary.ai)}` : undefined,
+    ogType: 'profile',
+    jsonLd,
   });
 
   useEffect(() => {
@@ -82,7 +102,10 @@ export default function AiDetailPage() {
   const rows = getAiMatches(summary.ai);
 
   return (
-    <div className="space-y-8">
+    <article className="space-y-8">
+      <h1 className="sr-only">
+        {AI_SHORT[summary.ai]} 2026世界杯预测分析 - AI 足球预测盈利率
+      </h1>
       <Link
         to="/ai"
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink transition-colors"
@@ -169,7 +192,33 @@ export default function AiDetailPage() {
       <AiMatchAccordionSection rows={rows} ai={decoded} />
 
       <AiChainBetsSection ai={decoded} />
-    </div>
+
+      {/* 内链：该 AI 预测过的所有比赛 */}
+      {rows.length > 0 && (
+        <nav
+          aria-label={`${AI_SHORT[summary.ai]} 预测过的比赛`}
+          className="rounded-2xl border border-divider bg-deep px-5 py-5 sm:px-7 sm:py-6"
+        >
+          <h2 className="text-base font-semibold text-ink">预测过的比赛</h2>
+          <p className="mt-1 text-xs text-muted">
+            点击查看 {AI_SHORT[summary.ai]} 在每场比赛的胜平负 / 让球 / 比分 / 总进球 / 半全场预测与命中情况。
+          </p>
+          <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {rows.map((row) => (
+              <li key={row.match.id}>
+                <Link
+                  to={`/matches/${encodeURIComponent(row.match.id)}`}
+                  className="block rounded-md border border-divider/70 bg-night/40 px-3 py-2 text-xs text-ink hover:border-gold/40 hover:bg-gold-soft/30 transition-colors"
+                >
+                  <span className="text-muted mr-2">{isoToCnDate(row.match.time)}</span>
+                  {row.match.teams}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+    </article>
   );
 }
 

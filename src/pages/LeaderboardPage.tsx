@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useDocumentMeta } from '../lib/useDocumentMeta';
+import { useDocumentMeta, SITE_ORIGIN, SITE_NAME } from '../lib/useDocumentMeta';
 import { supabase } from '../lib/supabase';
 import {
   AI_ACTIVE,
@@ -182,15 +182,46 @@ function RetiredCard({ s }: { s: AiSummary }) {
 }
 
 export default function LeaderboardPage() {
-  useDocumentMeta({
-    title: '2026世界杯AI预测大竞赛 | 8个AI足球数据分析对比实验',
-    description:
-      '8个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析，AI预测分析逻辑与盈利率排行，足球数据可视化实验。',
-  });
   const activeList = aiSummaries.filter(s => !s.retired);
   const retiredList = aiSummaries.filter(s => s.retired);
   const champion = activeList[0];
   const rest = activeList.slice(1);
+
+  const jsonLd = useMemo(() => {
+    const websiteSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_ORIGIN,
+      description:
+        '8 个 AI 预测 2026 世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析与盈利率排行。',
+      inLanguage: 'zh-CN',
+    };
+    const itemListSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: '2026 世界杯 AI 预测选手榜',
+      itemListOrder: 'https://schema.org/ItemListOrderAscending',
+      numberOfItems: aiSummaries.length,
+      itemListElement: aiSummaries.map((s, idx) => ({
+        '@type': 'ListItem',
+        position: idx + 1,
+        name: AI_SHORT[s.ai] ?? s.ai,
+        url: `${SITE_ORIGIN}/ai/${encodeURIComponent(s.ai)}`,
+      })),
+    };
+    return [websiteSchema, itemListSchema];
+  }, []);
+
+  useDocumentMeta({
+    title: '2026世界杯AI预测大竞赛 | 8个AI足球数据分析对比实验',
+    description:
+      '8个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析，AI预测分析逻辑与盈利率排行，足球数据可视化实验。',
+    keywords: '2026世界杯,世界杯AI预测,AI足球分析,世界杯预测对比,AI竞猜',
+    canonicalPath: '/',
+    ogType: 'website',
+    jsonLd,
+  });
 
   return (
     <div className="space-y-10">
