@@ -15,6 +15,7 @@ import {
   isRetiredAi,
   type AiName,
   type BettingDimensionKey,
+  type BettingDailyEntry,
   type BettingSummaryEntry,
   type ChainBet,
   type ChainBetSelection,
@@ -224,49 +225,9 @@ function DailyTimeline() {
               </span>
             </header>
             <div className="divide-y divide-divider">
-              {rows.map(r => {
-                const ratio = Math.min(1, Math.abs(r.daily_pnl) / dayMax);
-                const positive = r.daily_pnl > 0;
-                const negative = r.daily_pnl < 0;
-                return (
-                  <div
-                    key={r.ai}
-                    className="px-5 py-3 grid grid-cols-[140px_1fr_auto] items-center gap-4 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <Link
-                      to={`/ai/${encodeURIComponent(r.ai)}`}
-                      className="flex items-center gap-2 min-w-0 group"
-                    >
-                      <span className="text-ink font-medium truncate group-hover:text-gold transition-colors">
-                        {AI_SHORT[r.ai as AiName] ?? r.ai}
-                      </span>
-                    </Link>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-1/2 w-px bg-divider/70" />
-                      <div className="relative h-2 rounded-full bg-white/[0.04] overflow-hidden">
-                        {positive && (
-                          <div
-                            className="absolute inset-y-0 left-1/2 bg-turf/70 rounded-r-full"
-                            style={{ width: `${ratio * 50}%` }}
-                          />
-                        )}
-                        {negative && (
-                          <div
-                            className="absolute inset-y-0 right-1/2 bg-[#F87171]/70 rounded-l-full"
-                            style={{ width: `${ratio * 50}%` }}
-                          />
-                        )}
-                      </div>
-                      <div className="mt-1.5 flex items-center justify-end text-[11px] text-muted font-mono">
-                        <span>胜率 {r.win_rate}</span>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0 min-w-[80px]">
-                      <PnlText value={r.daily_pnl} size="base" />
-                    </div>
-                  </div>
-                );
-              })}
+              {rows.map(r => (
+                <DailyRow key={r.ai} entry={r} dayMax={dayMax} />
+              ))}
             </div>
           </article>
         );
@@ -406,6 +367,103 @@ export default function BettingPage() {
           本站所有数据仅用于AI预测能力对比研究，每注2元为虚拟模拟计算单位，与任何真实彩票投注无关。足球赛事临场变量极多，赛果存在高度不确定性，请理性观赛、远离非法购彩。
         </p>
       </section>
+    </div>
+  );
+}
+
+// ===== Daily row（可点击展开维度详情）=====
+const DAILY_DIMENSIONS = [
+  { key: 'spf' as const, label: '胜平负' },
+  { key: 'handicap' as const, label: '让球' },
+  { key: 'score' as const, label: '比分' },
+  { key: 'goals' as const, label: '总进球' },
+  { key: 'half_full' as const, label: '半全场' },
+  { key: 'chain' as const, label: '串关' },
+];
+
+function DailyRow({ entry, dayMax }: { entry: BettingDailyEntry; dayMax: number }) {
+  const [open, setOpen] = useState(false);
+  const ratio = Math.min(1, Math.abs(entry.daily_pnl) / dayMax);
+  const positive = entry.daily_pnl > 0;
+  const negative = entry.daily_pnl < 0;
+  return (
+    <div className="hover:bg-white/[0.02] transition-colors">
+      <div className="px-5 py-3 grid grid-cols-[140px_1fr_auto] items-center gap-4">
+        <Link
+          to={`/ai/${encodeURIComponent(entry.ai)}`}
+          className="flex items-center gap-2 min-w-0 group"
+        >
+          <span className="text-ink font-medium truncate group-hover:text-gold transition-colors">
+            {AI_SHORT[entry.ai as AiName] ?? entry.ai}
+          </span>
+        </Link>
+        <div className="relative">
+          <div className="absolute inset-y-0 left-1/2 w-px bg-divider/70" />
+          <div className="relative h-2 rounded-full bg-white/[0.04] overflow-hidden">
+            {positive && (
+              <div
+                className="absolute inset-y-0 left-1/2 bg-turf/70 rounded-r-full"
+                style={{ width: `${ratio * 50}%` }}
+              />
+            )}
+            {negative && (
+              <div
+                className="absolute inset-y-0 right-1/2 bg-[#F87171]/70 rounded-l-full"
+                style={{ width: `${ratio * 50}%` }}
+              />
+            )}
+          </div>
+          <div className="mt-1.5 flex items-center justify-end text-[11px] text-muted font-mono">
+            <span>胜率 {entry.win_rate}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          className="text-right shrink-0 min-w-[80px] flex items-center gap-1 justify-end group"
+          aria-expanded={open}
+          aria-label={open ? '收起详情' : '查看详情'}
+        >
+          <PnlText value={entry.daily_pnl} size="base" />
+          <span className="text-[10px] text-muted group-hover:text-gold transition-colors">
+            {open ? '▴' : '▾'}
+          </span>
+        </button>
+      </div>
+      {open && (
+        <div className="bg-night/40 border-t border-divider/60 px-5 py-3">
+          <div className="text-[11px] uppercase tracking-wider text-muted mb-2">
+            维度盈亏拆解
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {DAILY_DIMENSIONS.map(dim => {
+              const cell = entry[dim.key];
+              const invest = cell?.invest ?? 0;
+              const hits = cell?.hits ?? 0;
+              const pnl = cell?.pnl ?? 0;
+              const empty = invest === 0 && pnl === 0;
+              return (
+                <div
+                  key={dim.key}
+                  className="rounded-md border border-divider/60 bg-deep/40 px-3 py-2 flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0">
+                    <div className="text-xs text-ink">{dim.label}</div>
+                    <div className="text-[11px] text-muted font-mono">
+                      投 {invest} · 中 {hits}
+                    </div>
+                  </div>
+                  {empty ? (
+                    <span className="text-xs text-muted">—</span>
+                  ) : (
+                    <PnlText value={pnl} size="sm" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
