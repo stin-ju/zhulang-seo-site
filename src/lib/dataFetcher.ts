@@ -460,7 +460,10 @@ function buildBettingDaily(rows: DbBettingDailyRow[]): RawBettingDailyEntry[] {
   }));
 }
 
-function buildChainBets(rows: DbChainBetRow[]): {
+function buildChainBets(
+  rows: DbChainBetRow[],
+  matchRows: DbMatchRow[] = []
+): {
   days: RawChainBetDay[];
   chainPerAi: Map<string, RawDimensionStats>;
 } {
@@ -468,6 +471,11 @@ function buildChainBets(rows: DbChainBetRow[]): {
   const dateMap = new Map<string, Map<string, RawChainBet[]>>();
   const matchesPerDate = new Map<string, Set<string>>();
   const perAi = new Map<string, RawDimensionStats>();
+  // match_id → teams，用于补齐 selections 中缺失的 teams 字段
+  const teamsById = new Map<string, string>();
+  for (const m of matchRows) {
+    if (m.id && m.teams) teamsById.set(m.id, m.teams);
+  }
 
   for (const row of rows) {
     const ai = ensureAiPrefix(row.ai_name);
@@ -476,11 +484,16 @@ function buildChainBets(rows: DbChainBetRow[]): {
       : [];
     const selections: RawChainSelection[] = selectionsRaw.map(s => {
       const obj = (s ?? {}) as Record<string, unknown>;
+      const matchId = String(obj.match_id ?? '');
+      // 兼容两种字段命名：dimension/prediction（历史数据）与 dim/pick（v12 新数据）
+      const dimension = String(obj.dimension ?? obj.dim ?? '');
+      const prediction = String(obj.prediction ?? obj.pick ?? '');
+      const teams = String(obj.teams ?? teamsById.get(matchId) ?? '');
       return {
-        match_id: String(obj.match_id ?? ''),
-        teams: String(obj.teams ?? ''),
-        dimension: String(obj.dimension ?? ''),
-        prediction: String(obj.prediction ?? ''),
+        match_id: matchId,
+        teams,
+        dimension,
+        prediction,
         hit: toBoolOrNull(obj.hit),
       };
     });
@@ -623,7 +636,7 @@ export async function fetchRawData(): Promise<RawData> {
     predictionRows
   );
   const stats = buildStats(statsRows);
-  const { days: chainDays, chainPerAi } = buildChainBets(chainRows);
+  const { days: chainDays, chainPerAi } = buildChainBets(chainRows, matchRows);
   const summary = buildBettingSummary(summaryRows, chainPerAi);
   const daily = buildBettingDaily(dailyRows);
 
