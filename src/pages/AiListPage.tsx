@@ -80,10 +80,10 @@ function AiCard({ s }: { s: AiSummary }) {
 
 export default function AiListPage() {
   useDocumentMeta({
-    title: 'AI 选手名册 | 8个AI世界杯预测对比 - 大竞赛',
+    title: 'AI 选手名册 | 7个AI世界杯预测对比 - 大竞赛',
     description:
-      '2026 世界杯 AI 预测大竞赛 10 位选手（8 个活跃 + 2 个退赛）总览：盈利率、模拟盈亏、参赛场次。',
-    keywords: 'AI选手名册,世界杯AI,8个AI预测,2026世界杯,AI足球分析',
+      '2026 世界杯 AI 预测大竞赛 10 位选手（7 个活跃 + 3 个退赛）总览：盈利率、模拟盈亏、参赛场次。',
+    keywords: 'AI选手名册,世界杯AI,7个AI预测,2026世界杯,AI足球分析',
     canonicalPath: '/ai',
     ogType: 'website',
   });

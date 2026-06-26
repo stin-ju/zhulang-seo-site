@@ -327,11 +327,11 @@ export default function MatchDetailPage() {
   }, [match, homeName, awayName]);
 
   const seoTitle = match
-    ? `2026世界杯 ${homeName}vs${awayName} AI预测分析 | 8个AI命中矩阵`
-    : '比赛预测对比 | 8个AI命中矩阵 - 大竞赛';
+    ? `2026世界杯 ${homeName}vs${awayName} AI预测分析 | 7个AI命中矩阵`
+    : '比赛预测对比 | 7个AI命中矩阵 - 大竞赛';
   const seoDescription = match
-    ? `2026 世界杯 ${homeName} VS ${awayName}：8 个 AI 的胜平负、让球、比分、总进球、半全场预测命中矩阵与分析逻辑。`
-    : '8 个 AI 对世界杯赛事的胜平负、让球、比分、总进球、半全场预测命中矩阵。';
+    ? `2026 世界杯 ${homeName} VS ${awayName}：7 个 AI 的胜平负、让球、比分、总进球、半全场预测命中矩阵与分析逻辑。`
+    : '7 个 AI 对世界杯赛事的胜平负、让球、比分、总进球、半全场预测命中矩阵。';
 
   useDocumentMeta({
     title: seoTitle,

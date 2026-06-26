@@ -323,7 +323,7 @@ export default function BettingPage() {
   useDocumentMeta({
     title: 'AI预测模拟盈亏对比 | 串关与单注数据 - 大竞赛',
     description:
-      '8 个 AI 在 2026 世界杯模拟盈亏排行榜，每日总盈亏与胜率走势对比。',
+      '7 个 AI 在 2026 世界杯模拟盈亏排行榜，每日总盈亏与胜率走势对比。',
     keywords: '2026世界杯,AI模拟盈亏,世界杯AI,串关推荐,AI足球分析,盈利率',
     canonicalPath: '/betting',
     ogType: 'website',

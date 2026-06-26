@@ -16,23 +16,22 @@ export type AiName =
   | 'AI-千问'
   | 'AI-Kimi';
 
-// 8 active AIs in the order requested by the product team:
-// 豆包 → DeepSeek → 扣子 → 文心 → 智谱 → 天工 → MiniMax → 混元
+// 7 active AIs in the order requested by the product team:
+// 豆包 → DeepSeek → 扣子 → 文心 → 智谱 → MiniMax → 混元
 export const AI_ACTIVE: AiName[] = [
   'AI-豆包',
   'AI-DeepSeek',
   'AI-扣子（皮皮）',
   'AI-文心',
   'AI-智谱清言',
-  'AI-天工',
   'AI-MiniMax',
   'AI-混元',
 ];
 
 // Retired (greyed) AIs displayed at the tail of every list.
-export const AI_RETIRED: AiName[] = ['AI-千问', 'AI-Kimi'];
+export const AI_RETIRED: AiName[] = ['AI-千问', 'AI-Kimi', 'AI-天工'];
 
-// Canonical display order: 8 active first, then retired at the bottom.
+// Canonical display order: 7 active first, then retired at the bottom.
 export const AI_LIST: AiName[] = [...AI_ACTIVE, ...AI_RETIRED];
 
 export const AI_SHORT: Record<AiName, string> = {

@@ -49,9 +49,9 @@ function teamPair(teams: string): { home: string; away: string } {
 
 export default function MatchListPage() {
   useDocumentMeta({
-    title: '世界杯赛事AI预测对比 | 8个AI胜平负让球分析 - 大竞赛',
+    title: '世界杯赛事AI预测对比 | 7个AI胜平负让球分析 - 大竞赛',
     description:
-      '逐场对比 8 个 AI 对 2026 世界杯赛事的胜平负、让球、比分、总进球、半全场预测与命中表现，含每日串关推荐与分析逻辑跳转。',
+      '逐场对比 7 个 AI 对 2026 世界杯赛事的胜平负、让球、比分、总进球、半全场预测与命中表现，含每日串关推荐与分析逻辑跳转。',
     keywords: '2026世界杯,世界杯赛程,世界杯AI预测,AI足球分析,串关推荐,胜平负预测',
     canonicalPath: '/matches',
     ogType: 'website',
@@ -116,7 +116,7 @@ export default function MatchListPage() {
           <p className="text-xs uppercase tracking-[0.4em] text-muted">Matches</p>
           <h1 className="mt-2 text-3xl font-bold text-ink md:text-4xl">比赛日程与赛果</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            {matches.length} 场比赛 · {upcomingCount} 待比赛 · {confirmedCount} 已确认。点击 + 展开 8 个 AI 的预测明细。
+            {matches.length} 场比赛 · {upcomingCount} 待比赛 · {confirmedCount} 已确认。点击 + 展开 7 个 AI 的预测明细。
           </p>
         </div>
 

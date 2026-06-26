@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { AI_RETIRED } from './data';
 
 // ===== Raw data shape (mirrors src/data/data.json) =====
 // Reused by src/lib/data.ts so the existing parsing/aggregation logic
@@ -384,7 +385,10 @@ function buildMatchesAndResources(
 
 function buildStats(rows: DbStatsRow[]): RawStatsEntry[] {
   return rows.map(r => {
-    const isActive = r.is_active !== false; // default true
+    // Frontend retired list overrides DB is_active (e.g. 天工 is active in DB
+    // but marked retired on the frontend).
+    const isRetiredOnFrontend = AI_RETIRED.some(n => stripAiPrefix(n) === stripAiPrefix(r.ai_name));
+    const isActive = r.is_active !== false && !isRetiredOnFrontend; // default true
     const pnl = num(r.total_pnl);
     return {
       name: stripAiPrefix(r.ai_name),

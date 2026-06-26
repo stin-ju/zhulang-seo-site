@@ -194,7 +194,7 @@ export default function LeaderboardPage() {
       name: SITE_NAME,
       url: SITE_ORIGIN,
       description:
-        '8 个 AI 预测 2026 世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析与盈利率排行。',
+        '7 个 AI 预测 2026 世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析与盈利率排行。',
       inLanguage: 'zh-CN',
     };
     const itemListSchema = {
@@ -214,9 +214,9 @@ export default function LeaderboardPage() {
   }, []);
 
   useDocumentMeta({
-    title: '2026世界杯AI预测大竞赛 | 8个AI足球数据分析对比实验',
+    title: '2026世界杯AI预测大竞赛 | 7个AI足球数据分析对比实验',
     description:
-      '8个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析，AI预测分析逻辑与盈利率排行，足球数据可视化实验。',
+      '7个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析，AI预测分析逻辑与盈利率排行，足球数据可视化实验。',
     keywords: '2026世界杯,世界杯AI预测,AI足球分析,世界杯预测对比,AI竞猜',
     canonicalPath: '/',
     ogType: 'website',
