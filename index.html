@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html><html lang="zh-CN"><head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>2026世界杯AI预测大竞赛</title>
-<meta name="description" content="10个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析与盈亏排行">
+<meta name="description" content="7个AI预测2026世界杯全部赛事，含胜平负、让球、比分、总进球、半全场五维度对比分析、每日AI总评与盈亏排行"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -28,7 +26,7 @@ tailwind.config = {
 }
 </script>
 <style>
-  @import url('https://fonts.googleapis.cn/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.cn/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
   body { font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif; }
   .tabular { font-variant-numeric: tabular-nums; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -40,6 +38,9 @@ tailwind.config = {
   .shimmer { position: relative; overflow: hidden; }
   .shimmer::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.15), transparent); animation: shimmerMove 2s ease-out 0.3s 1 forwards; transform: translateX(-100%); }
   @keyframes shimmerMove { to { transform: translateX(100%); } }
+  .commentary-body { font-family: 'Noto Serif SC', serif; }
+  .commentary-body p { margin-bottom: 1em; line-height: 1.9; }
+  .commentary-body h3 { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
 </style>
 </head>
 <body class="bg-base text-gray-100 min-h-screen flex flex-col">
@@ -115,8 +116,6 @@ async function fetchData() {
 // ============================================================
 // CALCULATIONS
 // ============================================================
-
-// Get SPF odds for a prediction
 function getSpfOdds(match, prediction) {
   const spf = (prediction.spf || '').trim();
   if (spf.includes('胜') && !spf.includes('负')) return match.win_odds || 0;
@@ -125,7 +124,6 @@ function getSpfOdds(match, prediction) {
   return 0;
 }
 
-// Get handicap odds for a prediction
 function getHandicapOdds(match, prediction) {
   const hspf = (prediction.handicap_spf || '').trim();
   if (hspf.includes('胜') && !hspf.includes('负')) return match.handicap_win_odds || 0;
@@ -134,27 +132,19 @@ function getHandicapOdds(match, prediction) {
   return 0;
 }
 
-// Get odds for a dimension
 function getDimOdds(match, prediction, dimKey) {
   if (dimKey === 'spf') return getSpfOdds(match, prediction);
   if (dimKey === 'handicap') return getHandicapOdds(match, prediction);
-  // For score/goals/half_full, use SPF odds as proxy
   return getSpfOdds(match, prediction);
 }
 
-// Check if a dimension hit
 function isDimHit(prediction, dimKey) {
-  if (dimKey === 'spf') {
-    // SPF hit is derived: prediction matches actual result
-    // We don't have a hit_spf column, so we derive from match result
-    return null; // Will be computed separately
-  }
+  if (dimKey === 'spf') return null;
   const col = DIMS.find(d => d.key === dimKey)?.hitCol;
   if (!col) return null;
   return prediction[col] === true;
 }
 
-// Derive SPF result from actual score
 function actualSpfFromScore(home, away) {
   if (home == null || away == null) return null;
   const h = Number(home), a = Number(away);
@@ -164,7 +154,6 @@ function actualSpfFromScore(home, away) {
   return null;
 }
 
-// Check if SPF prediction matches actual
 function isSpfHit(prediction, match) {
   const actual = actualSpfFromScore(match.home_score, match.away_score);
   if (!actual) return null;
@@ -175,13 +164,11 @@ function isSpfHit(prediction, match) {
   return null;
 }
 
-// Check if a dimension hit (including SPF)
 function isDimHitWithSpf(prediction, match, dimKey) {
   if (dimKey === 'spf') return isSpfHit(prediction, match);
   return isDimHit(prediction, dimKey);
 }
 
-// Build predictions map by match_id
 function buildPredMap() {
   const map = {};
   for (const p of predictionsData) {
@@ -191,31 +178,22 @@ function buildPredMap() {
   return map;
 }
 
-// Calculate per-AI stats
 function calcAiStats() {
   const predMap = buildPredMap();
   const stats = {};
-
   for (const ai of AI_LIST) {
     stats[ai] = {
-      ai,
-      retired: AI_RETIRED.has(ai),
-      totalMatches: 0,
-      confirmedMatches: 0,
+      ai, retired: AI_RETIRED.has(ai),
+      totalMatches: 0, confirmedMatches: 0,
       dimHits: { spf: 0, handicap: 0, score: 0, goals: 0, half_full: 0 },
       dimTotal: { spf: 0, handicap: 0, score: 0, goals: 0, half_full: 0 },
       dimPnl: { spf: 0, handicap: 0, score: 0, goals: 0, half_full: 0 },
-      totalPnl: 0,
-      totalInvest: 0,
-      totalHits: 0,
-      totalBets: 0,
+      totalPnl: 0, totalInvest: 0, totalHits: 0, totalBets: 0,
     };
   }
-
   for (const match of matchesData) {
     const preds = predMap[match.id] || [];
     const isConfirmed = match.status === '已确认';
-
     for (const pred of preds) {
       const ai = pred.ai_name;
       if (!stats[ai]) continue;
@@ -242,40 +220,93 @@ function calcAiStats() {
       }
     }
   }
-
   return stats;
 }
 
-// Get overall hit rate for an AI
 function getAiHitRate(aiStats) {
   if (aiStats.totalBets === 0) return 0;
   return aiStats.totalHits / aiStats.totalBets;
 }
 
-// Get per-dimension hit rate
-function getDimHitRate(aiStats, dimKey) {
-  const total = aiStats.dimTotal[dimKey];
-  if (total === 0) return 0;
-  return aiStats.dimHits[dimKey] / total;
-}
-
-// Format percentage
-function fmtPct(v) {
-  return (v * 100).toFixed(1) + '%';
-}
-
-// Format PnL with sign
+function fmtPct(v) { return (v * 100).toFixed(1) + '%'; }
 function fmtPnl(v) {
   if (v > 0) return '+' + v.toFixed(2);
   if (v < 0) return v.toFixed(2);
   return '0.00';
 }
-
-// PnL color class
 function pnlClass(v) {
   if (v > 0) return 'text-win';
   if (v < 0) return 'text-lose';
   return 'text-muted';
+}
+
+// ============================================================
+// DAILY COMMENTARY HELPERS
+// ============================================================
+function getAvailableDates() {
+  const dates = new Set();
+  for (const m of matchesData) {
+    if (m.match_time) {
+      const d = m.match_time.substring(0, 10);
+      dates.add(d);
+    }
+  }
+  return [...dates].sort().reverse();
+}
+
+function getMatchesByDate(dateStr) {
+  return matchesData.filter(m => m.match_time && m.match_time.substring(0, 10) === dateStr);
+}
+
+function getCommentaryForDate(dateStr) {
+  const dayMatches = getMatchesByDate(dateStr);
+  for (const m of dayMatches) {
+    if (m.metadata && m.metadata.daily_commentary) {
+      return m.metadata.daily_commentary;
+    }
+  }
+  return null;
+}
+
+function getAiSummaryForDate(dateStr) {
+  const dayMatches = getMatchesByDate(dateStr);
+  for (const m of dayMatches) {
+    if (m.metadata && m.metadata.ai_summary) {
+      return m.metadata.ai_summary;
+    }
+  }
+  return null;
+}
+
+// Build a simple commentary from predictions if no DB commentary exists
+function buildFallbackCommentary(dateStr) {
+  const dayMatches = getMatchesByDate(dateStr);
+  if (dayMatches.length === 0) return null;
+  
+  const predMap = buildPredMap();
+  let parts = [];
+  
+  for (const match of dayMatches) {
+    const preds = predMap[match.id] || [];
+    if (preds.length === 0) continue;
+    
+    const spfVotes = { '胜': 0, '平': 0, '负': 0 };
+    for (const p of preds) {
+      const spf = (p.spf || '').trim();
+      if (spf.includes('胜') && !spf.includes('负')) spfVotes['胜']++;
+      else if (spf.includes('负') && !spf.includes('胜')) spfVotes['负']++;
+      else if (spf.includes('平')) spfVotes['平']++;
+    }
+    
+    const total = preds.length;
+    const top = Object.entries(spfVotes).sort((a, b) => b[1] - a[1])[0];
+    const consensus = Math.round(top[1] / total * 100);
+    
+    parts.push(`<p><strong>${match.teams}</strong> — ${total}个AI中${top[1]}个看好「${top[0]}」(共识度${consensus}%)，比分预测集中在AI各自分析中。</p>`);
+  }
+  
+  if (parts.length === 0) return null;
+  return `<h3>📊 ${dateStr} AI预测概览</h3>\n${parts.join('\n')}`;
 }
 
 // ============================================================
@@ -286,6 +317,7 @@ const NAV_ITEMS = [
   { hash: '#/matches', label: '比赛' },
   { hash: '#/ai', label: 'AI' },
   { hash: '#/betting', label: '盈亏' },
+  { hash: '#/daily', label: '每日分析' },
 ];
 
 function updateNav() {
@@ -307,6 +339,8 @@ function getRoute() {
   if (hash === '/ai') return { page: 'aiList' };
   if (hash.startsWith('/ai/')) return { page: 'aiDetail', name: decodeURIComponent(hash.slice(4)) };
   if (hash === '/betting') return { page: 'betting' };
+  if (hash === '/daily') return { page: 'daily' };
+  if (hash.startsWith('/daily/')) return { page: 'daily', date: decodeURIComponent(hash.slice(7)) };
   return { page: 'notfound' };
 }
 
@@ -326,6 +360,7 @@ async function navigate() {
     case 'aiList': renderAiList(app); break;
     case 'aiDetail': renderAiDetail(app, route.name); break;
     case 'betting': renderBetting(app); break;
+    case 'daily': renderDaily(app, route.date); break;
     default: app.innerHTML = '<div class="text-center py-24"><div class="text-6xl font-bold text-accent">404</div><p class="mt-4 text-muted">页面不存在</p><a href="#/" class="inline-block mt-6 px-4 py-2 rounded-md border border-accent/40 text-accent hover:bg-accent/10">返回排行榜</a></div>';
   }
   window.scrollTo(0, 0);
@@ -335,16 +370,168 @@ window.addEventListener('hashchange', navigate);
 window.addEventListener('DOMContentLoaded', navigate);
 
 // ============================================================
+// PAGE: DAILY ANALYSIS (评论风格)
+// ============================================================
+function renderDaily(el, selectedDate) {
+  const dates = getAvailableDates();
+  if (dates.length === 0) {
+    el.innerHTML = '<div class="text-center py-24 text-muted">暂无赛事数据</div>';
+    return;
+  }
+  
+  const dateStr = selectedDate || dates[0];
+  const dayMatches = getMatchesByDate(dateStr);
+  const commentary = getCommentaryForDate(dateStr) || buildFallbackCommentary(dateStr);
+  const predMap = buildPredMap();
+
+  // Build consensus cards for each match
+  let consensusCards = '';
+  for (const match of dayMatches) {
+    const preds = predMap[match.id] || [];
+    if (preds.length === 0) continue;
+    
+    const spfVotes = { '胜': [], '平': [], '负': [] };
+    for (const p of preds) {
+      const spf = (p.spf || '').trim();
+      const aiLabel = AI_SHORT[p.ai_name] || p.ai_name;
+      if (spf.includes('胜') && !spf.includes('负')) spfVotes['胜'].push(aiLabel);
+      else if (spf.includes('负') && !spf.includes('胜')) spfVotes['负'].push(aiLabel);
+      else if (spf.includes('平')) spfVotes['平'].push(aiLabel);
+    }
+    
+    const total = preds.length;
+    const sorted = Object.entries(spfVotes).sort((a, b) => b[1].length - a[1].length);
+    const topResult = sorted[0];
+    const consensus = Math.round(topResult[1].length / total * 100);
+    const isHighConsensus = consensus >= 70;
+    const isSplit = sorted[0][1].length === sorted[1][1].length;
+    
+    consensusCards += `
+    <div class="rounded-xl bg-card border ${isHighConsensus ? 'border-win/40' : isSplit ? 'border-lose/40' : 'border-border'} p-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-semibold">${match.teams}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded ${isHighConsensus ? 'bg-win/15 text-win' : isSplit ? 'bg-lose/15 text-lose' : 'bg-accent/15 text-accent'}">
+          ${isHighConsensus ? '高共识' : isSplit ? '大分歧' : '有倾向'}
+        </span>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center text-xs">
+        <div class="rounded-lg ${topResult[0]==='胜' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
+          <div class="font-bold ${topResult[0]==='胜' ? 'text-win' : 'text-muted'}">胜 ${spfVotes['胜'].length}</div>
+        </div>
+        <div class="rounded-lg ${topResult[0]==='平' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
+          <div class="font-bold ${topResult[0]==='平' ? 'text-win' : 'text-muted'}">平 ${spfVotes['平'].length}</div>
+        </div>
+        <div class="rounded-lg ${topResult[0]==='负' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
+          <div class="font-bold ${topResult[0]==='负' ? 'text-win' : 'text-muted'}">负 ${spfVotes['负'].length}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Format commentary HTML
+  let commentaryHtml = '';
+  if (commentary) {
+    // Convert line breaks and basic markdown-like formatting
+    commentaryHtml = commentary
+      .replace(/### (.*)/g, '<h3 class="text-lg font-bold mt-6 mb-3 text-accent">$1</h3>')
+      .replace(/## (.*)/g, '<h3 class="text-xl font-bold mt-8 mb-3 text-accent">$1</h3>')
+      .replace(/# (.*)/g, '<h3 class="text-2xl font-bold mt-8 mb-4 text-gray-100">$1</h3>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-gray-100">$1</strong>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br/>');
+    commentaryHtml = '<p>' + commentaryHtml + '</p>';
+    // Clean up empty paragraphs
+    commentaryHtml = commentaryHtml.replace(/<p>\s*<\/p>/g, '');
+    commentaryHtml = commentaryHtml.replace(/<p>\s*(<h3)/g, '$1');
+    commentaryHtml = commentaryHtml.replace(/(<\/h3>)\s*<\/p>/g, '$1');
+  }
+
+  // Date picker
+  let dateTabs = dates.slice(0, 14).map(d => {
+    const isActive = d === dateStr;
+    const label = new Date(d + 'T00:00:00').toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' });
+    return `<a href="#/daily/${d}" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+      isActive ? 'bg-accent text-white' : 'bg-card border border-border text-muted hover:text-gray-100 hover:border-accent/40'
+    }">${label}</a>`;
+  }).join('');
+
+  let html = `
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold mb-1">每日AI总评</h1>
+    <p class="text-sm text-muted">7个AI的预测汇总与深度点评，每日更新</p>
+  </div>
+
+  <!-- Date tabs -->
+  <div class="flex gap-2 overflow-x-auto pb-3 mb-6 scrollbar-hide">
+    ${dateTabs}
+  </div>
+
+  <!-- Consensus cards -->
+  <div class="mb-8">
+    <h2 class="text-sm tracking-[0.18em] uppercase text-muted mb-3">今日共识速览</h2>
+    <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      ${consensusCards || '<div class="text-muted text-sm col-span-full">今日暂无比赛数据</div>'}
+    </div>
+  </div>
+
+  <!-- Commentary article -->
+  ${commentaryHtml ? `
+  <div class="rounded-2xl bg-card border border-border p-6 sm:p-8 mb-8">
+    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-border">
+      <span class="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 text-accent text-lg">✍</span>
+      <div>
+        <div class="font-bold">AI首席评论员</div>
+        <div class="text-xs text-muted">${dateStr} · 逐浪AI实验室</div>
+      </div>
+    </div>
+    <div class="commentary-body text-gray-300 text-[15px] leading-relaxed">
+      ${commentaryHtml}
+    </div>
+  </div>` : `
+  <div class="rounded-2xl bg-card border border-border p-8 text-center text-muted mb-8">
+    <div class="text-4xl mb-3">📝</div>
+    <p>今日评论尚未生成</p>
+    <p class="text-xs mt-1">评论将在每日预测完成后自动生成</p>
+  </div>`}
+
+  <!-- Match list for this day -->
+  <h2 class="text-lg font-bold mb-4">当日比赛</h2>
+  <div class="space-y-3">
+  ${dayMatches.map(match => {
+    const preds = predMap[match.id] || [];
+    const isConfirmed = match.status === '已确认';
+    const score = isConfirmed && match.home_score != null ? `${match.home_score} - ${match.away_score}` : 'vs';
+    const timeStr = match.match_time ? new Date(match.match_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+    <a href="#/matches/${encodeURIComponent(match.id)}" class="block rounded-xl bg-card border ${isConfirmed ? 'border-accent/30' : 'border-border'} p-4 hover:border-accent/50 transition-colors group">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs text-muted">${timeStr}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded ${isConfirmed ? 'bg-win/15 text-win' : 'bg-accent/15 text-accent'}">${isConfirmed ? '已确认' : '待比赛'}</span>
+          </div>
+          <div class="text-base font-semibold truncate group-hover:text-accent transition-colors">${match.teams}</div>
+        </div>
+        <div class="text-right">
+          <div class="font-mono text-xl font-bold ${isConfirmed ? 'text-gray-100' : 'text-muted'}">${score}</div>
+          <div class="text-xs text-muted mt-1">${preds.length} 个AI预测</div>
+        </div>
+      </div>
+    </a>`;
+  }).join('')}
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+// ============================================================
 // PAGE: LEADERBOARD
 // ============================================================
 function renderLeaderboard(el) {
   const stats = calcAiStats();
   const active = AI_LIST.filter(a => !AI_RETIRED.has(a)).map(a => stats[a]).filter(Boolean);
   const retired = AI_LIST.filter(a => AI_RETIRED.has(a)).map(a => stats[a]).filter(Boolean);
-
-  // Sort active by totalPnl desc
   active.sort((a, b) => b.totalPnl - a.totalPnl);
-  // Assign ranks
   active.forEach((s, i) => s.rank = i + 1);
 
   const confirmedCount = matchesData.filter(m => m.status === '已确认').length;
@@ -358,7 +545,6 @@ function renderLeaderboard(el) {
       <p class="mt-3 text-sm sm:text-base text-muted max-w-2xl mx-auto">${AI_LIST.length - AI_RETIRED.size} 个活跃 AI（${AI_RETIRED.size} 已退赛），${confirmedCount} 场已确认比赛，5 个预测维度</p>
     </section>`;
 
-  // Champion card
   if (champion) {
     html += `
     <a href="#/ai/${encodeURIComponent(champion.ai)}" class="shimmer block rounded-2xl border border-accent/50 bg-gradient-to-br from-[#2d1b4e] to-[#1a0a2e] p-6 sm:p-8 mb-8 group transition-transform hover:-translate-y-0.5">
@@ -387,7 +573,6 @@ function renderLeaderboard(el) {
     </a>`;
   }
 
-  // Rest of active AIs
   html += `<section class="mb-8"><h2 class="text-sm tracking-[0.18em] uppercase text-muted mb-4">梯队榜单 · Lineup</h2><div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">`;
   for (const s of rest) {
     html += `
@@ -409,7 +594,6 @@ function renderLeaderboard(el) {
   }
   html += `</div></section>`;
 
-  // Retired AIs
   if (retired.length > 0) {
     html += `<section class="mb-8"><h2 class="text-sm tracking-[0.18em] uppercase text-muted mb-4">已退赛 · Retired</h2><div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">`;
     for (const s of retired) {
@@ -432,7 +616,6 @@ function renderLeaderboard(el) {
     html += `</div></section>`;
   }
 
-  // Stats
   html += `
   <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
     <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">活跃 AI</div><div class="mt-2 flex items-baseline gap-1"><span class="font-mono text-3xl font-bold">${AI_LIST.length - AI_RETIRED.size}</span><span class="text-xs text-muted">个</span></div></div>
@@ -523,7 +706,6 @@ function renderMatchDetail(el, matchId) {
     </div>` : ''}
   </div>`;
 
-  // Prediction matrix
   html += `<h2 class="text-lg font-bold mb-4">AI 预测矩阵</h2>`;
   html += `<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border">`;
   html += `<th class="text-left py-2 px-3 text-muted font-medium">AI</th>`;
@@ -564,7 +746,6 @@ function renderMatchDetail(el, matchId) {
 
   html += `</tbody></table></div>`;
 
-  // AI Analysis
   const analysisPreds = preds.filter(p => p.analysis && p.analysis.trim());
   if (analysisPreds.length > 0) {
     html += `<h2 class="text-lg font-bold mt-8 mb-4">AI 分析</h2>`;
@@ -677,7 +858,6 @@ function renderAiDetail(el, aiName) {
     </div>
   </div>`;
 
-  // Dimension breakdown
   html += `<h2 class="text-lg font-bold mb-4">维度命中详情</h2>`;
   html += `<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-6">`;
   for (const dim of DIMS) {
@@ -695,7 +875,6 @@ function renderAiDetail(el, aiName) {
   }
   html += `</div>`;
 
-  // Match history
   const predMap = buildPredMap();
   const aiPreds = predictionsData.filter(p => p.ai_name === aiName);
   const matchIds = [...new Set(aiPreds.map(p => p.match_id))];
@@ -739,7 +918,7 @@ function renderAiDetail(el, aiName) {
 }
 
 // ============================================================
-// PAGE: BETTING (模拟盈亏)
+// PAGE: BETTING
 // ============================================================
 function renderBetting(el) {
   const stats = calcAiStats();
@@ -763,7 +942,6 @@ function renderBetting(el) {
     <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">总注数</div><div class="mt-2 font-mono text-2xl font-bold">${totalBets}</div></div>
   </div>`;
 
-  // Ranking table
   html += `
   <div class="overflow-x-auto">
   <table class="w-full text-sm">
@@ -797,7 +975,6 @@ function renderBetting(el) {
 
   html += `</tbody></table></div>`;
 
-  // Dimension detail per AI (expandable)
   html += `<h2 class="text-lg font-bold mt-8 mb-4">维度盈亏明细</h2>`;
   html += `<div class="space-y-3">`;
   for (const s of active) {
@@ -830,5 +1007,4 @@ function renderBetting(el) {
   el.innerHTML = html;
 }
 </script>
-</body>
-</html>
+</body></html>
