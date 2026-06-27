@@ -10,7 +10,7 @@ build = [ ]
 run = [
   "sh",
   "-c",
-  "python -m http.server ${DEPLOY_RUN_PORT} --bind 0.0.0.0"
+  "python3 -m http.server ${DEPLOY_RUN_PORT} --bind 0.0.0.0"
 ]
 
 [deploy]
@@ -18,5 +18,5 @@ build = [ ]
 run = [
   "sh",
   "-c",
-  "python -m http.server ${DEPLOY_RUN_PORT} --bind 0.0.0.0"
+  "python3 -m http.server ${DEPLOY_RUN_PORT} --bind 0.0.0.0"
 ]
