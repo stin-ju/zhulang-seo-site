@@ -12,7 +12,7 @@
 
 ```
 ├── index.html          # 完整单文件应用（HTML + CSS + JS 全部内联）
-├── .coze               # 项目配置（native-static 模板，Python http.server 托管）
+├── .coze               # 项目配置（native-static 模板，npx serve 托管）
 ├── AGENTS.md           # 项目说明（本文件）
 └── DESIGN.md           # 设计规范
 ```

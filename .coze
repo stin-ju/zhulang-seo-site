@@ -1,6 +1,6 @@
 [project]
 entrypoint = "index.html"
-requires = [ "python-3.12" ]
+requires = [ "nodejs-24" ]
 template = "native-static"
 version = "0.0.28"
 appliedPatches = [ ]
@@ -10,7 +10,7 @@ build = [ ]
 run = [
   "sh",
   "-c",
-  "python3 -m http.server ${DEPLOY_RUN_PORT} --bind 0.0.0.0"
+  "npx serve -l ${DEPLOY_RUN_PORT} -s ."
 ]
 
 [deploy]
@@ -18,5 +18,5 @@ build = [ ]
 run = [
   "sh",
   "-c",
-  "python3 -m http.server ${DEPLOY_RUN_PORT} --bind 0.0.0.0"
+  "npx serve -l ${DEPLOY_RUN_PORT} -s ."
 ]
