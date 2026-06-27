@@ -140,3 +140,4 @@ node-compile-cache/
 .vite/
 .coze-logs
 .codegraph
+.codegraph/
