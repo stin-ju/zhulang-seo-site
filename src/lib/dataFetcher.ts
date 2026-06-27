@@ -644,6 +644,18 @@ export async function fetchRawData(): Promise<RawData> {
   const summary = buildBettingSummary(summaryRows, chainPerAi);
   const daily = buildBettingDaily(dailyRows);
 
+  // 数据完整性检查：如果 Supabase 中 predictions 数量过少（大部分比赛没有预测数据），
+  // 说明 DB 尚未同步完整数据，自动 fallback 到 data.json 静态数据源。
+  const expectedMinPredictions = matchRows.length * 4; // 至少每场 4 个 AI 的预测
+  if (predictionRows.length < expectedMinPredictions) {
+    console.warn(
+      `[dataFetcher] Supabase predictions 数据不完整（${predictionRows.length} < ${expectedMinPredictions}），fallback 到 data.json`
+    );
+    const jsonModule = await import('../data/data.json');
+    const jsonData = (jsonModule.default ?? jsonModule) as RawData;
+    return jsonData;
+  }
+
   return {
     matches,
     resources,
