@@ -8,15 +8,13 @@ appliedPatches = [ ]
 [dev]
 build = [ ]
 run = [
-  "sh",
-  "-c",
-  "npx serve -l ${DEPLOY_RUN_PORT} -s ."
+  "node",
+  "server.js"
 ]
 
 [deploy]
 build = [ ]
 run = [
-  "sh",
-  "-c",
-  "npx serve -l ${DEPLOY_RUN_PORT} -s ."
+  "node",
+  "server.js"
 ]
