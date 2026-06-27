@@ -2,62 +2,56 @@
 
 ## 技术栈
 
-- **核心**: Vite 7, TypeScript, Express, React 19
-- **路由**: react-router-dom v7（BrowserRouter，由 Express SPA fallback 兜底）
-- **UI**: Tailwind CSS（自定义深色调色板：`night/deep/elevated/turf/gold/miss`）
+- **核心**: 纯 HTML 单文件应用（无构建步骤）
+- **样式**: Tailwind CSS CDN
+- **数据**: Supabase JS SDK CDN（仅查询 `matches` + `predictions` 两张表）
+- **路由**: Hash 路由 SPA（`#/`, `#/matches`, `#/matches/:id`, `#/ai/:name`, `#/betting`）
+- **主题**: 深色紫色主题（`#1a0a2e` 背景）
 
 ## 目录结构
 
 ```
-├── scripts/                # 构建与启动脚本
-│   ├── build.sh            # 构建脚本
-│   ├── dev.sh              # 开发环境启动脚本
-│   ├── prepare.sh          # 预处理脚本
-│   └── start.sh            # 生产环境启动脚本
-├── server/                 # 服务端逻辑
-│   ├── routes/             # API 路由（保留示例，未在前端使用）
-│   ├── server.ts           # Express 服务入口
-│   └── vite.ts             # Vite 中间件集成 + 生产 SPA fallback
-├── src/                    # 前端源码（React SPA）
-│   ├── components/
-│   │   └── Layout.tsx      # 全局导航 + 页脚
-│   ├── data/data.json      # 28 场比赛 × 7 个 AI 的预测数据
-│   ├── lib/data.ts         # 数据类型定义、命中率聚合、查询工具
-│   ├── pages/
-│   │   ├── LeaderboardPage.tsx   # 首页 - AI 排行榜
-│   │   ├── MatchListPage.tsx     # 比赛列表（按时间倒序）
-│   │   ├── MatchDetailPage.tsx   # 比赛详情 - 7 AI 命中矩阵
-│   │   ├── AiListPage.tsx        # AI 选手列表
-│   │   ├── AiDetailPage.tsx      # AI 个人页 - 各维度命中率 + 命中条带
-│   │   └── NotFoundPage.tsx
-│   ├── App.tsx             # 路由配置
-│   ├── index.css           # 全局样式 + Tailwind 入口
-│   └── index.tsx           # React 客户端入口
-├── DESIGN.md               # 设计风格规范
-├── index.html              # 入口 HTML
-├── package.json            # 项目依赖管理
-├── tsconfig.json           # TypeScript 配置（jsx: react-jsx, moduleResolution: bundler）
-└── vite.config.ts          # Vite 配置（含 @vitejs/plugin-react v4）
+├── index.html          # 完整单文件应用（HTML + CSS + JS 全部内联）
+├── .coze               # 项目配置（native-static 模板，Python http.server 托管）
+├── AGENTS.md           # 项目说明（本文件）
+└── DESIGN.md           # 设计规范
 ```
 
-## 包管理规范
+## 数据源
 
-**仅允许使用 pnpm** 作为包管理器，**严禁使用 npm 或 yarn**。
-**常用命令**：
-- 安装依赖：`pnpm add <package>`
-- 安装开发依赖：`pnpm add -D <package>`
-- 安装所有依赖：`pnpm install`
-- 移除依赖：`pnpm remove <package>`
+仅查询 Supabase 两张表：
+- `matches`：比赛信息（队伍、时间、让球、比分、赔率、状态）
+- `predictions`：AI 预测数据（各维度预测值、命中状态、分析、串关数据）
 
-## 开发规范
+所有统计数据（排行榜、盈亏、命中率）在 JavaScript 中从这两张表实时计算。
 
-- 使用 Tailwind CSS 进行样式开发
-- React 组件函数省略显式返回类型注解；若需要类型，使用 `React.JSX.Element`（React 19 不再暴露全局 `JSX` 命名空间）
-- 数据来源仅 `src/data/data.json`，所有聚合（命中率、排名）通过 `src/lib/data.ts` 计算，前端组件直接消费导出的 `aiSummaries / matches` 等
-- AI 命中维度只有 4 项：让球胜平负 / 全场比分 / 总进球 / 半全场（"胜平负 spf" 列在表格中作为信息展示但不计入命中率）
-- 路由使用 `BrowserRouter`，路径中的 AI 名称含括号/中文，必须用 `encodeURIComponent` / `decodeURIComponent` 处理
+## AI 名单
 
-### 编码规范
+10 个 AI，其中 3 个已退赛：
+- **活跃（7个）**: 混元、豆包、DeepSeek、MiniMax、扣子（皮皮）、BetAgent、Grok
+- **已退赛（3个）**: Kimi、千问、天工
 
-- 默认按 TypeScript `strict` 心智写代码；优先复用当前作用域已声明的变量、函数、类型和导入，禁止引用未声明标识符或拼错变量名。
-- 禁止隐式 `any` 和 `as any`；函数参数、返回值、解构项、事件对象、Express `req`/`res`、`catch` 错误在使用前应有明确类型或先完成类型收窄，并清理未使用的变量和导入。
+## 预测维度
+
+5 个维度：
+1. `spf` - 胜平负（赔率：win_odds / draw_odds / lose_odds）
+2. `handicap` - 让球（赔率：handicap_win_odds / handicap_draw_odds / handicap_lose_odds）
+3. `score` - 比分
+4. `goals` - 进球数
+5. `half_full` - 半全场
+
+## 盈亏计算规则
+
+- 每维度每场投入 1 单位
+- 命中收益 = odds - 1（使用对应维度的赔率）
+- 未中亏损 = -1
+- 对于无赔率维度（score/goals/half_full），使用 SPF 赔率作为参考
+
+## 颜色规范
+
+- 命中 = 绿色（`#10B981`）
+- 未中 = 红色（`#EF4444`）
+- 盈亏正数 = 绿色
+- 盈亏负数 = 红色
+- 背景 = 深紫色 `#1a0a2e`
+- 卡片 = 稍浅紫色 `#2d1b4e`
