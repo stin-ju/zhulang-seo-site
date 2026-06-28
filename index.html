@@ -90,6 +90,7 @@
             transition: all 0.2s;
             display: block;
             cursor: default;
+            text-align: center;
         }
         .focus-card.clickable { cursor: pointer; }
         .focus-card.clickable:hover { border-color: rgba(139, 92, 246, 0.3); background: #1a1a2a; transform: translateY(-2px); }
@@ -106,7 +107,7 @@
         .focus-card .score.home-win { color: #22c55e; }
         .focus-card .score.away-win { color: #ef4444; }
         .focus-card .score.draw { color: #fbbf24; }
-        .focus-card .votes { display: flex; gap: 8px; font-size: 12px; color: #9ca3af; margin-top: 6px; }
+        .focus-card .votes { display: flex; gap: 8px; font-size: 12px; color: #9ca3af; margin-top: 6px; justify-content: center; }
         .focus-card .votes span { display: flex; align-items: center; gap: 3px; }
         .focus-card .arrow { color: #8b5cf6; font-size: 14px; transition: transform 0.2s; display: inline-block; }
         .focus-card.clickable:hover .arrow { transform: translateX(4px); }
