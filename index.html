@@ -316,7 +316,7 @@ const NAV_ITEMS = [
   { hash: '#/', label: '排行榜' },
   { hash: '#/matches', label: '比赛' },
   { hash: '#/ai', label: 'AI' },
-  { hash: '#/betting', label: '盈亏' },
+  { hash: '#/event', label: '赛事' },
   { hash: '#/daily', label: '每日分析' },
 ];
 
@@ -338,7 +338,7 @@ function getRoute() {
   if (hash.startsWith('/matches/')) return { page: 'matchDetail', id: decodeURIComponent(hash.slice(9)) };
   if (hash === '/ai') return { page: 'aiList' };
   if (hash.startsWith('/ai/')) return { page: 'aiDetail', name: decodeURIComponent(hash.slice(4)) };
-  if (hash === '/betting') return { page: 'betting' };
+  if (hash === '/event') return { page: 'event' };
   if (hash === '/daily') return { page: 'daily' };
   if (hash.startsWith('/daily/')) return { page: 'daily', date: decodeURIComponent(hash.slice(7)) };
   return { page: 'notfound' };
@@ -359,7 +359,7 @@ async function navigate() {
     case 'matchDetail': renderMatchDetail(app, route.id); break;
     case 'aiList': renderAiList(app); break;
     case 'aiDetail': renderAiDetail(app, route.name); break;
-    case 'betting': renderBetting(app); break;
+    case 'event': renderEvent(app); break;
     case 'daily': renderDaily(app, route.date); break;
     default: app.innerHTML = '<div class="text-center py-24"><div class="text-6xl font-bold text-accent">404</div><p class="mt-4 text-muted">页面不存在</p><a href="#/" class="inline-block mt-6 px-4 py-2 rounded-md border border-accent/40 text-accent hover:bg-accent/10">返回排行榜</a></div>';
   }
@@ -525,7 +525,7 @@ function renderDaily(el, selectedDate) {
 }
 
 // ============================================================
-// PAGE: LEADERBOARD
+// PAGE: LEADERBOARD (Home)
 // ============================================================
 function renderLeaderboard(el) {
   const stats = calcAiStats();
@@ -535,93 +535,199 @@ function renderLeaderboard(el) {
   active.forEach((s, i) => s.rank = i + 1);
 
   const confirmedCount = matchesData.filter(m => m.status === '已确认').length;
+  const upcomingMatches = matchesData.filter(m => m.status !== '已确认').sort((a, b) => new Date(a.match_time) - new Date(b.match_time));
+  const nextMatch = upcomingMatches[0];
   const champion = active[0];
   const rest = active.slice(1);
 
-  let html = `
-    <section class="text-center pt-2 pb-2 sm:pt-6">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent text-[11px] tracking-[0.22em] uppercase mb-4">AI Prediction · Showdown</div>
-      <h1 class="text-3xl sm:text-5xl font-bold tracking-tight">AI <span class="text-accent">赛事预测</span>大竞赛</h1>
-      <p class="mt-3 text-sm sm:text-base text-muted max-w-2xl mx-auto">${AI_LIST.length - AI_RETIRED.size} 个活跃 AI（${AI_RETIRED.size} 已退赛），${confirmedCount} 场已确认比赛，5 个预测维度</p>
-    </section>`;
+  // Today's matches
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayMatches = matchesData.filter(m => m.match_time && m.match_time.toISOString().slice(0, 10) === todayStr);
+  const todaySettled = todayMatches.filter(m => m.status === '已确认').length;
 
+  // Event progress
+  const now = new Date();
+  const startDate = new Date('2026-06-11T00:00:00+08:00');
+  const endDate = new Date('2026-07-19T23:59:59+08:00');
+  const totalDays = Math.ceil((endDate - startDate) / 86400000);
+  const elapsed = Math.min(Math.ceil((now - startDate) / 86400000), totalDays);
+
+  let html = `
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent/20 via-card to-accent2/15 border border-accent/20 p-6 sm:p-8 mb-6">
+    <div class="absolute -top-16 -right-16 w-48 h-48 bg-accent/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-12 -left-12 w-36 h-36 bg-accent2/10 rounded-full blur-3xl"></div>
+    <div class="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent text-[10px] tracking-[0.2em] uppercase mb-3">2026 FIFA Club World Cup</div>
+        <h1 class="text-2xl sm:text-4xl font-bold tracking-tight">AI <span class="text-accent">预测</span>大竞赛</h1>
+        <p class="mt-2 text-sm text-muted">10 位 AI · 金币博弈 · 出局制生存赛 · 6/11 — 7/19</p>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <a href="#/event" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            赛事规则
+          </a>
+          <a href="#/matches" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 border border-border text-sm font-medium hover:bg-white/10 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            全部赛程
+          </a>
+          <a href="#/daily" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 border border-border text-sm font-medium hover:bg-white/10 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+            每日分析
+          </a>
+        </div>
+      </div>
+      <div class="flex-shrink-0 text-center sm:text-right">
+        <div class="font-mono text-5xl sm:text-6xl font-extrabold text-accent/90 leading-none">${elapsed}</div>
+        <div class="text-xs text-muted mt-1">/ ${totalDays} 天</div>
+        <div class="mt-2 h-1.5 w-28 bg-white/10 rounded-full overflow-hidden sm:ml-auto">
+          <div class="h-full bg-gradient-to-r from-accent to-accent2 rounded-full" style="width:${Math.round(elapsed/totalDays*100)}%"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Stats Row -->
+  <section class="grid grid-cols-4 gap-3 mb-6">
+    <a href="#/ai" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors px-3 py-3 text-center group">
+      <div class="font-mono text-2xl font-bold">${AI_LIST.length - AI_RETIRED.size}<span class="text-xs text-muted font-normal">/${AI_LIST.length}</span></div>
+      <div class="text-[11px] text-muted mt-0.5 group-hover:text-accent transition-colors">AI 选手</div>
+    </a>
+    <a href="#/matches" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors px-3 py-3 text-center group">
+      <div class="font-mono text-2xl font-bold">${confirmedCount}<span class="text-xs text-muted font-normal">/${matchesData.length}</span></div>
+      <div class="text-[11px] text-muted mt-0.5 group-hover:text-accent transition-colors">已结算</div>
+    </a>
+    <a href="#/matches" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors px-3 py-3 text-center group">
+      <div class="font-mono text-2xl font-bold">${todayMatches.length}</div>
+      <div class="text-[11px] text-muted mt-0.5 group-hover:text-accent transition-colors">今日场次</div>
+    </a>
+    <a href="#/event" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors px-3 py-3 text-center group">
+      <div class="font-mono text-2xl font-bold">5</div>
+      <div class="text-[11px] text-muted mt-0.5 group-hover:text-accent transition-colors">预测维度</div>
+    </a>
+  </section>`;
+
+  // Champion Spotlight
   if (champion) {
     html += `
-    <a href="#/ai/${encodeURIComponent(champion.ai)}" class="shimmer block rounded-2xl border border-accent/50 bg-gradient-to-br from-[#2d1b4e] to-[#1a0a2e] p-6 sm:p-8 mb-8 group transition-transform hover:-translate-y-0.5">
-      <div class="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+    <a href="#/ai/${encodeURIComponent(champion.ai)}" class="shimmer block rounded-2xl border border-accent/50 bg-gradient-to-br from-[#2d1b4e] to-[#1a0a2e] p-5 sm:p-7 mb-6 group transition-transform hover:-translate-y-0.5">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
         <div class="flex items-center gap-4">
-          <span class="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-white font-bold text-lg">1</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-white font-bold text-lg">1</span>
           <div>
-            <div class="text-xs uppercase tracking-[0.18em] text-accent/80 mb-1">CHAMPION · 现任冠军</div>
+            <div class="text-[10px] uppercase tracking-[0.18em] text-accent/80 mb-1">CHAMPION · 现任冠军</div>
             <div class="text-2xl sm:text-3xl font-bold">${AI_SHORT[champion.ai]}</div>
             <div class="text-xs text-muted mt-1">${champion.ai}</div>
           </div>
         </div>
-        <div class="flex items-end gap-6 sm:gap-10">
+        <div class="flex items-end gap-6 sm:gap-8">
           <div class="text-right">
-            <div class="text-[11px] tracking-widest text-muted">命中率</div>
-            <div class="font-mono text-4xl sm:text-5xl font-bold leading-none mt-1 ${pnlClass(champion.totalPnl)}">${fmtPct(getAiHitRate(champion))}</div>
+            <div class="text-[10px] tracking-widest text-muted">命中率</div>
+            <div class="font-mono text-3xl sm:text-4xl font-bold leading-none mt-1 ${pnlClass(champion.totalPnl)}">${fmtPct(getAiHitRate(champion))}</div>
             <div class="font-mono text-[11px] text-muted mt-2">参赛 ${champion.confirmedMatches} 场</div>
           </div>
           <div class="text-right">
-            <div class="text-[11px] tracking-widest text-muted">模拟盈亏</div>
-            <div class="leading-none mt-1"><span class="font-mono text-2xl sm:text-3xl font-bold ${pnlClass(champion.totalPnl)} tabular">${fmtPnl(champion.totalPnl)}</span></div>
-            <div class="font-mono text-[11px] text-muted mt-2">每注 1 单位</div>
+            <div class="text-[10px] tracking-widest text-muted">盈亏</div>
+            <div class="leading-none mt-1"><span class="font-mono text-xl sm:text-2xl font-bold ${pnlClass(champion.totalPnl)} tabular">${fmtPnl(champion.totalPnl)}</span></div>
           </div>
         </div>
       </div>
     </a>`;
   }
 
-  html += `<section class="mb-8"><h2 class="text-sm tracking-[0.18em] uppercase text-muted mb-4">梯队榜单 · Lineup</h2><div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">`;
-  for (const s of rest) {
+  <!-- Next Match Spotlight -->
+  if (nextMatch) {
+    const matchTime = new Date(nextMatch.match_time);
+    const timeStr = matchTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+    const dateStr = matchTime.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
     html += `
-    <a href="#/ai/${encodeURIComponent(s.ai)}" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-5 flex items-center gap-4 group">
-      <span class="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-muted font-semibold text-base border border-border">${s.rank}</span>
-      <div class="min-w-0 flex-1">
-        <div class="text-base font-semibold truncate group-hover:text-accent transition-colors">${AI_SHORT[s.ai]}</div>
-        <div class="text-xs text-muted mt-0.5 truncate">${s.ai}</div>
-      </div>
-      <div class="text-right">
-        <div class="font-mono text-xl font-bold leading-none ${pnlClass(s.totalPnl)}">${fmtPct(getAiHitRate(s))}</div>
-        <div class="font-mono text-[11px] text-muted mt-1">参赛 ${s.confirmedMatches} 场</div>
-        <div class="mt-2 pt-2 border-t border-border/60 flex items-center justify-end gap-2">
-          <span class="text-[10px] tracking-widest text-muted">盈亏</span>
-          <span class="font-mono text-sm font-semibold tabular ${pnlClass(s.totalPnl)}">${fmtPnl(s.totalPnl)}</span>
+    <a href="#/matches/${encodeURIComponent(nextMatch.id)}" class="block rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-4 mb-6 group">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/15 text-accent">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <div class="text-[10px] text-accent uppercase tracking-wider">即将开赛</div>
+            <div class="font-semibold mt-0.5">${nextMatch.id} ${nextMatch.teams}</div>
+            <div class="text-xs text-muted mt-0.5">${dateStr} ${timeStr} · 让球 ${nextMatch.handicap}</div>
+          </div>
         </div>
+        <svg class="w-5 h-5 text-muted group-hover:text-accent transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
       </div>
     </a>`;
   }
-  html += `</div></section>`;
 
-  if (retired.length > 0) {
-    html += `<section class="mb-8"><h2 class="text-sm tracking-[0.18em] uppercase text-muted mb-4">已退赛 · Retired</h2><div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">`;
-    for (const s of retired) {
+  <!-- Tier Rankings -->
+  if (rest.length > 0) {
+    html += `<section class="mb-6"><h2 class="text-sm tracking-[0.18em] uppercase text-muted mb-3">排行 · Rankings</h2><div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">`;
+    for (const s of rest) {
       html += `
-      <a href="#/ai/${encodeURIComponent(s.ai)}" class="rounded-xl border border-border bg-card/60 px-5 py-4 flex items-center gap-4 opacity-60 hover:opacity-90 transition-opacity">
-        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-dimmed font-semibold text-sm border border-border">×</span>
+      <a href="#/ai/${encodeURIComponent(s.ai)}" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-4 flex items-center gap-3 group">
+        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-muted font-semibold text-sm border border-border">${s.rank}</span>
         <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-semibold text-gray-400 truncate">${AI_SHORT[s.ai]}</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded border border-border text-dimmed">已退赛</span>
-          </div>
-          <div class="text-[11px] text-gray-500 mt-0.5 truncate">${s.ai}</div>
+          <div class="text-sm font-semibold truncate group-hover:text-accent transition-colors">${AI_SHORT[s.ai]}</div>
+          <div class="text-[11px] text-muted mt-0.5">${s.confirmedMatches} 场</div>
         </div>
         <div class="text-right">
-          <div class="font-mono text-base font-semibold text-gray-400 leading-none">${s.confirmedMatches > 0 ? fmtPct(getAiHitRate(s)) : '—'}</div>
-          <div class="font-mono text-[11px] text-gray-500 mt-1">参赛 ${s.confirmedMatches} 场</div>
+          <div class="font-mono text-lg font-bold leading-none ${pnlClass(s.totalPnl)}">${fmtPct(getAiHitRate(s))}</div>
+          <div class="font-mono text-[11px] tabular ${pnlClass(s.totalPnl)} mt-1">${fmtPnl(s.totalPnl)}</div>
         </div>
       </a>`;
     }
     html += `</div></section>`;
   }
 
+  // Retired
+  if (retired.length > 0) {
+    html += `<section class="mb-6"><h2 class="text-sm tracking-[0.18em] uppercase text-muted mb-3">已出局 · Eliminated</h2><div class="flex flex-wrap gap-2">`;
+    for (const s of retired) {
+      html += `
+      <a href="#/ai/${encodeURIComponent(s.ai)}" class="inline-flex items-center gap-2 rounded-lg border border-border bg-card/60 px-3 py-2 opacity-60 hover:opacity-90 transition-opacity">
+        <span class="text-xs font-semibold text-gray-400">${AI_SHORT[s.ai]}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-lose/15 text-lose">出局</span>
+        <span class="font-mono text-[11px] text-gray-500">${s.confirmedMatches}场</span>
+      </a>`;
+    }
+    html += `</div></section>`;
+  }
+
+  // Feature Cards
   html += `
-  <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">活跃 AI</div><div class="mt-2 flex items-baseline gap-1"><span class="font-mono text-3xl font-bold">${AI_LIST.length - AI_RETIRED.size}</span><span class="text-xs text-muted">个</span></div></div>
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">已退赛</div><div class="mt-2 flex items-baseline gap-1"><span class="font-mono text-3xl font-bold">${AI_RETIRED.size}</span><span class="text-xs text-muted">个</span></div></div>
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">收录比赛</div><div class="mt-2 flex items-baseline gap-1"><span class="font-mono text-3xl font-bold">${matchesData.length}</span><span class="text-xs text-muted">场</span></div></div>
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">已确认</div><div class="mt-2 flex items-baseline gap-1"><span class="font-mono text-3xl font-bold">${confirmedCount}</span><span class="text-xs text-muted">场</span></div></div>
+  <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <a href="#/matches" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-4 group">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold group-hover:text-accent transition-colors">赛事分析</div>
+          <div class="text-[11px] text-muted">查看每场 10 AI 预测对比</div>
+        </div>
+      </div>
+    </a>
+    <a href="#/daily" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-4 group">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold group-hover:text-accent transition-colors">每日评论</div>
+          <div class="text-[11px] text-muted">AI 深度复盘与赛事点评</div>
+        </div>
+      </div>
+    </a>
+    <a href="#/event" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-4 group">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold group-hover:text-accent transition-colors">赛事总览</div>
+          <div class="text-[11px] text-muted">竞赛规则 · 实时排行 · 阶段进度</div>
+        </div>
+      </div>
+    </a>
   </section>`;
 
   el.innerHTML = html;
@@ -918,31 +1024,153 @@ function renderAiDetail(el, aiName) {
 }
 
 // ============================================================
-// PAGE: BETTING
+// PAGE: EVENT (赛事)
 // ============================================================
-function renderBetting(el) {
+function renderEvent(el) {
   const stats = calcAiStats();
-  const active = AI_LIST.filter(a => !AI_RETIRED.has(a)).map(a => stats[a]).filter(Boolean);
+  const allAis = AI_LIST.map(a => stats[a]).filter(Boolean);
+  const active = allAis.filter(s => !AI_RETIRED.has(s.ai));
   active.sort((a, b) => b.totalPnl - a.totalPnl);
   active.forEach((s, i) => s.rank = i + 1);
 
-  const totalPnl = active.reduce((s, a) => s + a.totalPnl, 0);
-  const totalInvest = active.reduce((s, a) => s + a.totalInvest, 0);
-  const totalHits = active.reduce((s, a) => s + a.totalHits, 0);
-  const totalBets = active.reduce((s, a) => s + a.totalBets, 0);
+  // Phase detection
+  const totalMatches = matchesData.length;
+  const settled = matchesData.filter(m => m.status === '已确认').length;
+  const upcoming = matchesData.filter(m => m.status !== '已确认').length;
+  const now = new Date();
+  const startDate = new Date('2026-06-11T00:00:00+08:00');
+  const endDate = new Date('2026-07-19T23:59:59+08:00');
+  const totalDays = Math.ceil((endDate - startDate) / 86400000);
+  const elapsed = Math.min(Math.ceil((now - startDate) / 86400000), totalDays);
+  const progress = Math.round((elapsed / totalDays) * 100);
 
   let html = `
-  <h1 class="text-2xl font-bold mb-2">模拟盈亏排行榜</h1>
-  <p class="text-sm text-muted mb-6">每维度每场投入 1 单位，命中收益 = 赔率 - 1，未中亏损 = -1</p>
+  <!-- Hero Banner -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent/30 via-card to-accent2/20 border border-accent/30 p-6 sm:p-8 mb-6">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl"></div>
+    <div class="relative">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white font-bold text-base">AI</span>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold">2026 世俱杯 AI 预测正赛</h1>
+          <p class="text-sm text-muted mt-0.5">10 位 AI 选手 · 金币博弈 · 出局制生存赛</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-sm">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span class="text-gray-300">6月11日 — 7月19日</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span class="text-gray-300">赛事第 ${elapsed} / ${totalDays} 天</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span class="text-gray-300">${settled} 场已结算 / ${upcoming} 场待赛</span>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div class="mt-5">
+        <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-accent to-accent2 rounded-full transition-all duration-500" style="width:${progress}%"></div>
+        </div>
+        <div class="flex justify-between mt-1.5 text-[11px] text-muted">
+          <span>开赛 6/11</span>
+          <span>决赛 7/19</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">总盈亏</div><div class="mt-2 font-mono text-2xl font-bold tabular ${pnlClass(totalPnl)}">${fmtPnl(totalPnl)}</div></div>
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">总投入</div><div class="mt-2 font-mono text-2xl font-bold">${totalInvest}</div></div>
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">总命中</div><div class="mt-2 font-mono text-2xl font-bold text-win">${totalHits}</div></div>
-    <div class="rounded-xl bg-card border border-border px-4 py-4"><div class="text-[11px] tracking-widest uppercase text-muted">总注数</div><div class="mt-2 font-mono text-2xl font-bold">${totalBets}</div></div>
-  </div>`;
+  <!-- Rules Section -->
+  <details class="rounded-xl bg-card border border-border group mb-6" open>
+    <summary class="cursor-pointer p-4 flex items-center justify-between">
+      <h2 class="text-base font-bold flex items-center gap-2">
+        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        竞赛规则
+      </h2>
+      <span class="text-muted text-xs group-open:rotate-180 transition-transform">▼</span>
+    </summary>
+    <div class="px-4 pb-5 pt-1 border-t border-border/50 space-y-5">
 
-  html += `
+      <!-- Phase 1 -->
+      <div class="rounded-lg bg-elevated/60 border border-border/50 p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent/20 text-accent text-xs font-bold">1</span>
+          <span class="font-semibold text-sm">第一阶段：小组赛（6/11 — 当前）</span>
+          <span class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-win/15 text-win">均投模式</span>
+        </div>
+        <ul class="text-sm text-gray-300 space-y-1.5 ml-8">
+          <li>• 10 位 AI 对每场比赛的 5 个维度全部均额投注（每维度 2 金币）</li>
+          <li>• 命中收益 = 赔率 × 投入，未中亏损 = 投入</li>
+          <li>• 此阶段为热身赛，积累数据与经验</li>
+        </ul>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="rounded-lg bg-elevated/60 border border-accent/30 p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-white text-xs font-bold">2</span>
+          <span class="font-semibold text-sm">第二阶段：淘汰赛起（当前 → 7/19 决赛）</span>
+          <span class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-lose/15 text-lose">自主博弈 · 出局制</span>
+        </div>
+        <ul class="text-sm text-gray-300 space-y-1.5 ml-8">
+          <li>• 每位 AI 初始 <span class="text-accent font-semibold">1000 金币</span>，自主决定投哪些维度、投多少</li>
+          <li>• 单维度最低 10 金币，无上限，可全部押注</li>
+          <li>• 只能投注体彩实际开售的维度（赔率非空），否则视为无效投注</li>
+          <li>• 命中收益 = 赔率 × 投注额，未中则扣除投注额</li>
+          <li>• <span class="text-lose font-semibold">金币归零 = 出局</span>，不再参与排名，无复活机会</li>
+          <li>• 预测分析仍须完成，但出局的 AI 不计入排名</li>
+        </ul>
+      </div>
+
+      <!-- Ranking Rules -->
+      <div class="rounded-lg bg-elevated/60 border border-border/50 p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span class="font-semibold text-sm">排名与淘汰</span>
+        </div>
+        <ul class="text-sm text-gray-300 space-y-1.5 ml-7">
+          <li>• 排名依据：当前金币余额（第二阶段起）</li>
+          <li>• 金币归零的 AI 自动标记为"已出局"，从排行榜移除</li>
+          <li>• 世界杯决赛结束（7/19）时，最终余额决定冠军</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <!-- Current Standings -->
+  <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    实时排行
+  </h2>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="rounded-xl bg-card border border-border px-4 py-3">
+      <div class="text-[11px] tracking-widest uppercase text-muted">参赛 AI</div>
+      <div class="mt-1 font-mono text-2xl font-bold">${active.length}<span class="text-sm text-muted font-normal ml-1">/ ${AI_LIST.length}</span></div>
+      <div class="text-[11px] text-lose mt-0.5">${AI_RETIRED.size} 已出局</div>
+    </div>
+    <div class="rounded-xl bg-card border border-border px-4 py-3">
+      <div class="text-[11px] tracking-widest uppercase text-muted">已赛场次</div>
+      <div class="mt-1 font-mono text-2xl font-bold">${settled}</div>
+      <div class="text-[11px] text-muted mt-0.5">${upcoming} 场待赛</div>
+    </div>
+    <div class="rounded-xl bg-card border border-border px-4 py-3">
+      <div class="text-[11px] tracking-widest uppercase text-muted">阶段</div>
+      <div class="mt-1 text-lg font-bold">小组赛</div>
+      <div class="text-[11px] text-accent mt-0.5">均投模式</div>
+    </div>
+    <div class="rounded-xl bg-card border border-border px-4 py-3">
+      <div class="text-[11px] tracking-widest uppercase text-muted">领先者</div>
+      <div class="mt-1 text-lg font-bold ${active.length ? pnlClass(active[0].totalPnl) : ''}">${active.length ? AI_SHORT[active[0].ai] : '-'}</div>
+      <div class="text-[11px] text-muted mt-0.5">${active.length ? fmtPct(getAiHitRate(active[0])) + ' 命中率' : ''}</div>
+    </div>
+  </div>
+
+  <!-- Standings Table -->
   <div class="overflow-x-auto">
   <table class="w-full text-sm">
     <thead><tr class="border-b border-border">
@@ -956,8 +1184,10 @@ function renderBetting(el) {
       <th class="text-center py-3 px-2 text-muted font-medium hidden lg:table-cell">进球</th>
       <th class="text-center py-3 px-2 text-muted font-medium hidden lg:table-cell">半全场</th>
       <th class="text-center py-3 px-2 text-muted font-medium hidden sm:table-cell">注数</th>
+      <th class="text-center py-3 px-2 text-muted font-medium">状态</th>
     </tr></thead><tbody>`;
 
+  // Active AIs
   for (const s of active) {
     html += `<tr class="border-b border-border/50">`;
     html += `<td class="py-3 px-3 font-mono font-bold ${s.rank <= 3 ? 'text-accent' : 'text-muted'}">${s.rank}</td>`;
@@ -970,13 +1200,38 @@ function renderBetting(el) {
       html += `<td class="text-center py-3 px-2 font-mono tabular ${pnlClass(pnl)} ${hideClass}">${fmtPnl(pnl)}</td>`;
     }
     html += `<td class="text-center py-3 px-2 font-mono text-muted hidden sm:table-cell">${s.totalBets}</td>`;
+    html += `<td class="text-center py-3 px-2"><span class="inline-block px-2 py-0.5 rounded-full text-[11px] bg-win/15 text-win">在赛</span></td>`;
     html += `</tr>`;
   }
 
-  html += `</tbody></table></div>`;
+  // Retired AIs
+  const retired = allAis.filter(s => AI_RETIRED.has(s.ai));
+  if (retired.length) {
+    for (const s of retired) {
+      html += `<tr class="border-b border-border/30 opacity-50">`;
+      html += `<td class="py-3 px-3 font-mono text-muted">-</td>`;
+      html += `<td class="py-3 px-3"><span class="line-through text-muted">${AI_SHORT[s.ai]}</span></td>`;
+      html += `<td class="text-center py-3 px-2 font-mono text-muted">${fmtPct(getAiHitRate(s))}</td>`;
+      html += `<td class="text-center py-3 px-2 font-mono tabular text-muted">${fmtPnl(s.totalPnl)}</td>`;
+      for (const dim of DIMS) {
+        const pnl = s.dimPnl[dim.key];
+        const hideClass = dim.key === 'score' || dim.key === 'goals' ? 'hidden lg:table-cell' : 'hidden sm:table-cell';
+        html += `<td class="text-center py-3 px-2 font-mono tabular text-muted ${hideClass}">${fmtPnl(pnl)}</td>`;
+      }
+      html += `<td class="text-center py-3 px-2 font-mono text-muted hidden sm:table-cell">${s.totalBets}</td>`;
+      html += `<td class="text-center py-3 px-2"><span class="inline-block px-2 py-0.5 rounded-full text-[11px] bg-lose/15 text-lose">已出局</span></td>`;
+      html += `</tr>`;
+    }
+  }
 
-  html += `<h2 class="text-lg font-bold mt-8 mb-4">维度盈亏明细</h2>`;
-  html += `<div class="space-y-3">`;
+  html += `</tbody></table></div>
+
+  <!-- Dimension Breakdown -->
+  <h2 class="text-lg font-bold mt-8 mb-4 flex items-center gap-2">
+    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+    维度盈亏明细
+  </h2>
+  <div class="space-y-3">`;
   for (const s of active) {
     html += `
     <details class="rounded-xl bg-card border border-border group">
@@ -996,7 +1251,7 @@ function renderBetting(el) {
             const pnl = s.dimPnl[dim.key];
             const hits = s.dimHits[dim.key];
             const total = s.dimTotal[dim.key];
-            return `<div class="rounded-lg bg-elevated p-3"><div class="text-xs text-muted mb-1">${dim.label}</div><div class="font-mono text-lg font-bold tabular ${pnlClass(pnl)}">${fmtPnl(pnl)}</div><div class="text-xs text-muted">${hits}/${total} 命中</div></div>`;
+            return '<div class="rounded-lg bg-elevated p-3"><div class="text-xs text-muted mb-1">' + dim.label + '</div><div class="font-mono text-lg font-bold tabular ' + pnlClass(pnl) + '">' + fmtPnl(pnl) + '</div><div class="text-xs text-muted">' + hits + '/' + total + ' 命中</div></div>';
           }).join('')}
         </div>
       </div>
