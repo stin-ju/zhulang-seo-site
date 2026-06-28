@@ -878,6 +878,7 @@ async function renderAiLogos() {
     try {
         const data = await sbQuery('predictions', 'ai_name');
         const names = [...new Set(data.map(p => p.ai_name))].sort();
+        console.log('🔍 AI列表:', names.length, names);
         if (names.length === 0) {
             container.innerHTML = '<span style="color:#6b7280;font-size:12px;">暂无AI参与预测</span>';
             return;
@@ -888,7 +889,9 @@ async function renderAiLogos() {
                 <span>${name}</span>
             </a>
         `).join('');
+        console.log('✅ AI logos rendered:', names.length);
     } catch (e) {
+        console.error('❌ renderAiLogos error:', e);
         container.innerHTML = '<span style="color:#6b7280;font-size:12px;">AI列表加载失败</span>';
     }
 }
