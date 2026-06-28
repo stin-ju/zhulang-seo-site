@@ -75,6 +75,8 @@
     .sport-switch.active { background: rgba(168,85,247,0.2); color: #a855f7; border: 1px solid rgba(168,85,247,0.4); }
     .sport-switch:not(.active) { color: #9ca3af; border: 1px solid #3d2a5c; }
     .sport-switch:not(.active):hover { color: #e5e7eb; border-color: #6b7280; }
+    /* 导航高亮 */
+    .nav-link.nav-active { background: rgba(168,85,247,0.15); color: #a855f7 !important; }
     </style>
     
     <!-- 赛事结构化数据 -->
@@ -310,8 +312,8 @@
         <a href="/" class="sport-switch active">⚽ 足球</a>
         <a href="/basketball.html" class="sport-switch">🏀 篮球</a>
         <span class="hidden sm:inline w-px h-5 bg-border mx-1"></span>
-        <a href="#matches" class="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">赛程</a>
-        <a href="#daily" class="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">AI分析</a>
+        <a href="#matches" data-nav="matches" class="nav-link rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">赛程</a>
+        <a href="#daily" data-nav="daily" class="nav-link rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">AI分析</a>
         <span class="rounded-lg px-3 py-1.5 text-sm font-medium text-dimmed/50 cursor-not-allowed">模拟大赛</span>
       </div>
     </div>
@@ -1821,24 +1823,10 @@
 <!-- AI分析 -->
 <section id="daily" class="mb-8" aria-label="AI分析">
   <h2 class="text-lg font-bold mb-4">🔍 AI分析</h2>
-  <div class="space-y-2 mb-6">
-    <details open class="rounded-xl bg-card border border-border overflow-hidden">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">✍ 6月28日 周日 AI总评</h3>
-      </summary>
-      <div class="commentary-body text-gray-100 text-[15px] leading-relaxed p-4 pt-0">
-        <p>今日总论：世界杯第六比赛日，七场对决看似强弱分明，实则暗藏玄机。克罗地亚对加纳、英格兰对巴拿马、阿根廷对约旦这三场，AI共识度高达100%，几乎是"闭眼都能猜"的局。但真正的陷阱藏在哥伦比亚对葡萄牙和阿尔及利亚对奥地利这两场——AI内部出现了明显的分歧，尤其是哥伦比亚那场，57%的"负"票率背后，有三位AI坚定看平，这绝不是偶然。刚果金对乌兹别克看似胜率高达86%，但比分预测却出现了1-1和1-0的拉锯，说明"胜"的背后是"小胜"还是"平局"，AI自己都没想清楚。今天的关键词是：警惕战意、轮换和荣誉之战。</p><p>克罗地亚VS加纳：7个AI全票看胜，比分高度集中在2-1，只有扣子给了2-0的文静选项。说实话，克罗地亚的"老油条"属性在这种一场定生死的比赛里太值钱了，加纳的冲击力或许能偷一个，但想赢？难。我看好克罗地亚2-1稳稳拿下，但别指望他们打出什么摧枯拉朽的攻势，莫德里奇会像指挥交通一样把节奏压到最慢。</p><p>巴拿马VS英格兰：又是100%的"负"共识，但有趣的是，豆包是唯一一个给出0-1的"吝啬"预测，其余AI清一色0-2或0-3。这里有个关键信息：英格兰已经提前出线，凯恩大概率轮休，替补阵容的默契度存疑。巴拿马虽然实力悬殊，但荣誉之战往往能激发超常的防守韧性。我偏向豆包的观点，英格兰会赢，但大概率是1-0或2-0的"打卡下班"式胜利，大胜有点奢侈。</p><p>哥伦比亚VS葡萄牙：这场是今天最精彩的"AI内战"。DeepSeek、智谱清言、混元看负，扣子、豆包、文心看平，MiniMax也看负但理由含糊。分歧的核心在于：哥伦比亚已经提前出线，会不会轮换？葡萄牙需要赢球才能确保小组第一，战意更强。但智谱清言的数据显示哥伦比亚两连胜零失球，防守纪律性极强，葡萄牙的攻坚能力在C罗体能下滑后其实有隐患。我的判断：平局概率不低，1-1是合理的结果，葡萄牙想赢也最多一个球。</p><p>刚果金VS乌兹别克：86%的"胜"共识，但比分预测的混乱暴露了AI的犹豫。DeepSeek直接看平，其他人虽然看胜，但1-0、2-0、3-1都有，说明他们对刚果金能否"稳赢"心里没底。乌兹别克虽然两连败，但输的都是强队，防守并非一触即溃。刚果金身价占优，但进攻效率偏低。我更认同DeepSeek的谨慎态度，刚果金赢面大，但平局不能排除，1-0或1-1是大概率区间。</p><p>阿尔及利亚VS奥地利：71%的"平"共识，但DeepSeek和MiniMax逆势看奥地利负，这很有意思。平局对双方都是最优解——各拿一分双双出线。但DeepSeek指出阿尔及利亚进攻依赖马赫雷斯单点，容易被掐死；MiniMax则强调奥地利整体实力略强。我的观点：平局是大概率，但奥地利如果率先破门，阿尔及利亚很难扳平。1-1是首选，0-1是冷门方向，但我觉得平局更符合两队"默契球"的潜在心理。</p><p>约旦VS阿根廷：100%的"负"共识，但比分预测从0-1到0-4都有，分歧在于阿根廷会赢几个。扣子直接给出1-0的"逆天"预测，理由是阿根廷大幅轮换+约旦荣誉战。这个角度很刁钻，但别忘了阿根廷的替补席也是世界级，梅西哪怕只踢60分钟也够约旦喝一壶。我看好阿根廷2-0或3-0，但扣子的"小胜论"确实提供了一个冷静的视角——别被身价差冲昏头脑，轮换阵容的进攻流畅度会打折扣。</p><p>今日金句：当AI们集体高呼"无悬念"时，请记住：世界杯的剧本，从来都是写在小球队的荣誉感和老将的最后一舞里的。</p>
-      </div>
-    </details></div>
-  
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月30日 周二 AI预测详情</h3>
-        <span class="text-xs text-muted">3 场</span>
-      </summary>
-      <div class="p-4 pt-0">
+  <div class="space-y-4">
+    
+    
+      <div class="space-y-3">
         
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周一074">
           <div class="flex items-center justify-between mb-3">
@@ -2285,15 +2273,43 @@
           </details></div>
         </div>
       </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
+    
+    <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
       <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
         <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月29日 周一 AI预测详情</h3>
-        <span class="text-xs text-muted">1 场</span>
+        <h3 class="font-semibold">📚 历史AI总评</h3>
+        <span class="text-xs text-muted">1 期</span>
       </summary>
-      <div class="p-4 pt-0">
+      <div class="p-4 pt-0 space-y-2">
         
+      <details class="rounded-xl bg-card border border-border overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h3 class="font-semibold text-sm">✍ 6月28日 周日 AI总评</h3>
+        </summary>
+        <div class="commentary-body text-gray-100 text-[15px] leading-relaxed p-4 pt-0">
+          <p>今日总论：世界杯第六比赛日，七场对决看似强弱分明，实则暗藏玄机。克罗地亚对加纳、英格兰对巴拿马、阿根廷对约旦这三场，AI共识度高达100%，几乎是"闭眼都能猜"的局。但真正的陷阱藏在哥伦比亚对葡萄牙和阿尔及利亚对奥地利这两场——AI内部出现了明显的分歧，尤其是哥伦比亚那场，57%的"负"票率背后，有三位AI坚定看平，这绝不是偶然。刚果金对乌兹别克看似胜率高达86%，但比分预测却出现了1-1和1-0的拉锯，说明"胜"的背后是"小胜"还是"平局"，AI自己都没想清楚。今天的关键词是：警惕战意、轮换和荣誉之战。</p><p>克罗地亚VS加纳：7个AI全票看胜，比分高度集中在2-1，只有扣子给了2-0的文静选项。说实话，克罗地亚的"老油条"属性在这种一场定生死的比赛里太值钱了，加纳的冲击力或许能偷一个，但想赢？难。我看好克罗地亚2-1稳稳拿下，但别指望他们打出什么摧枯拉朽的攻势，莫德里奇会像指挥交通一样把节奏压到最慢。</p><p>巴拿马VS英格兰：又是100%的"负"共识，但有趣的是，豆包是唯一一个给出0-1的"吝啬"预测，其余AI清一色0-2或0-3。这里有个关键信息：英格兰已经提前出线，凯恩大概率轮休，替补阵容的默契度存疑。巴拿马虽然实力悬殊，但荣誉之战往往能激发超常的防守韧性。我偏向豆包的观点，英格兰会赢，但大概率是1-0或2-0的"打卡下班"式胜利，大胜有点奢侈。</p><p>哥伦比亚VS葡萄牙：这场是今天最精彩的"AI内战"。DeepSeek、智谱清言、混元看负，扣子、豆包、文心看平，MiniMax也看负但理由含糊。分歧的核心在于：哥伦比亚已经提前出线，会不会轮换？葡萄牙需要赢球才能确保小组第一，战意更强。但智谱清言的数据显示哥伦比亚两连胜零失球，防守纪律性极强，葡萄牙的攻坚能力在C罗体能下滑后其实有隐患。我的判断：平局概率不低，1-1是合理的结果，葡萄牙想赢也最多一个球。</p><p>刚果金VS乌兹别克：86%的"胜"共识，但比分预测的混乱暴露了AI的犹豫。DeepSeek直接看平，其他人虽然看胜，但1-0、2-0、3-1都有，说明他们对刚果金能否"稳赢"心里没底。乌兹别克虽然两连败，但输的都是强队，防守并非一触即溃。刚果金身价占优，但进攻效率偏低。我更认同DeepSeek的谨慎态度，刚果金赢面大，但平局不能排除，1-0或1-1是大概率区间。</p><p>阿尔及利亚VS奥地利：71%的"平"共识，但DeepSeek和MiniMax逆势看奥地利负，这很有意思。平局对双方都是最优解——各拿一分双双出线。但DeepSeek指出阿尔及利亚进攻依赖马赫雷斯单点，容易被掐死；MiniMax则强调奥地利整体实力略强。我的观点：平局是大概率，但奥地利如果率先破门，阿尔及利亚很难扳平。1-1是首选，0-1是冷门方向，但我觉得平局更符合两队"默契球"的潜在心理。</p><p>约旦VS阿根廷：100%的"负"共识，但比分预测从0-1到0-4都有，分歧在于阿根廷会赢几个。扣子直接给出1-0的"逆天"预测，理由是阿根廷大幅轮换+约旦荣誉战。这个角度很刁钻，但别忘了阿根廷的替补席也是世界级，梅西哪怕只踢60分钟也够约旦喝一壶。我看好阿根廷2-0或3-0，但扣子的"小胜论"确实提供了一个冷静的视角——别被身价差冲昏头脑，轮换阵容的进攻流畅度会打折扣。</p><p>今日金句：当AI们集体高呼"无悬念"时，请记住：世界杯的剧本，从来都是写在小球队的荣誉感和老将的最后一舞里的。</p>
+        </div>
+      </details>
+      </div>
+    </details>
+    
+    <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
+      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+        <span class="chevron text-accent text-sm">▶</span>
+        <h3 class="font-semibold">📚 历史AI预测详情</h3>
+        <span class="text-xs text-muted">18 期</span>
+      </summary>
+      <div class="p-4 pt-0 space-y-2">
+        
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月29日 周一 AI预测详情</h4>
+          <span class="text-xs text-muted">1 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周日073">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周日073 南非VS加拿大</h4>
@@ -2442,16 +2458,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月28日 周日 AI预测详情</h3>
-        <span class="text-xs text-muted">6 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月28日 周日 AI预测详情</h4>
+          <span class="text-xs text-muted">6 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周六067">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周六067 克罗地亚VS加纳</h4>
@@ -3340,16 +3356,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月27日 周六 AI预测详情</h3>
-        <span class="text-xs text-muted">6 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月27日 周六 AI预测详情</h4>
+          <span class="text-xs text-muted">6 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周五061">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周五061 挪威VS法国</h4>
@@ -4238,16 +4254,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月26日 周五 AI预测详情</h3>
-        <span class="text-xs text-muted">6 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月26日 周五 AI预测详情</h4>
+          <span class="text-xs text-muted">6 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周四056">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周四056 库拉索VS科特迪瓦</h4>
@@ -5136,16 +5152,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月25日 周四 AI预测详情</h3>
-        <span class="text-xs text-muted">6 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月25日 周四 AI预测详情</h4>
+          <span class="text-xs text-muted">6 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周三050">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周三050 波黑VS卡塔尔</h4>
@@ -6034,16 +6050,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月24日 周三 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月24日 周三 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周二045">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周二045 葡萄牙VS乌兹别克斯坦</h4>
@@ -6636,16 +6652,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月23日 周二 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月23日 周二 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周一041">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周一041 阿根廷VS奥地利</h4>
@@ -7238,16 +7254,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月22日 周一 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月22日 周一 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周日037">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周日037 西班牙VS沙特</h4>
@@ -7840,16 +7856,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月21日 周日 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月21日 周日 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周六033">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周六033 荷兰VS瑞典</h4>
@@ -8442,16 +8458,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月20日 周六 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月20日 周六 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周五029">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周五029 美国VS澳大利亚</h4>
@@ -9044,16 +9060,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月19日 周五 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月19日 周五 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周四025">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周四025 捷克VS南非</h4>
@@ -9502,16 +9518,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月18日 周四 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月18日 周四 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周三021">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周三021 葡萄牙VS刚果民主共和国</h4>
@@ -9960,16 +9976,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月17日 周三 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月17日 周三 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周二017">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周二017 法国VS塞内加尔</h4>
@@ -10418,16 +10434,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月16日 周二 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月16日 周二 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周一013">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周一013 西班牙VS佛得角</h4>
@@ -10876,16 +10892,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月15日 周一 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月15日 周一 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周日009">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周日009 德国 VS 库拉索</h4>
@@ -11334,16 +11350,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月14日 周日 AI预测详情</h3>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月14日 周日 AI预测详情</h4>
+          <span class="text-xs text-muted">4 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周六005">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周六005 卡塔尔 VS 瑞士</h4>
@@ -11792,16 +11808,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月13日 周六 AI预测详情</h3>
-        <span class="text-xs text-muted">2 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月13日 周六 AI预测详情</h4>
+          <span class="text-xs text-muted">2 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周五003">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周五003 加拿大 VS 波黑</h4>
@@ -12026,16 +12042,16 @@
             </div>
           </details></div>
         </div>
-      </div>
-    </details>
-    <details open class="rounded-xl bg-card border border-border overflow-hidden mb-2">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h3 class="font-semibold">6月12日 周五 AI预测详情</h3>
-        <span class="text-xs text-muted">2 场</span>
-      </summary>
-      <div class="p-4 pt-0">
-        
+        </div>
+      </details>
+      <details class="rounded-lg bg-card/50 border border-border/50 overflow-hidden mb-2">
+        <summary class="flex items-center gap-3 px-4 py-2.5 hover:bg-elevated/50 transition-colors">
+          <span class="chevron text-accent text-sm">▶</span>
+          <h4 class="font-medium text-sm">6月12日 周五 AI预测详情</h4>
+          <span class="text-xs text-muted">2 场</span>
+        </summary>
+        <div class="p-4 pt-0">
+          
         <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3" id="match-周四001">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold">周四001 墨西哥 VS 南非</h4>
@@ -12260,8 +12276,11 @@
             </div>
           </details></div>
         </div>
+        </div>
+      </details>
       </div>
     </details>
+  </div>
 </section>
 <!-- 模拟大赛 -->
 <section id="simulation" class="mb-8" aria-label="模拟大赛">
@@ -12490,6 +12509,33 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4N
 # 接口：可通过 SITE_DATA.matches / SITE_DATA.predictions 访问全部数据
 # 篮球数据接口：fetch('https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com/rest/v1/matches?sport_type=eq.basketball')
 # 每日评论接口：match.metadata.daily_commentary / match.metadata.ai_summary
+
+// 导航栏滚动高亮
+(function() {
+  const navLinks = document.querySelectorAll('.nav-link[data-nav]');
+  const sections = [];
+  navLinks.forEach(link => {
+    const id = link.getAttribute('data-nav');
+    const el = document.getElementById(id);
+    if (el) sections.push({ id, el, link });
+  });
+  
+  function updateActive() {
+    const scrollY = window.scrollY + 80;
+    let activeId = '';
+    sections.forEach(s => {
+      if (s.el.offsetTop <= scrollY) activeId = s.id;
+    });
+    navLinks.forEach(link => link.classList.remove('nav-active'));
+    if (activeId) {
+      const active = document.querySelector('.nav-link[data-nav="' + activeId + '"]');
+      if (active) active.classList.add('nav-active');
+    }
+  }
+  
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+})();
 </script>
 
 </body>
