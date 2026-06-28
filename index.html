@@ -93,6 +93,7 @@ const DIMS = [
 let matchesData = [];
 let predictionsData = [];
 let dataLoaded = false;
+let dataError = false;
 
 async function fetchData() {
   if (dataLoaded) return;
@@ -107,9 +108,11 @@ async function fetchData() {
     ]);
     matchesData = Array.isArray(mRes) ? mRes : [];
     predictionsData = Array.isArray(pRes) ? pRes : [];
+    dataError = false;
     dataLoaded = true;
   } catch (e) {
     console.error('Failed to fetch data:', e);
+    dataError = true;
   }
 }
 
@@ -158,6 +161,11 @@ function isSpfHit(prediction, match) {
   const actual = actualSpfFromScore(match.home_score, match.away_score);
   if (!actual) return null;
   const pred = (prediction.spf || '').trim();
+  // 精确匹配：只匹配单独出现的 "胜"、"平"、"负"
+  if (pred === '胜') return actual === '胜';
+  if (pred === '平') return actual === '平';
+  if (pred === '负') return actual === '负';
+  // 兼容 "主胜"、"客胜" 等
   if (pred.includes('胜') && !pred.includes('负')) return actual === '胜';
   if (pred.includes('负') && !pred.includes('胜')) return actual === '负';
   if (pred.includes('平')) return actual === '平';
@@ -171,6 +179,7 @@ function isDimHitWithSpf(prediction, match, dimKey) {
 
 function buildPredMap() {
   const map = {};
+  if (!predictionsData || !Array.isArray(predictionsData)) return map;
   for (const p of predictionsData) {
     if (!map[p.match_id]) map[p.match_id] = [];
     map[p.match_id].push(p);
@@ -178,7 +187,14 @@ function buildPredMap() {
   return map;
 }
 
+// 缓存 calcAiStats 结果，避免多页面重复计算
+let _cachedStats = null;
+let _cachedStatsTime = 0;
+const _CACHE_TTL = 30000; // 30秒
+
 function calcAiStats() {
+  const now = Date.now();
+  if (_cachedStats && (now - _cachedStatsTime) < _CACHE_TTL) return _cachedStats;
   const predMap = buildPredMap();
   const stats = {};
   for (const ai of AI_LIST) {
@@ -193,7 +209,7 @@ function calcAiStats() {
   }
   for (const match of matchesData) {
     const preds = predMap[match.id] || [];
-    const isConfirmed = match.status === '已确认';
+    const isConfirmed = match.status === '已确认' || match.status === '已结束';
     for (const pred of preds) {
       const ai = pred.ai_name;
       if (!stats[ai]) continue;
@@ -220,6 +236,8 @@ function calcAiStats() {
       }
     }
   }
+  _cachedStats = stats;
+  _cachedStatsTime = Date.now();
   return stats;
 }
 
@@ -247,15 +265,19 @@ function getAvailableDates() {
   const dates = new Set();
   for (const m of matchesData) {
     if (m.match_time) {
-      const d = m.match_time.substring(0, 10);
+      const d = typeof m.match_time === 'string' ? m.match_time.substring(0, 10) : new Date(m.match_time).toISOString().substring(0, 10);
       dates.add(d);
     }
   }
-  return [...dates].sort().reverse();
+  return [...dates].sort((a, b) => a.localeCompare(b)).reverse();
 }
 
 function getMatchesByDate(dateStr) {
-  return matchesData.filter(m => m.match_time && m.match_time.substring(0, 10) === dateStr);
+  return matchesData.filter(m => {
+    if (!m.match_time) return false;
+    const d = typeof m.match_time === 'string' ? m.match_time.substring(0, 10) : new Date(m.match_time).toISOString().substring(0, 10);
+    return d === dateStr;
+  });
 }
 
 function getCommentaryForDate(dateStr) {
@@ -299,7 +321,13 @@ function buildFallbackCommentary(dateStr) {
     }
     
     const total = preds.length;
-    const top = Object.entries(spfVotes).sort((a, b) => b[1] - a[1])[0];
+    if (total === 0) continue;
+    const sorted = Object.entries(spfVotes).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0 || sorted[0][1] === 0) {
+      parts.push(`<p><strong>${match.teams}</strong> — ${total}个AI预测分散，暂无明确倾向。</p>`);
+      continue;
+    }
+    const top = sorted[0];
     const consensus = Math.round(top[1] / total * 100);
     
     parts.push(`<p><strong>${match.teams}</strong> — ${total}个AI中${top[1]}个看好「${top[0]}」(共识度${consensus}%)，比分预测集中在AI各自分析中。</p>`);
@@ -351,6 +379,11 @@ async function navigate() {
   void app.offsetWidth;
   app.classList.add('fade-in');
 
+  if (dataError && !dataLoaded) {
+    app.innerHTML = '<div class="text-center py-24"><div class="text-4xl font-bold text-lose mb-4">⚠️</div><p class="text-lg text-gray-300">数据加载失败</p><p class="text-sm text-muted mt-2">请检查网络后刷新页面重试</p><button onclick="location.reload()" class="mt-6 px-4 py-2 rounded-md border border-accent/40 text-accent hover:bg-accent/10">刷新页面</button></div>';
+    return;
+  }
+
   switch (route.page) {
     case 'matches': renderMatchList(app); break;
     case 'matchDetail': renderMatchDetail(app, route.id); break;
@@ -370,13 +403,21 @@ window.addEventListener('DOMContentLoaded', navigate);
 // PAGE: DAILY ANALYSIS (评论风格)
 // ============================================================
 function renderDaily(el, selectedDate) {
+  if (dataError) {
+    el.innerHTML = '<div class="text-center py-24 text-muted">⚠️ 数据加载失败，请刷新页面重试</div>';
+    return;
+  }
   const dates = getAvailableDates();
   if (dates.length === 0) {
     el.innerHTML = '<div class="text-center py-24 text-muted">暂无赛事数据</div>';
     return;
   }
   
-  const dateStr = selectedDate || dates[0];
+  const dateStr = selectedDate || dates[0] || '';
+  if (!dateStr) {
+    el.innerHTML = '<div class="text-center py-24 text-muted">暂无赛事数据</div>';
+    return;
+  }
   const dayMatches = getMatchesByDate(dateStr);
   const commentary = getCommentaryForDate(dateStr) || buildFallbackCommentary(dateStr);
   const predMap = buildPredMap();
@@ -755,7 +796,7 @@ function renderMatchList(el) {
             <span class="text-[10px] px-1.5 py-0.5 rounded ${isConfirmed ? 'bg-win/15 text-win' : 'bg-accent/15 text-accent'}">${isConfirmed ? '已确认' : '待比赛'}</span>
           </div>
           <div class="text-base font-semibold truncate group-hover:text-accent transition-colors">${match.teams}</div>
-          <div class="text-xs text-muted mt-1">让球: ${match.handicap || '—'}</div>
+          <div class="text-xs text-muted mt-1">让球: ${match.handicap !== null && match.handicap !== undefined ? match.handicap : '—'}</div>
         </div>
         <div class="text-right">
           <div class="font-mono text-xl font-bold ${isConfirmed ? 'text-gray-100' : 'text-muted'}">${score}</div>
@@ -791,7 +832,7 @@ function renderMatchDetail(el, matchId) {
       <div>
         <div class="text-xs text-muted mb-1">${dateStr}</div>
         <h1 class="text-2xl font-bold">${match.teams}</h1>
-        <div class="text-sm text-muted mt-1">让球: ${match.handicap || '—'}</div>
+        <div class="text-sm text-muted mt-1">让球: ${match.handicap !== null && match.handicap !== undefined ? match.handicap : '—'}</div>
       </div>
       <div class="text-right">
         <div class="font-mono text-3xl font-bold">${score}</div>
