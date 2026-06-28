@@ -862,19 +862,36 @@ function renderBrief() {
 // 初始化
 // ============================================================
 // ============================================================
-// AI Logo 渲染
+// AI Logo 渲染（动态获取实际参与的AI）
 // ============================================================
-const AI_LIST = [
-    { name: '混元', color: '#6366f1', initial: '混' },
-    { name: '豆包', color: '#f59e0b', initial: '豆' },
-    { name: 'DeepSeek', color: '#3b82f6', initial: 'DS' },
-    { name: 'MiniMax', color: '#10b981', initial: 'MM' },
-    { name: '扣子', color: '#8b5cf6', initial: '扣' },
-    { name: 'BetAgent', color: '#ef4444', initial: 'BA' },
-    { name: 'Grok', color: '#06b6d4', initial: 'G' },
-];
+const AI_COLORS = ['#6366f1','#f59e0b','#3b82f6','#10b981','#8b5cf6','#ef4444','#06b6d4','#ec4899','#14b8a6','#f97316'];
 
-function renderAiLogos() {
+function getInitial(name) {
+    if (/^[a-zA-Z]/.test(name)) return name.slice(0, 2).toUpperCase();
+    return name.charAt(0);
+}
+
+async function renderAiLogos() {
+    const container = document.getElementById('ai-logos');
+    if (!container) return;
+    container.innerHTML = '<span style="color:#6b7280;font-size:12px;">加载中...</span>';
+    try {
+        const data = await sbQuery('predictions', 'ai_name');
+        const names = [...new Set(data.map(p => p.ai_name))].sort();
+        if (names.length === 0) {
+            container.innerHTML = '<span style="color:#6b7280;font-size:12px;">暂无AI参与预测</span>';
+            return;
+        }
+        container.innerHTML = names.map((name, i) => `
+            <a href="#/ai/${encodeURIComponent(name)}" class="ai-logo">
+                <span class="dot" style="background:${AI_COLORS[i % AI_COLORS.length]}">${getInitial(name)}</span>
+                <span>${name}</span>
+            </a>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<span style="color:#6b7280;font-size:12px;">AI列表加载失败</span>';
+    }
+}function renderAiLogos() {
     const container = document.getElementById('ai-logos');
     if (!container) return;
     container.innerHTML = AI_LIST.map(ai => `
@@ -886,9 +903,8 @@ function renderAiLogos() {
 }
 
 async function init() {
-    renderAiLogos();
     try {
-        await loadAll();
+        await Promise.all([renderAiLogos(), loadAll()]);
         console.log('✅ 首页加载完成');
     } catch (error) {
         console.error('❌ 加载失败:', error);
