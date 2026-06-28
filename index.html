@@ -457,7 +457,9 @@ async function loadAll() {
     DATES = Array.from(dateSet).sort();
 
     // 默认选中"今天"或"最近的有未开赛比赛的日期"
-    const today = new Date().toISOString().slice(0, 10);
+    // 使用本地时间而非UTC，避免时区偏差
+    const now = new Date();
+    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     if (DATES.includes(today)) {
         CURRENT_DATE = today;
     } else {
