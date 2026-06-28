@@ -808,10 +808,10 @@ function renderAiLogos() {
     const container = document.getElementById('ai-logos');
     if (!container) return;
     container.innerHTML = AI_LIST.map(ai => `
-        <div class="ai-logo">
+        <a href="#/ai/${encodeURIComponent(ai.name)}" class="ai-logo">
             <span class="dot" style="background:${ai.color}">${ai.initial}</span>
             <span>${ai.name}</span>
-        </div>
+        </a>
     `).join('');
 }
 
