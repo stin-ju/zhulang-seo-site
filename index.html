@@ -618,7 +618,6 @@ function renderFocus(matches) {
         if (!match) {
             return '<div class="focus-card" style="display:flex;align-items:center;justify-content:center;color:#6b7280;min-height:120px;">' + sportIcon + ' 暂无' + sportLabel + '赛事</div>';
         }
-        const cls = match.consensus === '胜' ? 'win' : match.consensus === '负' ? 'lose' : 'draw';
         const isFinished = match.status === '已确认';
         const statusTag = isFinished ? '<span style="font-size:10px;color:#22c55e;margin-left:6px;">✓ 已完赛</span>' : '<span style="font-size:10px;color:#6b7280;margin-left:6px;">未开赛</span>';
         
@@ -627,7 +626,14 @@ function renderFocus(matches) {
         html += '<div class="teams">' + esc(match.teams) + '</div>';
         html += '<div class="meta">' + fmtTime(match.match_time) + ' · 让球 ' + (match.handicap || '—') + '</div>';
         
-        if (match.total > 0) {
+        // 已完赛显示实际比分，未完赛显示AI预测
+        if (isFinished && match.home_score !== null && match.away_score !== null) {
+            html += '<div class="prediction" style="color:#e5e7eb;">' + match.home_score + ' : ' + match.away_score + '</div>';
+            if (match.total > 0) {
+                html += '<div class="votes"><span style="color:#6b7280;">AI预测: ' + (match.consensus || '—') + '</span><span>✅' + match.votes['胜'] + ' ⚪' + match.votes['平'] + ' ❌' + match.votes['负'] + '</span></div>';
+            }
+        } else if (match.total > 0) {
+            const cls = match.consensus === '胜' ? 'win' : match.consensus === '负' ? 'lose' : 'draw';
             html += '<div class="prediction ' + cls + '">' + (match.consensus || '—') + '</div>';
             html += '<div class="votes"><span>✅ 胜 ' + match.votes['胜'] + '</span><span>⚪ 平 ' + match.votes['平'] + '</span><span>❌ 负 ' + match.votes['负'] + '</span></div>';
         } else {
