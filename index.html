@@ -58,6 +58,58 @@ tailwind.config = {
   </div>
 </nav>
 
+<!-- Sport Type Tab -->
+<div id="sport-tab" class="sticky top-14 z-40 bg-base/80 backdrop-blur-lg border-b border-border/50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex items-center h-11 gap-1">
+      <button id="tab-football" onclick="switchSport('football')" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all">
+        <span>🏆</span><span>足球</span>
+      </button>
+      <button id="tab-basketball" onclick="switchSport('basketball')" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all">
+        <span>🏀</span><span>篮球</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+#sport-tab #tab-football.active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+#sport-tab #tab-basketball.active {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+}
+#sport-tab #tab-football:not(.active),
+#sport-tab #tab-basketball:not(.active) {
+  color: #9ca3af;
+  background: transparent;
+}
+#sport-tab #tab-football:not(.active):hover,
+#sport-tab #tab-basketball:not(.active):hover {
+  color: #e5e7eb;
+  background: rgba(255,255,255,0.05);
+}
+</style>
+
+<script>
+// Update sport tab active state
+function updateSportTab() {
+  const footballTab = document.getElementById('tab-football');
+  const basketballTab = document.getElementById('tab-basketball');
+  if (currentSport === 'basketball') {
+    footballTab.classList.remove('active');
+    basketballTab.classList.add('active');
+  } else {
+    basketballTab.classList.remove('active');
+    footballTab.classList.add('active');
+  }
+}
+</script>
+
 <!-- Main Content -->
 <main id="app" class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6"></main>
 
@@ -75,10 +127,14 @@ tailwind.config = {
 const SUPABASE_URL = 'https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM';
 
+// Global sport type state: 'football' or 'basketball'
+let currentSport = 'football';
+
 const AI_LIST = ['混元','豆包','DeepSeek','Kimi','MiniMax','扣子（皮皮）','千问','天工','文心','智谱清言'];
 const AI_RETIRED = new Set(['Kimi','千问','天工']);
 const AI_SHORT = {'混元':'混元','豆包':'豆包','DeepSeek':'DeepSeek','Kimi':'Kimi','MiniMax':'MiniMax','扣子（皮皮）':'扣子','千问':'千问','天工':'天工','文心':'文心','智谱清言':'智谱'};
 
+// Football dimensions (5 dims)
 const DIMS = [
   { key: 'spf', label: '胜平负', hitCol: null },
   { key: 'handicap', label: '让球', hitCol: 'hit_handicap' },
@@ -86,6 +142,28 @@ const DIMS = [
   { key: 'goals', label: '总进球', hitCol: 'hit_goals' },
   { key: 'half_full', label: '半全场', hitCol: 'hit_half' },
 ];
+
+// Basketball dimensions (4 dims)
+const BASKETBALL_DIMS = [
+  { key: 'spf', label: '胜负', hitCol: null },
+  { key: 'handicap', label: '让分', hitCol: 'hit_handicap' },
+  { key: 'goals', label: '大小分', hitCol: null },
+  { key: 'score', label: '胜分差', hitCol: 'hit_score' },
+];
+
+// Current active dimensions based on sport type
+function getActiveDims() {
+  return currentSport === 'basketball' ? BASKETBALL_DIMS : DIMS;
+}
+
+// Sport-specific titles
+function getSportTitle() {
+  return currentSport === 'basketball' ? 'WNBA竞彩预测' : '2026 FIFA Club World Cup';
+}
+
+function getSportIcon() {
+  return currentSport === 'basketball' ? '🏀' : '🏆';
+}
 
 // ============================================================
 // DATA LAYER
@@ -99,10 +177,10 @@ async function fetchData() {
   if (dataLoaded) return;
   try {
     const [mRes, pRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?select=*&order=match_time.desc`, {
+      fetch(`${SUPABASE_URL}/rest/v1/matches?select=*&order=match_time.desc&sport_type=eq.${currentSport}`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       }).then(r => r.json()),
-      fetch(`${SUPABASE_URL}/rest/v1/predictions?select=*`, {
+      fetch(`${SUPABASE_URL}/rest/v1/predictions?select=*&sport_type=eq.${currentSport}`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       }).then(r => r.json()),
     ]);
@@ -114,6 +192,47 @@ async function fetchData() {
     console.error('Failed to fetch data:', e);
     dataError = true;
   }
+}
+
+// Reset data cache when sport type changes
+function resetDataCache() {
+  dataLoaded = false;
+  matchesData = [];
+  predictionsData = [];
+  _cachedStats = null;
+  _cachedStatsTime = 0;
+}
+
+// Switch sport type and reload
+function switchSport(sport) {
+  if (currentSport === sport) return;
+  currentSport = sport;
+  resetDataCache();
+  
+  // Update sport tab UI
+  updateSportTab();
+  
+  // Navigate to appropriate route
+  const hash = location.hash || '#/';
+  let targetHash = hash;
+  
+  if (sport === 'basketball') {
+    // Add /b prefix if not already present
+    if (!hash.startsWith('#/b/')) {
+      if (hash === '#/' || hash === '#') targetHash = '#/b/';
+      else if (hash.startsWith('#/')) targetHash = '#/b' + hash;
+      else targetHash = '#/b/';
+    }
+  } else {
+    // Remove /b prefix for football
+    if (hash.startsWith('#/b/')) {
+      targetHash = '#/' + hash.slice(4);
+    } else if (hash === '#/b' || hash === '#/b/') {
+      targetHash = '#/';
+    }
+  }
+  
+  location.hash = targetHash;
 }
 
 // ============================================================
@@ -143,7 +262,9 @@ function getDimOdds(match, prediction, dimKey) {
 
 function isDimHit(prediction, dimKey) {
   if (dimKey === 'spf') return null;
-  const col = DIMS.find(d => d.key === dimKey)?.hitCol;
+  const activeDims = getActiveDims();
+  const dim = activeDims.find(d => d.key === dimKey);
+  const col = dim?.hitCol;
   if (!col) return null;
   return prediction[col] === true;
 }
@@ -190,22 +311,29 @@ function buildPredMap() {
 // 缓存 calcAiStats 结果，避免多页面重复计算
 let _cachedStats = null;
 let _cachedStatsTime = 0;
+let _cachedStatsSport = null;
 const _CACHE_TTL = 30000; // 30秒
 
 function calcAiStats() {
   const now = Date.now();
-  if (_cachedStats && (now - _cachedStatsTime) < _CACHE_TTL) return _cachedStats;
+  if (_cachedStats && (now - _cachedStatsTime) < _CACHE_TTL && _cachedStatsSport === currentSport) return _cachedStats;
   const predMap = buildPredMap();
   const stats = {};
+  const activeDims = getActiveDims();
+  
   for (const ai of AI_LIST) {
     stats[ai] = {
       ai, retired: AI_RETIRED.has(ai),
       totalMatches: 0, confirmedMatches: 0,
-      dimHits: { spf: 0, handicap: 0, score: 0, goals: 0, half_full: 0 },
-      dimTotal: { spf: 0, handicap: 0, score: 0, goals: 0, half_full: 0 },
-      dimPnl: { spf: 0, handicap: 0, score: 0, goals: 0, half_full: 0 },
+      dimHits: {}, dimTotal: {}, dimPnl: {},
       totalPnl: 0, totalInvest: 0, totalHits: 0, totalBets: 0,
     };
+    // Initialize dimension stats
+    for (const dim of activeDims) {
+      stats[ai].dimHits[dim.key] = 0;
+      stats[ai].dimTotal[dim.key] = 0;
+      stats[ai].dimPnl[dim.key] = 0;
+    }
   }
   for (const match of matchesData) {
     const preds = predMap[match.id] || [];
@@ -216,7 +344,7 @@ function calcAiStats() {
       stats[ai].totalMatches++;
       if (isConfirmed) {
         stats[ai].confirmedMatches++;
-        for (const dim of DIMS) {
+        for (const dim of activeDims) {
           const hit = isDimHitWithSpf(pred, match, dim.key);
           if (hit === null) continue;
           stats[ai].dimTotal[dim.key]++;
@@ -237,6 +365,7 @@ function calcAiStats() {
     }
   }
   _cachedStats = stats;
+  _cachedStatsSport = currentSport;
   _cachedStatsTime = Date.now();
   return stats;
 }
@@ -340,26 +469,52 @@ function buildFallbackCommentary(dateStr) {
 // ============================================================
 // ROUTER
 // ============================================================
-const NAV_ITEMS = [
-  { hash: '#/', label: '首页' },
-  { hash: '#/matches', label: '比赛' },
-  { hash: '#/ai', label: 'AI' },
-  { hash: '#/daily', label: '每日分析' },
-];
+function getNavItems() {
+  const base = currentSport === 'basketball' ? '#/b' : '#';
+  return [
+    { hash: base + '/', label: '首页' },
+    { hash: base + '/matches', label: '比赛' },
+    { hash: base + '/ai', label: 'AI' },
+    { hash: base + '/daily', label: '每日分析' },
+  ];
+}
 
 function updateNav() {
   const hash = location.hash || '#/';
   const container = document.getElementById('nav-links');
-  container.innerHTML = NAV_ITEMS.map(item => {
-    const isActive = hash === item.hash || (item.hash !== '#/' && hash.startsWith(item.hash));
+  const navItems = getNavItems();
+  container.innerHTML = navItems.map(item => {
+    const isActive = hash === item.hash || (item.hash !== '#/' && item.hash !== '#/b/' && hash.startsWith(item.hash));
     return `<a href="${item.hash}" class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
       isActive ? 'bg-accent/20 text-accent' : 'text-muted hover:text-gray-100 hover:bg-white/5'
     }">${item.label}</a>`;
   }).join('');
+  
+  // Update sport tab state
+  updateSportTab();
+}
+
+// Detect sport type from hash and set currentSport
+function detectSportFromHash(hash) {
+  if (hash.startsWith('#/b/') || hash === '#/b') {
+    return 'basketball';
+  }
+  return 'football';
 }
 
 function getRoute() {
   const hash = location.hash.slice(1) || '/';
+  
+  // Basketball routes
+  if (hash === '/b' || hash === '/b/') return { page: 'event' };
+  if (hash === '/b/matches') return { page: 'matches' };
+  if (hash.startsWith('/b/matches/')) return { page: 'matchDetail', id: decodeURIComponent(hash.slice(11)) };
+  if (hash === '/b/ai') return { page: 'aiList' };
+  if (hash.startsWith('/b/ai/')) return { page: 'aiDetail', name: decodeURIComponent(hash.slice(6)) };
+  if (hash === '/b/daily') return { page: 'daily' };
+  if (hash.startsWith('/b/daily/')) return { page: 'daily', date: decodeURIComponent(hash.slice(9)) };
+  
+  // Football routes (default)
   if (hash === '/') return { page: 'event' };
   if (hash === '/matches') return { page: 'matches' };
   if (hash.startsWith('/matches/')) return { page: 'matchDetail', id: decodeURIComponent(hash.slice(9)) };
@@ -367,11 +522,24 @@ function getRoute() {
   if (hash.startsWith('/ai/')) return { page: 'aiDetail', name: decodeURIComponent(hash.slice(4)) };
   if (hash === '/daily') return { page: 'daily' };
   if (hash.startsWith('/daily/')) return { page: 'daily', date: decodeURIComponent(hash.slice(7)) };
+  
   return { page: 'notfound' };
 }
 
 async function navigate() {
+  // Detect sport type from URL
+  const detectedSport = detectSportFromHash(location.hash);
+  if (detectedSport !== currentSport) {
+    currentSport = detectedSport;
+  }
+  
   updateNav();
+  
+  // Reset data cache if sport changed
+  if (!dataLoaded || (matchesData.length > 0 && matchesData[0]?.sport_type !== currentSport)) {
+    resetDataCache();
+  }
+  
   await fetchData();
   const route = getRoute();
   const app = document.getElementById('app');
@@ -421,6 +589,9 @@ function renderDaily(el, selectedDate) {
   const dayMatches = getMatchesByDate(dateStr);
   const commentary = getCommentaryForDate(dateStr) || buildFallbackCommentary(dateStr);
   const predMap = buildPredMap();
+  const isBasketball = currentSport === 'basketball';
+  const matchLink = isBasketball ? '#/b/matches/' : '#/matches/';
+  const dailyLink = isBasketball ? '#/b/daily/' : '#/daily/';
 
   // Build consensus cards for each match
   let consensusCards = '';
@@ -428,42 +599,79 @@ function renderDaily(el, selectedDate) {
     const preds = predMap[match.id] || [];
     if (preds.length === 0) continue;
     
-    const spfVotes = { '胜': [], '平': [], '负': [] };
-    for (const p of preds) {
-      const spf = (p.spf || '').trim();
-      const aiLabel = AI_SHORT[p.ai_name] || p.ai_name;
-      if (spf.includes('胜') && !spf.includes('负')) spfVotes['胜'].push(aiLabel);
-      else if (spf.includes('负') && !spf.includes('胜')) spfVotes['负'].push(aiLabel);
-      else if (spf.includes('平')) spfVotes['平'].push(aiLabel);
+    if (isBasketball) {
+      // Basketball: 主胜/主负
+      const spfVotes = { '主胜': [], '主负': [] };
+      for (const p of preds) {
+        const spf = (p.spf || '').trim();
+        const aiLabel = AI_SHORT[p.ai_name] || p.ai_name;
+        if (spf.includes('胜') && !spf.includes('负')) spfVotes['主胜'].push(aiLabel);
+        else if (spf.includes('负')) spfVotes['主负'].push(aiLabel);
+      }
+      
+      const total = preds.length;
+      const sorted = Object.entries(spfVotes).sort((a, b) => b[1].length - a[1].length);
+      const topResult = sorted[0];
+      const consensus = total > 0 ? Math.round(topResult[1].length / total * 100) : 0;
+      const isHighConsensus = consensus >= 70;
+      const isSplit = spfVotes['主胜'].length === spfVotes['主负'].length;
+      
+      consensusCards += `
+      <div class="rounded-xl bg-card border ${isHighConsensus ? 'border-orange-500/40' : isSplit ? 'border-lose/40' : 'border-border'} p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-semibold">${match.teams}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded ${isHighConsensus ? 'bg-orange-500/15 text-orange-400' : isSplit ? 'bg-lose/15 text-lose' : 'bg-orange-500/15 text-orange-400'}">
+            ${isHighConsensus ? '高共识' : isSplit ? '大分歧' : '有倾向'}
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center text-xs">
+          <div class="rounded-lg ${topResult[0]==='主胜' ? 'bg-orange-500/15 ring-1 ring-orange-500/30' : 'bg-elevated'} p-2">
+            <div class="font-bold ${topResult[0]==='主胜' ? 'text-orange-400' : 'text-muted'}">主胜 ${spfVotes['主胜'].length}</div>
+          </div>
+          <div class="rounded-lg ${topResult[0]==='主负' ? 'bg-orange-500/15 ring-1 ring-orange-500/30' : 'bg-elevated'} p-2">
+            <div class="font-bold ${topResult[0]==='主负' ? 'text-orange-400' : 'text-muted'}">主负 ${spfVotes['主负'].length}</div>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      // Football: 胜/平/负
+      const spfVotes = { '胜': [], '平': [], '负': [] };
+      for (const p of preds) {
+        const spf = (p.spf || '').trim();
+        const aiLabel = AI_SHORT[p.ai_name] || p.ai_name;
+        if (spf.includes('胜') && !spf.includes('负')) spfVotes['胜'].push(aiLabel);
+        else if (spf.includes('负') && !spf.includes('胜')) spfVotes['负'].push(aiLabel);
+        else if (spf.includes('平')) spfVotes['平'].push(aiLabel);
+      }
+      
+      const total = preds.length;
+      const sorted = Object.entries(spfVotes).sort((a, b) => b[1].length - a[1].length);
+      const topResult = sorted[0];
+      const consensus = Math.round(topResult[1].length / total * 100);
+      const isHighConsensus = consensus >= 70;
+      const isSplit = sorted[0][1].length === sorted[1][1].length;
+      
+      consensusCards += `
+      <div class="rounded-xl bg-card border ${isHighConsensus ? 'border-win/40' : isSplit ? 'border-lose/40' : 'border-border'} p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-semibold">${match.teams}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded ${isHighConsensus ? 'bg-win/15 text-win' : isSplit ? 'bg-lose/15 text-lose' : 'bg-accent/15 text-accent'}">
+            ${isHighConsensus ? '高共识' : isSplit ? '大分歧' : '有倾向'}
+          </span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="rounded-lg ${topResult[0]==='胜' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
+            <div class="font-bold ${topResult[0]==='胜' ? 'text-win' : 'text-muted'}">胜 ${spfVotes['胜'].length}</div>
+          </div>
+          <div class="rounded-lg ${topResult[0]==='平' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
+            <div class="font-bold ${topResult[0]==='平' ? 'text-win' : 'text-muted'}">平 ${spfVotes['平'].length}</div>
+          </div>
+          <div class="rounded-lg ${topResult[0]==='负' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
+            <div class="font-bold ${topResult[0]==='负' ? 'text-win' : 'text-muted'}">负 ${spfVotes['负'].length}</div>
+          </div>
+        </div>
+      </div>`;
     }
-    
-    const total = preds.length;
-    const sorted = Object.entries(spfVotes).sort((a, b) => b[1].length - a[1].length);
-    const topResult = sorted[0];
-    const consensus = Math.round(topResult[1].length / total * 100);
-    const isHighConsensus = consensus >= 70;
-    const isSplit = sorted[0][1].length === sorted[1][1].length;
-    
-    consensusCards += `
-    <div class="rounded-xl bg-card border ${isHighConsensus ? 'border-win/40' : isSplit ? 'border-lose/40' : 'border-border'} p-4">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-sm font-semibold">${match.teams}</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded ${isHighConsensus ? 'bg-win/15 text-win' : isSplit ? 'bg-lose/15 text-lose' : 'bg-accent/15 text-accent'}">
-          ${isHighConsensus ? '高共识' : isSplit ? '大分歧' : '有倾向'}
-        </span>
-      </div>
-      <div class="grid grid-cols-3 gap-2 text-center text-xs">
-        <div class="rounded-lg ${topResult[0]==='胜' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
-          <div class="font-bold ${topResult[0]==='胜' ? 'text-win' : 'text-muted'}">胜 ${spfVotes['胜'].length}</div>
-        </div>
-        <div class="rounded-lg ${topResult[0]==='平' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
-          <div class="font-bold ${topResult[0]==='平' ? 'text-win' : 'text-muted'}">平 ${spfVotes['平'].length}</div>
-        </div>
-        <div class="rounded-lg ${topResult[0]==='负' ? 'bg-win/15 ring-1 ring-win/30' : 'bg-elevated'} p-2">
-          <div class="font-bold ${topResult[0]==='负' ? 'text-win' : 'text-muted'}">负 ${spfVotes['负'].length}</div>
-        </div>
-      </div>
-    </div>`;
   }
 
   // Format commentary HTML
@@ -488,7 +696,7 @@ function renderDaily(el, selectedDate) {
   let dateTabs = dates.slice(0, 14).map(d => {
     const isActive = d === dateStr;
     const label = new Date(d + 'T00:00:00').toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' });
-    return `<a href="#/daily/${d}" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+    return `<a href="${dailyLink}${d}" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
       isActive ? 'bg-accent text-white' : 'bg-card border border-border text-muted hover:text-gray-100 hover:border-accent/40'
     }">${label}</a>`;
   }).join('');
@@ -541,12 +749,12 @@ function renderDaily(el, selectedDate) {
     const score = isConfirmed && match.home_score != null ? `${match.home_score} - ${match.away_score}` : 'vs';
     const timeStr = match.match_time ? new Date(match.match_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
     return `
-    <a href="#/matches/${encodeURIComponent(match.id)}" class="block rounded-xl bg-card border ${isConfirmed ? 'border-accent/30' : 'border-border'} p-4 hover:border-accent/50 transition-colors group">
+    <a href="${matchLink}${encodeURIComponent(match.id)}" class="block rounded-xl bg-card border ${isConfirmed ? (isBasketball ? 'border-orange-500/30' : 'border-accent/30') : 'border-border'} p-4 hover:border-accent/50 transition-colors group">
       <div class="flex items-center justify-between gap-4">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs text-muted">${timeStr}</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded ${isConfirmed ? 'bg-win/15 text-win' : 'bg-accent/15 text-accent'}">${isConfirmed ? '已确认' : '待比赛'}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded ${isConfirmed ? (isBasketball ? 'bg-orange-500/15 text-orange-400' : 'bg-win/15 text-win') : (isBasketball ? 'bg-orange-500/15 text-orange-400' : 'bg-accent/15 text-accent')}">${isConfirmed ? '已确认' : '待比赛'}</span>
           </div>
           <div class="text-base font-semibold truncate group-hover:text-accent transition-colors">${match.teams}</div>
         </div>
@@ -777,6 +985,8 @@ function renderLeaderboard(el) {
 function renderMatchList(el) {
   const predMap = buildPredMap();
   const sorted = [...matchesData].sort((a, b) => new Date(b.match_time) - new Date(a.match_time));
+  const isBasketball = currentSport === 'basketball';
+  const matchLink = isBasketball ? '#/b/matches/' : '#/matches/';
 
   let html = `<h1 class="text-2xl font-bold mb-6">比赛列表</h1>`;
   html += `<div class="space-y-3">`;
@@ -786,17 +996,27 @@ function renderMatchList(el) {
     const isConfirmed = match.status === '已确认';
     const score = isConfirmed && match.home_score != null ? `${match.home_score} - ${match.away_score}` : 'vs';
     const dateStr = match.match_time ? new Date(match.match_time).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    
+    // Basketball meta info
+    let metaInfo = '';
+    if (isBasketball) {
+      const meta = match.metadata ? (typeof match.metadata === 'string' ? JSON.parse(match.metadata) : match.metadata) : {};
+      const totalLine = meta.total_points_line || match.total_points_line || '—';
+      metaInfo = `<div class="text-xs text-muted mt-1">预设总分: ${totalLine}</div>`;
+    } else {
+      metaInfo = `<div class="text-xs text-muted mt-1">让球: ${match.handicap !== null && match.handicap !== undefined ? match.handicap : '—'}</div>`;
+    }
 
     html += `
-    <a href="#/matches/${encodeURIComponent(match.id)}" class="block rounded-xl bg-card border ${isConfirmed ? 'border-accent/30' : 'border-border'} p-4 hover:border-accent/50 transition-colors group">
+    <a href="${matchLink}${encodeURIComponent(match.id)}" class="block rounded-xl bg-card border ${isConfirmed ? (isBasketball ? 'border-orange-500/30' : 'border-accent/30') : 'border-border'} p-4 hover:border-accent/50 transition-colors group">
       <div class="flex items-center justify-between gap-4">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs text-muted">${dateStr}</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded ${isConfirmed ? 'bg-win/15 text-win' : 'bg-accent/15 text-accent'}">${isConfirmed ? '已确认' : '待比赛'}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded ${isConfirmed ? (isBasketball ? 'bg-orange-500/15 text-orange-400' : 'bg-win/15 text-win') : (isBasketball ? 'bg-orange-500/15 text-orange-400' : 'bg-accent/15 text-accent')}">${isConfirmed ? '已确认' : '待比赛'}</span>
           </div>
           <div class="text-base font-semibold truncate group-hover:text-accent transition-colors">${match.teams}</div>
-          <div class="text-xs text-muted mt-1">让球: ${match.handicap !== null && match.handicap !== undefined ? match.handicap : '—'}</div>
+          ${metaInfo}
         </div>
         <div class="text-right">
           <div class="font-mono text-xl font-bold ${isConfirmed ? 'text-gray-100' : 'text-muted'}">${score}</div>
@@ -824,6 +1044,22 @@ function renderMatchDetail(el, matchId) {
   const isConfirmed = match.status === '已确认';
   const score = isConfirmed && match.home_score != null ? `${match.home_score} - ${match.away_score}` : 'vs';
   const dateStr = match.match_time ? new Date(match.match_time).toLocaleString('zh-CN') : '';
+  const activeDims = getActiveDims();
+  const isBasketball = currentSport === 'basketball';
+
+  // Basketball metadata
+  let metaInfo = '';
+  if (isBasketball && match.metadata) {
+    const meta = typeof match.metadata === 'string' ? JSON.parse(match.metadata) : match.metadata;
+    if (meta.league) {
+      metaInfo = `<div class="text-sm text-muted mt-1">联赛: ${meta.league}</div>`;
+    }
+    if (meta.total_points_line) {
+      metaInfo += `<div class="text-sm text-muted">预设总分: ${meta.total_points_line}</div>`;
+    }
+  } else if (!isBasketball && match.handicap !== null && match.handicap !== undefined) {
+    metaInfo = `<div class="text-sm text-muted mt-1">让球: ${match.handicap}</div>`;
+  }
 
   let html = `
   <a href="#/matches" class="text-sm text-muted hover:text-accent mb-4 inline-block">← 返回比赛列表</a>
@@ -832,7 +1068,7 @@ function renderMatchDetail(el, matchId) {
       <div>
         <div class="text-xs text-muted mb-1">${dateStr}</div>
         <h1 class="text-2xl font-bold">${match.teams}</h1>
-        <div class="text-sm text-muted mt-1">让球: ${match.handicap !== null && match.handicap !== undefined ? match.handicap : '—'}</div>
+        ${metaInfo}
       </div>
       <div class="text-right">
         <div class="font-mono text-3xl font-bold">${score}</div>
@@ -840,6 +1076,17 @@ function renderMatchDetail(el, matchId) {
       </div>
     </div>
     ${isConfirmed ? `
+    ${isBasketball ? `
+    <!-- Basketball odds -->
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4 pt-4 border-t border-border">
+      <div class="text-center"><div class="text-[10px] text-muted">主胜赔</div><div class="font-mono text-sm">${match.win_odds || '—'}</div></div>
+      <div class="text-center"><div class="text-[10px] text-muted">客胜赔</div><div class="font-mono text-sm">${match.lose_odds || '—'}</div></div>
+      <div class="text-center"><div class="text-[10px] text-muted">让分</div><div class="font-mono text-sm">${match.handicap || '—'}</div></div>
+      <div class="text-center"><div class="text-[10px] text-muted">预设总分</div><div class="font-mono text-sm">${match.total_points_line || '—'}</div></div>
+      <div class="text-center"><div class="text-[10px] text-muted">大分赔</div><div class="font-mono text-sm">${match.big_odds || '—'}</div></div>
+      <div class="text-center"><div class="text-[10px] text-muted">小分赔</div><div class="font-mono text-sm">${match.small_odds || '—'}</div></div>
+    </div>` : `
+    <!-- Football odds -->
     <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4 pt-4 border-t border-border">
       <div class="text-center"><div class="text-[10px] text-muted">胜赔</div><div class="font-mono text-sm">${match.win_odds || '—'}</div></div>
       <div class="text-center"><div class="text-[10px] text-muted">平赔</div><div class="font-mono text-sm">${match.draw_odds || '—'}</div></div>
@@ -847,13 +1094,14 @@ function renderMatchDetail(el, matchId) {
       <div class="text-center"><div class="text-[10px] text-muted">让球胜</div><div class="font-mono text-sm">${match.handicap_win_odds || '—'}</div></div>
       <div class="text-center"><div class="text-[10px] text-muted">让球平</div><div class="font-mono text-sm">${match.handicap_draw_odds || '—'}</div></div>
       <div class="text-center"><div class="text-[10px] text-muted">让球负</div><div class="font-mono text-sm">${match.handicap_lose_odds || '—'}</div></div>
-    </div>` : ''}
+    </div>`}
+    ` : ''}
   </div>`;
 
   html += `<h2 class="text-lg font-bold mb-4">AI 预测矩阵</h2>`;
   html += `<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border">`;
   html += `<th class="text-left py-2 px-3 text-muted font-medium">AI</th>`;
-  for (const dim of DIMS) {
+  for (const dim of activeDims) {
     html += `<th class="text-center py-2 px-2 text-muted font-medium">${dim.label}</th>`;
   }
   html += `<th class="text-center py-2 px-2 text-muted font-medium">命中</th>`;
@@ -868,7 +1116,7 @@ function renderMatchDetail(el, matchId) {
     html += `<tr class="border-b border-border/50 ${retired ? 'opacity-50' : ''}">`;
     html += `<td class="py-3 px-3"><a href="#/ai/${encodeURIComponent(ai)}" class="hover:text-accent transition-colors">${AI_SHORT[ai] || ai}</a>${retired ? ' <span class="text-[10px] text-dimmed">退赛</span>' : ''}</td>`;
 
-    for (const dim of DIMS) {
+    for (const dim of activeDims) {
       const hit = isDimHitWithSpf(pred, match, dim.key);
       let cellHtml;
       if (hit === null) {
@@ -913,16 +1161,19 @@ function renderMatchDetail(el, matchId) {
 // ============================================================
 function renderAiList(el) {
   const stats = calcAiStats();
-  const active = AI_LIST.filter(a => !AI_RETIRED.has(a)).map(a => stats[a]).filter(Boolean);
-  const retired = AI_LIST.filter(a => AI_RETIRED.has(a)).map(a => stats[a]).filter(Boolean);
+  const isBasketball = currentSport === 'basketball';
+  const active = AI_LIST.filter(a => !AI_RETIRED.has(a) || isBasketball).map(a => stats[a]).filter(Boolean);
+  const retired = isBasketball ? [] : AI_LIST.filter(a => AI_RETIRED.has(a)).map(a => stats[a]).filter(Boolean);
   active.sort((a, b) => b.totalPnl - a.totalPnl);
 
+  const basePath = isBasketball ? '#/b/ai/' : '#/ai/';
+  
   let html = `<h1 class="text-2xl font-bold mb-6">AI 选手</h1>`;
   html += `<div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">`;
 
   for (const s of active) {
     html += `
-    <a href="#/ai/${encodeURIComponent(s.ai)}" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-5 group">
+    <a href="${basePath}${encodeURIComponent(s.ai)}" class="rounded-xl bg-card border border-border hover:border-accent/40 transition-colors p-5 group">
       <div class="flex items-center gap-3 mb-3">
         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 text-accent font-bold">${AI_SHORT[s.ai]?.charAt(0) || '?'}</span>
         <div>
@@ -945,7 +1196,7 @@ function renderAiList(el) {
     html += `<h2 class="text-lg font-bold mt-8 mb-4">已退赛</h2><div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">`;
     for (const s of retired) {
       html += `
-      <a href="#/ai/${encodeURIComponent(s.ai)}" class="rounded-xl border border-border bg-card/60 px-5 py-4 opacity-60 hover:opacity-90 transition-opacity">
+      <a href="${basePath}${encodeURIComponent(s.ai)}" class="rounded-xl border border-border bg-card/60 px-5 py-4 opacity-60 hover:opacity-90 transition-opacity">
         <div class="flex items-center gap-3">
           <span class="flex h-10 w-10 items-center justify-center rounded-full bg-elevated text-dimmed font-bold">${AI_SHORT[s.ai]?.charAt(0) || '?'}</span>
           <div>
@@ -972,11 +1223,15 @@ function renderAiDetail(el, aiName) {
     return;
   }
 
-  const retired = AI_RETIRED.has(aiName);
+  const isBasketball = currentSport === 'basketball';
+  const retired = !isBasketball && AI_RETIRED.has(aiName);
   const hitRate = getAiHitRate(aiStats);
+  const activeDims = getActiveDims();
+  const backLink = isBasketball ? '#/b/ai' : '#/ai';
+  const matchLink = isBasketball ? '#/b/matches/' : '#/matches/';
 
   let html = `
-  <a href="#/ai" class="text-sm text-muted hover:text-accent mb-4 inline-block">← 返回AI列表</a>
+  <a href="${backLink}" class="text-sm text-muted hover:text-accent mb-4 inline-block">← 返回AI列表</a>
   <div class="rounded-xl bg-card border border-border p-6 mb-6">
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div class="flex items-center gap-4">
@@ -1003,12 +1258,13 @@ function renderAiDetail(el, aiName) {
   </div>`;
 
   html += `<h2 class="text-lg font-bold mb-4">维度命中详情</h2>`;
-  html += `<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-6">`;
-  for (const dim of DIMS) {
-    const hits = aiStats.dimHits[dim.key];
-    const total = aiStats.dimTotal[dim.key];
+  const dimColClass = activeDims.length === 5 ? 'lg:grid-cols-5' : activeDims.length === 4 ? 'lg:grid-cols-4' : 'sm:grid-cols-2';
+  html += `<div class="grid gap-3 grid-cols-2 ${dimColClass} mb-6">`;
+  for (const dim of activeDims) {
+    const hits = aiStats.dimHits[dim.key] || 0;
+    const total = aiStats.dimTotal[dim.key] || 0;
     const rate = total > 0 ? hits / total : 0;
-    const pnl = aiStats.dimPnl[dim.key];
+    const pnl = aiStats.dimPnl[dim.key] || 0;
     html += `
     <div class="rounded-xl bg-card border border-border p-4">
       <div class="text-sm font-medium text-muted mb-2">${dim.label}</div>
@@ -1036,14 +1292,14 @@ function renderAiDetail(el, aiName) {
     const score = isConfirmed && match.home_score != null ? `${match.home_score}-${match.away_score}` : 'vs';
     let hits = 0, total = 0;
     if (isConfirmed) {
-      for (const dim of DIMS) {
+      for (const dim of activeDims) {
         const hit = isDimHitWithSpf(pred, match, dim.key);
         if (hit !== null) { total++; if (hit) hits++; }
       }
     }
 
     html += `
-    <a href="#/matches/${encodeURIComponent(match.id)}" class="block rounded-lg bg-card border border-border p-3 hover:border-accent/40 transition-colors">
+    <a href="${matchLink}${encodeURIComponent(match.id)}" class="block rounded-lg bg-card border border-border p-3 hover:border-accent/40 transition-colors">
       <div class="flex items-center justify-between gap-3">
         <div class="flex-1 min-w-0">
           <div class="text-sm font-medium truncate hover:text-accent">${match.teams}</div>
@@ -1066,27 +1322,65 @@ function renderAiDetail(el, aiName) {
 // ============================================================
 function renderEvent(el) {
   const stats = calcAiStats();
+  const isBasketball = currentSport === 'basketball';
   const allAis = AI_LIST.map(a => stats[a]).filter(Boolean);
-  const active = allAis.filter(s => !AI_RETIRED.has(s.ai));
+  const active = allAis.filter(s => !AI_RETIRED.has(s.ai) || isBasketball);
   active.sort((a, b) => b.totalPnl - a.totalPnl);
   active.forEach((s, i) => s.rank = i + 1);
+  const retired = isBasketball ? [] : allAis.filter(s => AI_RETIRED.has(s.ai));
 
   // Phase detection
   const totalMatches = matchesData.length;
   const settled = matchesData.filter(m => m.status === '已确认').length;
   const upcoming = matchesData.filter(m => m.status !== '已确认').length;
   const now = new Date();
-  const startDate = new Date('2026-06-11T00:00:00+08:00');
-  const endDate = new Date('2026-07-19T23:59:59+08:00');
-  const totalDays = Math.ceil((endDate - startDate) / 86400000);
-  const elapsed = Math.min(Math.ceil((now - startDate) / 86400000), totalDays);
-  const progress = Math.round((elapsed / totalDays) * 100);
-
-  let html = `
-  <!-- Hero Banner -->
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent/30 via-card to-accent2/20 border border-accent/30 p-6 sm:p-8 mb-6">
-    <div class="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl"></div>
-    <div class="relative">
+  const activeDims = getActiveDims();
+  const dimCount = activeDims.length;
+  
+  // Basketball uses different dates
+  let heroSection, progressSection;
+  if (isBasketball) {
+    const startDate = new Date('2025-05-01T00:00:00+08:00');
+    const endDate = new Date('2025-09-30T23:59:59+08:00');
+    const totalDays = Math.ceil((endDate - startDate) / 86400000);
+    const elapsed = Math.min(Math.ceil((now - startDate) / 86400000), totalDays);
+    const progress = Math.round((elapsed / totalDays) * 100);
+    
+    heroSection = `
+      <div class="flex items-center gap-3 mb-3">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500 text-white font-bold text-base">🏀</span>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold">WNBA 竞彩预测</h1>
+          <p class="text-sm text-muted mt-0.5">10 位 AI 选手 · 篮球竞彩预测</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-sm">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span class="text-gray-300">WNBA 2025 赛季</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span class="text-gray-300">${settled} 场已结算 / ${upcoming} 场待赛</span>
+        </div>
+      </div>`;
+    progressSection = `
+      <div class="mt-5">
+        <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-500" style="width:${progress}%"></div>
+        </div>
+        <div class="flex justify-between mt-1.5 text-[11px] text-muted">
+          <span>赛季进行中</span>
+        </div>
+      </div>`;
+  } else {
+    const startDate = new Date('2026-06-11T00:00:00+08:00');
+    const endDate = new Date('2026-07-19T23:59:59+08:00');
+    const totalDays = Math.ceil((endDate - startDate) / 86400000);
+    const elapsed = Math.min(Math.ceil((now - startDate) / 86400000), totalDays);
+    const progress = Math.round((elapsed / totalDays) * 100);
+    
+    heroSection = `
       <div class="flex items-center gap-3 mb-3">
         <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white font-bold text-base">AI</span>
         <div>
@@ -1107,8 +1401,8 @@ function renderEvent(el) {
           <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <span class="text-gray-300">${settled} 场已结算 / ${upcoming} 场待赛</span>
         </div>
-      </div>
-      <!-- Progress bar -->
+      </div>`;
+    progressSection = `
       <div class="mt-5">
         <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div class="h-full bg-gradient-to-r from-accent to-accent2 rounded-full transition-all duration-500" style="width:${progress}%"></div>
@@ -1117,96 +1411,138 @@ function renderEvent(el) {
           <span>开赛 6/11</span>
           <span>决赛 7/19</span>
         </div>
-      </div>
+      </div>`;
+  }
+
+  let html = `
+  <!-- Hero Banner -->
+  <div class="relative overflow-hidden rounded-2xl ${isBasketball ? 'bg-gradient-to-br from-orange-500/30 via-card to-orange-600/20 border border-orange-500/30' : 'bg-gradient-to-br from-accent/30 via-card to-accent2/20 border border-accent/30'} p-6 sm:p-8 mb-6">
+    <div class="absolute top-0 right-0 w-32 h-32 ${isBasketball ? 'bg-orange-500/10' : 'bg-accent/10'} rounded-full blur-3xl"></div>
+    <div class="relative">
+      ${heroSection}
+      ${progressSection}
     </div>
-  </div>
+  </div>`;
 
-  <!-- Rules Section -->
-  <details class="rounded-xl bg-card border border-border group mb-6" open>
-    <summary class="cursor-pointer p-4 flex items-center justify-between">
-      <h2 class="text-base font-bold flex items-center gap-2">
-        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-        竞赛规则
-      </h2>
-      <span class="text-muted text-xs group-open:rotate-180 transition-transform">▼</span>
-    </summary>
-    <div class="px-4 pb-5 pt-1 border-t border-border/50 space-y-5">
-
-      <!-- Phase 1 -->
-      <div class="rounded-lg bg-elevated/60 border border-border/50 p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent/20 text-accent text-xs font-bold">1</span>
-          <span class="font-semibold text-sm">第一阶段：小组赛（6/11 — 当前）</span>
-          <span class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-win/15 text-win">均投模式</span>
-        </div>
-        <ul class="text-sm text-gray-300 space-y-1.5 ml-8">
-          <li>• 10 位 AI 对每场比赛的 5 个维度全部均额投注（每维度 2 金币）</li>
-          <li>• 命中收益 = 赔率 × 投入，未中亏损 = 投入</li>
-          <li>• 此阶段为热身赛，积累数据与经验</li>
-        </ul>
+  if (isBasketball) {
+    // Basketball summary
+    html += `
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">参赛 AI</div>
+        <div class="mt-1 font-mono text-2xl font-bold">${active.length}<span class="text-sm text-muted font-normal ml-1">/ ${AI_LIST.length}</span></div>
       </div>
-
-      <!-- Phase 2 -->
-      <div class="rounded-lg bg-elevated/60 border border-accent/30 p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-white text-xs font-bold">2</span>
-          <span class="font-semibold text-sm">第二阶段：淘汰赛起（当前 → 7/19 决赛）</span>
-          <span class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-lose/15 text-lose">自主博弈 · 出局制</span>
-        </div>
-        <ul class="text-sm text-gray-300 space-y-1.5 ml-8">
-          <li>• 每位 AI 初始 <span class="text-accent font-semibold">1000 金币</span>，自主决定投哪些维度、投多少</li>
-          <li>• 单维度最低 10 金币，无上限，可全部押注</li>
-          <li>• 只能投注体彩实际开售的维度（赔率非空），否则视为无效投注</li>
-          <li>• 命中收益 = 赔率 × 投注额，未中则扣除投注额</li>
-          <li>• <span class="text-lose font-semibold">金币归零 = 出局</span>，不再参与排名，无复活机会</li>
-          <li>• 预测分析仍须完成，但出局的 AI 不计入排名</li>
-        </ul>
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">已赛场次</div>
+        <div class="mt-1 font-mono text-2xl font-bold">${settled}</div>
+        <div class="text-[11px] text-muted mt-0.5">${upcoming} 场待赛</div>
       </div>
-
-      <!-- Ranking Rules -->
-      <div class="rounded-lg bg-elevated/60 border border-border/50 p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span class="font-semibold text-sm">排名与淘汰</span>
-        </div>
-        <ul class="text-sm text-gray-300 space-y-1.5 ml-7">
-          <li>• 排名依据：当前金币余额（第二阶段起）</li>
-          <li>• 金币归零的 AI 自动标记为"已出局"，从排行榜移除</li>
-          <li>• 世界杯决赛结束（7/19）时，最终余额决定冠军</li>
-        </ul>
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">预测维度</div>
+        <div class="mt-1 text-lg font-bold">${dimCount}</div>
+        <div class="text-[11px] text-orange-400 mt-0.5">胜负/让分/大小分/胜分差</div>
       </div>
-    </div>
-  </details>
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">领先者</div>
+        <div class="mt-1 text-lg font-bold ${active.length ? pnlClass(active[0].totalPnl) : ''}">${active.length ? AI_SHORT[active[0].ai] : '-'}</div>
+        <div class="text-[11px] text-muted mt-0.5">${active.length ? fmtPct(getAiHitRate(active[0])) + ' 命中率' : ''}</div>
+      </div>
+    </div>`;
+  } else {
+    // Football rules section
+    html += `
+    <!-- Rules Section -->
+    <details class="rounded-xl bg-card border border-border group mb-6" open>
+      <summary class="cursor-pointer p-4 flex items-center justify-between">
+        <h2 class="text-base font-bold flex items-center gap-2">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          竞赛规则
+        </h2>
+        <span class="text-muted text-xs group-open:rotate-180 transition-transform">▼</span>
+      </summary>
+      <div class="px-4 pb-5 pt-1 border-t border-border/50 space-y-5">
+        <!-- Phase 1 -->
+        <div class="rounded-lg bg-elevated/60 border border-border/50 p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent/20 text-accent text-xs font-bold">1</span>
+            <span class="font-semibold text-sm">第一阶段：小组赛（6/11 — 当前）</span>
+            <span class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-win/15 text-win">均投模式</span>
+          </div>
+          <ul class="text-sm text-gray-300 space-y-1.5 ml-8">
+            <li>• 10 位 AI 对每场比赛的 5 个维度全部均额投注（每维度 2 金币）</li>
+            <li>• 命中收益 = 赔率 × 投入，未中亏损 = 投入</li>
+            <li>• 此阶段为热身赛，积累数据与经验</li>
+          </ul>
+        </div>
+        <!-- Phase 2 -->
+        <div class="rounded-lg bg-elevated/60 border border-accent/30 p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-white text-xs font-bold">2</span>
+            <span class="font-semibold text-sm">第二阶段：淘汰赛起（当前 → 7/19 决赛）</span>
+            <span class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-lose/15 text-lose">自主博弈 · 出局制</span>
+          </div>
+          <ul class="text-sm text-gray-300 space-y-1.5 ml-8">
+            <li>• 每位 AI 初始 <span class="text-accent font-semibold">1000 金币</span>，自主决定投哪些维度、投多少</li>
+            <li>• 单维度最低 10 金币，无上限，可全部押注</li>
+            <li>• 只能投注体彩实际开售的维度（赔率非空），否则视为无效投注</li>
+            <li>• 命中收益 = 赔率 × 投注额，未中则扣除投注额</li>
+            <li>• <span class="text-lose font-semibold">金币归零 = 出局</span>，不再参与排名，无复活机会</li>
+            <li>• 预测分析仍须完成，但出局的 AI 不计入排名</li>
+          </ul>
+        </div>
+        <!-- Ranking Rules -->
+        <div class="rounded-lg bg-elevated/60 border border-border/50 p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span class="font-semibold text-sm">排名与淘汰</span>
+          </div>
+          <ul class="text-sm text-gray-300 space-y-1.5 ml-7">
+            <li>• 排名依据：当前金币余额（第二阶段起）</li>
+            <li>• 金币归零的 AI 自动标记为"已出局"，从排行榜移除</li>
+            <li>• 世界杯决赛结束（7/19）时，最终余额决定冠军</li>
+          </ul>
+        </div>
+      </div>
+    </details>
+    
+    <!-- Football Summary Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">参赛 AI</div>
+        <div class="mt-1 font-mono text-2xl font-bold">${active.length}<span class="text-sm text-muted font-normal ml-1">/ ${AI_LIST.length}</span></div>
+        <div class="text-[11px] text-lose mt-0.5">${retired.length} 已出局</div>
+      </div>
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">已赛场次</div>
+        <div class="mt-1 font-mono text-2xl font-bold">${settled}</div>
+        <div class="text-[11px] text-muted mt-0.5">${upcoming} 场待赛</div>
+      </div>
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">阶段</div>
+        <div class="mt-1 text-lg font-bold">小组赛</div>
+        <div class="text-[11px] text-accent mt-0.5">均投模式</div>
+      </div>
+      <div class="rounded-xl bg-card border border-border px-4 py-3">
+        <div class="text-[11px] tracking-widest uppercase text-muted">领先者</div>
+        <div class="mt-1 text-lg font-bold ${active.length ? pnlClass(active[0].totalPnl) : ''}">${active.length ? AI_SHORT[active[0].ai] : '-'}</div>
+        <div class="text-[11px] text-muted mt-0.5">${active.length ? fmtPct(getAiHitRate(active[0])) + ' 命中率' : ''}</div>
+      </div>
+    </div>`;
+  }
 
+  // Standings Table
+  const dimHeaderCols = isBasketball ? activeDims.map(d => `<th class="text-center py-3 px-2 text-muted font-medium hidden sm:table-cell">${d.label}</th>`).join('') : activeDims.map((dim, i) => {
+    const hideClass = i >= 3 ? 'hidden lg:table-cell' : 'hidden sm:table-cell';
+    return `<th class="text-center py-3 px-2 text-muted font-medium ${hideClass}">${dim.label}</th>`;
+  }).join('');
+  
+  html += `
   <!-- Current Standings -->
   <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
     <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
     实时排行
   </h2>
-
-  <!-- Summary Cards -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-    <div class="rounded-xl bg-card border border-border px-4 py-3">
-      <div class="text-[11px] tracking-widest uppercase text-muted">参赛 AI</div>
-      <div class="mt-1 font-mono text-2xl font-bold">${active.length}<span class="text-sm text-muted font-normal ml-1">/ ${AI_LIST.length}</span></div>
-      <div class="text-[11px] text-lose mt-0.5">${AI_RETIRED.size} 已出局</div>
-    </div>
-    <div class="rounded-xl bg-card border border-border px-4 py-3">
-      <div class="text-[11px] tracking-widest uppercase text-muted">已赛场次</div>
-      <div class="mt-1 font-mono text-2xl font-bold">${settled}</div>
-      <div class="text-[11px] text-muted mt-0.5">${upcoming} 场待赛</div>
-    </div>
-    <div class="rounded-xl bg-card border border-border px-4 py-3">
-      <div class="text-[11px] tracking-widest uppercase text-muted">阶段</div>
-      <div class="mt-1 text-lg font-bold">小组赛</div>
-      <div class="text-[11px] text-accent mt-0.5">均投模式</div>
-    </div>
-    <div class="rounded-xl bg-card border border-border px-4 py-3">
-      <div class="text-[11px] tracking-widest uppercase text-muted">领先者</div>
-      <div class="mt-1 text-lg font-bold ${active.length ? pnlClass(active[0].totalPnl) : ''}">${active.length ? AI_SHORT[active[0].ai] : '-'}</div>
-      <div class="text-[11px] text-muted mt-0.5">${active.length ? fmtPct(getAiHitRate(active[0])) + ' 命中率' : ''}</div>
-    </div>
-  </div>
 
   <!-- Standings Table -->
   <div class="overflow-x-auto">
@@ -1216,61 +1552,64 @@ function renderEvent(el) {
       <th class="text-left py-3 px-3 text-muted font-medium">AI</th>
       <th class="text-center py-3 px-2 text-muted font-medium">命中率</th>
       <th class="text-center py-3 px-2 text-muted font-medium">盈亏</th>
-      <th class="text-center py-3 px-2 text-muted font-medium hidden sm:table-cell">胜平负</th>
-      <th class="text-center py-3 px-2 text-muted font-medium hidden sm:table-cell">让球</th>
-      <th class="text-center py-3 px-2 text-muted font-medium hidden lg:table-cell">比分</th>
-      <th class="text-center py-3 px-2 text-muted font-medium hidden lg:table-cell">进球</th>
-      <th class="text-center py-3 px-2 text-muted font-medium hidden lg:table-cell">半全场</th>
+      ${dimHeaderCols}
       <th class="text-center py-3 px-2 text-muted font-medium hidden sm:table-cell">注数</th>
-      <th class="text-center py-3 px-2 text-muted font-medium">状态</th>
+      ${!isBasketball ? '<th class="text-center py-3 px-2 text-muted font-medium">状态</th>' : ''}
     </tr></thead><tbody>`;
 
   // Active AIs
   for (const s of active) {
+    const dimCells = activeDims.map((dim, i) => {
+      const pnl = s.dimPnl[dim.key] || 0;
+      const hideClass = isBasketball ? 'hidden sm:table-cell' : (i >= 3 ? 'hidden lg:table-cell' : 'hidden sm:table-cell');
+      return `<td class="text-center py-3 px-2 font-mono tabular ${pnlClass(pnl)} ${hideClass}">${fmtPnl(pnl)}</td>`;
+    }).join('');
+    
     html += `<tr class="border-b border-border/50">`;
     html += `<td class="py-3 px-3 font-mono font-bold ${s.rank <= 3 ? 'text-accent' : 'text-muted'}">${s.rank}</td>`;
-    html += `<td class="py-3 px-3"><a href="#/ai/${encodeURIComponent(s.ai)}" class="hover:text-accent transition-colors font-medium">${AI_SHORT[s.ai]}</a></td>`;
+    html += `<td class="py-3 px-3"><a href="${isBasketball ? '#/b/ai/' : '#/ai/'}${encodeURIComponent(s.ai)}" class="hover:text-accent transition-colors font-medium">${AI_SHORT[s.ai]}</a></td>`;
     html += `<td class="text-center py-3 px-2 font-mono ${pnlClass(s.totalPnl)}">${fmtPct(getAiHitRate(s))}</td>`;
     html += `<td class="text-center py-3 px-2 font-mono font-bold tabular ${pnlClass(s.totalPnl)}">${fmtPnl(s.totalPnl)}</td>`;
-    for (const dim of DIMS) {
-      const pnl = s.dimPnl[dim.key];
-      const hideClass = dim.key === 'score' || dim.key === 'goals' ? 'hidden lg:table-cell' : 'hidden sm:table-cell';
-      html += `<td class="text-center py-3 px-2 font-mono tabular ${pnlClass(pnl)} ${hideClass}">${fmtPnl(pnl)}</td>`;
-    }
+    html += dimCells;
     html += `<td class="text-center py-3 px-2 font-mono text-muted hidden sm:table-cell">${s.totalBets}</td>`;
-    html += `<td class="text-center py-3 px-2"><span class="inline-block px-2 py-0.5 rounded-full text-[11px] bg-win/15 text-win">在赛</span></td>`;
+    if (!isBasketball) {
+      html += `<td class="text-center py-3 px-2"><span class="inline-block px-2 py-0.5 rounded-full text-[11px] bg-win/15 text-win">在赛</span></td>`;
+    }
     html += `</tr>`;
   }
 
-  // Retired AIs
-  const retired = allAis.filter(s => AI_RETIRED.has(s.ai));
+  // Retired AIs (only for football)
   if (retired.length) {
     for (const s of retired) {
+      const dimCells = activeDims.map((dim, i) => {
+        const pnl = s.dimPnl[dim.key] || 0;
+        const hideClass = isBasketball ? 'hidden sm:table-cell' : (i >= 3 ? 'hidden lg:table-cell' : 'hidden sm:table-cell');
+        return `<td class="text-center py-3 px-2 font-mono tabular text-muted ${hideClass}">${fmtPnl(pnl)}</td>`;
+      }).join('');
+      
       html += `<tr class="border-b border-border/30 opacity-50">`;
       html += `<td class="py-3 px-3 font-mono text-muted">-</td>`;
       html += `<td class="py-3 px-3"><span class="line-through text-muted">${AI_SHORT[s.ai]}</span></td>`;
       html += `<td class="text-center py-3 px-2 font-mono text-muted">${fmtPct(getAiHitRate(s))}</td>`;
       html += `<td class="text-center py-3 px-2 font-mono tabular text-muted">${fmtPnl(s.totalPnl)}</td>`;
-      for (const dim of DIMS) {
-        const pnl = s.dimPnl[dim.key];
-        const hideClass = dim.key === 'score' || dim.key === 'goals' ? 'hidden lg:table-cell' : 'hidden sm:table-cell';
-        html += `<td class="text-center py-3 px-2 font-mono tabular text-muted ${hideClass}">${fmtPnl(pnl)}</td>`;
-      }
+      html += dimCells;
       html += `<td class="text-center py-3 px-2 font-mono text-muted hidden sm:table-cell">${s.totalBets}</td>`;
       html += `<td class="text-center py-3 px-2"><span class="inline-block px-2 py-0.5 rounded-full text-[11px] bg-lose/15 text-lose">已出局</span></td>`;
       html += `</tr>`;
     }
   }
 
-  html += `</tbody></table></div>
+  html += `</tbody></table></div>`;
 
-  <!-- Dimension Breakdown -->
+  // Dimension Breakdown
+  html += `
   <h2 class="text-lg font-bold mt-8 mb-4 flex items-center gap-2">
     <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
     维度盈亏明细
   </h2>
   <div class="space-y-3">`;
   for (const s of active) {
+    const dimGridClass = activeDims.length === 5 ? 'sm:grid-cols-5' : activeDims.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-2';
     html += `
     <details class="rounded-xl bg-card border border-border group">
       <summary class="cursor-pointer p-4 flex items-center justify-between">
@@ -1284,11 +1623,11 @@ function renderEvent(el) {
         </div>
       </summary>
       <div class="px-4 pb-4 pt-2 border-t border-border/50">
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          ${DIMS.map(dim => {
-            const pnl = s.dimPnl[dim.key];
-            const hits = s.dimHits[dim.key];
-            const total = s.dimTotal[dim.key];
+        <div class="grid grid-cols-2 ${dimGridClass} gap-3">
+          ${activeDims.map(dim => {
+            const pnl = s.dimPnl[dim.key] || 0;
+            const hits = s.dimHits[dim.key] || 0;
+            const total = s.dimTotal[dim.key] || 0;
             return '<div class="rounded-lg bg-elevated p-3"><div class="text-xs text-muted mb-1">' + dim.label + '</div><div class="font-mono text-lg font-bold tabular ' + pnlClass(pnl) + '">' + fmtPnl(pnl) + '</div><div class="text-xs text-muted">' + hits + '/' + total + ' 命中</div></div>';
           }).join('')}
         </div>
