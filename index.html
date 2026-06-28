@@ -400,10 +400,10 @@ function fmtDate(dt) {
 function fmtDateLabel(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
     const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-    const today = new Date().toISOString().slice(0, 10);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
     const wd = weekdays[d.getDay()];
-    if (dateStr === today) return '今天 周' + wd;
-    return '周' + wd;
+    return m + '/' + day + ' 周' + wd;
 }
 
 // ============================================================
