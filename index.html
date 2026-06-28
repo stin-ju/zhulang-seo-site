@@ -313,10 +313,9 @@ function buildFallbackCommentary(dateStr) {
 // ROUTER
 // ============================================================
 const NAV_ITEMS = [
-  { hash: '#/', label: '排行榜' },
+  { hash: '#/', label: '首页' },
   { hash: '#/matches', label: '比赛' },
   { hash: '#/ai', label: 'AI' },
-  { hash: '#/event', label: '赛事' },
   { hash: '#/daily', label: '每日分析' },
 ];
 
@@ -333,12 +332,11 @@ function updateNav() {
 
 function getRoute() {
   const hash = location.hash.slice(1) || '/';
-  if (hash === '/') return { page: 'leaderboard' };
+  if (hash === '/') return { page: 'event' };
   if (hash === '/matches') return { page: 'matches' };
   if (hash.startsWith('/matches/')) return { page: 'matchDetail', id: decodeURIComponent(hash.slice(9)) };
   if (hash === '/ai') return { page: 'aiList' };
   if (hash.startsWith('/ai/')) return { page: 'aiDetail', name: decodeURIComponent(hash.slice(4)) };
-  if (hash === '/event') return { page: 'event' };
   if (hash === '/daily') return { page: 'daily' };
   if (hash.startsWith('/daily/')) return { page: 'daily', date: decodeURIComponent(hash.slice(7)) };
   return { page: 'notfound' };
@@ -354,14 +352,13 @@ async function navigate() {
   app.classList.add('fade-in');
 
   switch (route.page) {
-    case 'leaderboard': renderLeaderboard(app); break;
     case 'matches': renderMatchList(app); break;
     case 'matchDetail': renderMatchDetail(app, route.id); break;
     case 'aiList': renderAiList(app); break;
     case 'aiDetail': renderAiDetail(app, route.name); break;
     case 'event': renderEvent(app); break;
     case 'daily': renderDaily(app, route.date); break;
-    default: app.innerHTML = '<div class="text-center py-24"><div class="text-6xl font-bold text-accent">404</div><p class="mt-4 text-muted">页面不存在</p><a href="#/" class="inline-block mt-6 px-4 py-2 rounded-md border border-accent/40 text-accent hover:bg-accent/10">返回排行榜</a></div>';
+    default: app.innerHTML = '<div class="text-center py-24"><div class="text-6xl font-bold text-accent">404</div><p class="mt-4 text-muted">页面不存在</p><a href="#/" class="inline-block mt-6 px-4 py-2 rounded-md border border-accent/40 text-accent hover:bg-accent/10">返回首页</a></div>';
   }
   window.scrollTo(0, 0);
 }
