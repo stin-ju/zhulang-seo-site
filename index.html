@@ -65,6 +65,15 @@
             -webkit-text-fill-color: transparent;
         }
         .hero p { color: #6b7280; font-size: 14px; margin-top: 6px; }
+        .ai-logos { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .ai-logo {
+            display: flex; align-items: center; gap: 6px;
+            background: #14141f; border: 1px solid #2a2a3e; border-radius: 20px;
+            padding: 5px 12px 5px 6px; font-size: 12px; font-weight: 600; color: #e5e7eb;
+            transition: all 0.2s;
+        }
+        .ai-logo:hover { border-color: rgba(139,92,246,0.3); transform: translateY(-1px); }
+        .ai-logo .dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0; }
         .hero-stats { display: flex; justify-content: center; gap: 32px; margin-top: 14px; }
         .hero-stats div { text-align: center; }
         .hero-stats .num { font-size: 24px; font-weight: 700; color: #e5e7eb; display: block; }
@@ -261,10 +270,13 @@
 
     <!-- 英雄区 -->
     <section class="hero">
-        <h1>10大AI · <em>实时预测</em> 每一场赛事</h1>
-        <p>胜平负 · 让球 · 比分 · 总进球 · 半全场 — 五维度对比</p>
+        <h1>AI · <em>实时预测</em> 每一场赛事</h1>
+        <p>竞足 · 竞篮</p>
+        <div class="ai-logos" id="ai-logos">
+            <!-- 由JS动态渲染7个AI logo -->
+        </div>
         <div class="hero-stats">
-            <div><span class="num" id="ai-count">10</span><span class="lbl">AI 模型</span></div>
+            <div><span class="num" id="ai-count">7</span><span class="lbl">AI 模型</span></div>
             <div><span class="num" id="match-count">—</span><span class="lbl">赛事总数</span></div>
             <div><span class="num" id="done-count">—</span><span class="lbl">已完赛</span></div>
         </div>
@@ -779,7 +791,32 @@ function renderBrief() {
 // ============================================================
 // 初始化
 // ============================================================
+// ============================================================
+// AI Logo 渲染
+// ============================================================
+const AI_LIST = [
+    { name: '混元', color: '#6366f1', initial: '混' },
+    { name: '豆包', color: '#f59e0b', initial: '豆' },
+    { name: 'DeepSeek', color: '#3b82f6', initial: 'DS' },
+    { name: 'MiniMax', color: '#10b981', initial: 'MM' },
+    { name: '扣子', color: '#8b5cf6', initial: '扣' },
+    { name: 'BetAgent', color: '#ef4444', initial: 'BA' },
+    { name: 'Grok', color: '#06b6d4', initial: 'G' },
+];
+
+function renderAiLogos() {
+    const container = document.getElementById('ai-logos');
+    if (!container) return;
+    container.innerHTML = AI_LIST.map(ai => `
+        <div class="ai-logo">
+            <span class="dot" style="background:${ai.color}">${ai.initial}</span>
+            <span>${ai.name}</span>
+        </div>
+    `).join('');
+}
+
 async function init() {
+    renderAiLogos();
     try {
         await loadAll();
         console.log('✅ 首页加载完成');
