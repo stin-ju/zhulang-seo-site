@@ -871,29 +871,19 @@ function getInitial(name) {
     return name.charAt(0);
 }
 
+// 活跃AI名单（按AGENTS.md定义）
+const ACTIVE_AIS = ['混元', '豆包', 'DeepSeek', 'MiniMax', '扣子（皮皮）', 'BetAgent', 'Grok'];
+
 async function renderAiLogos() {
     const container = document.getElementById('ai-logos');
     if (!container) return;
-    container.innerHTML = '<span style="color:#6b7280;font-size:12px;">加载中...</span>';
-    try {
-        const data = await sbQuery('predictions', 'ai_name');
-        const names = [...new Set(data.map(p => p.ai_name))].sort();
-        console.log('🔍 AI列表:', names.length, names);
-        if (names.length === 0) {
-            container.innerHTML = '<span style="color:#6b7280;font-size:12px;">暂无AI参与预测</span>';
-            return;
-        }
-        container.innerHTML = names.map((name, i) => `
-            <a href="#/ai/${encodeURIComponent(name)}" class="ai-logo">
-                <span class="dot" style="background:${AI_COLORS[i % AI_COLORS.length]}">${getInitial(name)}</span>
-                <span>${name}</span>
-            </a>
-        `).join('');
-        console.log('✅ AI logos rendered:', names.length);
-    } catch (e) {
-        console.error('❌ renderAiLogos error:', e);
-        container.innerHTML = '<span style="color:#6b7280;font-size:12px;">AI列表加载失败</span>';
-    }
+    const names = ACTIVE_AIS;
+    container.innerHTML = names.map((name, i) => `
+        <a href="#/ai/${encodeURIComponent(name)}" class="ai-logo">
+            <span class="dot" style="background:${AI_COLORS[i % AI_COLORS.length]}">${getInitial(name)}</span>
+            <span>${name}</span>
+        </a>
+    `).join('');
 }
 
 async function init() {
