@@ -77,6 +77,14 @@
     .sport-switch:not(.active):hover { color: #e5e7eb; border-color: #6b7280; }
     /* 导航高亮 */
     .nav-link.nav-active { background: rgba(168,85,247,0.15); color: #a855f7 !important; }
+    .vote-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.06); }
+    .vote-bar .vw { background: #22c55e; }
+    .vote-bar .vd { background: #fbbf24; }
+    .vote-bar .vl { background: #ef4444; }
+    .focus-card { position: relative; overflow: hidden; }
+    .focus-card::before { content: ''; position: absolute; top: -30px; right: -30px; width: 80px; height: 80px; border-radius: 50%; opacity: 0.08; }
+    .focus-consensus::before { background: #22c55e; }
+    .focus-divergence::before { background: #fbbf24; }
     </style>
     
     <!-- 赛事结构化数据 -->
@@ -363,6 +371,34 @@
     <div class="font-mono text-2xl font-bold">5</div>
     <div class="text-[11px] text-muted mt-0.5">预测维度</div>
   </div>
+</section>
+<!-- 焦点对决 -->
+<section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6" aria-label="焦点对决">
+
+      <div class="focus-card focus-consensus rounded-2xl bg-gradient-to-br from-win/10 to-card border border-win/25 p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-lg">🔥</span>
+          <span class="text-xs font-bold tracking-widest text-win uppercase">今日最高共识</span>
+          <span class="ml-auto font-mono text-2xl font-extrabold text-win">86%</span>
+        </div>
+        <h3 class="text-lg font-bold mb-1">南非VS加拿大</h3>
+        <div class="text-xs text-muted mb-3">周日073 · 06月29日 03:00 · 让球 +1</div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="text-sm">AI预测</span>
+          <span class="font-mono text-xl font-bold text-lose">负</span>
+          <span class="text-xs text-muted">7个AI一致看好</span>
+        </div>
+        <div class="vote-bar mb-2">
+          <div class="vw" style="width:14%"></div>
+          <div class="vd" style="width:0%"></div>
+          <div class="vl" style="width:86%"></div>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span class="text-win">胜 1</span>
+          <span class="text-[#fbbf24]">平 0</span>
+          <span class="text-lose">负 6</span>
+        </div>
+      </div>
 </section>
 <!-- 冠军 -->
 <section class="mb-6" aria-label="当前冠军">
