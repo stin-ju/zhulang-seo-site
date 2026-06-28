@@ -891,15 +891,6 @@ async function renderAiLogos() {
     } catch (e) {
         container.innerHTML = '<span style="color:#6b7280;font-size:12px;">AI列表加载失败</span>';
     }
-}function renderAiLogos() {
-    const container = document.getElementById('ai-logos');
-    if (!container) return;
-    container.innerHTML = AI_LIST.map(ai => `
-        <a href="#/ai/${encodeURIComponent(ai.name)}" class="ai-logo">
-            <span class="dot" style="background:${ai.color}">${ai.initial}</span>
-            <span>${ai.name}</span>
-        </a>
-    `).join('');
 }
 
 async function init() {
