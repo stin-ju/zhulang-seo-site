@@ -414,14 +414,19 @@ async function loadAll() {
     });
     DATES = Array.from(dateSet).sort();
 
-    // 默认选中今天，或最近的日期
+    // 默认选中"今天"或"最近的有未开赛比赛的日期"
     const today = new Date().toISOString().slice(0, 10);
     if (DATES.includes(today)) {
         CURRENT_DATE = today;
     } else {
-        // 选最近的未开赛日期，或最后一个日期
+        // 优先选最近的未来日期（有比赛的）
         const future = DATES.filter(d => d >= today);
-        CURRENT_DATE = future.length > 0 ? future[future.length - 1] : DATES[DATES.length - 1];
+        if (future.length > 0) {
+            CURRENT_DATE = future[0]; // 最近的将来日期
+        } else {
+            // 没有未来比赛，选最后一个日期
+            CURRENT_DATE = DATES[DATES.length - 1];
+        }
     }
 
     // 加载当前日期的预测
@@ -497,8 +502,8 @@ function renderDateBar() {
     const bar = document.getElementById('date-bar');
     if (DATES.length <= 1) { bar.style.display = 'none'; return; }
 
-    // 只显示最近7天
-    const recent = DATES.slice(-7);
+    // 显示最近10天（最新在前）
+    const recent = DATES.slice(-10).reverse();
     let html = '<span class="label">日期：</span>';
     recent.forEach(d => {
         const active = d === CURRENT_DATE ? ' active' : '';
@@ -538,13 +543,17 @@ function renderFocus(matches) {
 
     const enriched = matches.map(m => ({ ...m, ...computeVotes(m.id) }));
 
-    // 最高共识（至少有2票）
-    const withVotes = enriched.filter(m => m.total >= 2);
-    const sorted = [...withVotes].sort((a, b) => b.consensusRate - a.consensusRate);
+    // 优先选未开赛的比赛（status !== '已确认'），其次才看已完赛的
+    const upcoming = enriched.filter(m => m.status !== '已确认' && m.total >= 2);
+    const confirmed = enriched.filter(m => m.status === '已确认' && m.total >= 2);
+    const pool = upcoming.length >= 2 ? upcoming : (upcoming.length > 0 ? [...upcoming, ...confirmed] : confirmed);
+
+    // 最高共识
+    const sorted = [...pool].sort((a, b) => b.consensusRate - a.consensusRate);
     const most = sorted[0] || null;
 
     // 最大分歧（共识率最低且<70%）
-    const divs = withVotes.filter(m => m.consensusRate < 70).sort((a, b) => a.consensusRate - b.consensusRate);
+    const divs = pool.filter(m => m.consensusRate < 70).sort((a, b) => a.consensusRate - b.consensusRate);
     const div = divs[0] || null;
 
     // 共识卡片
