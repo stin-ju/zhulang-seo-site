@@ -159,6 +159,21 @@
         .detail-item .pred.lose { color: #ef4444; }
         .detail-item .score { font-size: 11px; color: #6b7280; margin-top: 2px; }
 
+        /* 折叠行 */
+        .hidden-row { display: none; }
+        .show-more-btn {
+            text-align: center;
+            padding: 10px;
+            color: #8b5cf6;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.2s;
+        }
+        .show-more-btn:hover { background: rgba(139, 92, 246, 0.06); }
+        .arrow-down { display: inline-block; transition: transform 0.2s; }
+
         /* AI排行 + 简报 */
         .rank-section { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 4px; }
         @media (max-width: 768px) { .rank-section { grid-template-columns: 1fr; } }
@@ -295,8 +310,25 @@
             <span class="count" id="match-count-label"></span>
         </div>
         <div class="date-bar" id="date-bar"></div>
-        <div class="view-card" id="view-list">
-            <div class="loading">加载中...</div>
+        <!-- 足球 -->
+        <div style="margin-top:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:15px;font-weight:600;">⚽ 竞足</span>
+                <span class="count" id="football-count-label"></span>
+            </div>
+            <div class="view-card" id="view-football">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        <!-- 篮球 -->
+        <div style="margin-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:15px;font-weight:600;">🏀 竞篮</span>
+                <span class="count" id="basketball-count-label"></span>
+            </div>
+            <div class="view-card" id="view-basketball">
+                <div class="loading">加载中...</div>
+            </div>
         </div>
     </section>
 
@@ -411,7 +443,7 @@ let CURRENT_DATE = '';
 async function loadAll() {
     // 并行加载
     const [matches, rank] = await Promise.all([
-        sbQuery('matches', 'id,teams,match_time,status,handicap,win_odds,draw_odds,lose_odds,home_score,away_score,metadata', 'sport_type=eq.football&order=match_time.asc'),
+        sbQuery('matches', 'id,teams,match_time,status,handicap,win_odds,draw_odds,lose_odds,home_score,away_score,metadata,sport_type', 'order=match_time.asc'),
         sbQuery('ai_stats', 'ai_name,rank,total_pnl,hit_rate,matches,is_active', 'order=rank.asc')
     ]);
 
@@ -543,7 +575,16 @@ function renderCurrentDate() {
     const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === CURRENT_DATE);
 
     renderFocus(dayMatches);
-    renderViews(dayMatches);
+
+    // 按运动类型分组
+    const football = dayMatches.filter(m => m.sport_type === 'football');
+    const basketball = dayMatches.filter(m => m.sport_type === 'basketball');
+
+    renderSportView('view-football', football, 'football-count-label');
+    renderSportView('view-basketball', basketball, 'basketball-count-label');
+
+    // 总数
+    document.getElementById('match-count-label').textContent = '共 ' + dayMatches.length + ' 场';
 }
 
 function renderFocus(matches) {
@@ -609,26 +650,29 @@ function renderFocus(matches) {
     });
 }
 
-function renderViews(matches) {
-    const container = document.getElementById('view-list');
-    const label = document.getElementById('match-count-label');
+function renderSportView(containerId, matches, countLabelId) {
+    const container = document.getElementById(containerId);
+    const label = document.getElementById(countLabelId);
+    const SHOW_COUNT = 3;
 
     if (!matches || matches.length === 0) {
-        container.innerHTML = '<div style="padding:20px;text-align:center;color:#6b7280;font-size:14px;">该日期暂无赛事</div>';
-        label.textContent = '共 0 场';
+        container.innerHTML = '<div style="padding:16px;text-align:center;color:#6b7280;font-size:13px;">该日期暂无赛事</div>';
+        label.textContent = '0 场';
         return;
     }
 
-    label.textContent = '共 ' + matches.length + ' 场';
+    label.textContent = matches.length + ' 场';
     let html = '';
 
-    matches.forEach(m => {
+    matches.forEach((m, idx) => {
         const stats = computeVotes(m.id);
         const topVote = Object.entries(stats.votes).sort((a, b) => b[1] - a[1])[0];
         const voteCls = topVote ? (topVote[0] === '胜' ? 'win' : topVote[0] === '负' ? 'lose' : 'draw') : '';
         const isDone = m.status === '已确认';
         const result = isDone ? getMatchResult(m) : null;
+        const isHidden = idx >= SHOW_COUNT;
 
+        html += '<div class="match-row' + (isHidden ? ' hidden-row' : '') + '">';
         html += '<div class="view-item" data-match="' + esc(m.id) + '" style="cursor:pointer;">';
         html += '<span class="time">' + fmtTime(m.match_time) + '</span>';
         html += '<span class="teams">' + esc(m.teams) + '</span>';
@@ -665,18 +709,44 @@ function renderViews(matches) {
         } else {
             html += '<div style="color:#6b7280;font-size:13px;text-align:center;padding:8px;">暂无AI预测数据</div>';
         }
-        html += '</div>';
+        html += '</div></div>';
     });
+
+    // 折叠按钮
+    if (matches.length > SHOW_COUNT) {
+        html += '<div class="show-more-btn" data-container="' + containerId + '">';
+        html += '展开全部 ' + matches.length + ' 场 <span class="arrow-down">↓</span>';
+        html += '</div>';
+    }
 
     container.innerHTML = html;
 
-    // 点击展开/收起
+    // 点击展开/收起详情
     container.querySelectorAll('.view-item').forEach(item => {
         item.addEventListener('click', function () {
             const mid = this.dataset.match;
             toggleDetail(mid);
         });
     });
+
+    // 展开全部按钮
+    const moreBtn = container.querySelector('.show-more-btn');
+    if (moreBtn) {
+        moreBtn.addEventListener('click', function () {
+            const rows = container.querySelectorAll('.hidden-row');
+            const isExpanded = this.dataset.expanded === 'true';
+            rows.forEach(r => {
+                r.style.display = isExpanded ? 'none' : 'block';
+            });
+            if (isExpanded) {
+                this.innerHTML = '展开全部 ' + matches.length + ' 场 <span class="arrow-down">↓</span>';
+                this.dataset.expanded = 'false';
+            } else {
+                this.innerHTML = '收起 <span class="arrow-down" style="transform:rotate(180deg);">↓</span>';
+                this.dataset.expanded = 'true';
+            }
+        });
+    }
 }
 
 function toggleDetail(matchId) {
