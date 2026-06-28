@@ -370,12 +370,20 @@ function fmtDateLabel(dateStr) {
 async function sbQuery(table, select, params) {
     let url = SB_URL + '/rest/v1/' + table + '?select=' + encodeURIComponent(select);
     if (params) {
-        for (const [k, v] of Object.entries(params)) {
-            url += '&' + k + '=' + encodeURIComponent(v);
+        if (typeof params === 'string') {
+            // 支持字符串参数（如 'sport_type=eq.football&order=match_time.asc'）
+            url += '&' + params;
+        } else {
+            for (const [k, v] of Object.entries(params)) {
+                url += '&' + k + '=' + encodeURIComponent(v);
+            }
         }
     }
     const resp = await fetch(url, { headers: SB_HEADERS });
-    if (!resp.ok) throw new Error(table + ' HTTP ' + resp.status);
+    if (!resp.ok) {
+        const text = await resp.text().catch(function () { return ''; });
+        throw new Error(table + ' HTTP ' + resp.status + ': ' + text.slice(0, 200));
+    }
     return resp.json();
 }
 
@@ -445,10 +453,10 @@ async function loadPredictions() {
     const batchSize = 20;
     for (let i = 0; i < matchIds.length; i += batchSize) {
         const batch = matchIds.slice(i, i + batchSize);
-        const orFilter = batch.map(id => 'match_id.eq.' + id).join(',');
+        const orFilter = 'or=(' + batch.map(function (id) { return 'match_id.eq.' + id; }).join(',') + ')';
         const data = await sbQuery('predictions',
             'match_id,ai_name,spf,handicap_spf,score,goals,half_full,hit_handicap,hit_score,hit_goals,hit_half,total_hits',
-            { 'or': orFilter }
+            orFilter
         );
         all.push(...(data || []));
     }
