@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026WNBA篮球AI预测 - 胜负/让分/大小分/胜分差</title>
+    <meta name="description" content="AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。">
+    <meta name="keywords" content="WNBA预测,篮球预测,AI篮球,篮球AI预测,让分,大小分,胜分差">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="体彩模拟实验">
+    <link rel="canonical" href="https://zhulang.coze.site/basketball.html">
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="2026WNBA篮球AI预测 - 胜负/让分/大小分/胜分差">
+    <meta property="og:description" content="AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。">
+    <meta property="og:url" content="https://zhulang.coze.site/basketball.html">
+    <meta property="og:site_name" content="体彩模拟实验">
+    <meta property="og:locale" content="zh_CN">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="2026WNBA篮球AI预测 - 胜负/让分/大小分/胜分差">
+    <meta name="twitter:description" content="AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。">
+    
+    <!-- 结构化数据 -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "体彩模拟实验",
+        "url": "https://zhulang.coze.site",
+        "description": "AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。",
+        "inLanguage": "zh-CN",
+        "publisher": {
+            "@type": "Organization",
+            "name": "体彩模拟实验"
+        }
+    }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            base: '#0a1628', card: '#0f2035', elevated: '#162a45',
+            border: '#1e3a5c', accent: '#f97316', accent2: '#ea580c',
+            win: '#22c55e', lose: '#ef4444', muted: '#9ca3af', dimmed: '#6b7280',
+          }
+        }
+      }
+    }
+    </script>
+    <style>
+    @import url('https://fonts.googleapis.cn/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.2); border-radius: 3px; }
+    details > summary { cursor: pointer; list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] > summary .chevron { transform: rotate(90deg); }
+    .chevron { transition: transform 0.2s; }
+    .sport-switch { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+    .sport-switch.active { background: rgba(249,115,22,0.2); color: #f97316; border: 1px solid rgba(249,115,22,0.4); }
+    .sport-switch:not(.active) { color: #9ca3af; border: 1px solid #1e3a5c; }
+    .sport-switch:not(.active):hover { color: #e5e7eb; border-color: #6b7280; }
+    </style>
+</head>
+<body class="bg-base text-gray-100 min-h-screen flex flex-col">
+
+<nav class="sticky top-0 z-50 bg-base/90 backdrop-blur-xl border-b border-border">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex h-14 items-center justify-between">
+      <a href="/" class="flex items-center gap-2.5 group">
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white font-bold text-sm">AI</span>
+        <span class="text-base font-bold text-gray-100 group-hover:text-accent transition-colors hidden sm:inline">AI预测平台</span>
+      </a>
+      <div class="flex items-center gap-1">
+        <a href="/" class="sport-switch">⚽ 足球</a>
+        <a href="/basketball.html" class="sport-switch active">🏀 篮球</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+
+<section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent/20 via-card to-accent2/15 border border-accent/20 p-6 sm:p-8 mb-6">
+  <div class="relative">
+    <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent text-[10px] tracking-[0.2em] uppercase mb-3">WNBA 2026</div>
+    <h1 class="text-2xl sm:text-4xl font-bold tracking-tight">🏀 篮球 <span class="text-accent">AI预测</span></h1>
+    <p class="mt-2 text-sm text-muted">多AI模型 · 四维度分析 · 实时更新</p>
+  </div>
+</section>
+
+    <details open class="rounded-xl bg-card/50 border border-border overflow-hidden mb-4">
+      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+        <span class="chevron text-accent text-sm">▶</span>
+        <h2 class="font-bold text-lg">6月29日 周一</h2>
+        <span class="text-xs text-muted">4 场</span>
+      </summary>
+      <div class="p-4 pt-0 grid gap-3 grid-cols-1 sm:grid-cols-2">
+        
+        <article class="rounded-xl bg-card border border-border p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <time class="text-xs text-muted">06月29日 02:00</time>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+            </div>
+            <span class="text-xs text-muted">周日301</span>
+          </div>
+          <h3 class="text-base font-semibold mb-2">明尼苏达天猫VS达拉斯飞马</h3>
+          <div class="flex items-center justify-between text-sm">
+            <div class="text-muted">
+              让分 +3.5 · 总分 162.5
+            </div>
+            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
+          </div>
+          <div class="mt-2 text-sm text-accent">AI共识：主胜 4/6</div>
+          
+          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr></tbody></table></div>
+        </article>
+        <article class="rounded-xl bg-card border border-border p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <time class="text-xs text-muted">06月29日 03:00</time>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+            </div>
+            <span class="text-xs text-muted">周日302</span>
+          </div>
+          <h3 class="text-base font-semibold mb-2">波特兰火焰VS华盛顿神秘人</h3>
+          <div class="flex items-center justify-between text-sm">
+            <div class="text-muted">
+              让分 -6.5 · 总分 165.5
+            </div>
+            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
+          </div>
+          <div class="mt-2 text-sm text-accent">AI共识：主胜 4/6</div>
+          
+          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center"></td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr></tbody></table></div>
+        </article>
+        <article class="rounded-xl bg-card border border-border p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <time class="text-xs text-muted">06月29日 04:00</time>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+            </div>
+            <span class="text-xs text-muted">周日303</span>
+          </div>
+          <h3 class="text-base font-semibold mb-2">拉斯维加斯王牌VS芝加哥天空</h3>
+          <div class="flex items-center justify-between text-sm">
+            <div class="text-muted">
+              让分 +7.5 · 总分 170.5
+            </div>
+            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
+          </div>
+          <div class="mt-2 text-sm text-accent">AI共识：主负 4/6</div>
+          
+          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center"></td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr></tbody></table></div>
+        </article>
+        <article class="rounded-xl bg-card border border-border p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <time class="text-xs text-muted">06月29日 07:00</time>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+            </div>
+            <span class="text-xs text-muted">周日304</span>
+          </div>
+          <h3 class="text-base font-semibold mb-2">纽约自由VS金州女武神</h3>
+          <div class="flex items-center justify-between text-sm">
+            <div class="text-muted">
+              让分 -1.5 · 总分 168.5
+            </div>
+            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
+          </div>
+          <div class="mt-2 text-sm text-accent">AI共识：主胜 6/6</div>
+          
+          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center"></td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">—</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr></tbody></table></div>
+        </article>
+      </div>
+    </details>
+</main>
+<footer class="border-t border-border py-5 mt-auto">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs text-dimmed">
+    <p>2026 AI 预测平台 · 数据仅供 AI 能力评测</p>
+    <p class="mt-1">体彩模拟实验 · <a href="/" class="text-accent hover:underline">足球预测</a></p>
+  </div>
+</footer>
+</body>
+</html>
