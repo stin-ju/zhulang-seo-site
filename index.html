@@ -218,9 +218,9 @@ function switchSport(sport) {
   
   if (sport === 'basketball') {
     // Add /b prefix if not already present
-    if (!hash.startsWith('#/b/')) {
-      if (hash === '#/' || hash === '#') targetHash = '#/b/';
-      else if (hash.startsWith('#/')) targetHash = '#/b' + hash;
+    if (!hash.startsWith('#/b/') && !hash.startsWith('#/b/matches') && !hash.startsWith('#/b/ai') && !hash.startsWith('#/b/daily')) {
+      if (hash === '#/' || hash === '#' || hash === '') targetHash = '#/b/';
+      else if (hash.startsWith('#/')) targetHash = '#/b' + hash.slice(1);
       else targetHash = '#/b/';
     }
   } else {
