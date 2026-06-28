@@ -596,48 +596,51 @@ function renderFocus(matches) {
 
     const enriched = matches.map(m => ({ ...m, ...computeVotes(m.id) }));
 
-    // 从当前日期的比赛中选（至少有2票）
-    const withVotes = enriched.filter(m => m.total >= 2);
+    // 按运动类型分组
+    const football = enriched.filter(m => m.sport_type === 'football');
+    const basketball = enriched.filter(m => m.sport_type === 'basketball');
 
-    // 最高共识
-    const sorted = [...withVotes].sort((a, b) => b.consensusRate - a.consensusRate);
-    const most = sorted[0] || null;
-
-    // 最大分歧（共识率最低且<70%）
-    const divs = withVotes.filter(m => m.consensusRate < 70).sort((a, b) => a.consensusRate - b.consensusRate);
-    const div = divs[0] || null;
-
-    // 共识卡片
-    let html = '';
-    if (most) {
-        const cls = most.consensus === '胜' ? 'win' : most.consensus === '负' ? 'lose' : 'draw';
-        html += '<div class="focus-card clickable" data-match="' + esc(most.id) + '">';
-        html += '<div class="tag consensus">🔥 最高共识 · ' + most.consensusRate + '%</div>';
-        html += '<div class="teams">' + esc(most.teams) + '</div>';
-        html += '<div class="meta">' + fmtTime(most.match_time) + ' · 让球 ' + (most.handicap || '—') + '</div>';
-        html += '<div class="prediction ' + cls + '">' + most.consensus + '</div>';
-        html += '<div class="votes"><span>✅ 胜 ' + most.votes['胜'] + '</span><span>⚪ 平 ' + most.votes['平'] + '</span><span>❌ 负 ' + most.votes['负'] + '</span></div>';
-        html += '<div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:#6b7280;">点击查看各AI预测</span><span class="arrow">→</span></div>';
-        html += '</div>';
-    } else {
-        html += '<div class="focus-card" style="display:flex;align-items:center;justify-content:center;color:#6b7280;min-height:120px;">暂无共识数据</div>';
+    // 找最新结束的比赛（优先已确认，否则取最新的）
+    function getLatestMatch(sportMatches) {
+        if (!sportMatches || sportMatches.length === 0) return null;
+        // 优先找已确认的，按时间倒序
+        const finished = sportMatches.filter(m => m.status === '已确认').sort((a, b) => b.match_time.localeCompare(a.match_time));
+        if (finished.length > 0) return finished[0];
+        // 否则取最新的未开赛
+        return sportMatches.sort((a, b) => b.match_time.localeCompare(a.match_time))[0];
     }
 
-    // 分歧卡片
-    if (div) {
-        const cls = div.consensus === '胜' ? 'win' : div.consensus === '负' ? 'lose' : 'draw';
-        const divRate = 100 - div.consensusRate;
-        html += '<div class="focus-card clickable" data-match="' + esc(div.id) + '">';
-        html += '<div class="tag divergence">⚡ 最大分歧 · ' + divRate + '%</div>';
-        html += '<div class="teams">' + esc(div.teams) + '</div>';
-        html += '<div class="meta">' + fmtTime(div.match_time) + ' · 让球 ' + (div.handicap || '—') + '</div>';
-        html += '<div class="prediction ' + cls + '">' + div.consensus + '</div>';
-        html += '<div class="votes"><span>✅ 胜 ' + div.votes['胜'] + '</span><span>⚪ 平 ' + div.votes['平'] + '</span><span>❌ 负 ' + div.votes['负'] + '</span></div>';
+    const latestFootball = getLatestMatch(football);
+    const latestBasketball = getLatestMatch(basketball);
+
+    // 渲染单张卡片
+    function renderCard(match, sportLabel, sportIcon) {
+        if (!match) {
+            return '<div class="focus-card" style="display:flex;align-items:center;justify-content:center;color:#6b7280;min-height:120px;">' + sportIcon + ' 暂无' + sportLabel + '赛事</div>';
+        }
+        const cls = match.consensus === '胜' ? 'win' : match.consensus === '负' ? 'lose' : 'draw';
+        const isFinished = match.status === '已确认';
+        const statusTag = isFinished ? '<span style="font-size:10px;color:#22c55e;margin-left:6px;">✓ 已完赛</span>' : '<span style="font-size:10px;color:#6b7280;margin-left:6px;">未开赛</span>';
+        
+        let html = '<div class="focus-card clickable" data-match="' + esc(match.id) + '">';
+        html += '<div class="tag consensus">' + sportIcon + ' ' + sportLabel + ' · 最新' + (isFinished ? '赛果' : '赛事') + statusTag + '</div>';
+        html += '<div class="teams">' + esc(match.teams) + '</div>';
+        html += '<div class="meta">' + fmtTime(match.match_time) + ' · 让球 ' + (match.handicap || '—') + '</div>';
+        
+        if (match.total > 0) {
+            html += '<div class="prediction ' + cls + '">' + (match.consensus || '—') + '</div>';
+            html += '<div class="votes"><span>✅ 胜 ' + match.votes['胜'] + '</span><span>⚪ 平 ' + match.votes['平'] + '</span><span>❌ 负 ' + match.votes['负'] + '</span></div>';
+        } else {
+            html += '<div class="prediction" style="color:#6b7280;font-size:18px;">暂无AI预测</div>';
+        }
+        
         html += '<div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:#6b7280;">点击查看各AI预测</span><span class="arrow">→</span></div>';
         html += '</div>';
-    } else {
-        html += '<div class="focus-card" style="display:flex;align-items:center;justify-content:center;color:#6b7280;min-height:120px;">' + (withVotes.length > 0 ? 'AI意见较统一' : '暂无分歧数据') + '</div>';
+        return html;
     }
+
+    let html = renderCard(latestFootball, '竞足', '⚽');
+    html += renderCard(latestBasketball, '竞篮', '🏀');
 
     container.innerHTML = html;
 
