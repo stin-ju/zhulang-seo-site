@@ -543,17 +543,15 @@ function renderFocus(matches) {
 
     const enriched = matches.map(m => ({ ...m, ...computeVotes(m.id) }));
 
-    // 优先选未开赛的比赛（status !== '已确认'），其次才看已完赛的
-    const upcoming = enriched.filter(m => m.status !== '已确认' && m.total >= 2);
-    const confirmed = enriched.filter(m => m.status === '已确认' && m.total >= 2);
-    const pool = upcoming.length >= 2 ? upcoming : (upcoming.length > 0 ? [...upcoming, ...confirmed] : confirmed);
+    // 从当前日期的比赛中选（至少有2票）
+    const withVotes = enriched.filter(m => m.total >= 2);
 
     // 最高共识
-    const sorted = [...pool].sort((a, b) => b.consensusRate - a.consensusRate);
+    const sorted = [...withVotes].sort((a, b) => b.consensusRate - a.consensusRate);
     const most = sorted[0] || null;
 
     // 最大分歧（共识率最低且<70%）
-    const divs = pool.filter(m => m.consensusRate < 70).sort((a, b) => a.consensusRate - b.consensusRate);
+    const divs = withVotes.filter(m => m.consensusRate < 70).sort((a, b) => a.consensusRate - b.consensusRate);
     const div = divs[0] || null;
 
     // 共识卡片
