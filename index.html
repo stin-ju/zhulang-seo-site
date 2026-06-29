@@ -899,61 +899,75 @@ function renderRank() {
 }
 
 // ============================================================
-// 渲染：简报（直接显示内容，不跳转）
+// 渲染：今日简报（从matches表的metadata字段读取AI摘要）
 // ============================================================
 async function renderBrief() {
     const dateEl = document.getElementById('brief-date');
     const contentEl = document.getElementById('brief-content');
+    if (!contentEl) return;
+    
+    // 更新日期
     dateEl.textContent = CURRENT_DATE;
     
-    // 获取今日比赛
-    const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === CURRENT_DATE);
+    // 获取今日足球赛事（从已加载的ALL_MATCHES中过滤）
+    const todayMatches = ALL_MATCHES.filter(m => {
+        if (!m.match_time) return false;
+        return fmtDate(m.match_time) === CURRENT_DATE;
+    }).sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
     
-    // 尝试获取今日简报的metadata
-    try {
-        const resp = await fetch(`${SB_URL}/rest/v1/metadata?match_date=eq.${CURRENT_DATE}&select=daily_commentary`, {
-            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-        });
-        const meta = await resp.json();
-        
-        if (meta && meta.length > 0 && meta[0].daily_commentary) {
-            // 显示daily_commentary摘要（截取前200字）
-            const commentary = meta[0].daily_commentary;
-            const summary = commentary.length > 200 ? commentary.substring(0, 200) + '...' : commentary;
-            contentEl.innerHTML = `
-                <div style="color:#e8eef7;font-size:13px;line-height:1.7;">
-                    ${summary.replace(/\n/g, '<br>')}
-                </div>
-            `;
-            return;
-        }
-    } catch (e) {
-        console.warn('获取metadata失败:', e);
-    }
-    
-    // 如果没有daily_commentary，显示比赛列表
-    if (dayMatches.length > 0) {
-        let matchList = '';
-        dayMatches.forEach((m, i) => {
-            const teams = m.teams || '';
-            const time = m.match_time ? new Date(m.match_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
-            matchList += `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-                <span style="color:#6b7280;margin-right:8px;">${i + 1}.</span>
-                <span style="color:#e8eef7;">${teams}</span>
-                <span style="color:#6b7280;margin-left:8px;font-size:11px;">${time}</span>
-            </div>`;
-        });
-        contentEl.innerHTML = `
-            <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">今日 ${dayMatches.length} 场赛事：</div>
-            ${matchList}
-        `;
-    } else {
+    if (todayMatches.length === 0) {
         contentEl.innerHTML = `
             <div style="text-align:center;padding:10px;color:#6b7280;font-size:13px;">
-                今日暂无赛事
+                今日暂无赛事，AI实验室休息中 🧪
             </div>
         `;
+        return;
     }
+    
+    // 生成简报内容
+    let parts = [];
+    let hasAIInfo = false;
+    
+    todayMatches.forEach(m => {
+        let aiSummary = null;
+        if (m.metadata) {
+            try {
+                const meta = typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata;
+                aiSummary = meta.ai_summary;
+            } catch (e) {}
+        }
+        
+        const time = m.match_time ? m.match_time.slice(11, 16) : '';
+        const teams = m.teams || '';
+        const isDone = m.status === 'confirmed' || m.status === '已确认';
+        const score = (isDone && m.home_score !== null && m.home_score !== undefined) 
+            ? ` ${m.home_score}-${m.away_score}` 
+            : '';
+        
+        if (aiSummary && aiSummary.spf) {
+            hasAIInfo = true;
+            const spf = aiSummary.spf;
+            const consensus = spf.consensus || '待定';
+            const rate = spf.consensus_rate || 0;
+            const isDiv = spf.has_divergence || false;
+            const emoji = isDone ? '✅' : '⏳';
+            parts.push(`${time} ${teams}${score}：${emoji} ${consensus}（${rate}%${isDiv ? '·分歧' : ''}）`);
+        } else {
+            parts.push(`${time} ${teams}${score}：⏳ 分析中`);
+        }
+    });
+    
+    // 限制显示长度，最多3条
+    let displayText = parts.slice(0, 3).join('<br>');
+    if (parts.length > 3) {
+        displayText += `<br><span style="color:#6b7280;font-size:12px;">...等${parts.length}场赛事</span>`;
+    }
+    
+    contentEl.innerHTML = `
+        <div style="color:#e8eef7;font-size:13px;line-height:1.7;">
+            ${displayText}
+        </div>
+    `;
 }
 
 // ============================================================
