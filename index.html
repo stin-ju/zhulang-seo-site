@@ -902,52 +902,64 @@ function renderRank() {
 // 渲染：今日简报（显示今日赛事列表）
 // ============================================================
 async function renderBrief() {
+    console.log('🧪 renderBrief called, CURRENT_DATE:', CURRENT_DATE, 'ALL_MATCHES.length:', ALL_MATCHES.length);
     const dateEl = document.getElementById('brief-date');
     const contentEl = document.getElementById('brief-content');
-    if (!contentEl) return;
+    if (!contentEl) {
+        console.error('brief-content element not found');
+        return;
+    }
     
     // 更新日期
     if (dateEl) dateEl.textContent = CURRENT_DATE;
     
-    // 获取今日足球赛事（从已加载的ALL_MATCHES中过滤）
-    const todayMatches = ALL_MATCHES.filter(m => {
-        if (!m.match_time) return false;
-        return fmtDate(m.match_time) === CURRENT_DATE;
-    }).sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
-    
-    if (todayMatches.length === 0) {
+    try {
+        // 获取今日足球赛事（从已加载的ALL_MATCHES中过滤）
+        const todayMatches = ALL_MATCHES.filter(m => {
+            if (!m.match_time) return false;
+            return fmtDate(m.match_time) === CURRENT_DATE;
+        }).sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
+        
+        console.log('🧪 todayMatches:', todayMatches.length);
+        
+        if (todayMatches.length === 0) {
+            contentEl.innerHTML = `
+                <div style="text-align:center;padding:10px;color:#6b7280;font-size:13px;">
+                    今日暂无赛事，AI实验室休息中 🧪
+                </div>
+            `;
+            return;
+        }
+        
+        // 生成简报内容 - 显示比赛列表
+        let parts = [];
+        todayMatches.forEach(m => {
+            const time = m.match_time ? m.match_time.slice(11, 16) : '';
+            const teams = m.teams || '';
+            const isDone = m.status === 'confirmed' || m.status === '已确认';
+            const score = (isDone && m.home_score !== null && m.home_score !== undefined) 
+                ? ` ${m.home_score}-${m.away_score}` 
+                : '';
+            const emoji = isDone ? '✅' : '⏳';
+            parts.push(`${emoji} ${time} ${teams}${score}`);
+        });
+        
+        // 限制显示长度，最多4条
+        let displayText = parts.slice(0, 4).join('<br>');
+        if (parts.length > 4) {
+            displayText += `<br><span style="color:#6b7280;font-size:12px;">...等${parts.length}场赛事</span>`;
+        }
+        
         contentEl.innerHTML = `
-            <div style="text-align:center;padding:10px;color:#6b7280;font-size:13px;">
-                今日暂无赛事，AI实验室休息中 🧪
+            <div style="color:#e8eef7;font-size:13px;line-height:1.7;">
+                ${displayText}
             </div>
         `;
-        return;
+        console.log('🧪 Brief rendered successfully');
+    } catch (error) {
+        console.error('🧪 renderBrief error:', error);
+        contentEl.innerHTML = `<div style="color:#ef4444;font-size:13px;">加载失败: ${error.message}</div>`;
     }
-    
-    // 生成简报内容 - 显示比赛列表
-    let parts = [];
-    todayMatches.forEach(m => {
-        const time = m.match_time ? m.match_time.slice(11, 16) : '';
-        const teams = m.teams || '';
-        const isDone = m.status === 'confirmed' || m.status === '已确认';
-        const score = (isDone && m.home_score !== null && m.home_score !== undefined) 
-            ? ` ${m.home_score}-${m.away_score}` 
-            : '';
-        const emoji = isDone ? '✅' : '⏳';
-        parts.push(`${emoji} ${time} ${teams}${score}`);
-    });
-    
-    // 限制显示长度，最多4条
-    let displayText = parts.slice(0, 4).join('<br>');
-    if (parts.length > 4) {
-        displayText += `<br><span style="color:#6b7280;font-size:12px;">...等${parts.length}场赛事</span>`;
-    }
-    
-    contentEl.innerHTML = `
-        <div style="color:#e8eef7;font-size:13px;line-height:1.7;">
-            ${displayText}
-        </div>
-    `;
 }
 
 // ============================================================
