@@ -325,16 +325,20 @@
                 <div style="font-size:13px;">敬请期待</div>
             </div>
         </div>
-        <a href="/brief.html" class="rank-card" style="text-decoration:none;color:inherit;cursor:pointer;">
+        <div class="rank-card" id="brief-card">
             <div class="head">
                 <span>✍️ 今日简报</span>
                 <span style="font-size:11px;color:#6b7280;" id="brief-date"></span>
             </div>
-            <div style="text-align:center;padding:20px;color:#94a3b8;">
-                <div style="font-size:14px;color:#e8eef7;font-weight:500;" id="brief-title">点击查看今日AI预测简报</div>
-                <div style="font-size:12px;color:#6b7280;margin-top:8px;">包含赛事分析、共识度、分歧点等</div>
+            <div id="brief-content" style="padding:12px 16px;color:#94a3b8;font-size:13px;line-height:1.6;">
+                <div style="text-align:center;padding:20px;color:#94a3b8;">
+                    <div style="font-size:14px;color:#e8eef7;font-weight:500;" id="brief-title">加载中...</div>
+                </div>
             </div>
-        </a>
+            <div style="padding:8px 16px 12px;text-align:right;">
+                <a href="/brief.html" style="font-size:12px;color:#8b5cf6;text-decoration:none;">查看全部简报 →</a>
+            </div>
+        </div>
     </div>
 
     <!-- 底部入口 -->
@@ -895,19 +899,60 @@ function renderRank() {
 }
 
 // ============================================================
-// 渲染：简报（仅设置日期和标题，完整内容在brief.html）
+// 渲染：简报（直接显示内容，不跳转）
 // ============================================================
-function renderBrief() {
+async function renderBrief() {
     const dateEl = document.getElementById('brief-date');
-    const titleEl = document.getElementById('brief-title');
+    const contentEl = document.getElementById('brief-content');
     dateEl.textContent = CURRENT_DATE;
     
-    // 获取今日比赛数量
+    // 获取今日比赛
     const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === CURRENT_DATE);
+    
+    // 尝试获取今日简报的metadata
+    try {
+        const resp = await fetch(`${SB_URL}/rest/v1/metadata?match_date=eq.${CURRENT_DATE}&select=daily_commentary`, {
+            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+        });
+        const meta = await resp.json();
+        
+        if (meta && meta.length > 0 && meta[0].daily_commentary) {
+            // 显示daily_commentary摘要（截取前200字）
+            const commentary = meta[0].daily_commentary;
+            const summary = commentary.length > 200 ? commentary.substring(0, 200) + '...' : commentary;
+            contentEl.innerHTML = `
+                <div style="color:#e8eef7;font-size:13px;line-height:1.7;">
+                    ${summary.replace(/\n/g, '<br>')}
+                </div>
+            `;
+            return;
+        }
+    } catch (e) {
+        console.warn('获取metadata失败:', e);
+    }
+    
+    // 如果没有daily_commentary，显示比赛列表
     if (dayMatches.length > 0) {
-        titleEl.textContent = `点击查看${CURRENT_DATE} AI预测简报（${dayMatches.length}场赛事）`;
+        let matchList = '';
+        dayMatches.forEach((m, i) => {
+            const teams = m.teams || '';
+            const time = m.match_time ? new Date(m.match_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
+            matchList += `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <span style="color:#6b7280;margin-right:8px;">${i + 1}.</span>
+                <span style="color:#e8eef7;">${teams}</span>
+                <span style="color:#6b7280;margin-left:8px;font-size:11px;">${time}</span>
+            </div>`;
+        });
+        contentEl.innerHTML = `
+            <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">今日 ${dayMatches.length} 场赛事：</div>
+            ${matchList}
+        `;
     } else {
-        titleEl.textContent = '点击查看今日AI预测简报';
+        contentEl.innerHTML = `
+            <div style="text-align:center;padding:10px;color:#6b7280;font-size:13px;">
+                今日暂无赛事
+            </div>
+        `;
     }
 }
 
