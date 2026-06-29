@@ -567,7 +567,7 @@ function renderDateBar() {
 function renderPredictionTable(details, match, isDone) {
     const dims = [
         { key: 'spf', label: '胜平负' },
-        { key: 'handicap', label: '让球' },
+        { key: 'handicap', label: `让球(${match.handicap || '?'})` },
         { key: 'score', label: '比分' },
         { key: 'goals', label: '进球数' },
         { key: 'half_full', label: '半全场' }
