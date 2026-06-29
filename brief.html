@@ -1,221 +1,401 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI预测简报 - AI实验室·体彩好伙伴</title>
-<meta name="description" content="每日精选AI预测与复盘，7个AI模型智能分析赛事，只发干货不灌水。">
-<meta name="keywords" content="AI预测,体彩预测,赛事分析,世界杯预测,AI简报">
-<link rel="canonical" href="https://zhulang.coze.site/brief.html">
-<meta property="og:type" content="website">
-<meta property="og:title" content="AI预测简报 - AI实验室·体彩好伙伴">
-<meta property="og:description" content="每日精选AI预测与复盘，只发干货。">
-<meta property="og:url" content="https://zhulang.coze.site/brief.html">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="AI预测简报 - AI实验室·体彩好伙伴">
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "AI预测简报",
-    "description": "每日精选AI预测与复盘，7个AI模型智能分析赛事。",
-    "url": "https://zhulang.coze.site/brief.html",
-    "inLanguage": "zh-CN",
-    "isPartOf": {"@type": "WebSite", "name": "AI实验室-体彩模拟实验", "url": "https://zhulang.coze.site"}
-}
-</script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        base: '#1a0a2e', card: '#241540', elevated: '#2d1b4e',
-        border: '#3d2a5c', accent: '#a855f7', accent2: '#7c3aed',
-        win: '#22c55e', lose: '#ef4444', muted: '#9ca3af', dimmed: '#6b7280',
-      }
-    }
-  }
-}
-</script>
-<style>
-@import url('https://fonts.googleapis.cn/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
-body { font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif; }
-.tabular { font-variant-numeric: tabular-nums; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.2); border-radius: 3px; }
-.commentary-body { font-family: 'Noto Serif SC', serif; }
-.commentary-body p { margin-bottom: 1em; line-height: 1.9; }
-.pin-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI预测简报 - AI实验室·体彩好伙伴</title>
+    <meta name="description" content="每日AI预测简报，汇总7大AI模型对竞彩足球和篮球的预测分析，帮助用户了解AI的预测准确率。">
+    <meta name="keywords" content="AI预测,体彩预测,赛事分析,竞彩足球,竞彩篮球,AI实验室">
+    <link rel="canonical" href="https://zhulang.coze.site/brief.html">
+    <meta property="og:title" content="AI预测简报 - AI实验室·体彩好伙伴">
+    <meta property="og:description" content="每日AI预测简报，汇总7大AI模型对竞彩足球和篮球的预测分析。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://zhulang.coze.site/brief.html">
+    <style>
+        :root {
+            --bg-night: #0B1220;
+            --bg-deep: #0F1A2E;
+            --bg-elevated: #16243D;
+            --turf: #10B981;
+            --turf-soft: rgba(16,185,129,0.15);
+            --gold: #F5C242;
+            --gold-soft: rgba(245,194,66,0.12);
+            --miss: #3F4A60;
+            --text-primary: #E8EEF7;
+            --text-secondary: #94A3B8;
+            --divider: rgba(255,255,255,0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            background: var(--bg-night);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        a { color: inherit; }
+        .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Navbar */
+        .navbar {
+            background: rgba(11, 18, 32, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--divider);
+            padding: 10px 0;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .logo { font-size: 18px; font-weight: 800; color: var(--gold); text-decoration: none; }
+        .logo span { color: var(--text-primary); }
+        .nav-links { display: flex; gap: 2px; flex-wrap: wrap; }
+        .nav-links a {
+            padding: 5px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+        .nav-links a.active { color: var(--gold); background: var(--gold-soft); }
+        
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-elevated) 100%);
+            border-bottom: 1px solid var(--divider);
+            margin-bottom: 24px;
+        }
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--turf) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+        
+        /* Pinned section */
+        .pinned-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .pinned-section a:hover {
+            border-color: var(--gold) !important;
+            transform: translateY(-2px);
+        }
+        
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px;
+            border-top: 1px solid var(--divider);
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 24px; }
+            .hero p { font-size: 13px; }
+        }
+    </style>
 </head>
-<body class="bg-base text-gray-100 min-h-screen flex flex-col">
-<nav class="sticky top-0 z-50 bg-base/90 backdrop-blur-xl border-b border-border">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
-    <div class="flex h-14 items-center justify-between">
-      <a href="/" class="flex items-center gap-2.5 group">
-        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white font-bold text-sm">AI</span>
-        <span class="text-base font-bold text-gray-100 group-hover:text-accent transition-colors hidden sm:inline">AI实验室</span>
-      </a>
-      <div class="flex items-center gap-1">
-        <a href="/" class="rounded-lg px-3 py-1.5 text-sm font-medium text-accent hover:text-gray-100 hover:bg-white/5 transition-colors">🏠 首页</a>
-        <span class="hidden sm:inline w-px h-5 bg-border mx-1"></span>
-        <a href="/" class="sport-switch">⚽ 足球</a>
-        <a href="/basketball.html" class="sport-switch">🏀 篮球</a>
-        <span class="hidden sm:inline w-px h-5 bg-border mx-1"></span>
-        <a href="/brief.html" class="rounded-lg px-3 py-1.5 text-sm font-medium bg-accent/15 text-accent">✍ AI简报</a>
-        <a href="/ai-analysis.html" class="nav-link rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">AI分析预测</a>
-      </div>
-    </div>
-  </div>
-</nav>
-<main class="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6">
-<section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent/20 via-card to-accent2/15 border border-accent/20 p-6 sm:p-8 mb-6">
-  <div class="absolute -top-16 -right-16 w-48 h-48 bg-accent/10 rounded-full blur-3xl"></div>
-  <div class="relative text-center">
-    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">✍️ AI预测简报</h1>
-    <p class="mt-2 text-sm text-muted">精选预测 · 赛后复盘 · 重要热点 · 不灌水</p>
-  </div>
-</section><section class="mb-6"><h2 class="text-lg font-bold mb-4">📌 置顶</h2><div class="space-y-3">
-<a href="/brief-2026-06-30.html" class="block rounded-xl bg-card border border-accent/30 hover:border-accent/60 transition-all p-5 group"><div class="flex items-start gap-3"><span class="pin-badge bg-accent/20 text-accent shrink-0 mt-0.5">📊 预测</span><div class="flex-1 min-w-0"><h3 class="font-bold text-[15px] group-hover:text-accent transition-colors">6月30日 周二 赛事预测</h3><p class="text-sm text-muted mt-1 truncate">朋友们，今天三场球，看点全在数据里。先聊巴西对日本，共识度100%指向巴西胜，比分3-1。巴西前场三人组状态正热，日本队后防面对高压逼抢容易出漏洞。混元模型给出让负，说明巴西可能不会疯狂刷净胜球，但赢...</p><p class="text-xs text-dimmed mt-1">5场赛事 · 06月30日 00:00开赛</p></div><span class="text-accent text-xl group-hover:translate-x-1 transition-transform shrink-0">→</span></div></a>
-<a href="/brief-2026-06-29.html" class="block rounded-xl bg-card border border-border hover:border-accent/40 transition-all p-5 group"><div class="flex items-start gap-3"><span class="pin-badge bg-win/20 text-win shrink-0 mt-0.5">🔁 复盘</span><div class="flex-1 min-w-0"><h3 class="font-bold text-[15px] group-hover:text-accent transition-colors">6月29日 周一 赛后复盘</h3><p class="text-sm text-muted mt-1 truncate">7AI命中率 16/31 (51%) · 最佳: 智谱清言(4/5)</p><p class="text-xs text-dimmed mt-1">5场已完赛</p></div><span class="text-accent text-xl group-hover:translate-x-1 transition-transform shrink-0">→</span></div></a>
-</div></section>
-<!-- 今日热点新闻 -->
-<section class="mb-8 fade-in">
-  <h2 class="text-lg font-bold mb-4">🔥 2026年06月30日 热点新闻</h2>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="rounded-xl bg-card border border-border overflow-hidden">
-      <div class="px-4 py-3 border-b border-border/50 flex items-center gap-2">
-        <span class="text-base">🔴</span>
-        <span class="text-sm font-semibold text-gray-100">微博热搜</span>
-        <span class="text-xs text-muted ml-auto">实时更新</span>
-      </div>
-      <div class="p-2 space-y-0.5">
-        <a href="https://s.weibo.com/weibo?q=%E5%B7%B4%E8%A5%BF%E7%BB%9D%E6%9D%80" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#f59e0b">1</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">巴西绝杀<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">148万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E6%97%A5%E6%9C%AC%E6%B7%98%E6%B1%B0" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#f59e0b">2</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">日本淘汰<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">62万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E8%BF%99%E4%BA%9B7%E6%9C%88%E6%96%B0%E8%A7%84%E5%BD%B1%E5%93%8D%E4%BD%A0%E6%88%91" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#f59e0b">3</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">这些7月新规影响你我<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">31万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E5%BE%B7%E5%9B%BDvs%E5%B7%B4%E6%8B%89%E5%9C%AD" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">4</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">德国vs巴拉圭<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">27万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E5%B7%B4%E8%A5%BF2%E6%AF%941%E6%97%A5%E6%9C%AC" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">5</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">巴西2比1日本<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">19万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E5%B7%B4%E8%A5%BF%E9%86%92%E9%86%92%20%E8%BF%99%E6%98%AF%E6%B7%98%E6%B1%B0%E8%B5%9B" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">6</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">巴西醒醒 这是淘汰赛<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">14万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E9%A9%AC%E8%88%AAMH370%E4%BC%A0%E6%9D%A5%E6%9C%80%E6%96%B0%E6%B6%88%E6%81%AF" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">7</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">马航MH370传来最新消息<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">12万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E7%88%B1%E7%9B%B4%E6%8E%A5%E5%AF%B9%E5%98%B4%E5%96%9D%E9%A5%AE%E6%96%99%E7%9A%84%E4%BA%BA%E5%A4%A9%E5%A1%8C%E4%BA%86" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">8</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">爱直接对嘴喝饮料的人天塌了<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">11万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E6%81%8B%E4%B8%8E%E6%B7%B1%E7%A9%BA%E5%9B%9E%E5%BA%94%E4%BA%89%E8%AE%AE" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">9</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">恋与深空回应争议<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">10万</span>
-        </a>
-        <a href="https://s.weibo.com/weibo?q=%E5%AD%99%E5%85%B4%E6%85%9C%E9%81%93%E6%AD%89" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">10</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">孙兴慜道歉<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">9万</span>
-        </a>
-      </div>
-    </div>
-    <div class="rounded-xl bg-card border border-border overflow-hidden">
-      <div class="px-4 py-3 border-b border-border/50 flex items-center gap-2">
-        <span class="text-base">📰</span>
-        <span class="text-sm font-semibold text-gray-100">头条热榜</span>
-        <span class="text-xs text-muted ml-auto">实时更新</span>
-      </div>
-      <div class="p-2 space-y-0.5">
-        <a href="https://www.toutiao.com/trending/7656885041292722222" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#ef4444">1</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">巴西绝杀日本<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">2103万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7655812439468998675" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#ef4444">2</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">中国对日本再出重拳<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">1903万</span>
-        </a>
-        <a href="https://www.toutiao.com/article/7656739930353254966" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#ef4444">3</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">未来五年，教育强国这样建设<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">1722万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7655989484927959059" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">4</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">亚洲球队全部告别世界杯<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">1558万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7655885086147182611" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">5</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">中国代表在联合国点名日本所犯罪行<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">1410万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7655945032872034323" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">6</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">德国vs巴拉圭<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">1275万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7655914624688816179" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">7</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">巴西把自己踢晕了<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">1154万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7656678655938789412" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">8</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">女子发现孩子非现任亲生状告前任索赔<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">1044万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7656222205965221898" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">9</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">杨某诋毁袁隆平院士科研成果被刑拘<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">945万</span>
-        </a>
-        <a href="https://www.toutiao.com/trending/7656886036429098506" target="_blank" rel="noopener" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-          <span class="w-5 text-center text-sm font-bold tabular" style="color:#6b7280">10</span>
-          <span class="flex-1 text-sm text-gray-200 group-hover:text-white truncate">卡塞米罗头球破门<span class="text-xs text-muted ml-1">(6/30)</span></span>
-          <span class="text-xs text-muted tabular">855万</span>
-        </a>
-      </div>
-    </div>
-  </div>
-  <p class="text-xs text-muted mt-2 text-center">数据来源：微博、今日头条 · 仅供参考</p>
-</section>
-</main>
-<footer class="border-t border-border py-5 mt-auto">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs text-dimmed">
-    <p>2026 世界杯 AI 预测大竞赛 · 数据仅供 AI 能力评测</p>
-    <p class="mt-1">
-      <a href="/" class="text-accent hover:underline">足球预测</a> · 
-      <a href="/basketball.html" class="text-accent hover:underline">篮球预测</a> · 
-      <a href="/brief.html" class="text-accent hover:underline">AI简报</a>
-    </p>
-  </div>
-</footer>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">AI实验室<span>·</span>体彩好伙伴</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/brief.html" class="active">简报</a>
+                <a href="/calculator.html">计算器</a>
+                <a href="/ai-analysis.html">AI分析</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero -->
+    <section class="hero">
+        <h1>AI预测简报</h1>
+        <p>每日AI预测汇总，7大AI模型为您分析赛事</p>
+    </section>
+    
+    <main class="container">
+        <!-- All Briefs List (Collapsible) -->
+        <section style="margin-bottom:24px;">
+            <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                📋 全部简报 <span style="font-size:14px;color:var(--text-secondary);font-weight:400;">(21篇)</span>
+            </h2>
+            <div class="brief-list">
+                
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">🔮</span>
+                <span style="flex:1;font-weight:500;">7月2日 周四 AI预测简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">3场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-07-02.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">7月1日 周三 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-07-01.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月30日 周二 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">5场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-30.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月29日 周一 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">5场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-29.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月28日 周日 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">6场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-28.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月27日 周六 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">6场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-27.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月26日 周五 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">6场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-26.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月25日 周四 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">6场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-25.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月24日 周三 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-24.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月23日 周二 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-23.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月22日 周一 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-22.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月21日 周日 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-21.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月20日 周六 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-20.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月19日 周五 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-19.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月18日 周四 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-18.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月17日 周三 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-17.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月16日 周二 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-16.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月15日 周一 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-15.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月14日 周日 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">4场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-14.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月13日 周六 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">2场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-13.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">📊</span>
+                <span style="flex:1;font-weight:500;">6月12日 周五 AI复盘简报</span>
+                <span style="font-size:12px;color:var(--text-secondary);">2场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="/brief-2026-06-12.html" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>AI实验室·体彩好伙伴 - 数据仅供参考，请理性看待</p>
+    </footer>
 </body>
 </html>
