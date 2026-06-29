@@ -259,29 +259,47 @@ def fetch_metadata_for_date(date_str):
 
 def generate_brief_page(news_data, all_dates):
     """
-    Generate the brief index page HTML with a list of article titles.
-    Returns (html, article_list) where article_list contains info for each date.
+    Generate the brief index page HTML with pinned articles (today's prediction + yesterday's review).
+    Returns (html, article_list) where article_list contains only 2 articles.
     """
     today = datetime.now()
     today_str = today.strftime("%Y-%m-%d")
     
-    # Generate article list
+    # Only generate 2 articles: latest date (prediction) and second latest date (review)
     article_list = []
-    for date_str in all_dates:
-        matches = fetch_matches_for_date(date_str)
-        metadata = fetch_metadata_for_date(date_str)
+    
+    # Latest date - today's prediction
+    if len(all_dates) >= 1:
+        latest_date = all_dates[0]
+        matches = fetch_matches_for_date(latest_date)
+        metadata = fetch_metadata_for_date(latest_date)
         article_list.append({
-            'date': date_str,
+            'date': latest_date,
             'matches': matches,
             'metadata': metadata,
-            'match_count': len(matches)
+            'match_count': len(matches),
+            'type': 'prediction'  # 今日预测
         })
     
-    # Build article list HTML
-    article_items_html = ''
+    # Second latest date - yesterday's review
+    if len(all_dates) >= 2:
+        second_date = all_dates[1]
+        matches = fetch_matches_for_date(second_date)
+        metadata = fetch_metadata_for_date(second_date)
+        article_list.append({
+            'date': second_date,
+            'matches': matches,
+            'metadata': metadata,
+            'match_count': len(matches),
+            'type': 'review'  # 昨日复盘
+        })
+    
+    # Build pinned articles HTML
+    pinned_html = ''
     for article in article_list:
         date_str = article['date']
         match_count = article['match_count']
+        article_type = article.get('type', 'prediction')
         metadata = article.get('metadata')
         
         # Format date for display
@@ -294,18 +312,36 @@ def generate_brief_page(news_data, all_dates):
             display_date = date_str
             display_date_full = date_str
         
-        # Get title from metadata or generate one
-        if metadata and metadata.get('title'):
-            title = metadata['title']
+        # Get title and icon based on type
+        if article_type == 'prediction':
+            icon = '🔮'
+            type_label = '今日预测'
+            type_color = 'var(--gold)'
+            type_bg = 'var(--gold-soft)'
+            if metadata and metadata.get('title'):
+                title = metadata['title']
+            else:
+                title = f"{display_date_full} AI预测简报"
         else:
-            title = f"{display_date_full} AI预测简报"
+            icon = '📊'
+            type_label = '昨日复盘'
+            type_color = 'var(--turf)'
+            type_bg = 'var(--turf-soft)'
+            if metadata and metadata.get('title'):
+                title = metadata['title']
+            else:
+                title = f"{display_date_full} AI复盘简报"
         
         # Generate article URL
         article_url = f"/brief-{date_str}.html"
         
-        article_items_html += f'''
-        <a href="{article_url}" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
+        pinned_html += f'''
+        <a href="{article_url}" style="display:flex;align-items:center;gap:16px;padding:20px 24px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div style="font-size:32px;">{icon}</div>
+            <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:{type_bg};color:{type_color};font-weight:600;">{type_label}</span>
+                </div>
                 <div style="font-size:16px;font-weight:600;margin-bottom:4px;">{title}</div>
                 <div style="font-size:13px;color:var(--text-secondary);">{display_date_full} · {match_count}场赛事</div>
             </div>
@@ -398,14 +434,14 @@ def generate_brief_page(news_data, all_dates):
             color: var(--text-secondary);
         }}
         
-        /* Article list */
-        .article-list {{
+        /* Pinned section */
+        .pinned-section {{
             display: flex;
             flex-direction: column;
             gap: 12px;
             margin-bottom: 24px;
         }}
-        .article-list a:hover {{
+        .pinned-section a:hover {{
             border-color: var(--gold) !important;
             transform: translateY(-2px);
         }}
@@ -446,18 +482,17 @@ def generate_brief_page(news_data, all_dates):
     </section>
     
     <main class="container">
-        {generate_news_html(news_data)}
-        
-        <!-- Article List -->
+        <!-- Pinned Section: Today's Prediction + Yesterday's Review -->
         <section style="margin-bottom:24px;">
             <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-                📋 历史简报
-                <span style="font-size:13px;font-weight:400;color:var(--text-secondary);">共 {len(all_dates)} 期</span>
+                📌 最新简报
             </h2>
-            <div class="article-list">
-                {article_items_html}
+            <div class="pinned-section">
+                {pinned_html}
             </div>
         </section>
+        
+        {generate_news_html(news_data)}
     </main>
     
     <footer>
@@ -478,6 +513,7 @@ def generate_brief_article(article, news_data):
     matches = article['matches']
     metadata = article.get('metadata')
     match_count = article['match_count']
+    article_type = article.get('type', 'prediction')
     
     # Format date for display
     try:
@@ -489,8 +525,15 @@ def generate_brief_article(article, news_data):
         display_date = date_str
         display_date_full = date_str
     
-    # Get title and commentary from metadata
-    title = f"{display_date_full} AI预测简报"
+    # Get title and commentary from metadata, with type-based defaults
+    if article_type == 'review':
+        default_title = f"{display_date_full} AI复盘简报"
+        section_title = "📊 AI复盘"
+    else:
+        default_title = f"{display_date_full} AI预测简报"
+        section_title = "🔮 AI总评"
+    
+    title = default_title
     commentary = ""
     if metadata:
         if metadata.get('title'):
@@ -708,7 +751,7 @@ def generate_brief_article(article, news_data):
         </div>
         
         <!-- Commentary -->
-        {f'<div class="commentary"><h2>AI总评</h2><p>{commentary}</p></div>' if commentary else ''}
+        {f'<div class="commentary"><h2>{section_title}</h2><p>{commentary}</p></div>' if commentary else ''}
         
         <!-- Matches -->
         <div class="matches-section">
@@ -753,8 +796,9 @@ def main():
         f.write(brief_html)
     print(f"✓ brief.html 已生成")
     
-    # Generate individual article pages
+    # Generate individual article pages (only 2: latest + second latest)
     print("生成独立文章页...")
+    article_dates_for_sitemap = []
     for article in article_list:
         date_str = article['date']
         article_html = generate_brief_article(article, news_data)
@@ -762,10 +806,11 @@ def main():
         with open(article_path, 'w', encoding='utf-8') as f:
             f.write(article_html)
         print(f"✓ brief-{date_str}.html 已生成")
+        article_dates_for_sitemap.append(date_str)
     
-    # Generate sitemap
+    # Generate sitemap (only include the 2 generated article pages)
     sitemap_urls = ['https://zhulang.coze.site/', 'https://zhulang.coze.site/brief.html']
-    for date_str in all_dates:
+    for date_str in article_dates_for_sitemap:
         sitemap_urls.append(f'https://zhulang.coze.site/brief-{date_str}.html')
     
     sitemap_xml = '''<?xml version="1.0" encoding="UTF-8"?>

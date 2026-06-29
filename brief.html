@@ -83,14 +83,14 @@
             color: var(--text-secondary);
         }
         
-        /* Article list */
-        .article-list {
+        /* Pinned section */
+        .pinned-section {
             display: flex;
             flex-direction: column;
             gap: 12px;
             margin-bottom: 24px;
         }
-        .article-list a:hover {
+        .pinned-section a:hover {
             border-color: var(--gold) !important;
             transform: translateY(-2px);
         }
@@ -131,6 +131,40 @@
     </section>
     
     <main class="container">
+        <!-- Pinned Section: Today's Prediction + Yesterday's Review -->
+        <section style="margin-bottom:24px;">
+            <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                📌 最新简报
+            </h2>
+            <div class="pinned-section">
+                
+        <a href="/brief-2026-07-02.html" style="display:flex;align-items:center;gap:16px;padding:20px 24px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div style="font-size:32px;">🔮</div>
+            <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:var(--gold-soft);color:var(--gold);font-weight:600;">今日预测</span>
+                </div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">7月2日 周四 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">7月2日 周四 · 3场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
+
+        <a href="/brief-2026-07-01.html" style="display:flex;align-items:center;gap:16px;padding:20px 24px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div style="font-size:32px;">📊</div>
+            <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:var(--turf-soft);color:var(--turf);font-weight:600;">昨日复盘</span>
+                </div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">7月1日 周三 AI复盘简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">7月1日 周三 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
+
+            </div>
+        </section>
+        
         
     <!-- ===== 每日热点新闻 ===== -->
     <section style="margin-bottom:24px;">
@@ -165,43 +199,43 @@
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">4</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西醒醒 这是淘汰赛</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">5</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">日本进球</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">6</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">孙兴慜道歉</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">7</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西2比1日本</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">8</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西扳平比分</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">9</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">日本淘汰</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">5</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西2比1日本</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">6</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西醒醒 这是淘汰赛</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">7</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">孙兴慜道歉</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">8</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">日本进球</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">9</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西扳平比分</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">10</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">爱直接对嘴喝饮料的人天塌了</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">恋与深空回应争议</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
@@ -220,7 +254,7 @@
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--turf-soft);text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--turf);min-width:20px;">2</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">卡塞米罗头球破门</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">宜宾地震食客避难后折返 无人逃单</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
@@ -232,13 +266,13 @@
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">4</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">宜宾地震食客避难后折返 无人逃单</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">中国对日本再出重拳</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">5</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">中国对日本再出重拳</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">本科毕业生为何涌入专科学校</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
@@ -250,13 +284,13 @@
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">7</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">本科毕业生为何涌入专科学校</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">中国代表在联合国点名日本所犯罪行</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">8</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">中国代表在联合国点名日本所犯罪行</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">国内最大沙漠发洪水意味着什么</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
@@ -268,7 +302,7 @@
 
                 <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">10</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">美加墨世界杯：亚洲足球的得意与失意</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">卡塞米罗头球破门</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
                 </a>
 
@@ -276,185 +310,6 @@
         </div>
     </section>
 
-        
-        <!-- Article List -->
-        <section style="margin-bottom:24px;">
-            <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-                📋 历史简报
-                <span style="font-size:13px;font-weight:400;color:var(--text-secondary);">共 21 期</span>
-            </h2>
-            <div class="article-list">
-                
-        <a href="/brief-2026-07-02.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">7月2日 周四 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">7月2日 周四 · 3场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-07-01.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">7月1日 周三 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">7月1日 周三 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-30.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月30日 周二 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月30日 周二 · 5场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-29.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月29日 周一 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月29日 周一 · 5场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-28.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月28日 周日 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月28日 周日 · 6场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-27.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月27日 周六 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月27日 周六 · 6场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-26.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月26日 周五 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月26日 周五 · 6场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-25.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月25日 周四 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月25日 周四 · 6场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-24.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月24日 周三 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月24日 周三 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-23.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月23日 周二 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月23日 周二 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-22.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月22日 周一 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月22日 周一 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-21.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月21日 周日 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月21日 周日 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-20.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月20日 周六 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月20日 周六 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-19.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月19日 周五 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月19日 周五 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-18.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月18日 周四 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月18日 周四 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-17.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月17日 周三 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月17日 周三 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-16.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月16日 周二 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月16日 周二 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-15.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月15日 周一 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月15日 周一 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-14.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月14日 周日 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月14日 周日 · 4场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-13.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月13日 周六 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月13日 周六 · 2场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-        <a href="/brief-2026-06-12.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-            <div>
-                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月12日 周五 AI预测简报</div>
-                <div style="font-size:13px;color:var(--text-secondary);">6月12日 周五 · 2场赛事</div>
-            </div>
-            <div style="font-size:20px;color:var(--text-secondary);">→</div>
-        </a>
-
-            </div>
-        </section>
     </main>
     
     <footer>
