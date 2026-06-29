@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI预测简报 - AI实验室·体彩好伙伴</title>
+    <meta name="description" content="AI实验室每日简报，汇总7大AI模型对今日赛事的预测分析，包括共识度、分歧点、预测命中率等数据。">
+    <meta name="keywords" content="AI预测,体彩预测,赛事分析,AI简报,预测命中率">
+    <link rel="canonical" href="https://zhulang.coze.site/brief.html">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a0a2e;
+            color: #e8eef7;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #2d1b4e 0%, #1a0a2e 100%);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(245, 194, 66, 0.2);
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #F5C242;
+            margin-bottom: 8px;
+        }
+        .header .date {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+        .brief-content {
+            background: #2d1b4e;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 24px;
+        }
+        .brief-content h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #F5C242;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .brief-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #e8eef7;
+        }
+        .brief-text .hl { color: #8b5cf6; font-weight: 600; }
+        .brief-text .dv { color: #fbbf24; font-weight: 600; }
+        .back-link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(245, 194, 66, 0.1);
+            border: 1px solid rgba(245, 194, 66, 0.3);
+            border-radius: 8px;
+            color: #F5C242;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .back-link:hover {
+            background: rgba(245, 194, 66, 0.2);
+            transform: translateY(-1px);
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✍️ AI预测简报</h1>
+            <div class="date" id="brief-date">加载中...</div>
+        </div>
+        
+        <div class="brief-content">
+            <h2>今日赛事分析</h2>
+            <div class="brief-text" id="brief-text">
+                <div class="loading">正在加载简报内容...</div>
+            </div>
+        </div>
+        
+        <a href="/" class="back-link">← 返回首页</a>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM';
+        
+        let ALL_MATCHES = [];
+        let ALL_PREDICTIONS = [];
+
+        function fmtDate(iso) {
+            const d = new Date(iso);
+            const m = (d.getMonth() + 1).toString().padStart(2, '0');
+            const day = d.getDate().toString().padStart(2, '0');
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            return `${m}/${day} ${weekdays[d.getDay()]}`;
+        }
+
+        function esc(s) {
+            const div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        async function loadData() {
+            try {
+                const [matchesRes, predictionsRes] = await Promise.all([
+                    fetch(`${SUPABASE_URL}/rest/v1/matches?select=*`, { headers: { 'apikey': SUPABASE_KEY } }),
+                    fetch(`${SUPABASE_URL}/rest/v1/predictions?select=*`, { headers: { 'apikey': SUPABASE_KEY } })
+                ]);
+                ALL_MATCHES = await matchesRes.json();
+                ALL_PREDICTIONS = await predictionsRes.json();
+                renderBrief();
+            } catch (e) {
+                console.error('加载数据失败:', e);
+                document.getElementById('brief-text').textContent = '加载数据失败，请稍后重试。';
+            }
+        }
+
+        function computeVotes(matchId) {
+            const preds = ALL_PREDICTIONS.filter(p => p.match_id === matchId);
+            const votes = { '胜': 0, '平': 0, '负': 0 };
+            const details = [];
+            
+            for (const p of preds) {
+                if (p.spf && votes[p.spf] !== undefined) {
+                    votes[p.spf]++;
+                }
+                details.push({
+                    ai: p.ai_name,
+                    spf: p.spf || '-',
+                    score: p.score || '-',
+                    handicap: p.handicap_spf || '-'
+                });
+            }
+            
+            const total = preds.length;
+            const consensus = Object.entries(votes).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0]);
+            const consensusRate = total > 0 ? Math.round((consensus[1] / total) * 100) : 0;
+            
+            return { votes, details, total, consensus: consensus[0], consensusRate };
+        }
+
+        function renderBrief() {
+            const dateEl = document.getElementById('brief-date');
+            const textEl = document.getElementById('brief-text');
+            
+            // 使用当前日期
+            const now = new Date();
+            const m = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const currentDate = `${m}/${day} ${weekdays[now.getDay()]}`;
+            dateEl.textContent = currentDate;
+
+            // 尝试从 metadata.daily_commentary 提取简报
+            const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === currentDate);
+            let commentary = '';
+
+            for (const m of dayMatches) {
+                if (m.metadata) {
+                    try {
+                        const meta = typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata;
+                        if (meta.daily_commentary) {
+                            commentary = meta.daily_commentary;
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            if (commentary) {
+                // 显示完整简报
+                const paragraphs = commentary.split('\n\n');
+                let html = '';
+                for (const p of paragraphs) {
+                    const highlighted = esc(p)
+                        .replace(/(\d+%)/g, '<span class="hl">$1</span>')
+                        .replace(/(共识|分歧|看胜|看负|看平)/g, '<span class="dv">$1</span>');
+                    html += `<p style="margin-bottom: 16px;">${highlighted}</p>`;
+                }
+                textEl.innerHTML = html;
+            } else if (dayMatches.length === 0) {
+                textEl.textContent = '该日期暂无赛事数据。';
+            } else {
+                // 自动生成简报
+                const enriched = dayMatches.map(m => ({ ...m, ...computeVotes(m.id) }));
+                const withVotes = enriched.filter(m => m.total > 0);
+                const highConsensus = withVotes.filter(m => m.consensusRate >= 85);
+                const divergent = withVotes.filter(m => m.consensusRate < 70);
+
+                let text = currentDate + ' 共 ' + dayMatches.length + ' 场赛事。';
+                if (highConsensus.length > 0) {
+                    text += '其中 ' + highConsensus.length + ' 场AI高度共识（≥85%）。';
+                }
+                if (divergent.length > 0) {
+                    text += ' ' + divergent.length + ' 场出现明显分歧。';
+                }
+                if (withVotes.length === 0) {
+                    text += 'AI预测数据加载中...';
+                }
+                
+                // 添加比赛详情
+                text += '<br><br><strong>赛事详情：</strong><br>';
+                for (const m of enriched) {
+                    if (m.total > 0) {
+                        text += `<br>• ${m.teams} - ${m.consensus || '无'}（${m.consensusRate}%共识）`;
+                    }
+                }
+                
+                textEl.innerHTML = text;
+            }
+        }
+
+        // 加载数据
+        loadData();
+    </script>
+</body>
+</html>

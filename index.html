@@ -324,13 +324,16 @@
                 <div style="font-size:13px;">敬请期待</div>
             </div>
         </div>
-        <div class="rank-card">
+        <a href="/brief.html" class="rank-card" style="text-decoration:none;color:inherit;cursor:pointer;">
             <div class="head">
                 <span>✍️ 今日简报</span>
                 <span style="font-size:11px;color:#6b7280;" id="brief-date"></span>
             </div>
-            <div class="brief-text" id="brief-text">加载中...</div>
-        </div>
+            <div style="text-align:center;padding:20px;color:#94a3b8;">
+                <div style="font-size:14px;color:#e8eef7;font-weight:500;" id="brief-title">点击查看今日AI预测简报</div>
+                <div style="font-size:12px;color:#6b7280;margin-top:8px;">包含赛事分析、共识度、分歧点等</div>
+            </div>
+        </a>
     </div>
 
     <!-- 底部入口 -->
@@ -891,58 +894,19 @@ function renderRank() {
 }
 
 // ============================================================
-// 渲染：简报
+// 渲染：简报（仅设置日期和标题，完整内容在brief.html）
 // ============================================================
 function renderBrief() {
     const dateEl = document.getElementById('brief-date');
-    const textEl = document.getElementById('brief-text');
+    const titleEl = document.getElementById('brief-title');
     dateEl.textContent = CURRENT_DATE;
-
-    // 尝试从 metadata.daily_commentary 提取简报
+    
+    // 获取今日比赛数量
     const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === CURRENT_DATE);
-    let commentary = '';
-
-    for (const m of dayMatches) {
-        if (m.metadata) {
-            try {
-                const meta = typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata;
-                if (meta.daily_commentary) {
-                    commentary = meta.daily_commentary;
-                    break;
-                }
-            } catch (e) {}
-        }
-    }
-
-    if (commentary) {
-        // 截取第一段作为简报
-        const paragraphs = commentary.split('\n\n');
-        const brief = paragraphs[0] || commentary;
-        // 高亮关键信息
-        const highlighted = esc(brief)
-            .replace(/(\d+%)/g, '<span class="hl">$1</span>')
-            .replace(/(共识|分歧|看胜|看负|看平)/g, '<span class="dv">$1</span>');
-        textEl.innerHTML = highlighted;
-    } else if (dayMatches.length === 0) {
-        textEl.textContent = '该日期暂无赛事数据。';
+    if (dayMatches.length > 0) {
+        titleEl.textContent = `点击查看${CURRENT_DATE} AI预测简报（${dayMatches.length}场赛事）`;
     } else {
-        // 自动生成简报
-        const enriched = dayMatches.map(m => ({ ...m, ...computeVotes(m.id) }));
-        const withVotes = enriched.filter(m => m.total > 0);
-        const highConsensus = withVotes.filter(m => m.consensusRate >= 85);
-        const divergent = withVotes.filter(m => m.consensusRate < 70);
-
-        let text = CURRENT_DATE + ' 共 ' + dayMatches.length + ' 场赛事。';
-        if (highConsensus.length > 0) {
-            text += '其中 ' + highConsensus.length + ' 场AI高度共识（≥85%）。';
-        }
-        if (divergent.length > 0) {
-            text += ' ' + divergent.length + ' 场出现明显分歧。';
-        }
-        if (withVotes.length === 0) {
-            text += 'AI预测数据加载中...';
-        }
-        textEl.textContent = text;
+        titleEl.textContent = '点击查看今日AI预测简报';
     }
 }
 
