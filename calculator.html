@@ -8,7 +8,6 @@
     <meta name="keywords" content="体彩计算器,竞彩足球,竞彩篮球,串关计算,奖金优化" />
     <link rel="canonical" href="https://zhulang.coze.site/calculator.html" />
     <style>
-        /* ===== 全局样式 ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
@@ -17,8 +16,6 @@
             min-height: 100vh;
         }
         .container { max-width: 820px; margin: 0 auto; padding: 20px; }
-
-        /* ===== 导航 ===== */
         .navbar {
             background: rgba(11, 18, 32, 0.92);
             backdrop-filter: blur(12px);
@@ -43,8 +40,6 @@
         }
         .nav-links a:hover { color: #E8EEF7; background: rgba(255, 255, 255, 0.04); }
         .nav-links a.active { color: #F5C242; background: rgba(245, 194, 66, 0.12); }
-
-        /* ===== 卡片 ===== */
         .card {
             background: #0F1A2E;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -65,14 +60,12 @@
             font-weight: 400;
             color: #94A3B8;
         }
-
-        /* ===== 表单 ===== */
         .form-row {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             flex-wrap: wrap;
         }
         .form-row .label {
@@ -81,38 +74,21 @@
             width: 120px;
             flex-shrink: 0;
         }
-        .form-row .label-sm {
-            width: 80px;
-        }
-        .form-row input, .form-row select {
+        .form-row select, .form-row input {
             background: #16243D;
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 8px;
             padding: 8px 12px;
             color: #E8EEF7;
             font-size: 14px;
-            width: 100px;
             transition: border 0.2s;
         }
-        .form-row input:focus, .form-row select:focus {
+        .form-row select:focus, .form-row input:focus {
             outline: none;
             border-color: #F5C242;
         }
+        .form-row select { width: 100px; }
         .form-row input { width: 80px; }
-        .form-row .odds-input { width: 100px; }
-
-        .form-row .remove-btn {
-            background: transparent;
-            border: 1px solid #EF4444;
-            color: #EF4444;
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .form-row .remove-btn:hover { background: rgba(239, 68, 68, 0.1); }
-
         .btn {
             padding: 8px 20px;
             border-radius: 8px;
@@ -127,12 +103,7 @@
         .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); color: #94A3B8; }
         .btn-secondary:hover { border-color: #F5C242; color: #E8EEF7; }
         .btn-sm { padding: 4px 14px; font-size: 12px; }
-        .btn-danger { background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-        .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
-
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-
-        /* ===== 结果区 ===== */
         .result-box {
             background: #16243D;
             border-radius: 12px;
@@ -150,30 +121,6 @@
         .result-box .item .val.win { color: #10B981; }
         .result-box .item .val.highlight { color: #F5C242; }
         .result-box .divider { border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 8px 0; }
-
-        /* ===== 投注方案 ===== */
-        .scheme-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-            margin-top: 8px;
-        }
-        @media (max-width: 600px) { .scheme-grid { grid-template-columns: 1fr 1fr; } }
-        .scheme-card {
-            background: #16243D;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            padding: 12px 14px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .scheme-card:hover { border-color: #F5C242; }
-        .scheme-card.active { border-color: #F5C242; background: rgba(245, 194, 66, 0.06); }
-        .scheme-card .name { font-size: 13px; font-weight: 600; }
-        .scheme-card .desc { font-size: 11px; color: #94A3B8; }
-
-        /* ===== Tab切换 ===== */
         .tabs {
             display: flex;
             gap: 4px;
@@ -201,8 +148,6 @@
         }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
-        /* ===== 彩种选择 ===== */
         .lottery-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -229,28 +174,35 @@
             color: #F5C242;
         }
         .lottery-btn .icon { font-size: 20px; display: block; margin-bottom: 2px; }
-
-        /* ===== 响应式 ===== */
+        .match-select {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .match-select select {
+            width: 100%;
+        }
+        .match-info {
+            font-size: 12px;
+            color: #94A3B8;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #94A3B8;
+        }
         @media (max-width: 600px) {
             .form-row .label { width: 70px; font-size: 13px; }
             .form-row input { width: 60px; }
-            .form-row .odds-input { width: 70px; }
             .card { padding: 16px; }
             .result-box .item { font-size: 13px; }
         }
-
-        /* ===== 提示 ===== */
-        .hint {
-            font-size: 12px;
-            color: #94A3B8;
-            margin-top: 4px;
-        }
-        .hint .key { color: #F5C242; }
     </style>
 </head>
 <body>
 
-<!-- ===== 导航 ===== -->
 <nav class="navbar">
     <div class="container">
         <a href="/" class="logo">AI实验室<span> · </span>体彩好伙伴</a>
@@ -262,16 +214,12 @@
     </div>
 </nav>
 
-<!-- ===== 主内容 ===== -->
 <main class="container">
-
-    <!-- ===== 标题 ===== -->
     <section style="padding: 12px 0 8px;">
         <h1 style="font-size: 28px; font-weight: 900;">体彩奖金计算器</h1>
-        <p style="color: #94A3B8; font-size: 14px; margin-top: 4px;">串关奖金 · 优化建议 · 快速计算</p>
+        <p style="color: #94A3B8; font-size: 14px; margin-top: 4px;">从数据库加载真实比赛赔率 · 串关奖金计算</p>
     </section>
 
-    <!-- ===== 彩种选择 ===== -->
     <div class="card">
         <div class="lottery-grid" id="lotteryType">
             <button class="lottery-btn active" data-type="football">
@@ -289,67 +237,32 @@
         </div>
     </div>
 
-    <!-- ========================================================== -->
     <!-- Tab1: 竞彩足球 -->
-    <!-- ========================================================== -->
     <div class="tab-content active" id="tab-football">
         <div class="card">
             <div class="card-title">
                 ⚽ 竞彩足球串关
-                <span class="sub">— 添加比赛，计算奖金</span>
+                <span class="sub">— 从数据库选择比赛</span>
             </div>
 
-            <!-- 串关方式 -->
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
                 <button class="btn btn-secondary btn-sm" data-pass="2串1">2串1</button>
                 <button class="btn btn-primary btn-sm" data-pass="3串1">3串1</button>
                 <button class="btn btn-secondary btn-sm" data-pass="4串1">4串1</button>
                 <button class="btn btn-secondary btn-sm" data-pass="3串4">3串4</button>
                 <button class="btn btn-secondary btn-sm" data-pass="4串5">4串5</button>
-                <button class="btn btn-secondary btn-sm" data-pass="自由组合">自由组合</button>
             </div>
 
-            <!-- 比赛列表 -->
             <div id="footballMatches">
-                <div class="form-row">
-                    <span class="label">比赛1</span>
-                    <select class="result-type">
-                        <option value="胜">胜</option>
-                        <option value="平">平</option>
-                        <option value="负">负</option>
-                    </select>
-                    <input type="number" class="odds-input" value="1.85" step="0.01" placeholder="赔率" />
-                    <button class="remove-btn" style="visibility:hidden;">删除</button>
-                </div>
-                <div class="form-row">
-                    <span class="label">比赛2</span>
-                    <select class="result-type">
-                        <option value="胜">胜</option>
-                        <option value="平">平</option>
-                        <option value="负">负</option>
-                    </select>
-                    <input type="number" class="odds-input" value="2.10" step="0.01" placeholder="赔率" />
-                    <button class="remove-btn" style="visibility:hidden;">删除</button>
-                </div>
-                <div class="form-row">
-                    <span class="label">比赛3</span>
-                    <select class="result-type">
-                        <option value="胜">胜</option>
-                        <option value="平">平</option>
-                        <option value="负">负</option>
-                    </select>
-                    <input type="number" class="odds-input" value="1.65" step="0.01" placeholder="赔率" />
-                    <button class="remove-btn" style="visibility:hidden;">删除</button>
-                </div>
+                <div class="loading">正在加载比赛数据...</div>
             </div>
 
             <div class="btn-group">
-                <button class="btn btn-secondary btn-sm" id="addMatch">＋ 添加比赛</button>
+                <button class="btn btn-secondary btn-sm" id="addFootballMatch">＋ 添加比赛</button>
                 <button class="btn btn-primary" id="calcFootball">💰 计算奖金</button>
                 <button class="btn btn-secondary" id="clearFootball">清空</button>
             </div>
 
-            <!-- 结果 -->
             <div id="footballResult" class="result-box" style="display:none;">
                 <div class="item"><span>串关方式</span><span class="val" id="fbPassType">3串1</span></div>
                 <div class="item"><span>投注金额</span><span class="val">2 元</span></div>
@@ -363,25 +276,14 @@
                 </div>
             </div>
         </div>
-
-        <!-- 快速示例 -->
-        <div class="card" style="border-color: rgba(245,194,66,0.15); background: rgba(245,194,66,0.03);">
-            <div style="font-size:13px; color:#94A3B8;">
-                💡 <span style="color:#E8EEF7;">快速示例：</span>
-                3串1，三场比赛赔率分别为 1.85、2.10、1.65
-                <span style="color:#F5C242; margin-left:12px;">奖金 = 2 × 1.85 × 2.10 × 1.65 = 12.82 元</span>
-            </div>
-        </div>
     </div>
 
-    <!-- ========================================================== -->
     <!-- Tab2: 竞彩篮球 -->
-    <!-- ========================================================== -->
     <div class="tab-content" id="tab-basketball">
         <div class="card">
             <div class="card-title">
                 🏀 竞彩篮球串关
-                <span class="sub">— 胜负 · 让分 · 大小分</span>
+                <span class="sub">— 从数据库选择比赛</span>
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
@@ -391,24 +293,7 @@
             </div>
 
             <div id="basketballMatches">
-                <div class="form-row">
-                    <span class="label">比赛1</span>
-                    <select class="result-type">
-                        <option value="主胜">主胜</option>
-                        <option value="主负">主负</option>
-                    </select>
-                    <input type="number" class="odds-input" value="1.75" step="0.01" placeholder="赔率" />
-                    <button class="remove-btn" style="visibility:hidden;">删除</button>
-                </div>
-                <div class="form-row">
-                    <span class="label">比赛2</span>
-                    <select class="result-type">
-                        <option value="主胜">主胜</option>
-                        <option value="主负">主负</option>
-                    </select>
-                    <input type="number" class="odds-input" value="1.90" step="0.01" placeholder="赔率" />
-                    <button class="remove-btn" style="visibility:hidden;">删除</button>
-                </div>
+                <div class="loading">正在加载比赛数据...</div>
             </div>
 
             <div class="btn-group">
@@ -427,9 +312,7 @@
         </div>
     </div>
 
-    <!-- ========================================================== -->
     <!-- Tab3: 奖金优化 -->
-    <!-- ========================================================== -->
     <div class="tab-content" id="tab-optimize">
         <div class="card">
             <div class="card-title">
@@ -468,34 +351,181 @@
         </div>
     </div>
 
-    <!-- ===== 页脚 ===== -->
     <footer style="text-align:center;padding:20px 0;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;color:#94A3B8;margin-top:12px;">
         <p>AI实验室 · 体彩好伙伴 · 计算器数据仅供模拟参考 · 请以官方开奖结果为准</p>
     </footer>
-
 </main>
 
-<!-- ============================================================ -->
-<!-- JavaScript -->
-<!-- ============================================================ -->
 <script>
-    // ============================================================
-    // Tab 切换
-    // ============================================================
+    // Supabase config
+    const SUPABASE_URL = 'https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM';
+
+    // Store matches data
+    let footballMatches = [];
+    let basketballMatches = [];
+    let footballSelections = [];
+    let basketballSelections = [];
+
+    // Fetch matches from Supabase
+    async function fetchMatches() {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/matches?select=*&status=eq.upcoming&order=match_date.asc`, {
+                headers: { 'apikey': SUPABASE_KEY }
+            });
+            const data = await response.json();
+            
+            footballMatches = data.filter(m => m.sport_type === 'football');
+            basketballMatches = data.filter(m => m.sport_type === 'basketball');
+            
+            renderFootballMatches();
+            renderBasketballMatches();
+        } catch (error) {
+            console.error('Failed to fetch matches:', error);
+            document.getElementById('footballMatches').innerHTML = '<div class="loading">加载失败，请刷新页面</div>';
+            document.getElementById('basketballMatches').innerHTML = '<div class="loading">加载失败，请刷新页面</div>';
+        }
+    }
+
+    // Render football matches selection
+    function renderFootballMatches() {
+        const container = document.getElementById('footballMatches');
+        if (footballMatches.length === 0) {
+            container.innerHTML = '<div class="loading">暂无即将开始的足球比赛</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        addFootballMatchRow();
+        addFootballMatchRow();
+        addFootballMatchRow();
+    }
+
+    function addFootballMatchRow() {
+        const container = document.getElementById('footballMatches');
+        const idx = container.children.length + 1;
+        const div = document.createElement('div');
+        div.className = 'form-row';
+        
+        let matchOptions = '<option value="">-- 选择比赛 --</option>';
+        footballMatches.forEach((m, i) => {
+            const teams = m.teams || `${m.home_team} VS ${m.away_team}`;
+            matchOptions += `<option value="${i}" data-odds="${m.win_odds},${m.draw_odds},${m.lose_odds}">${teams} (${m.win_odds}/${m.draw_odds}/${m.lose_odds})</option>`;
+        });
+
+        div.innerHTML = `
+            <span class="label">比赛${idx}</span>
+            <div class="match-select">
+                <select class="match-selector" onchange="updateFootballOdds(this)">
+                    ${matchOptions}
+                </select>
+            </div>
+            <select class="result-type">
+                <option value="胜">胜</option>
+                <option value="平">平</option>
+                <option value="负">负</option>
+            </select>
+            <input type="number" class="odds-input" value="" step="0.01" placeholder="赔率" readonly />
+            <button class="btn btn-secondary btn-sm remove-btn">删除</button>
+        `;
+        container.appendChild(div);
+        
+        div.querySelector('.remove-btn').addEventListener('click', function() {
+            if (container.children.length > 1) div.remove();
+        });
+    }
+
+    function updateFootballOdds(select) {
+        const row = select.closest('.form-row');
+        const option = select.options[select.selectedIndex];
+        const oddsStr = option.dataset.odds;
+        const resultType = row.querySelector('.result-type').value;
+        const oddsInput = row.querySelector('.odds-input');
+        
+        if (oddsStr) {
+            const odds = oddsStr.split(',').map(parseFloat);
+            if (resultType === '胜') oddsInput.value = odds[0];
+            else if (resultType === '平') oddsInput.value = odds[1];
+            else if (resultType === '负') oddsInput.value = odds[2];
+        } else {
+            oddsInput.value = '';
+        }
+    }
+
+    // Render basketball matches selection
+    function renderBasketballMatches() {
+        const container = document.getElementById('basketballMatches');
+        if (basketballMatches.length === 0) {
+            container.innerHTML = '<div class="loading">暂无即将开始的篮球比赛</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        addBasketballMatchRow();
+        addBasketballMatchRow();
+    }
+
+    function addBasketballMatchRow() {
+        const container = document.getElementById('basketballMatches');
+        const idx = container.children.length + 1;
+        const div = document.createElement('div');
+        div.className = 'form-row';
+        
+        let matchOptions = '<option value="">-- 选择比赛 --</option>';
+        basketballMatches.forEach((m, i) => {
+            const teams = m.teams || `${m.home_team} VS ${m.away_team}`;
+            matchOptions += `<option value="${i}" data-odds="${m.win_odds},${m.lose_odds}">${teams} (${m.win_odds}/${m.lose_odds})</option>`;
+        });
+
+        div.innerHTML = `
+            <span class="label">比赛${idx}</span>
+            <div class="match-select">
+                <select class="match-selector" onchange="updateBasketballOdds(this)">
+                    ${matchOptions}
+                </select>
+            </div>
+            <select class="result-type">
+                <option value="主胜">主胜</option>
+                <option value="主负">主负</option>
+            </select>
+            <input type="number" class="odds-input" value="" step="0.01" placeholder="赔率" readonly />
+            <button class="btn btn-secondary btn-sm remove-btn">删除</button>
+        `;
+        container.appendChild(div);
+        
+        div.querySelector('.remove-btn').addEventListener('click', function() {
+            if (container.children.length > 1) div.remove();
+        });
+    }
+
+    function updateBasketballOdds(select) {
+        const row = select.closest('.form-row');
+        const option = select.options[select.selectedIndex];
+        const oddsStr = option.dataset.odds;
+        const resultType = row.querySelector('.result-type').value;
+        const oddsInput = row.querySelector('.odds-input');
+        
+        if (oddsStr) {
+            const odds = oddsStr.split(',').map(parseFloat);
+            if (resultType === '主胜') oddsInput.value = odds[0];
+            else if (resultType === '主负') oddsInput.value = odds[1];
+        } else {
+            oddsInput.value = '';
+        }
+    }
+
+    // Tab switching
     document.querySelectorAll('.lottery-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.lottery-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-
             const type = this.dataset.type;
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + type).classList.add('active');
         });
     });
 
-    // ============================================================
-    // 串关方式选择
-    // ============================================================
+    // Pass type selection
     document.querySelectorAll('[data-pass]').forEach(btn => {
         btn.addEventListener('click', function() {
             const parent = this.closest('.card');
@@ -506,86 +536,41 @@
         });
     });
 
-    // ============================================================
-    // 添加/删除比赛（足球）
-    // ============================================================
-    document.getElementById('addMatch').addEventListener('click', function() {
-        const container = document.getElementById('footballMatches');
-        const idx = container.children.length + 1;
-        const div = document.createElement('div');
-        div.className = 'form-row';
-        div.innerHTML = `
-            <span class="label">比赛${idx}</span>
-            <select class="result-type">
-                <option value="胜">胜</option>
-                <option value="平">平</option>
-                <option value="负">负</option>
-            </select>
-            <input type="number" class="odds-input" value="1.80" step="0.01" placeholder="赔率" />
-            <button class="remove-btn">删除</button>
-        `;
-        container.appendChild(div);
-        div.querySelector('.remove-btn').addEventListener('click', function() {
-            if (container.children.length > 1) div.remove();
-        });
+    // Add match buttons
+    document.getElementById('addFootballMatch').addEventListener('click', addFootballMatchRow);
+    document.getElementById('addBasketballMatch').addEventListener('click', addBasketballMatchRow);
+
+    // Update odds when result type changes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('result-type')) {
+            const row = e.target.closest('.form-row');
+            const matchSelector = row.querySelector('.match-selector');
+            if (matchSelector && matchSelector.value) {
+                if (row.closest('#tab-football')) {
+                    updateFootballOdds(matchSelector);
+                } else if (row.closest('#tab-basketball')) {
+                    updateBasketballOdds(matchSelector);
+                }
+            }
+        }
     });
 
-    // 删除事件绑定（初始）
-    document.querySelectorAll('#footballMatches .remove-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const container = document.getElementById('footballMatches');
-            if (container.children.length > 1) this.closest('.form-row').remove();
-        });
-    });
-
-    // ============================================================
-    // 添加/删除比赛（篮球）
-    // ============================================================
-    document.getElementById('addBasketballMatch').addEventListener('click', function() {
-        const container = document.getElementById('basketballMatches');
-        const idx = container.children.length + 1;
-        const div = document.createElement('div');
-        div.className = 'form-row';
-        div.innerHTML = `
-            <span class="label">比赛${idx}</span>
-            <select class="result-type">
-                <option value="主胜">主胜</option>
-                <option value="主负">主负</option>
-            </select>
-            <input type="number" class="odds-input" value="1.80" step="0.01" placeholder="赔率" />
-            <button class="remove-btn">删除</button>
-        `;
-        container.appendChild(div);
-        div.querySelector('.remove-btn').addEventListener('click', function() {
-            if (container.children.length > 1) div.remove();
-        });
-    });
-
-    document.querySelectorAll('#basketballMatches .remove-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const container = document.getElementById('basketballMatches');
-            if (container.children.length > 1) this.closest('.form-row').remove();
-        });
-    });
-
-    // ============================================================
-    // 清空
-    // ============================================================
+    // Clear buttons
     document.getElementById('clearFootball').addEventListener('click', function() {
         const container = document.getElementById('footballMatches');
-        while (container.children.length > 1) container.lastChild.remove();
+        container.innerHTML = '';
+        addFootballMatchRow();
         document.getElementById('footballResult').style.display = 'none';
     });
 
     document.getElementById('clearBasketball').addEventListener('click', function() {
         const container = document.getElementById('basketballMatches');
-        while (container.children.length > 1) container.lastChild.remove();
+        container.innerHTML = '';
+        addBasketballMatchRow();
         document.getElementById('basketballResult').style.display = 'none';
     });
 
-    // ============================================================
-    // 计算足球奖金
-    // ============================================================
+    // Calculate football prize
     document.getElementById('calcFootball').addEventListener('click', function() {
         const rows = document.querySelectorAll('#footballMatches .form-row');
         const odds = [];
@@ -599,15 +584,12 @@
             return;
         }
 
-        // 获取串关方式
         const passBtn = document.querySelector('#tab-football .btn-primary[data-pass]');
         const passType = passBtn ? passBtn.dataset.pass : '3串1';
 
-        // 计算
         const combined = odds.reduce((a, b) => a * b, 1);
         const prize = 2 * combined;
 
-        // 显示结果
         document.getElementById('fbPassType').textContent = passType;
         document.getElementById('fbMaxPrize').textContent = prize.toFixed(2) + ' 元';
         document.getElementById('fbMinPrize').textContent = prize.toFixed(2) + ' 元';
@@ -615,9 +597,7 @@
         document.getElementById('footballResult').style.display = 'block';
     });
 
-    // ============================================================
-    // 计算篮球奖金
-    // ============================================================
+    // Calculate basketball prize
     document.getElementById('calcBasketball').addEventListener('click', function() {
         const rows = document.querySelectorAll('#basketballMatches .form-row');
         const odds = [];
@@ -643,9 +623,7 @@
         document.getElementById('basketballResult').style.display = 'block';
     });
 
-    // ============================================================
-    // 奖金优化
-    // ============================================================
+    // Optimize calculation
     document.getElementById('calcOptimize').addEventListener('click', function() {
         const budget = parseFloat(document.getElementById('optBudget').value) || 100;
         const matches = parseInt(document.getElementById('optMatches').value) || 4;
@@ -656,82 +634,39 @@
             return;
         }
 
-        // 生成优化方案
         const schemes = [];
-        // 2串1
         if (matches >= 2) {
             const count = Math.floor(budget / 2);
             const comb = avgOdds * avgOdds;
-            schemes.push({
-                name: '2串1',
-                desc: `2场串关 · ${count}注`,
-                invest: count * 2,
-                return: count * 2 * comb,
-                comb: comb
-            });
+            schemes.push({ name: '2串1', desc: `2场串关 · ${count}注`, invest: count * 2, return: count * 2 * comb });
         }
-        // 3串1
         if (matches >= 3) {
             const count = Math.floor(budget / 2);
             const comb = avgOdds * avgOdds * avgOdds;
-            schemes.push({
-                name: '3串1',
-                desc: `3场串关 · ${count}注`,
-                invest: count * 2,
-                return: count * 2 * comb,
-                comb: comb
-            });
+            schemes.push({ name: '3串1', desc: `3场串关 · ${count}注`, invest: count * 2, return: count * 2 * comb });
         }
-        // 4串1
         if (matches >= 4) {
             const count = Math.floor(budget / 2);
             const comb = avgOdds * avgOdds * avgOdds * avgOdds;
-            schemes.push({
-                name: '4串1',
-                desc: `4场串关 · ${count}注`,
-                invest: count * 2,
-                return: count * 2 * comb,
-                comb: comb
-            });
-        }
-        // 混合（3串4）
-        if (matches >= 3) {
-            const count = Math.floor(budget / 8);
-            const comb = avgOdds * avgOdds * avgOdds;
-            schemes.push({
-                name: '3串4',
-                desc: `3场4注 · ${count}倍`,
-                invest: count * 8,
-                return: count * 8 * comb,
-                comb: comb
-            });
+            schemes.push({ name: '4串1', desc: `4场串关 · ${count}注`, invest: count * 2, return: count * 2 * comb });
         }
 
-        // 渲染方案
         const container = document.getElementById('optSchemes');
         let html = '';
         schemes.forEach(s => {
             const rate = ((s.return - s.invest) / s.invest * 100);
-            const cls = rate > 0 ? 'win' : '';
             html += `
-                <div class="scheme-card">
-                    <div class="name">${s.name}</div>
-                    <div class="desc">${s.desc}</div>
-                    <div style="margin-top:4px;font-size:13px;color:#E8EEF7;">
-                        投入 ${s.invest} 元
-                    </div>
-                    <div style="font-size:14px;font-weight:700;color:${rate > 0 ? '#10B981' : '#EF4444'};">
-                        ${s.return.toFixed(2)} 元
-                    </div>
-                    <div style="font-size:11px;color:#94A3B8;">
-                        ${rate > 0 ? '+' : ''}${rate.toFixed(0)}%
-                    </div>
+                <div style="background:#16243D;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 14px;text-align:center;">
+                    <div style="font-size:13px;font-weight:600;">${s.name}</div>
+                    <div style="font-size:11px;color:#94A3B8;">${s.desc}</div>
+                    <div style="margin-top:4px;font-size:13px;">投入 ${s.invest} 元</div>
+                    <div style="font-size:14px;font-weight:700;color:${rate > 0 ? '#10B981' : '#EF4444'};">${s.return.toFixed(2)} 元</div>
+                    <div style="font-size:11px;color:#94A3B8;">${rate > 0 ? '+' : ''}${rate.toFixed(0)}%</div>
                 </div>
             `;
         });
-        container.innerHTML = html;
+        container.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">${html}</div>`;
 
-        // 统计
         const maxReturn = Math.max(...schemes.map(s => s.return));
         const minReturn = Math.min(...schemes.map(s => s.return));
         const avgReturn = schemes.reduce((a, b) => a + b.return, 0) / schemes.length;
@@ -739,22 +674,11 @@
         document.getElementById('optMaxReturn').textContent = maxReturn.toFixed(2) + ' 元';
         document.getElementById('optMinReturn').textContent = minReturn.toFixed(2) + ' 元';
         document.getElementById('optReturnRate').textContent = ((avgReturn - budget) / budget * 100).toFixed(0) + '%';
-
         document.getElementById('optimizeResult').style.display = 'block';
     });
 
-    // ============================================================
-    // 键盘快捷键：回车触发计算
-    // ============================================================
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            const active = document.querySelector('.tab-content.active');
-            if (active) {
-                const calcBtn = active.querySelector('.btn-primary');
-                if (calcBtn) calcBtn.click();
-            }
-        }
-    });
+    // Initialize
+    fetchMatches();
 </script>
 
 </body>
