@@ -79,39 +79,6 @@
         .hero-stats .num { font-size: 24px; font-weight: 700; color: #e5e7eb; display: block; }
         .hero-stats .lbl { font-size: 12px; color: #6b7280; }
 
-        /* 焦点卡片 */
-        .focus-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px auto 20px; max-width: 700px; }
-        @media (max-width: 768px) { .focus-grid { grid-template-columns: 1fr; } }
-        .focus-card {
-            background: #14141f;
-            border: 1px solid #2a2a3e;
-            border-radius: 14px;
-            padding: 18px 20px;
-            transition: all 0.2s;
-            display: block;
-            cursor: default;
-            text-align: center;
-        }
-        .focus-card.clickable { cursor: pointer; }
-        .focus-card.clickable:hover { border-color: rgba(139, 92, 246, 0.3); background: #1a1a2a; transform: translateY(-2px); }
-        .focus-card .tag { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
-        .focus-card .tag.consensus { color: #8b5cf6; }
-        .focus-card .tag.divergence { color: #fbbf24; }
-        .focus-card .teams { font-size: 17px; font-weight: 700; margin: 4px 0 2px; }
-        .focus-card .meta { font-size: 12px; color: #6b7280; }
-        .focus-card .prediction { font-size: 28px; font-weight: 800; margin-top: 4px; }
-        .focus-card .prediction.win { color: #22c55e; }
-        .focus-card .prediction.draw { color: #fbbf24; }
-        .focus-card .prediction.lose { color: #ef4444; }
-        .focus-card .score { font-size: 32px; font-weight: 900; margin-top: 4px; letter-spacing: 2px; }
-        .focus-card .score.home-win { color: #22c55e; }
-        .focus-card .score.away-win { color: #ef4444; }
-        .focus-card .score.draw { color: #fbbf24; }
-        .focus-card .votes { display: flex; gap: 8px; font-size: 12px; color: #9ca3af; margin-top: 6px; justify-content: center; }
-        .focus-card .votes span { display: flex; align-items: center; gap: 3px; }
-        .focus-card .arrow { color: #8b5cf6; font-size: 14px; transition: transform 0.2s; display: inline-block; }
-        .focus-card.clickable:hover .arrow { transform: translateX(4px); }
-
         /* 赛程列表 */
         .section-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
         .section-title .count { font-size: 13px; font-weight: 400; color: #6b7280; }
@@ -263,7 +230,6 @@
         @media (max-width: 480px) {
             .hero h1 { font-size: 22px; }
             .hero-stats { gap: 16px; }
-            .focus-card .prediction { font-size: 22px; }
             .view-item { flex-wrap: wrap; gap: 4px; padding: 8px 12px; }
             .view-item .time { width: auto; }
             .navbar .container { flex-direction: column; gap: 6px; }
@@ -302,12 +268,6 @@
         </div>
     </section>
 
-    <!-- 焦点区 -->
-    <div class="focus-grid" id="focus-grid">
-        <div class="focus-card loading">加载中...</div>
-        <div class="focus-card loading">加载中...</div>
-    </div>
-
     <!-- 日期选择 + 赛程列表 -->
     <section>
         <div class="section-title">
@@ -327,6 +287,10 @@
         </div>
         <!-- 篮球 -->
         <div style="margin-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:15px;font-weight:600;">🏀 竞篮</span>
+                <span class="count" id="basketball-count-label"></span>
+            </div>
             <div class="view-card" id="view-basketball">
                 <div class="loading">加载中...</div>
             </div>
@@ -575,8 +539,6 @@ function renderDateBar() {
 function renderCurrentDate() {
     const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === CURRENT_DATE);
 
-    renderFocus(dayMatches);
-
     // 按运动类型分组
     const football = dayMatches.filter(m => m.sport_type === 'football');
     const basketball = dayMatches.filter(m => m.sport_type === 'basketball');
@@ -586,81 +548,6 @@ function renderCurrentDate() {
 
     // 总数
     document.getElementById('match-count-label').textContent = '共 ' + dayMatches.length + ' 场';
-}
-
-function renderFocus(matches) {
-    const container = document.getElementById('focus-grid');
-    if (!matches || matches.length === 0) {
-        container.innerHTML = '<div class="focus-card" style="grid-column:1/-1;text-align:center;color:#6b7280;padding:30px;cursor:default;">该日期暂无赛事</div>';
-        return;
-    }
-
-    const enriched = matches.map(m => ({ ...m, ...computeVotes(m.id) }));
-
-    // 按运动类型分组
-    const football = enriched.filter(m => m.sport_type === 'football');
-    const basketball = enriched.filter(m => m.sport_type === 'basketball');
-
-    // 找最新结束的比赛（优先已确认，否则取最新的）
-    function getLatestMatch(sportMatches) {
-        if (!sportMatches || sportMatches.length === 0) return null;
-        // 优先找已确认的，按时间倒序
-        const finished = sportMatches.filter(m => m.status === '已确认').sort((a, b) => b.match_time.localeCompare(a.match_time));
-        if (finished.length > 0) return finished[0];
-        // 否则取最新的未开赛
-        return sportMatches.sort((a, b) => b.match_time.localeCompare(a.match_time))[0];
-    }
-
-    const latestFootball = getLatestMatch(football);
-    const latestBasketball = getLatestMatch(basketball);
-
-    // 渲染单张卡片
-    function renderCard(match, sportLabel, sportIcon) {
-        if (!match) {
-            return '<div class="focus-card" style="display:flex;align-items:center;justify-content:center;color:#6b7280;min-height:120px;">' + sportIcon + ' 暂无' + sportLabel + '赛事</div>';
-        }
-        const isFinished = match.status === '已确认';
-        const statusTag = isFinished ? '<span style="font-size:10px;color:#22c55e;margin-left:6px;">✓ 已完赛</span>' : '<span style="font-size:10px;color:#6b7280;margin-left:6px;">未开赛</span>';
-        
-        let html = '<div class="focus-card clickable" data-match="' + esc(match.id) + '">';
-        html += '<div class="tag consensus">' + sportIcon + ' ' + sportLabel + ' · 最新' + (isFinished ? '赛果' : '赛事') + statusTag + '</div>';
-        html += '<div class="teams">' + esc(match.teams) + '</div>';
-        html += '<div class="meta">' + fmtTime(match.match_time) + ' · 让球 ' + (match.handicap || '—') + '</div>';
-        
-        // 已完赛显示实际比分，未完赛显示AI预测
-        if (isFinished && match.home_score !== null && match.away_score !== null) {
-            const h = parseInt(match.home_score);
-            const a = parseInt(match.away_score);
-            const scoreCls = h > a ? 'home-win' : h < a ? 'away-win' : 'draw';
-            html += '<div class="score ' + scoreCls + '">' + match.home_score + ' : ' + match.away_score + '</div>';
-            if (match.total > 0) {
-                html += '<div class="votes"><span style="color:#6b7280;">AI预测: ' + (match.consensus || '—') + '</span><span>✅' + match.votes['胜'] + ' ⚪' + match.votes['平'] + ' ❌' + match.votes['负'] + '</span></div>';
-            }
-        } else if (match.total > 0) {
-            const cls = match.consensus === '胜' ? 'win' : match.consensus === '负' ? 'lose' : 'draw';
-            html += '<div class="prediction ' + cls + '">' + (match.consensus || '—') + '</div>';
-            html += '<div class="votes"><span>✅ 胜 ' + match.votes['胜'] + '</span><span>⚪ 平 ' + match.votes['平'] + '</span><span>❌ 负 ' + match.votes['负'] + '</span></div>';
-        } else {
-            html += '<div class="prediction" style="color:#6b7280;font-size:18px;">暂无AI预测</div>';
-        }
-        
-        html += '<div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:#6b7280;">点击查看各AI预测</span><span class="arrow">→</span></div>';
-        html += '</div>';
-        return html;
-    }
-
-    let html = renderCard(latestFootball, '竞足', '⚽');
-    html += renderCard(latestBasketball, '竞篮', '🏀');
-
-    container.innerHTML = html;
-
-    // 焦点卡片点击展开
-    container.querySelectorAll('.focus-card.clickable').forEach(card => {
-        card.addEventListener('click', function () {
-            const mid = this.dataset.match;
-            toggleDetail(mid);
-        });
-    });
 }
 
 function renderSportView(containerId, matches, countLabelId) {
