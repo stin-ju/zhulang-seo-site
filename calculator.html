@@ -192,6 +192,16 @@
         function fmtDate(dt) { if (!dt) return ''; try { const d = new Date(dt); const weekdays = ['周日','周一','周二','周三','周四','周五','周六']; return weekdays[d.getDay()] + ' ' + (d.getMonth()+1) + '/' + d.getDate(); } catch(e) { return dt.slice(5,10); } }
         function fmtTime(dt) { if (!dt) return ''; try { return dt.slice(11,16); } catch(e) { return ''; } }
         
+        // 玩法配置
+        const BET_TYPES = {
+            'spf': { name: '胜平负', options: ['胜', '平', '负'], oddsKeys: ['win_odds', 'draw_odds', 'lose_odds'] },
+            'rqspf': { name: '让球胜平负', options: ['让胜', '让平', '让负'], oddsKeys: ['handicap_win_odds', 'handicap_draw_odds', 'handicap_lose_odds'] },
+            'bf': { name: '比分', options: ['1:0','2:0','2:1','3:0','3:1','3:2','4:0','4:1','4:2','5:0','5:1','5:2','0:0','1:1','2:2','3:3','0:1','0:2','1:2','0:3','1:3','2:3','0:4','1:4','2:4','0:5','1:5','2:5','胜其他','平其他','负其他'] },
+            'zjq': { name: '总进球数', options: ['0球','1球','2球','3球','4球','5球','6球','7+球'] },
+            'bqc': { name: '半全场', options: ['胜胜','胜平','胜负','平胜','平平','平负','负胜','负平','负负'] }
+        };
+        let currentBetType = 'spf';
+        
         // 渲染赛事列表
         function renderMatches(matches) {
             const container = document.getElementById('matchList');
@@ -200,6 +210,15 @@
                 container.innerHTML = '<div class="card" style="text-align:center;padding:30px;color:#6b7280;"><div style="font-size:28px;margin-bottom:8px;">📭</div>暂无待比赛的足球赛事</div>';
                 return;
             }
+            
+            // 渲染玩法切换Tab
+            let tabHtml = '<div class="bet-type-tabs" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">';
+            Object.keys(BET_TYPES).forEach(key => {
+                const active = key === currentBetType ? 'active' : '';
+                tabHtml += `<button class="tab-btn ${active}" onclick="switchBetType('${key}')" style="padding:6px 12px;border-radius:6px;border:1px solid #333;background:${key === currentBetType ? '#22c55e' : '#1a1a2e'};color:${key === currentBetType ? '#fff' : '#9ca3af'};cursor:pointer;font-size:12px;">${BET_TYPES[key].name}</button>`;
+            });
+            tabHtml += '</div>';
+            
             const groups = {};
             matches.forEach(m => {
                 const dateKey = m.match_date || (m.match_time ? m.match_time.slice(0,10) : 'unknown');
@@ -207,25 +226,60 @@
                 groups[dateKey].push(m);
             });
             const sortedDates = Object.keys(groups).sort();
-            let html = '';
+            let html = tabHtml;
             sortedDates.forEach((dateKey) => {
                 const dayMatches = groups[dateKey];
                 const dateLabel = fmtDate(dateKey);
                 const isToday = dateKey === new Date().toISOString().slice(0,10);
-                html += '<div class="date-group"><div class="group-header" onclick="toggleGroup(this)"><span class="arrow ' + (isToday?'open':'') + '">▶</span><span>' + dateLabel + '</span><span class="count">' + dayMatches.length + '场</span>' + (isToday?'<span style="font-size:11px;color:#22c55e;">● 今日</span>':'') + '</div><div class="group-body ' + (isToday?'':'hidden') + '"><div class="card" style="padding:8px 12px;"><div class="match-row" style="font-size:11px;color:#6b7280;border-bottom:1px solid #2a2a3e;padding-bottom:4px;margin-bottom:2px;"><span>编号</span><span>时间</span><span>对阵</span><span>让球</span><span>胜</span><span>平</span><span>负</span><span></span></div>';
+                html += '<div class="date-group"><div class="group-header" onclick="toggleGroup(this)"><span class="arrow ' + (isToday?'open':'') + '">▶</span><span>' + dateLabel + '</span><span class="count">' + dayMatches.length + '场</span>' + (isToday?'<span style="font-size:11px;color:#22c55e;">● 今日</span>':'') + '</div><div class="group-body ' + (isToday?'':'hidden') + '">';
+                
+                // 根据当前玩法渲染不同的选项
+                const betType = BET_TYPES[currentBetType];
+                html += '<div class="card" style="padding:8px 12px;">';
+                
+                // 表头
+                if (currentBetType === 'spf' || currentBetType === 'rqspf') {
+                    html += '<div class="match-row" style="font-size:11px;color:#6b7280;border-bottom:1px solid #2a2a3e;padding-bottom:4px;margin-bottom:2px;"><span>编号</span><span>时间</span><span>对阵</span>';
+                    if (currentBetType === 'rqspf') html += '<span>让球</span>';
+                    betType.options.forEach(opt => { html += '<span>' + opt + '</span>'; });
+                    html += '<span></span></div>';
+                } else {
+                    html += '<div class="match-row" style="font-size:11px;color:#6b7280;border-bottom:1px solid #2a2a3e;padding-bottom:4px;margin-bottom:2px;"><span>编号</span><span>时间</span><span>对阵</span><span>选项</span><span></span></div>';
+                }
+                
                 dayMatches.forEach(m => {
                     const displayName = m.home_team && m.away_team ? m.home_team + ' VS ' + m.away_team : (m.teams || '-- VS --');
                     const id = m.id || '---';
                     const time = fmtTime(m.match_time);
-                    const handicap = m.handicap || '0';
-                    const winOdds = m.win_odds || '--';
-                    const drawOdds = m.draw_odds || '--';
-                    const loseOdds = m.lose_odds || '--';
-                    html += '<div class="match-row" data-id="' + m.id + '"><span class="id">' + esc(id) + '</span><span class="time">' + time + '</span><span class="teams">' + esc(displayName) + '</span><span class="handicap">' + handicap + '</span><span class="odds win" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'胜\',' + winOdds + ')">' + winOdds + '</span><span class="odds draw" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'平\',' + drawOdds + ')">' + drawOdds + '</span><span class="odds lose" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'负\',' + loseOdds + ')">' + loseOdds + '</span><span class="add-btn" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'胜\',' + winOdds + ')">＋</span></div>';
+                    
+                    if (currentBetType === 'spf' || currentBetType === 'rqspf') {
+                        const handicap = m.handicap || '0';
+                        const odds = betType.oddsKeys.map(k => m[k] || '--');
+                        html += '<div class="match-row" data-id="' + m.id + '"><span class="id">' + esc(id) + '</span><span class="time">' + time + '</span><span class="teams">' + esc(displayName) + '</span>';
+                        if (currentBetType === 'rqspf') html += '<span class="handicap">' + handicap + '</span>';
+                        betType.options.forEach((opt, idx) => {
+                            const oddsVal = odds[idx];
+                            const cls = idx === 0 ? 'win' : idx === 1 ? 'draw' : 'lose';
+                            html += '<span class="odds ' + cls + '" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'' + opt + '\',' + oddsVal + ')">' + oddsVal + '</span>';
+                        });
+                        html += '<span class="add-btn" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'' + betType.options[0] + '\',' + odds[0] + ')">＋</span></div>';
+                    } else {
+                        // 比分、总进球数、半全场 - 每个选项一行
+                        betType.options.forEach((opt, idx) => {
+                            const oddsVal = (2 + Math.random() * 5).toFixed(2); // 示例赔率
+                            html += '<div class="match-row" data-id="' + m.id + '-' + opt + '"><span class="id">' + (idx === 0 ? esc(id) : '') + '</span><span class="time">' + (idx === 0 ? time : '') + '</span><span class="teams">' + (idx === 0 ? esc(displayName) : '') + '</span><span class="odds" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'' + opt + '\',' + oddsVal + ')" style="cursor:pointer;">' + opt + ' @' + oddsVal + '</span><span class="add-btn" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'' + opt + '\',' + oddsVal + ')">＋</span></div>';
+                        });
+                    }
                 });
                 html += '</div></div></div>';
             });
             container.innerHTML = html;
+        }
+        
+        function switchBetType(type) {
+            currentBetType = type;
+            const matches = (window.MATCH_DATA || []).filter(m => m.status === '待比赛');
+            renderMatches(matches);
         }
         
         function toggleGroup(header) { const body = header.nextElementSibling; const arrow = header.querySelector('.arrow'); if (body) { body.classList.toggle('hidden'); if (arrow) arrow.classList.toggle('open'); } }
@@ -290,11 +344,13 @@
         window.removeSelected = removeSelected;
         window.toggleGroup = toggleGroup;
         
-        // 初始化：使用嵌入的数据
+        // 初始化：只显示待比赛的比赛
         document.addEventListener('DOMContentLoaded', function() {
-            const matches = window.MATCH_DATA || [];
-            renderMatches(matches);
-            console.log('✅ 加载完成，共 ' + matches.length + ' 场（嵌入数据）');
+            const allMatches = window.MATCH_DATA || [];
+            const pendingMatches = allMatches.filter(m => m.status === '待比赛');
+            renderMatches(pendingMatches);
+            document.getElementById('totalMatches').textContent = pendingMatches.length;
+            console.log('✅ 加载完成，共 ' + pendingMatches.length + ' 场可投注赛事');
         });
     </script>
 </body>
