@@ -108,7 +108,7 @@
             }
         }
 
-        /* ===== 赛事列表 ===== */
+        /* ===== 卡片 ===== */
         .card {
             background: #14141f;
             border: 1px solid #2a2a3e;
@@ -139,10 +139,10 @@
             border-radius: 10px;
         }
 
-        /* ===== 比赛行（模仿竞彩） ===== */
+        /* ===== 比赛行 ===== */
         .match-row {
             display: grid;
-            grid-template-columns: 50px 90px 1fr 50px 60px 60px 60px 40px;
+            grid-template-columns: 50px 80px 1fr 50px 60px 60px 60px 36px;
             gap: 4px;
             align-items: center;
             padding: 6px 4px;
@@ -158,6 +158,7 @@
         .match-row .id {
             color: #6b7280;
             font-weight: 500;
+            font-size: 12px;
         }
         .match-row .time {
             color: #9ca3af;
@@ -173,6 +174,7 @@
             color: #fbbf24;
             font-weight: 600;
             text-align: center;
+            font-size: 12px;
         }
         .match-row .odds {
             text-align: center;
@@ -181,13 +183,14 @@
             font-weight: 500;
             transition: all 0.2s;
             cursor: pointer;
+            font-size: 13px;
         }
         .match-row .odds:hover {
             background: rgba(139, 92, 246, 0.15);
             color: #a78bfa;
         }
         .match-row .odds.selected {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(139, 92, 246, 0.25);
             color: #a78bfa;
             border: 1px solid rgba(139, 92, 246, 0.3);
         }
@@ -211,7 +214,7 @@
             color: #8b5cf6;
         }
 
-        /* ===== 日期分组折叠 ===== */
+        /* ===== 日期分组 ===== */
         .date-group {
             margin-bottom: 4px;
         }
@@ -249,7 +252,7 @@
             display: none;
         }
 
-        /* ===== 右侧计算器（固定） ===== */
+        /* ===== 右侧计算器 ===== */
         .calculator-panel {
             position: sticky;
             top: 80px;
@@ -278,7 +281,6 @@
             color: #ef4444;
         }
 
-        /* 已选比赛 */
         .selected-match {
             display: flex;
             justify-content: space-between;
@@ -291,6 +293,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
         .selected-match .info .odds-val {
             color: #8b5cf6;
@@ -313,7 +316,7 @@
             padding: 8px 0;
         }
 
-        /* 串关方式 */
+        /* ===== 串关方式 ===== */
         .pass-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -358,7 +361,7 @@
             background: #7c3aed;
         }
 
-        /* 结果 */
+        /* ===== 结果 ===== */
         .result-box {
             background: #1a1a2a;
             border-radius: 8px;
@@ -391,7 +394,7 @@
                 position: static;
             }
             .match-row {
-                grid-template-columns: 36px 70px 1fr 40px 44px 44px 44px 32px;
+                grid-template-columns: 36px 60px 1fr 40px 44px 44px 44px 28px;
                 font-size: 12px;
                 gap: 2px;
             }
@@ -401,7 +404,7 @@
         }
         @media (max-width: 600px) {
             .match-row {
-                grid-template-columns: 30px 60px 1fr 36px 38px 38px 38px 28px;
+                grid-template-columns: 30px 50px 1fr 32px 34px 34px 34px 24px;
                 font-size: 11px;
                 padding: 4px 2px;
             }
@@ -422,12 +425,6 @@
         }
         .text-sm {
             font-size: 12px;
-        }
-        .mt-2 {
-            margin-top: 8px;
-        }
-        .mb-2 {
-            margin-bottom: 8px;
         }
         .loading {
             text-align: center;
@@ -471,7 +468,6 @@
             <!-- ========================================================== -->
             <div>
 
-                <!-- 标题栏 -->
                 <div class="card" style="padding:10px 16px;margin-bottom:8px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
                         <div style="display:flex;align-items:center;gap:12px;font-size:13px;">
@@ -488,19 +484,17 @@
                     </div>
                 </div>
 
-                <!-- 赛事列表 -->
                 <div id="matchList">
                     <div class="loading">⏳ 加载赛事...</div>
                 </div>
 
-                <!-- 更新时间 -->
                 <div style="font-size:11px;color:#6b7280;text-align:right;padding:4px 0;">
                     数据更新：<span id="updateTime">--</span>
                 </div>
             </div>
 
             <!-- ========================================================== -->
-            <!-- 右侧：计算器（固定） -->
+            <!-- 右侧：计算器 -->
             <!-- ========================================================== -->
             <div class="calculator-panel">
                 <div class="card">
@@ -510,12 +504,10 @@
                         <button class="clear-btn" id="clearSelected">清空</button>
                     </div>
 
-                    <!-- 已选比赛列表 -->
                     <div id="selectedList">
                         <div class="selected-empty">👆 点击左侧赔率添加比赛</div>
                     </div>
 
-                    <!-- 串关方式 -->
                     <div style="margin-top:10px;">
                         <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">串关方式</div>
                         <div class="pass-grid" id="passGrid">
@@ -538,10 +530,8 @@
                         </div>
                     </div>
 
-                    <!-- 计算按钮 -->
                     <button class="btn-calc" id="calcBtn">💰 计算奖金</button>
 
-                    <!-- 结果 -->
                     <div id="resultBox" class="result-box" style="display:none;">
                         <div class="row"><span>串关</span><span class="val" id="resultPass">3串1</span></div>
                         <div class="row"><span>场次</span><span class="val" id="resultCount">0</span></div>
@@ -577,10 +567,10 @@
         // 状态
         // ============================================================
         let allMatches = [];
-        let selectedMatches = []; // { id, teams, odds, result }
+        let selectedMatches = [];
 
         // ============================================================
-        // 工具
+        // 工具函数
         // ============================================================
         function esc(s) {
             if (!s) return '';
@@ -620,12 +610,13 @@
         }
 
         // ============================================================
-        // 获取数据
+        // 获取数据 - 使用新字段 home_team, away_team, match_date
+        // 状态筛选：'待比赛' = 可投注
         // ============================================================
         async function fetchMatches() {
             const data = await querySupabase(
                 'matches',
-                'id,teams,match_time,handicap,status,win_odds,draw_odds,lose_odds,home_score,away_score',
+                'id,teams,home_team,away_team,match_time,match_date,handicap,status,win_odds,draw_odds,lose_odds',
                 { sport_type: 'football', status: '待比赛' }
             );
             return data.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
@@ -642,22 +633,21 @@
                 container.innerHTML = `
                     <div class="card" style="text-align:center;padding:30px;color:#6b7280;">
                         <div style="font-size:28px;margin-bottom:8px;">📭</div>
-                        暂无待比赛的足球赛事
+                        暂无待开赛的足球赛事
                     </div>
                 `;
                 document.getElementById('totalMatches').textContent = '0';
                 return;
             }
 
-            // 按日期分组
+            // 按日期分组（使用 match_date 字段）
             const groups = {};
             matches.forEach(m => {
-                const dateKey = m.match_time ? m.match_time.slice(0, 10) : 'unknown';
+                const dateKey = m.match_date || (m.match_time ? m.match_time.slice(0, 10) : 'unknown');
                 if (!groups[dateKey]) groups[dateKey] = [];
                 groups[dateKey].push(m);
             });
 
-            // 排序日期
             const sortedDates = Object.keys(groups).sort();
 
             let html = '';
@@ -689,32 +679,36 @@
                 `;
 
                 dayMatches.forEach(m => {
+                    // 使用 home_team 和 away_team 显示对阵
+                    const displayName = m.home_team && m.away_team ?
+                        `${m.home_team} VS ${m.away_team}` :
+                        (m.teams || '-- VS --');
+
                     const id = m.id || '---';
                     const time = fmtTime(m.match_time);
-                    const teams = m.teams || '-- VS --';
                     const handicap = m.handicap || '0';
                     const winOdds = m.win_odds || '--';
                     const drawOdds = m.draw_odds || '--';
                     const loseOdds = m.lose_odds || '--';
 
                     html += `
-                        <div class="match-row">
+                        <div class="match-row" data-id="${m.id}">
                             <span class="id">${esc(id)}</span>
                             <span class="time">${time}</span>
-                            <span class="teams">${esc(teams)}</span>
+                            <span class="teams">${esc(displayName)}</span>
                             <span class="handicap">${handicap}</span>
-                            <span class="odds win" onclick="selectMatch('${m.id}','${esc(teams)}','胜',${winOdds})">${winOdds}</span>
-                            <span class="odds draw" onclick="selectMatch('${m.id}','${esc(teams)}','平',${drawOdds})">${drawOdds}</span>
-                            <span class="odds lose" onclick="selectMatch('${m.id}','${esc(teams)}','负',${loseOdds})">${loseOdds}</span>
-                            <span class="add-btn" onclick="selectMatch('${m.id}','${esc(teams)}','胜',${winOdds})">＋</span>
+                            <span class="odds win" onclick="selectMatch('${m.id}','${esc(displayName)}','胜',${winOdds})">${winOdds}</span>
+                            <span class="odds draw" onclick="selectMatch('${m.id}','${esc(displayName)}','平',${drawOdds})">${drawOdds}</span>
+                            <span class="odds lose" onclick="selectMatch('${m.id}','${esc(displayName)}','负',${loseOdds})">${loseOdds}</span>
+                            <span class="add-btn" onclick="selectMatch('${m.id}','${esc(displayName)}','胜',${winOdds})">＋</span>
                         </div>
                     `;
                 });
 
                 html += `
-                                </div>
                             </div>
                         </div>
+                    </div>
                 `;
             });
 
@@ -736,7 +730,7 @@
         }
 
         // ============================================================
-        // 选择比赛（点击赔率或＋号）
+        // 选择比赛
         // ============================================================
         function selectMatch(id, teams, result, odds) {
             if (odds === '--' || isNaN(odds) || odds <= 0) {
@@ -744,20 +738,16 @@
                 return;
             }
 
-            // 检查是否已选
             const existing = selectedMatches.findIndex(m => m.id === id && m.result === result);
             if (existing >= 0) {
-                // 如果已选，则取消选中
                 selectedMatches.splice(existing, 1);
                 renderSelected();
                 updateOddsHighlight();
                 return;
             }
 
-            // 检查是否已选同一场比赛（不同结果）
             const sameMatch = selectedMatches.findIndex(m => m.id === id);
             if (sameMatch >= 0) {
-                // 替换该场比赛的选择
                 selectedMatches.splice(sameMatch, 1);
             }
 
@@ -814,13 +804,11 @@
         }
 
         // ============================================================
-        // 高亮已选的赔率
+        // 高亮已选赔率
         // ============================================================
         function updateOddsHighlight() {
-            // 清除所有高亮
             document.querySelectorAll('.odds').forEach(el => el.classList.remove('selected'));
 
-            // 高亮已选
             selectedMatches.forEach(m => {
                 document.querySelectorAll('.match-row').forEach(row => {
                     const id = row.querySelector('.id')?.textContent;
@@ -837,7 +825,7 @@
         }
 
         // ============================================================
-        // 清空已选
+        // 清空
         // ============================================================
         document.getElementById('clearSelected').addEventListener('click', function() {
             selectedMatches = [];
