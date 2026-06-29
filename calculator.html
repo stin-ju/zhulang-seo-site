@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>智胜AI · 奖金计算器</title>
-    <meta name="description" content="从今日赛事中选择比赛，计算竞彩串关奖金。" />
+    <meta name="description" content="从今日未开赛赛事中选择比赛，计算竞彩串关奖金。" />
     <style>
         /* ===== 复用网站样式 ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -57,11 +57,20 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
         .card-title .count {
             font-size: 13px;
             font-weight: 400;
             color: #6b7280;
+        }
+        .card-title .badge {
+            font-size: 11px;
+            font-weight: 500;
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            padding: 2px 10px;
+            border-radius: 12px;
         }
 
         /* ===== 比赛列表 ===== */
@@ -94,6 +103,13 @@
         .match-check .info .teams { font-size: 14px; font-weight: 500; }
         .match-check .info .meta { font-size: 12px; color: #6b7280; }
         .match-check .info .odds { font-size: 13px; color: #8b5cf6; font-weight: 600; }
+
+        .empty-state {
+            padding: 30px 20px;
+            text-align: center;
+            color: #6b7280;
+        }
+        .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
 
         /* ===== 已选区域 ===== */
         .selected-area {
@@ -226,6 +242,7 @@
             <a href="/football.html">足球</a>
             <a href="/basketball.html">篮球</a>
             <a href="/calculator.html" class="active">计算器</a>
+            <span class="nav-divider"></span>
             <a href="/rank.html">排行</a>
         </div>
     </div>
@@ -235,7 +252,9 @@
 <main class="container" style="padding: 20px 0;">
 
     <h1 style="font-size: 28px; font-weight: 900; margin-bottom: 4px;">🧮 奖金计算器</h1>
-    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">选择今日比赛 → 串关 → 自动计算奖金</p>
+    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
+        选择<span style="color:#22c55e;">未开赛</span>比赛 → 串关 → 自动计算奖金
+    </p>
 
     <!-- ===== Tabs ===== -->
     <div class="tabs">
@@ -249,21 +268,19 @@
     <div class="tab-content active" id="tab-football">
         <div class="card">
             <div class="card-title">
-                📋 今日足球赛事
+                📋 可投注足球赛事
                 <span class="count" id="fbCount">加载中...</span>
+                <span class="badge">● 未开赛</span>
             </div>
 
-            <!-- 比赛列表 -->
             <div id="fbMatchList">
-                <div class="loading">⏳ 加载今日赛事...</div>
+                <div class="loading">⏳ 加载中...</div>
             </div>
 
-            <!-- 已选区域 -->
             <div class="selected-area" id="fbSelected">
                 <span class="empty">👆 请从上方勾选比赛</span>
             </div>
 
-            <!-- 串关方式 -->
             <div class="pass-btns" id="fbPassBtns">
                 <button data-pass="2串1">2串1</button>
                 <button data-pass="3串1" class="active">3串1</button>
@@ -297,12 +314,13 @@
     <div class="tab-content" id="tab-basketball">
         <div class="card">
             <div class="card-title">
-                📋 今日篮球赛事
+                📋 可投注篮球赛事
                 <span class="count" id="bbCount">加载中...</span>
+                <span class="badge">● 未开赛</span>
             </div>
 
             <div id="bbMatchList">
-                <div class="loading">⏳ 加载今日赛事...</div>
+                <div class="loading">⏳ 加载中...</div>
             </div>
 
             <div class="selected-area" id="bbSelected">
@@ -371,13 +389,13 @@
     }
 
     // ============================================================
-    // 获取数据
+    // 获取数据（只获取未开赛的比赛）
     // ============================================================
     async function fetchMatches(sport) {
         const data = await querySupabase(
             'matches',
             'id,teams,match_time,handicap,status,win_odds,draw_odds,lose_odds,home_score,away_score,metadata',
-            { sport_type: sport }
+            { sport_type: sport, status: '未开赛' }  // ← 关键：只取未开赛
         );
         return data.filter(m => {
             if (!m.match_time) return false;
@@ -406,11 +424,16 @@
         if (!container) return;
 
         if (!matches || matches.length === 0) {
-            container.innerHTML = '<div style="padding:20px;text-align:center;color:#6b7280;">今日暂无赛事</div>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <div>今日暂无未开赛的${sport === 'football' ? '足球' : '篮球'}赛事</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:4px;">比赛开售后会显示在这里</div>
+                </div>
+            `;
             return;
         }
 
-        // 获取AI共识
         const predMap = {};
         if (predictions) {
             predictions.forEach(p => {
@@ -421,7 +444,6 @@
 
         let html = '';
         matches.forEach(m => {
-            // 获取赔率（取胜赔）
             const odds = m.win_odds || m.draw_odds || m.lose_odds || 1.80;
             const preds = predMap[m.id] || [];
             const topVote = getTopVote(preds);
@@ -432,7 +454,6 @@
                     <div class="info">
                         <span class="teams">${esc(m.teams)}</span>
                         <span class="meta">${fmtTime(m.match_time)} · 让球 ${m.handicap || '—'}</span>
-                        <span class="meta">${m.status === '已确认' ? '✅ 已完赛' : '未开赛'}</span>
                         ${topVote ? `<span class="meta" style="color:#8b5cf6;">AI共识 ${topVote}</span>` : ''}
                         <span class="odds">赔率 ${odds}</span>
                     </div>
@@ -442,18 +463,16 @@
 
         container.innerHTML = html;
 
-        // 绑定勾选事件
         container.querySelectorAll('.match-cb').forEach(cb => {
             cb.addEventListener('change', function() {
                 updateSelected(sport);
             });
         });
 
-        // 更新计数
         const countEl = document.getElementById(sport === 'football' ? 'fbCount' : 'bbCount');
         if (countEl) countEl.textContent = `共 ${matches.length} 场`;
 
-        // 默认选中前几场
+        // 默认选中前3场
         const cbs = container.querySelectorAll('.match-cb');
         const maxDefault = Math.min(cbs.length, 3);
         for (let i = 0; i < maxDefault; i++) {
@@ -512,7 +531,6 @@
             </div>
         `;
 
-        // 点击✕取消选中
         selectedEl.querySelectorAll('.remove').forEach(el => {
             el.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -523,7 +541,6 @@
             });
         });
 
-        // 存储已选赔率供计算使用
         selectedEl.dataset.odds = JSON.stringify(odds);
         selectedEl.dataset.count = cbs.length;
     }
@@ -542,19 +559,16 @@
         const count = parseInt(selectedEl.dataset.count || '0');
 
         if (count < 2) {
-            alert('至少选择2场比赛');
+            alert('至少选择2场比赛（当前已选 ' + count + ' 场）');
             return;
         }
 
-        // 获取串关方式
         const activeBtn = passBtns.querySelector('button.active');
         const passType = activeBtn ? activeBtn.dataset.pass : '3串1';
 
-        // 计算
         const combined = odds.reduce((a, b) => a * b, 1);
         const prize = 2 * combined;
 
-        // 显示结果
         const prefix = sport === 'football' ? 'fb' : 'bb';
         document.getElementById(prefix + 'PassType').textContent = passType;
         document.getElementById(prefix + 'MatchCount').textContent = count + ' 场';
@@ -612,23 +626,21 @@
     async function init() {
         console.log('🚀 加载计算器数据...');
 
-        // 加载足球
         try {
             const fbMatches = await fetchMatches('football');
             const fbIds = fbMatches.map(m => m.id);
             const fbPreds = fbIds.length > 0 ? await fetchPredictions(fbIds) : [];
             renderMatches('fbMatchList', fbMatches, 'football', fbPreds);
         } catch (e) {
-            document.getElementById('fbMatchList').innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;">加载失败，请刷新</div>';
+            document.getElementById('fbMatchList').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>加载失败，请刷新</div>';
             console.error(e);
         }
 
-        // 加载篮球
         try {
             const bbMatches = await fetchMatches('basketball');
             renderMatches('bbMatchList', bbMatches, 'basketball', []);
         } catch (e) {
-            document.getElementById('bbMatchList').innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;">加载失败，请刷新</div>';
+            document.getElementById('bbMatchList').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>加载失败，请刷新</div>';
             console.error(e);
         }
 
