@@ -620,8 +620,27 @@ function renderPredictionTable(details, match, isDone) {
         const handicapHit = isDone && d.hit_handicap === true;
         html += renderPredCell(d.handicap, handicapHit, isDone);
 
-        // 比分维度
-        const scoreHit = isDone && d.hit_score === true;
+        // 比分维度 - 自己计算命中
+        let scoreHit = false;
+        if (isDone && d.score) {
+            if (isBasketball) {
+                // 篮球比分格式: "主胜6-10" 或 "主负6-10"
+                const scoreMatch = d.score.match(/(\d+)-(\d+)/);
+                if (scoreMatch) {
+                    const predHome = parseInt(scoreMatch[1]);
+                    const predAway = parseInt(scoreMatch[2]);
+                    scoreHit = (predHome === match.home_score && predAway === match.away_score);
+                }
+            } else {
+                // 足球比分格式: "1-2" 或 "2-1"
+                const scoreMatch = d.score.match(/(\d+)-(\d+)/);
+                if (scoreMatch) {
+                    const predHome = parseInt(scoreMatch[1]);
+                    const predAway = parseInt(scoreMatch[2]);
+                    scoreHit = (predHome === match.home_score && predAway === match.away_score);
+                }
+            }
+        }
         html += renderPredCell(d.score, scoreHit, isDone);
 
         // 进球数维度（仅足球）
@@ -726,7 +745,11 @@ function renderSportView(containerId, matches, countLabelId) {
         html += '<div class="match-row' + (isHidden ? ' hidden-row' : '') + '">';
         html += '<div class="view-item" data-match="' + esc(m.id) + '" style="cursor:pointer;">';
         html += '<span class="time">' + fmtTime(m.match_time) + '</span>';
-        html += '<span class="teams">' + esc(m.teams) + '</span>';
+        html += '<span class="teams">' + esc(m.teams);
+        if (isDone && m.home_score !== null && m.away_score !== null) {
+            html += ' <span style="color:#F5C242;font-weight:600;">' + m.home_score + '-' + m.away_score + '</span>';
+        }
+        html += '</span>';
         html += '<div class="badge-group">';
         if (topVote && topVote[1] > 0) {
             html += '<span class="badge-sm ' + voteCls + '">' + topVote[0] + ' ' + topVote[1] + '</span>';
