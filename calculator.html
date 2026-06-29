@@ -569,7 +569,7 @@
             const params = new URLSearchParams();
             params.append('select', 'id,teams,"home_team","away_team",match_time,match_date,handicap,status,win_odds,draw_odds,lose_odds');
             params.append('sport_type', 'eq.football');
-            params.append('status', 'eq.未开赛');
+            params.append('status', 'eq.待比赛');
             params.append('order', 'match_time.asc');
 
             const url = `${SUPABASE_URL}/rest/v1/matches?${params.toString()}`;
