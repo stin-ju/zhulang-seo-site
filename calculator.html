@@ -133,6 +133,15 @@
         .sel-item .sel-banker { font-size: 10px; background: #f59e0b; color: #000; padding: 1px 4px; border-radius: 3px; margin-left: 6px; }
         .sel-item .sel-remove { background: none; border: none; color: #6b7280; font-size: 18px; cursor: pointer; padding: 4px 8px; }
         .sel-item .sel-remove:hover { color: #ef4444; }
+        
+        /* 复式投注分组样式 */
+        .sel-match-group { background: #1a1a2a; border-radius: 8px; margin-bottom: 10px; padding: 10px; }
+        .sel-match-header { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #e5e7eb; }
+        .sel-match-header .sel-banker { font-size: 10px; background: #f59e0b; color: #000; padding: 1px 4px; border-radius: 3px; margin-left: 6px; }
+        .sel-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+        .sel-pick-tag { display: inline-flex; align-items: center; gap: 4px; background: #2d1b4e; border: 1px solid #8b5cf6; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #a78bfa; }
+        .sel-pick-tag button { background: none; border: none; color: #6b7280; font-size: 14px; cursor: pointer; padding: 0 2px; margin-left: 2px; }
+        .sel-pick-tag button:hover { color: #ef4444; }
 
         .empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
         .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
@@ -522,13 +531,22 @@
                 // 点击已选中的选项，取消选择
                 selectedMatches.splice(idx, 1);
             } else {
-                // 竞彩规则：同一场比赛只能选1个选项（不同玩法也不能同时选）
-                const sameMatch = selectedMatches.findIndex(s => s.matchId === matchId);
-                if (sameMatch >= 0) {
-                    // 替换该比赛的选项
-                    selectedMatches.splice(sameMatch, 1);
+                // 竞彩复式投注：同一场比赛同一玩法可以选多个选项（双选、三选）
+                // 但不同玩法不能同时选（如不能同时选A场的胜平负和A场的比分）
+                const sameMatchDiffType = selectedMatches.findIndex(s => s.matchId === matchId && s.pickType !== pickType);
+                if (sameMatchDiffType >= 0) {
+                    alert('同一场比赛不同玩法不能混合选择，请先取消其他玩法的选择');
+                    return;
                 }
-                if (selectedMatches.length >= 8) { alert('最多选择8场比赛'); return; }
+                // 同一玩法内，检查是否已选（避免重复）
+                const sameKey = selectedMatches.findIndex(s => s.key === key);
+                if (sameKey >= 0) {
+                    selectedMatches.splice(sameKey, 1);
+                    renderMatches();
+                    updateBottomBar();
+                    return;
+                }
+                if (selectedMatches.length >= 24) { alert('最多选择24个选项'); return; }
                 selectedMatches.push({ matchId, matchName, pickType, pickLabel, odds, isBanker: false, key });
             }
             renderMatches();
@@ -546,8 +564,15 @@
 
         // ========== 底部栏更新 ==========
         function updateBottomBar() {
-            document.getElementById('selectedCount').textContent = selectedMatches.length;
-            document.getElementById('selectedCountPanel').textContent = selectedMatches.length;
+            // 按比赛分组计数（复式投注时，同一场比赛多个选项算1场）
+            const uniqueMatches = new Set(selectedMatches.map(s => s.matchId));
+            const matchCount = uniqueMatches.size;
+            const totalSelections = selectedMatches.length;
+            
+            // 显示：X场Y选（如果是复式）或X场（如果是单式）
+            const countText = totalSelections > matchCount ? `${matchCount}场${totalSelections}选` : `${matchCount}场`;
+            document.getElementById('selectedCount').textContent = countText;
+            document.getElementById('selectedCountPanel').textContent = countText;
             
             const totalBets = calculateTotalBets();
             const amount = totalBets * 2 * multiplier;
@@ -562,18 +587,147 @@
 
         function calculateTotalBets() {
             if (selectedMatches.length === 0) return 0;
-            // 简化计算：M串N的注数
+            
+            // 按比赛分组，统计每场比赛的选项数（复式投注）
+            const matchSelections = {};
+            selectedMatches.forEach(s => {
+                if (!matchSelections[s.matchId]) matchSelections[s.matchId] = [];
+                matchSelections[s.matchId].push(s);
+            });
+            const matchIds = Object.keys(matchSelections);
+            const matchCounts = matchIds.map(id => matchSelections[id].length);
+            
+            // 检查是否为纯单式（每场比赛只有1个选项）
+            const isSingleBet = matchCounts.every(c => c === 1);
+            
+            // M串N的注数计算
+            if (selectedPass === '2串1') {
+                // 2串1：所有选项组合数
+                return matchCounts.reduce((a, b) => a * b, 1);
+            }
+            
+            if (selectedPass === '3串1') {
+                // 3串1：所有选项组合数
+                return matchCounts.reduce((a, b) => a * b, 1);
+            }
+            
+            if (selectedPass === '3串4') {
+                // 3串4 = 3个2串1 + 1个3串1
+                // 2串1组合：C(3,2) = 3种
+                // 每种2串1的注数 = 两场比赛选项数的乘积
+                let total = 0;
+                // 3个2串1
+                for (let i = 0; i < matchIds.length; i++) {
+                    for (let j = i + 1; j < matchIds.length; j++) {
+                        total += matchCounts[i] * matchCounts[j];
+                    }
+                }
+                // 1个3串1
+                total += matchCounts.reduce((a, b) => a * b, 1);
+                return total;
+            }
+            
+            if (selectedPass === '4串1') {
+                return matchCounts.reduce((a, b) => a * b, 1);
+            }
+            
+            if (selectedPass === '4串5') {
+                // 4串5 = 4个3串1 + 1个4串1
+                let total = 0;
+                // 4个3串1
+                for (let i = 0; i < matchIds.length; i++) {
+                    for (let j = i + 1; j < matchIds.length; j++) {
+                        for (let k = j + 1; k < matchIds.length; k++) {
+                            total += matchCounts[i] * matchCounts[j] * matchCounts[k];
+                        }
+                    }
+                }
+                // 1个4串1
+                total += matchCounts.reduce((a, b) => a * b, 1);
+                return total;
+            }
+            
+            if (selectedPass === '4串11') {
+                // 4串11 = 6个2串1 + 4个3串1 + 1个4串1
+                let total = 0;
+                // 6个2串1
+                for (let i = 0; i < matchIds.length; i++) {
+                    for (let j = i + 1; j < matchIds.length; j++) {
+                        total += matchCounts[i] * matchCounts[j];
+                    }
+                }
+                // 4个3串1
+                for (let i = 0; i < matchIds.length; i++) {
+                    for (let j = i + 1; j < matchIds.length; j++) {
+                        for (let k = j + 1; k < matchIds.length; k++) {
+                            total += matchCounts[i] * matchCounts[j] * matchCounts[k];
+                        }
+                    }
+                }
+                // 1个4串1
+                total += matchCounts.reduce((a, b) => a * b, 1);
+                return total;
+            }
+            
+            if (selectedPass === '5串1' || selectedPass === '6串1' || selectedPass === '7串1' || selectedPass === '8串1') {
+                return matchCounts.reduce((a, b) => a * b, 1);
+            }
+            
+            if (selectedPass === '5串16') {
+                // 5串16 = 10个2串1 + 10个3串1 + 5个4串1 + 1个5串1
+                let total = 0;
+                const n = matchIds.length;
+                // 10个2串1
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) total += matchCounts[i] * matchCounts[j];
+                // 10个3串1
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) total += matchCounts[i] * matchCounts[j] * matchCounts[k];
+                // 5个4串1
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) for (let l = k + 1; l < n; l++) total += matchCounts[i] * matchCounts[j] * matchCounts[k] * matchCounts[l];
+                // 1个5串1
+                total += matchCounts.reduce((a, b) => a * b, 1);
+                return total;
+            }
+            
+            if (selectedPass === '5串26') {
+                // 5串26 = 10个2串1 + 10个3串1 + 5个4串1 + 1个5串1 (重复计算)
+                // 实际上是所有可能的组合
+                let total = 0;
+                const n = matchIds.length;
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) total += matchCounts[i] * matchCounts[j];
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) total += matchCounts[i] * matchCounts[j] * matchCounts[k];
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) for (let l = k + 1; l < n; l++) total += matchCounts[i] * matchCounts[j] * matchCounts[k] * matchCounts[l];
+                total += matchCounts.reduce((a, b) => a * b, 1);
+                return total * 2; // 近似值
+            }
+            
+            // 默认：按单式计算
             const passMap = {
                 '2串1': 1, '3串1': 1, '4串1': 1, '5串1': 1, '6串1': 1, '7串1': 1, '8串1': 1,
                 '3串4': 4, '4串5': 5, '4串11': 11, '5串16': 16, '5串26': 26,
                 '6串20': 20, '6串35': 35, '6串42': 42, '6串57': 57
             };
-            return passMap[selectedPass] || 1;
+            return (passMap[selectedPass] || 1) * (isSingleBet ? 1 : matchCounts.reduce((a, b) => a * b, 1));
         }
 
         function calculateMaxOdds() {
             if (selectedMatches.length === 0) return 0;
-            return selectedMatches.reduce((acc, s) => acc * s.odds, 1);
+            
+            // 按比赛分组
+            const matchSelections = {};
+            selectedMatches.forEach(s => {
+                if (!matchSelections[s.matchId]) matchSelections[s.matchId] = [];
+                matchSelections[s.matchId].push(s);
+            });
+            const matchIds = Object.keys(matchSelections);
+            
+            // 对于复式投注，计算最高奖金（取每场比赛最高赔率的组合）
+            // 这是简化计算，实际应该计算所有组合的最高值
+            let maxOdds = 1;
+            matchIds.forEach(id => {
+                const maxMatchOdds = Math.max(...matchSelections[id].map(s => s.odds));
+                maxOdds *= maxMatchOdds;
+            });
+            return maxOdds;
         }
 
         function renderSelectedPanel() {
@@ -582,14 +736,27 @@
                 container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;">暂无选择</div>';
                 return;
             }
+            
+            // 按比赛分组显示
+            const matchGroups = {};
+            selectedMatches.forEach((s, idx) => {
+                if (!matchGroups[s.matchId]) matchGroups[s.matchId] = { name: s.matchName, picks: [], indices: [] };
+                matchGroups[s.matchId].picks.push(s);
+                matchGroups[s.matchId].indices.push(idx);
+            });
+            
             let html = '';
-            selectedMatches.forEach((s, i) => {
-                html += `<div class="sel-item">`;
-                html += `<div class="sel-info">`;
-                html += `<div class="sel-match">${s.matchId} ${s.matchName}${s.isBanker?'<span class="sel-banker">胆</span>':''}</div>`;
-                html += `<div class="sel-pick">${s.pickLabel} @${s.odds}</div>`;
+            Object.keys(matchGroups).forEach(matchId => {
+                const group = matchGroups[matchId];
+                const isBanker = group.picks[0].isBanker;
+                html += `<div class="sel-match-group">`;
+                html += `<div class="sel-match-header">${matchId} ${group.name}${isBanker?'<span class="sel-banker">胆</span>':''}</div>`;
+                html += `<div class="sel-picks">`;
+                group.picks.forEach((s, i) => {
+                    const globalIdx = group.indices[i];
+                    html += `<span class="sel-pick-tag">${s.pickLabel} @${s.odds}<button onclick="removeSelection(${globalIdx})">×</button></span>`;
+                });
                 html += `</div>`;
-                html += `<button class="sel-remove" onclick="removeSelection(${i})">×</button>`;
                 html += `</div>`;
             });
             container.innerHTML = html;
