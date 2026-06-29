@@ -37,7 +37,7 @@ def fetch_today_matches():
         )
         cur = conn.cursor()
         
-        # 只查询"待比赛"状态且三个赔率都有的赛事（体彩可下注的场次）
+        # 查询所有有赔率的赛事（包括已确认和待比赛），供计算器展示
         # 赔率转换为 float
         cur.execute("""
             SELECT 
@@ -53,11 +53,10 @@ def fetch_today_matches():
                 (handicap_draw_odds)::float as handicap_draw_odds,
                 (handicap_lose_odds)::float as handicap_lose_odds
             FROM matches 
-            WHERE status = '待比赛'
-              AND win_odds IS NOT NULL
+            WHERE win_odds IS NOT NULL
               AND draw_odds IS NOT NULL
               AND lose_odds IS NOT NULL
-            ORDER BY match_time ASC
+            ORDER BY match_time DESC
             LIMIT 50
         """)
         
