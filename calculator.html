@@ -112,23 +112,6 @@
             padding: 16px 20px;
             margin-bottom: 16px;
         }
-        .card-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .card-title .count {
-            font-size: 12px;
-            font-weight: 400;
-            color: #6b7280;
-            background: rgba(255, 255, 255, 0.04);
-            padding: 0 10px;
-            border-radius: 10px;
-        }
 
         .match-row {
             display: grid;
@@ -579,13 +562,12 @@
         }
 
         // ============================================================
-        // 方式1：使用 Supabase JS 客户端（推荐）
-        // 但由于是纯前端，我们用 REST API + URLSearchParams
+        // 获取数据 - 使用双引号包裹带下划线的字段名
         // ============================================================
         async function fetchMatches() {
-            // 构建查询参数
+            // 关键：home_team 和 away_team 带下划线，需要双引号包裹
             const params = new URLSearchParams();
-            params.append('select', 'id,teams,home_team,away_team,match_time,match_date,handicap,status,win_odds,draw_odds,lose_odds');
+            params.append('select', 'id,teams,"home_team","away_team",match_time,match_date,handicap,status,win_odds,draw_odds,lose_odds');
             params.append('sport_type', 'eq.football');
             params.append('status', 'eq.未开赛');
             params.append('order', 'match_time.asc');
@@ -597,7 +579,7 @@
                 headers: {
                     'apikey': SUPABASE_KEY,
                     'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Range': '0-99', // 限制返回数量
+                    'Range': '0-99',
                 }
             });
 
@@ -609,25 +591,11 @@
 
             const data = await resp.json();
             console.log('✅ 获取到数据:', data.length, '条');
+            // 打印第一条数据看看字段是否正确
+            if (data.length > 0) {
+                console.log('📋 示例数据:', data[0]);
+            }
             return data;
-        }
-
-        // ============================================================
-        // 方式2：如果上面不行，用 POST + body（备选）
-        // ============================================================
-        async function fetchMatchesPost() {
-            const body = {
-                select: 'id,teams,home_team,away_team,match_time,match_date,handicap,status,win_odds,draw_odds,lose_odds',
-                where: {
-                    sport_type: 'football',
-                    status: '未开赛'
-                },
-                order: { match_time: 'asc' }
-            };
-
-            const url = `${SUPABASE_URL}/rest/v1/rpc/query_matches`; // 需要创建函数
-            // 这个需要 Supabase 有对应的 RPC 函数，暂不使用
-            throw new Error('请使用 GET 方式');
         }
 
         // ============================================================
@@ -642,7 +610,6 @@
                     <div class="card" style="text-align:center;padding:30px;color:#6b7280;">
                         <div style="font-size:28px;margin-bottom:8px;">📭</div>
                         暂无未开赛的足球赛事
-                        <div style="font-size:12px;margin-top:4px;color:#6b7280;">比赛开售后会显示在这里</div>
                     </div>
                 `;
                 document.getElementById('totalMatches').textContent = '0';
@@ -688,9 +655,11 @@
                 `;
 
                 dayMatches.forEach(m => {
-                    const displayName = m.home_team && m.away_team ?
-                        `${m.home_team} VS ${m.away_team}` :
-                        (m.teams || '-- VS --');
+                    // 优先使用 home_team / away_team，如果没有则用 teams
+                    let displayName = m.teams || '-- VS --';
+                    if (m.home_team && m.away_team) {
+                        displayName = `${m.home_team} VS ${m.away_team}`;
+                    }
 
                     const id = m.id || '---';
                     const time = fmtTime(m.match_time);
@@ -699,19 +668,15 @@
                     const drawOdds = m.draw_odds || '--';
                     const loseOdds = m.lose_odds || '--';
 
-                    // 检查是否已选
-                    const isSelected = selectedMatches.some(s => s.id === m.id);
-                    const selectedClass = isSelected ? 'selected' : '';
-
                     html += `
                         <div class="match-row" data-id="${m.id}">
                             <span class="id">${esc(id)}</span>
                             <span class="time">${time}</span>
                             <span class="teams">${esc(displayName)}</span>
                             <span class="handicap">${handicap}</span>
-                            <span class="odds win ${selectedClass}" onclick="selectMatch('${m.id}','${esc(displayName)}','胜',${winOdds})">${winOdds}</span>
-                            <span class="odds draw ${selectedClass}" onclick="selectMatch('${m.id}','${esc(displayName)}','平',${drawOdds})">${drawOdds}</span>
-                            <span class="odds lose ${selectedClass}" onclick="selectMatch('${m.id}','${esc(displayName)}','负',${loseOdds})">${loseOdds}</span>
+                            <span class="odds win" onclick="selectMatch('${m.id}','${esc(displayName)}','胜',${winOdds})">${winOdds}</span>
+                            <span class="odds draw" onclick="selectMatch('${m.id}','${esc(displayName)}','平',${drawOdds})">${drawOdds}</span>
+                            <span class="odds lose" onclick="selectMatch('${m.id}','${esc(displayName)}','负',${loseOdds})">${loseOdds}</span>
                             <span class="add-btn" onclick="selectMatch('${m.id}','${esc(displayName)}','胜',${winOdds})">＋</span>
                         </div>
                     `;
@@ -750,7 +715,6 @@
                 return;
             }
 
-            // 检查是否已选同一场比赛的同一结果，点击取消
             const existing = selectedMatches.findIndex(m => m.id === id && m.result === result);
             if (existing >= 0) {
                 selectedMatches.splice(existing, 1);
@@ -759,7 +723,6 @@
                 return;
             }
 
-            // 检查是否已选同一场比赛（不同结果），替换
             const sameMatch = selectedMatches.findIndex(m => m.id === id);
             if (sameMatch >= 0) {
                 selectedMatches.splice(sameMatch, 1);
@@ -904,7 +867,6 @@
                         <div class="card" style="text-align:center;padding:30px;color:#6b7280;">
                             <div style="font-size:28px;margin-bottom:8px;">📭</div>
                             暂无未开赛的足球赛事
-                            <div style="font-size:12px;margin-top:4px;color:#6b7280;">比赛开售后会显示在这里</div>
                         </div>
                     `;
                     document.getElementById('totalMatches').textContent = '0';
