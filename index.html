@@ -642,11 +642,15 @@ function renderPredictionTable(details, match, isDone) {
         if (isDone && d.score) {
             if (isBasketball) {
                 // 篮球比分格式: "主胜6-10" 或 "主负6-10"
-                const scoreMatch = d.score.match(/(\d+)-(\d+)/);
+                // 表示：主胜/主负 + 分差范围
+                const scoreMatch = d.score.match(/(主胜|主负)(\d+)-(\d+)/);
                 if (scoreMatch) {
-                    const predHome = parseInt(scoreMatch[1]);
-                    const predAway = parseInt(scoreMatch[2]);
-                    scoreHit = (predHome === match.home_score && predAway === match.away_score);
+                    const predWinner = scoreMatch[1]; // 主胜 or 主负
+                    const minDiff = parseInt(scoreMatch[2]);
+                    const maxDiff = parseInt(scoreMatch[3]);
+                    const actualDiff = Math.abs(match.home_score - match.away_score);
+                    const actualWinner = match.home_score > match.away_score ? '主胜' : '主负';
+                    scoreHit = (predWinner === actualWinner && actualDiff >= minDiff && actualDiff <= maxDiff);
                 }
             } else {
                 // 足球比分格式: "1-2" 或 "2-1"
