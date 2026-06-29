@@ -575,6 +575,18 @@ function renderPredictionTable(details, match, isDone) {
 
     // 计算实际结果
     const actualResult = isDone ? getMatchResult(match) : null;
+    
+    // 计算实际进球数
+    const actualGoals = isDone ? (match.home_score + match.away_score) : null;
+    
+    // 计算实际半全场结果
+    let actualHalfFull = null;
+    if (isDone && match.half_home_score !== null && match.half_away_score !== null) {
+        const halfResult = match.half_home_score > match.half_away_score ? '胜' : 
+                          match.half_home_score < match.half_away_score ? '负' : '平';
+        const fullResult = actualResult;
+        actualHalfFull = halfResult + fullResult;
+    }
 
     let html = '<div class="pred-table-wrap">';
     html += '<table class="pred-table">';
@@ -605,17 +617,28 @@ function renderPredictionTable(details, match, isDone) {
         const scoreHit = isDone && d.hit_score === true;
         html += renderPredCell(d.score, scoreHit, isDone);
 
-        // 进球数维度
-        const goalsHit = isDone && d.hit_goals === true;
+        // 进球数维度 - 自己计算
+        let goalsHit = false;
+        if (isDone && actualGoals !== null && d.goals !== null) {
+            goalsHit = parseInt(d.goals) === actualGoals;
+        }
         html += renderPredCell(d.goals, goalsHit, isDone);
 
-        // 半全场维度
-        const halfFullHit = isDone && d.hit_half === true;
+        // 半全场维度 - 自己计算
+        let halfFullHit = false;
+        if (isDone && actualHalfFull && d.half_full) {
+            halfFullHit = d.half_full === actualHalfFull;
+        }
         html += renderPredCell(d.half_full, halfFullHit, isDone);
 
-        // 命中总数
+        // 命中总数 - 自己计算
         if (isDone) {
-            const hits = d.total_hits || 0;
+            let hits = 0;
+            if (spfHit) hits++;
+            if (handicapHit) hits++;
+            if (scoreHit) hits++;
+            if (goalsHit) hits++;
+            if (halfFullHit) hits++;
             html += '<td class="hits-col"><span class="hits-num">' + hits + '/5</span></td>';
         }
 
