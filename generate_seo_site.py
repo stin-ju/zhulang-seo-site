@@ -260,39 +260,25 @@ def fetch_metadata_for_date(date_str):
 
 def generate_brief_page(news_data, all_dates):
     """
-    Generate the brief index page HTML with pinned articles (today's prediction + yesterday's review).
-    Returns (html, article_list) where article_list contains only 2 articles.
+    Generate the brief index page HTML with collapsible list of all briefs.
+    Returns (html, article_list) where article_list contains all dates.
     """
     today = datetime.now()
     today_str = today.strftime("%Y-%m-%d")
     
-    # Only generate 2 articles: latest date (prediction) and second latest date (review)
+    # Generate articles for all dates
     article_list = []
-    
-    # Latest date - today's prediction
-    if len(all_dates) >= 1:
-        latest_date = all_dates[0]
-        matches = fetch_matches_for_date(latest_date)
-        metadata = fetch_metadata_for_date(latest_date)
+    for date_str in all_dates:
+        matches = fetch_matches_for_date(date_str)
+        metadata = fetch_metadata_for_date(date_str)
+        # Determine type: latest date is prediction, others are review
+        article_type = 'prediction' if date_str == all_dates[0] else 'review'
         article_list.append({
-            'date': latest_date,
+            'date': date_str,
             'matches': matches,
             'metadata': metadata,
             'match_count': len(matches),
-            'type': 'prediction'  # 今日预测
-        })
-    
-    # Second latest date - yesterday's review
-    if len(all_dates) >= 2:
-        second_date = all_dates[1]
-        matches = fetch_matches_for_date(second_date)
-        metadata = fetch_metadata_for_date(second_date)
-        article_list.append({
-            'date': second_date,
-            'matches': matches,
-            'metadata': metadata,
-            'match_count': len(matches),
-            'type': 'review'  # 昨日复盘
+            'type': article_type
         })
     
     # Build pinned articles HTML
@@ -483,17 +469,15 @@ def generate_brief_page(news_data, all_dates):
     </section>
     
     <main class="container">
-        <!-- Pinned Section: Today's Prediction + Yesterday's Review -->
+        <!-- All Briefs List (Collapsible) -->
         <section style="margin-bottom:24px;">
             <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-                📌 最新简报
+                📋 全部简报 <span style="font-size:14px;color:var(--text-secondary);font-weight:400;">({len(articles)}篇)</span>
             </h2>
-            <div class="pinned-section">
-                {pinned_html}
+            <div class="brief-list">
+                {brief_list_html}
             </div>
         </section>
-        
-        {generate_news_html(news_data)}
     </main>
     
     <footer>
@@ -830,55 +814,51 @@ def main():
     print("更新首页简报区块...")
     update_index_brief(output_dir, all_dates)
     
+    # Update brief.html with collapsible list
+    print("更新简报列表页...")
+    update_brief_page(output_dir, all_dates)
+    
     print("完成！")
 
 
 def update_index_brief(output_dir, all_dates):
-    """Update the brief section in index.html with static HTML content."""
+    """Update the brief section in index.html with a list of brief titles."""
     if not all_dates:
         return
     
-    # Get the latest date's matches (all_dates is a list of date strings)
-    date_str = all_dates[0]  # First item is the latest date
+    # Generate brief list HTML (latest 5 dates)
+    brief_items = []
+    for date_str in all_dates[:5]:
+        # Parse date for display
+        try:
+            dt = datetime.strptime(date_str, '%Y-%m-%d')
+            weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+            date_display = f"{dt.month}月{dt.day}日 {weekdays[dt.weekday()]}"
+        except:
+            date_display = date_str
+        
+        # Determine if it's prediction or review
+        today = datetime.now().date()
+        is_prediction = dt.date() >= today
+        label = "预测" if is_prediction else "复盘"
+        icon = "🔮" if is_prediction else "📊"
+        
+        # Link to article page
+        article_url = f"/brief-{date_str}.html"
+        
+        brief_items.append(f'''                <a href="{article_url}" class="brief-item">
+                    <div class="top">
+                        <span class="icon">{icon}</span>
+                        <span class="title">{date_display} {label}</span>
+                        <span class="date">{date_str}</span>
+                        <span class="arrow">→</span>
+                    </div>
+                </a>''')
     
-    # Parse date for display
-    try:
-        dt = datetime.strptime(date_str, '%Y-%m-%d')
-        weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-        date_display = f"{dt.month}月{dt.day}日 {weekdays[dt.weekday()]}"
-    except:
-        date_display = date_str
-    
-    # Fetch matches for this date
-    matches_url = f"{SUPABASE_URL}/rest/v1/matches?select=id,teams,match_time&match_time=gte.{date_str}T00:00:00&match_time=lt.{date_str}T23:59:59&sport_type=eq.football&order=match_time.asc"
-    try:
-        req = urllib.request.Request(matches_url, headers={
-            'apikey': SUPABASE_KEY,
-            'Authorization': f'Bearer {SUPABASE_KEY}'
-        })
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            matches = json.loads(resp.read().decode('utf-8'))
-    except Exception as e:
-        print(f"  ✗ 获取比赛数据失败: {e}")
+    if not brief_items:
         return
     
-    if not matches:
-        print("  ⚠ 最新日期无比赛数据")
-        return
-    
-    # Generate static HTML for brief content
-    match_rows = []
-    for m in matches[:6]:  # Show max 6 matches
-        match_id = m.get('id', '---')
-        teams = m.get('teams', '-- VS --')
-        match_time = m.get('match_time', '')
-        time_display = match_time[11:16] if match_time and len(match_time) >= 16 else '--:--'
-        match_rows.append(f'                    <span style="color:#6b7280;">{match_id}</span>\n                    <span>{teams}</span>\n                    <span style="color:#6b7280;">{time_display}</span>')
-    
-    brief_content_html = f'''                <div style="font-size:13px;color:#e8eef7;font-weight:500;margin-bottom:8px;">{date_display} 赛事列表</div>
-                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;font-size:12px;">
-{chr(10).join(match_rows)}
-                </div>'''
+    brief_list_html = '\n'.join(brief_items)
     
     # Read index.html
     index_path = os.path.join(output_dir, 'index.html')
@@ -889,15 +869,8 @@ def update_index_brief(output_dir, all_dates):
         print(f"  ✗ 读取index.html失败: {e}")
         return
     
-    # Update brief-date
-    content = re.sub(
-        r'(<span[^>]*id="brief-date"[^>]*>).*?(</span>)',
-        lambda m: m.group(1) + date_display + m.group(2),
-        content
-    )
-    
     # Update brief-content
-    new_brief_content = f'<!-- BRIEF_CONTENT_START -->\n{brief_content_html}\n                <!-- BRIEF_CONTENT_END -->'
+    new_brief_content = f'<!-- BRIEF_CONTENT_START -->\n{brief_list_html}\n                <!-- BRIEF_CONTENT_END -->'
     content = re.sub(
         r'<!-- BRIEF_CONTENT_START -->.*?<!-- BRIEF_CONTENT_END -->',
         new_brief_content,
@@ -909,9 +882,80 @@ def update_index_brief(output_dir, all_dates):
     try:
         with open(index_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        print(f"  ✓ 首页简报已更新: {date_display}, {len(matches)}场比赛")
+        print(f"  ✓ 首页简报已更新: {len(brief_items)}条简报")
     except Exception as e:
         print(f"  ✗ 写入index.html失败: {e}")
+
+
+def update_brief_page(output_dir, all_dates):
+    """Update brief.html with collapsible list of all briefs."""
+    if not all_dates:
+        return
+    
+    # Generate collapsible list HTML
+    brief_sections = []
+    for date_str in all_dates:
+        # Parse date for display
+        try:
+            dt = datetime.strptime(date_str, '%Y-%m-%d')
+            weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+            date_display = f"{dt.year}年{dt.month}月{dt.day}日 {weekdays[dt.weekday()]}"
+        except:
+            date_display = date_str
+        
+        # Determine if it's prediction or review
+        today = datetime.now().date()
+        is_prediction = dt.date() >= today
+        label = "AI预测" if is_prediction else "AI复盘"
+        icon = "🔮" if is_prediction else "📊"
+        
+        # Link to article page
+        article_url = f"/brief-{date_str}.html"
+        
+        brief_sections.append(f'''            <div class="brief-section">
+                <div class="brief-header" onclick="toggleBrief(this)">
+                    <span class="arrow">▶</span>
+                    <span class="icon">{icon}</span>
+                    <span class="title">{date_display} {label}</span>
+                    <a href="{article_url}" class="view-link" onclick="event.stopPropagation()">查看 →</a>
+                </div>
+                <div class="brief-body hidden">
+                    <div class="brief-summary">
+                        <p>点击查看{date_display}的{label}详情，包含AI分析、预测数据和比赛信息。</p>
+                    </div>
+                </div>
+            </div>''')
+    
+    if not brief_sections:
+        return
+    
+    brief_list_html = '\n'.join(brief_sections)
+    
+    # Read brief.html
+    brief_path = os.path.join(output_dir, 'brief.html')
+    try:
+        with open(brief_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        print(f"  ✗ 读取brief.html失败: {e}")
+        return
+    
+    # Update brief-list
+    new_brief_list = f'<!-- BRIEF_LIST_START -->\n{brief_list_html}\n            <!-- BRIEF_LIST_END -->'
+    content = re.sub(
+        r'<!-- BRIEF_LIST_START -->.*?<!-- BRIEF_LIST_END -->',
+        new_brief_list,
+        content,
+        flags=re.DOTALL
+    )
+    
+    # Write back
+    try:
+        with open(brief_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"  ✓ 简报列表页已更新: {len(brief_sections)}条简报")
+    except Exception as e:
+        print(f"  ✗ 写入brief.html失败: {e}")
 
 
 if __name__ == '__main__':

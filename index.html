@@ -251,6 +251,33 @@
             .pred-table { font-size: 11px; }
             .pred-table th, .pred-table td { padding: 6px 4px; }
         }
+
+        /* ===== 简报列表 ===== */
+        .brief-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.15s;
+        }
+        .brief-item:hover {
+            background: rgba(139, 92, 246, 0.05);
+        }
+        .brief-item:last-child {
+            border-bottom: none;
+        }
+        .brief-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #e8eef7;
+        }
+        .brief-date {
+            font-size: 12px;
+            color: #6b7280;
+        }
     </style>
 </head>
 <body>
@@ -328,23 +355,22 @@
         <div class="rank-card" id="brief-card">
             <div class="head">
                 <span>🔍 AI预测简报</span>
-                <span style="font-size:11px;color:#6b7280;" id="brief-date">7月2日 周三</span>
             </div>
-            <div id="brief-content" style="padding:8px 16px;color:#94a3b8;font-size:13px;line-height:1.7;">
-                <!-- BRIEF_CONTENT_START -->
-                <div style="font-size:13px;color:#e8eef7;font-weight:500;margin-bottom:8px;">7月2日 周三 赛事列表</div>
-                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;font-size:12px;">
-                    <span style="color:#6b7280;">周三080</span>
-                    <span>英格兰VS刚果金</span>
-                    <span style="color:#6b7280;">00:00</span>
-                    <span style="color:#6b7280;">周三081</span>
-                    <span>比利时VS塞内加尔</span>
-                    <span style="color:#6b7280;">04:00</span>
-                    <span style="color:#6b7280;">周三082</span>
-                    <span>美国VS波黑</span>
-                    <span style="color:#6b7280;">08:00</span>
-                </div>
-                <!-- BRIEF_CONTENT_END -->
+            <div id="brief-list">
+                <!-- BRIEF_LIST_START -->
+                <a href="/brief-2026-07-02.html" class="brief-item">
+                    <span class="brief-title">7月2日 周三 赛事预测</span>
+                    <span class="brief-date">07-02</span>
+                </a>
+                <a href="/brief-2026-07-01.html" class="brief-item">
+                    <span class="brief-title">7月1日 周二 赛事复盘</span>
+                    <span class="brief-date">07-01</span>
+                </a>
+                <a href="/brief-2026-06-30.html" class="brief-item">
+                    <span class="brief-title">6月30日 周一 赛事复盘</span>
+                    <span class="brief-date">06-30</span>
+                </a>
+                <!-- BRIEF_LIST_END -->
             </div>
             <div style="padding:8px 16px 12px;text-align:right;">
                 <a href="/brief.html" style="font-size:12px;color:#8b5cf6;text-decoration:none;">查看全部简报 →</a>
