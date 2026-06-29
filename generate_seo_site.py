@@ -48,7 +48,10 @@ def fetch_today_matches():
                 status,
                 (win_odds)::float as win_odds,
                 (draw_odds)::float as draw_odds,
-                (lose_odds)::float as lose_odds
+                (lose_odds)::float as lose_odds,
+                (handicap_win_odds)::float as handicap_win_odds,
+                (handicap_draw_odds)::float as handicap_draw_odds,
+                (handicap_lose_odds)::float as handicap_lose_odds
             FROM matches 
             WHERE status = '待比赛'
               AND win_odds IS NOT NULL
