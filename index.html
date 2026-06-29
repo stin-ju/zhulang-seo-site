@@ -226,6 +226,20 @@
         .date-chip:hover { border-color: rgba(139, 92, 246, 0.3); color: #e5e7eb; }
         .date-chip.active { background: rgba(139, 92, 246, 0.12); border-color: rgba(139, 92, 246, 0.4); color: #a78bfa; }
 
+        /* 预测详情表格 */
+        .pred-table-wrap { overflow-x: auto; padding: 8px 0; }
+        .pred-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .pred-table th { background: rgba(139, 92, 246, 0.08); color: #94a3b8; font-weight: 500; padding: 8px 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
+        .pred-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        .pred-table .ai-col { text-align: left; font-weight: 500; color: #e8eef7; white-space: nowrap; min-width: 70px; }
+        .pred-table .hits-col { min-width: 50px; }
+        .pred-val { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+        .pred-val.hit { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .pred-val.miss { background: rgba(239, 68, 68, 0.1); color: #94a3b8; }
+        .hit-mark { color: #10b981; font-weight: 700; margin-left: 2px; }
+        .miss-mark { color: #6b7280; font-weight: 400; margin-left: 2px; }
+        .hits-num { font-weight: 600; color: #a78bfa; font-size: 12px; }
+
         /* 响应式 */
         @media (max-width: 480px) {
             .hero h1 { font-size: 22px; }
@@ -234,6 +248,8 @@
             .view-item .time { width: auto; }
             .navbar .container { flex-direction: column; gap: 6px; }
             .nav-links { justify-content: center; }
+            .pred-table { font-size: 11px; }
+            .pred-table th, .pred-table td { padding: 6px 4px; }
         }
     </style>
 </head>
@@ -493,7 +509,19 @@ function computeVotes(matchId) {
         else if (spf.includes('胜') && !spf.includes('负')) votes['胜']++;
         else if (spf.includes('负') && !spf.includes('胜')) votes['负']++;
         else if (spf.includes('平')) votes['平']++;
-        details.push({ ai: p.ai_name, spf: spf, score: p.score, handicap: p.handicap_spf });
+        details.push({
+            ai: p.ai_name,
+            spf: spf,
+            handicap: p.handicap_spf,
+            score: p.score,
+            goals: p.goals,
+            half_full: p.half_full,
+            hit_handicap: p.hit_handicap,
+            hit_score: p.hit_score,
+            hit_goals: p.hit_goals,
+            hit_half: p.hit_half,
+            total_hits: p.total_hits
+        });
     });
 
     const total = Object.values(votes).reduce((a, b) => a + b, 0);
@@ -531,6 +559,83 @@ function renderDateBar() {
             renderCurrentDate();
         });
     });
+}
+
+// ============================================================
+// 渲染：预测详情表格（7 AI × 5 维度）
+// ============================================================
+function renderPredictionTable(details, match, isDone) {
+    const dims = [
+        { key: 'spf', label: '胜平负' },
+        { key: 'handicap', label: '让球' },
+        { key: 'score', label: '比分' },
+        { key: 'goals', label: '进球数' },
+        { key: 'half_full', label: '半全场' }
+    ];
+
+    // 计算实际结果
+    const actualResult = isDone ? getMatchResult(match) : null;
+
+    let html = '<div class="pred-table-wrap">';
+    html += '<table class="pred-table">';
+    html += '<thead><tr>';
+    html += '<th class="ai-col">AI</th>';
+    dims.forEach(d => {
+        html += '<th>' + d.label + '</th>';
+    });
+    if (isDone) {
+        html += '<th class="hits-col">命中</th>';
+    }
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    details.forEach(d => {
+        html += '<tr>';
+        html += '<td class="ai-col">' + esc(d.ai) + '</td>';
+
+        // 胜平负维度
+        const spfHit = isDone && actualResult && d.spf === actualResult;
+        html += renderPredCell(d.spf, spfHit, isDone);
+
+        // 让球维度
+        const handicapHit = isDone && d.hit_handicap === true;
+        html += renderPredCell(d.handicap, handicapHit, isDone);
+
+        // 比分维度
+        const scoreHit = isDone && d.hit_score === true;
+        html += renderPredCell(d.score, scoreHit, isDone);
+
+        // 进球数维度
+        const goalsHit = isDone && d.hit_goals === true;
+        html += renderPredCell(d.goals, goalsHit, isDone);
+
+        // 半全场维度
+        const halfFullHit = isDone && d.hit_half === true;
+        html += renderPredCell(d.half_full, halfFullHit, isDone);
+
+        // 命中总数
+        if (isDone) {
+            const hits = d.total_hits || 0;
+            html += '<td class="hits-col"><span class="hits-num">' + hits + '/5</span></td>';
+        }
+
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    html += '</div>';
+    return html;
+}
+
+function renderPredCell(value, isHit, isDone) {
+    const display = value || '—';
+    if (!isDone) {
+        return '<td><span class="pred-val">' + esc(display) + '</span></td>';
+    }
+    if (isHit) {
+        return '<td><span class="pred-val hit">' + esc(display) + ' <span class="hit-mark">✓</span></span></td>';
+    }
+    return '<td><span class="pred-val miss">' + esc(display) + ' <span class="miss-mark">✗</span></span></td>';
 }
 
 // ============================================================
@@ -596,16 +701,7 @@ function renderSportView(containerId, matches, countLabelId) {
         // 展开详情区域
         html += '<div class="match-detail" id="detail-' + esc(m.id) + '">';
         if (stats.details.length > 0) {
-            html += '<div class="detail-grid">';
-            stats.details.forEach(d => {
-                const pCls = d.spf === '胜' ? 'win' : d.spf === '负' ? 'lose' : 'draw';
-                html += '<div class="detail-item">';
-                html += '<div class="ai">' + esc(d.ai) + '</div>';
-                html += '<div class="pred ' + pCls + '">' + esc(d.spf || '—') + '</div>';
-                html += '<div class="score">' + esc(d.score || '') + ' | ' + esc(d.handicap || '') + '</div>';
-                html += '</div>';
-            });
-            html += '</div>';
+            html += renderPredictionTable(stats.details, m, isDone);
         } else {
             html += '<div style="color:#6b7280;font-size:13px;text-align:center;padding:8px;">暂无AI预测数据</div>';
         }
