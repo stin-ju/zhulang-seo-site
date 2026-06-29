@@ -324,7 +324,15 @@
         // ========== 渲染比赛列表 ==========
         function renderMatches() {
             const allMatches = window.MATCH_DATA || [];
-            const matches = allMatches.filter(m => m.status === '待比赛');
+            // 过滤：待比赛 + 比赛时间还没到（提前10分钟截止）
+            const now = new Date();
+            const cutoffBuffer = 10 * 60 * 1000; // 10分钟
+            const matches = allMatches.filter(m => {
+                if (m.status !== '待比赛') return false;
+                if (!m.match_time) return false;
+                const matchTime = new Date(m.match_time.replace(' ', 'T'));
+                return matchTime.getTime() > now.getTime() + cutoffBuffer;
+            });
             const container = document.getElementById('matchList');
 
             if (matches.length === 0) {
