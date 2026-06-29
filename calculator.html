@@ -519,11 +519,15 @@
             if (odds === '--' || isNaN(odds) || odds <= 0) { alert('该赔率暂不可用'); return; }
             const idx = selectedMatches.findIndex(s => s.key === key);
             if (idx >= 0) {
+                // 点击已选中的选项，取消选择
                 selectedMatches.splice(idx, 1);
             } else {
-                // 同一场比赛同一玩法只能选一个
-                const sameMatchType = selectedMatches.findIndex(s => s.matchId === matchId && s.pickType === pickType);
-                if (sameMatchType >= 0) selectedMatches.splice(sameMatchType, 1);
+                // 竞彩规则：同一场比赛只能选1个选项（不同玩法也不能同时选）
+                const sameMatch = selectedMatches.findIndex(s => s.matchId === matchId);
+                if (sameMatch >= 0) {
+                    // 替换该比赛的选项
+                    selectedMatches.splice(sameMatch, 1);
+                }
                 if (selectedMatches.length >= 8) { alert('最多选择8场比赛'); return; }
                 selectedMatches.push({ matchId, matchName, pickType, pickLabel, odds, isBanker: false, key });
             }
@@ -532,10 +536,10 @@
         }
 
         function toggleBanker(matchId, matchName) {
-            const matchSelections = selectedMatches.filter(s => s.matchId === matchId);
-            if (matchSelections.length === 0) { alert('请先选择该比赛的投注选项'); return; }
-            const hasBanker = matchSelections.some(s => s.isBanker);
-            matchSelections.forEach(s => s.isBanker = !hasBanker);
+            // 竞彩规则：同一场比赛只能选1个选项，设胆就是给这个选项标记为胆码
+            const matchSel = selectedMatches.find(s => s.matchId === matchId);
+            if (!matchSel) { alert('请先选择该比赛的投注选项'); return; }
+            matchSel.isBanker = !matchSel.isBanker;
             renderMatches();
             updateBottomBar();
         }
