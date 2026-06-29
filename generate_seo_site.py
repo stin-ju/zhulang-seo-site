@@ -9,6 +9,7 @@ This script generates:
 import urllib.request
 import json
 import os
+import re
 from datetime import datetime
 
 # Supabase configuration
@@ -825,7 +826,92 @@ def main():
         f.write(sitemap_xml)
     print(f"✓ sitemap.xml 已生成，包含 {len(sitemap_urls)} 个URL")
     
+    # Update index.html brief section with latest data
+    print("更新首页简报区块...")
+    update_index_brief(output_dir, all_dates)
+    
     print("完成！")
+
+
+def update_index_brief(output_dir, all_dates):
+    """Update the brief section in index.html with static HTML content."""
+    if not all_dates:
+        return
+    
+    # Get the latest date's matches (all_dates is a list of date strings)
+    date_str = all_dates[0]  # First item is the latest date
+    
+    # Parse date for display
+    try:
+        dt = datetime.strptime(date_str, '%Y-%m-%d')
+        weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+        date_display = f"{dt.month}月{dt.day}日 {weekdays[dt.weekday()]}"
+    except:
+        date_display = date_str
+    
+    # Fetch matches for this date
+    matches_url = f"{SUPABASE_URL}/rest/v1/matches?select=id,teams,match_time&match_time=gte.{date_str}T00:00:00&match_time=lt.{date_str}T23:59:59&sport_type=eq.football&order=match_time.asc"
+    try:
+        req = urllib.request.Request(matches_url, headers={
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}'
+        })
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            matches = json.loads(resp.read().decode('utf-8'))
+    except Exception as e:
+        print(f"  ✗ 获取比赛数据失败: {e}")
+        return
+    
+    if not matches:
+        print("  ⚠ 最新日期无比赛数据")
+        return
+    
+    # Generate static HTML for brief content
+    match_rows = []
+    for m in matches[:6]:  # Show max 6 matches
+        match_id = m.get('id', '---')
+        teams = m.get('teams', '-- VS --')
+        match_time = m.get('match_time', '')
+        time_display = match_time[11:16] if match_time and len(match_time) >= 16 else '--:--'
+        match_rows.append(f'                    <span style="color:#6b7280;">{match_id}</span>\n                    <span>{teams}</span>\n                    <span style="color:#6b7280;">{time_display}</span>')
+    
+    brief_content_html = f'''                <div style="font-size:13px;color:#e8eef7;font-weight:500;margin-bottom:8px;">{date_display} 赛事列表</div>
+                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;font-size:12px;">
+{chr(10).join(match_rows)}
+                </div>'''
+    
+    # Read index.html
+    index_path = os.path.join(output_dir, 'index.html')
+    try:
+        with open(index_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        print(f"  ✗ 读取index.html失败: {e}")
+        return
+    
+    # Update brief-date
+    content = re.sub(
+        r'(<span[^>]*id="brief-date"[^>]*>).*?(</span>)',
+        lambda m: m.group(1) + date_display + m.group(2),
+        content
+    )
+    
+    # Update brief-content
+    new_brief_content = f'<!-- BRIEF_CONTENT_START -->\n{brief_content_html}\n                <!-- BRIEF_CONTENT_END -->'
+    content = re.sub(
+        r'<!-- BRIEF_CONTENT_START -->.*?<!-- BRIEF_CONTENT_END -->',
+        new_brief_content,
+        content,
+        flags=re.DOTALL
+    )
+    
+    # Write back
+    try:
+        with open(index_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"  ✓ 首页简报已更新: {date_display}, {len(matches)}场比赛")
+    except Exception as e:
+        print(f"  ✗ 写入index.html失败: {e}")
 
 
 if __name__ == '__main__':
