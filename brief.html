@@ -4,180 +4,134 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI预测简报 - AI实验室·体彩好伙伴</title>
-    <meta name="description" content="AI实验室每日简报，汇总7大AI模型对今日赛事的预测分析，包括共识度、分歧点、预测命中率等数据。">
-    <meta name="keywords" content="AI预测,体彩预测,赛事分析,AI简报,预测命中率">
+    <meta name="description" content="每日AI预测简报，汇总7大AI模型对竞彩足球和篮球的预测分析，帮助用户了解AI的预测准确率。">
+    <meta name="keywords" content="AI预测,体彩预测,赛事分析,竞彩足球,竞彩篮球,AI实验室">
     <link rel="canonical" href="https://zhulang.coze.site/brief.html">
+    <meta property="og:title" content="AI预测简报 - AI实验室·体彩好伙伴">
+    <meta property="og:description" content="每日AI预测简报，汇总7大AI模型对竞彩足球和篮球的预测分析。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://zhulang.coze.site/brief.html">
     <style>
+        :root {
+            --bg-night: #0B1220;
+            --bg-deep: #0F1A2E;
+            --bg-elevated: #16243D;
+            --turf: #10B981;
+            --turf-soft: rgba(16,185,129,0.15);
+            --gold: #F5C242;
+            --gold-soft: rgba(245,194,66,0.12);
+            --miss: #3F4A60;
+            --text-primary: #E8EEF7;
+            --text-secondary: #94A3B8;
+            --divider: rgba(255,255,255,0.08);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a0a2e;
-            color: #e8eef7;
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            background: var(--bg-night);
+            color: var(--text-primary);
             line-height: 1.6;
         }
-        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
-        .header {
+        a { color: inherit; }
+        .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Navbar */
+        .navbar {
+            background: rgba(11, 18, 32, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--divider);
+            padding: 10px 0;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .logo { font-size: 18px; font-weight: 800; color: var(--gold); text-decoration: none; }
+        .logo span { color: var(--text-primary); }
+        .nav-links { display: flex; gap: 2px; flex-wrap: wrap; }
+        .nav-links a {
+            padding: 5px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+        .nav-links a.active { color: var(--gold); background: var(--gold-soft); }
+        
+        /* Hero */
+        .hero {
             text-align: center;
             padding: 40px 20px;
-            background: linear-gradient(135deg, #2d1b4e 0%, #1a0a2e 100%);
-            border-radius: 12px;
+            background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-elevated) 100%);
+            border-bottom: 1px solid var(--divider);
             margin-bottom: 24px;
-            border: 1px solid rgba(245, 194, 66, 0.2);
         }
-        .header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            color: #F5C242;
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 900;
             margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--turf) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        .header .date {
-            font-size: 14px;
-            color: #94a3b8;
-        }
-        .brief-content {
-            background: #2d1b4e;
-            border-radius: 12px;
-            padding: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            margin-bottom: 24px;
-        }
-        .brief-content h2 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #F5C242;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .brief-text {
+        .hero p {
             font-size: 15px;
-            line-height: 1.8;
-            color: #e8eef7;
+            color: var(--text-secondary);
         }
-        .brief-text .hl { color: #8b5cf6; font-weight: 600; }
-        .brief-text .dv { color: #fbbf24; font-weight: 600; }
-        .back-link {
-            display: inline-block;
-            padding: 12px 24px;
-            background: rgba(245, 194, 66, 0.1);
-            border: 1px solid rgba(245, 194, 66, 0.3);
-            border-radius: 8px;
-            color: #F5C242;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .back-link:hover {
-            background: rgba(245, 194, 66, 0.2);
-            transform: translateY(-1px);
-        }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #94a3b8;
-        }
-        /* Hot News Section */
-        .hot-news-section {
-            background: #2d1b4e;
-            border-radius: 12px;
-            padding: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        
+        /* Article list */
+        .article-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             margin-bottom: 24px;
         }
-        .hot-news-section h2 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #F5C242;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        .article-list a:hover {
+            border-color: var(--gold) !important;
+            transform: translateY(-2px);
         }
-        .hot-news-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-        .hot-news-tab {
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: transparent;
-            color: #94a3b8;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .hot-news-tab:hover {
-            border-color: rgba(245, 194, 66, 0.3);
-            color: #F5C242;
-        }
-        .hot-news-tab.active {
-            background: rgba(245, 194, 66, 0.1);
-            border-color: rgba(245, 194, 66, 0.3);
-            color: #F5C242;
-        }
-        .hot-news-list {
-            list-style: none;
-        }
-        .hot-news-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-        }
-        .hot-news-item:last-child {
-            border-bottom: none;
-        }
-        .hot-news-rank {
-            flex-shrink: 0;
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.06);
-            color: #94a3b8;
-            font-size: 12px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .hot-news-rank.top3 {
-            background: rgba(245, 194, 66, 0.15);
-            color: #F5C242;
-        }
-        .hot-news-title {
-            flex: 1;
-            font-size: 14px;
-            color: #e8eef7;
-            line-height: 1.5;
-        }
-        .hot-news-title a {
-            color: inherit;
-            text-decoration: none;
-        }
-        .hot-news-title a:hover {
-            color: #F5C242;
-        }
-        .hot-news-date {
-            flex-shrink: 0;
-            font-size: 12px;
-            color: #64748b;
-        }
-        .hot-news-loading {
+        
+        /* Footer */
+        footer {
             text-align: center;
             padding: 20px;
-            color: #94a3b8;
-            font-size: 14px;
+            border-top: 1px solid var(--divider);
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 24px; }
+            .hero p { font-size: 13px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>✍️ AI预测简报</h1>
-            <div class="date" id="brief-date">加载中...</div>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">AI实验室<span>·</span>体彩好伙伴</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/brief.html" class="active">简报</a>
+                <a href="/calculator.html">计算器</a>
+                <a href="/ai-analysis.html">AI分析</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero -->
+    <section class="hero">
+        <h1>AI预测简报</h1>
+        <p>每日AI预测汇总，7大AI模型为您分析赛事</p>
+    </section>
+    
+    <main class="container">
+        
     <!-- ===== 每日热点新闻 ===== -->
     <section style="margin-bottom:24px;">
         <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
@@ -191,74 +145,64 @@
                     微博热搜
                 </h3>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--gold);min-width:20px;">1</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西绝杀</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--gold);min-width:20px;">2</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西vs日本</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">4,400,438</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--gold);min-width:20px;">2</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">日本进球</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">1,120,973</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--gold);min-width:20px;">3</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">这些7月新规影响你我</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">738,936</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">4</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西醒醒 这是淘汰赛</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">612,937</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">5</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">日本进球</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">6</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">孙兴慜道歉</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">473,186</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">6</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">恋与深空回应争议</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">333,373</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">7</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西2比1日本</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">8</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西扳平比分</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">9</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">日本淘汰</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">10</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">爱直接对嘴喝饮料的人天塌了</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">326,715</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">8</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">马航MH370传来最新消息</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">268,729</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">9</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">王源近几年没有路演了</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">215,488</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">10</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">詹姆斯 勇士</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">202,335</span>
                 </a>
 
             </div>
@@ -268,315 +212,253 @@
                     头条热榜
                 </h3>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--gold);min-width:20px;">1</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西把自己踢晕了</span>
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--turf-soft);text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--turf);min-width:20px;">1</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西绝杀日本</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">20,768,726</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--gold);min-width:20px;">2</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">中国对日本再出重拳</span>
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--turf-soft);text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--turf);min-width:20px;">2</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">卡塞米罗头球破门</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">18,792,320</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--gold-soft);text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--gold);min-width:20px;">3</span>
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--turf-soft);text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--turf);min-width:20px;">3</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">未来五年，教育强国这样建设</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">17,003,995</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">4</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">美加墨世界杯：亚洲足球的得意与失意</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">15,385,851</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">5</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西vs日本</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">13,921,693</span>
-                </a>
-
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
-                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">6</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">宜宾地震食客避难后折返 无人逃单</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">12,596,869</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">5</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">中国对日本再出重拳</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">6</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">巴西把自己踢晕了</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
+                </a>
+
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">7</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">本科毕业生为何涌入专科学校</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">11,398,118</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">8</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">中国代表在联合国点名日本所犯罪行</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">10,313,444</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">9</span>
                     <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">杨某诋毁袁隆平院士科研成果被刑拘</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">9,331,990</span>
                 </a>
 
-                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+                <a href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:transparent;text-decoration:none;color:var(--text-primary);margin-bottom:6px;">
                     <span style="font-size:14px;font-weight:700;color:var(--text-secondary);min-width:20px;">10</span>
-                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">国务院：探索延长义务教育年限</span>
+                    <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">美加墨世界杯：亚洲足球的得意与失意</span>
                     <span style="font-size:11px;color:var(--text-secondary);">6/30</span>
-                    <span style="font-size:11px;color:var(--text-secondary);">8,443,934</span>
                 </a>
 
             </div>
         </div>
     </section>
 
-        </div>
         
-        <div class="brief-content">
-            <h2>今日赛事分析</h2>
-            <div class="brief-text" id="brief-text">
-                <div class="loading">正在加载简报内容...</div>
+        <!-- Article List -->
+        <section style="margin-bottom:24px;">
+            <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                📋 历史简报
+                <span style="font-size:13px;font-weight:400;color:var(--text-secondary);">共 21 期</span>
+            </h2>
+            <div class="article-list">
+                
+        <a href="/brief-2026-07-02.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">7月2日 周四 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">7月2日 周四 · 3场赛事</div>
             </div>
-        </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        <!-- Hot News Section -->
-        <div class="hot-news-section">
-            <h2>🔥 每日热点新闻</h2>
-            <div class="hot-news-tabs">
-                <button class="hot-news-tab active" data-source="weibo">微博热搜</button>
-                <button class="hot-news-tab" data-source="toutiao">头条热榜</button>
+        <a href="/brief-2026-07-01.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">7月1日 周三 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">7月1日 周三 · 4场赛事</div>
             </div>
-            <ul class="hot-news-list" id="hot-news-list">
-                <li class="hot-news-loading">正在加载热点新闻...</li>
-            </ul>
-        </div>
-        
-        <a href="/" class="back-link">← 返回首页</a>
-    </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-    <script>
-        const SUPABASE_URL = 'https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM';
-        
-        let ALL_MATCHES = [];
-        let ALL_PREDICTIONS = [];
+        <a href="/brief-2026-06-30.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月30日 周二 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月30日 周二 · 5场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        function fmtDate(iso) {
-            const d = new Date(iso);
-            const m = (d.getMonth() + 1).toString().padStart(2, '0');
-            const day = d.getDate().toString().padStart(2, '0');
-            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-            return `${m}/${day} ${weekdays[d.getDay()]}`;
-        }
+        <a href="/brief-2026-06-29.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月29日 周一 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月29日 周一 · 5场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        function esc(s) {
-            const div = document.createElement('div');
-            div.textContent = s;
-            return div.innerHTML;
-        }
+        <a href="/brief-2026-06-28.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月28日 周日 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月28日 周日 · 6场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        async function loadData() {
-            try {
-                const [matchesRes, predictionsRes] = await Promise.all([
-                    fetch(`${SUPABASE_URL}/rest/v1/matches?select=*`, { headers: { 'apikey': SUPABASE_KEY } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/predictions?select=*`, { headers: { 'apikey': SUPABASE_KEY } })
-                ]);
-                ALL_MATCHES = await matchesRes.json();
-                ALL_PREDICTIONS = await predictionsRes.json();
-                renderBrief();
-            } catch (e) {
-                console.error('加载数据失败:', e);
-                document.getElementById('brief-text').textContent = '加载数据失败，请稍后重试。';
-            }
-        }
+        <a href="/brief-2026-06-27.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月27日 周六 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月27日 周六 · 6场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        function computeVotes(matchId) {
-            const preds = ALL_PREDICTIONS.filter(p => p.match_id === matchId);
-            const votes = { '胜': 0, '平': 0, '负': 0 };
-            const details = [];
-            
-            for (const p of preds) {
-                if (p.spf && votes[p.spf] !== undefined) {
-                    votes[p.spf]++;
-                }
-                details.push({
-                    ai: p.ai_name,
-                    spf: p.spf || '-',
-                    score: p.score || '-',
-                    handicap: p.handicap_spf || '-'
-                });
-            }
-            
-            const total = preds.length;
-            const consensus = Object.entries(votes).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0]);
-            const consensusRate = total > 0 ? Math.round((consensus[1] / total) * 100) : 0;
-            
-            return { votes, details, total, consensus: consensus[0], consensusRate };
-        }
+        <a href="/brief-2026-06-26.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月26日 周五 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月26日 周五 · 6场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        function renderBrief() {
-            const dateEl = document.getElementById('brief-date');
-            const textEl = document.getElementById('brief-text');
-            
-            // 使用当前日期
-            const now = new Date();
-            const m = (now.getMonth() + 1).toString().padStart(2, '0');
-            const day = now.getDate().toString().padStart(2, '0');
-            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-            const currentDate = `${m}/${day} ${weekdays[now.getDay()]}`;
-            dateEl.textContent = currentDate;
+        <a href="/brief-2026-06-25.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月25日 周四 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月25日 周四 · 6场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-            // 尝试从 metadata.daily_commentary 提取简报
-            const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === currentDate);
-            let commentary = '';
+        <a href="/brief-2026-06-24.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月24日 周三 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月24日 周三 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-            for (const m of dayMatches) {
-                if (m.metadata) {
-                    try {
-                        const meta = typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata;
-                        if (meta.daily_commentary) {
-                            commentary = meta.daily_commentary;
-                            break;
-                        }
-                    } catch (e) {}
-                }
-            }
+        <a href="/brief-2026-06-23.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月23日 周二 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月23日 周二 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-            if (commentary) {
-                // 显示完整简报
-                const paragraphs = commentary.split('\n\n');
-                let html = '';
-                for (const p of paragraphs) {
-                    const highlighted = esc(p)
-                        .replace(/(\d+%)/g, '<span class="hl">$1</span>')
-                        .replace(/(共识|分歧|看胜|看负|看平)/g, '<span class="dv">$1</span>');
-                    html += `<p style="margin-bottom: 16px;">${highlighted}</p>`;
-                }
-                textEl.innerHTML = html;
-            } else if (dayMatches.length === 0) {
-                textEl.textContent = '该日期暂无赛事数据。';
-            } else {
-                // 自动生成简报
-                const enriched = dayMatches.map(m => ({ ...m, ...computeVotes(m.id) }));
-                const withVotes = enriched.filter(m => m.total > 0);
-                const highConsensus = withVotes.filter(m => m.consensusRate >= 85);
-                const divergent = withVotes.filter(m => m.consensusRate < 70);
+        <a href="/brief-2026-06-22.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月22日 周一 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月22日 周一 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-                let text = currentDate + ' 共 ' + dayMatches.length + ' 场赛事。';
-                if (highConsensus.length > 0) {
-                    text += '其中 ' + highConsensus.length + ' 场AI高度共识（≥85%）。';
-                }
-                if (divergent.length > 0) {
-                    text += ' ' + divergent.length + ' 场出现明显分歧。';
-                }
-                if (withVotes.length === 0) {
-                    text += 'AI预测数据加载中...';
-                }
-                
-                // 添加比赛详情
-                text += '<br><br><strong>赛事详情：</strong><br>';
-                for (const m of enriched) {
-                    if (m.total > 0) {
-                        text += `<br>• ${m.teams} - ${m.consensus || '无'}（${m.consensusRate}%共识）`;
-                    }
-                }
-                
-                textEl.innerHTML = text;
-            }
-        }
+        <a href="/brief-2026-06-21.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月21日 周日 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月21日 周日 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        // 加载数据
-        loadData();
+        <a href="/brief-2026-06-20.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月20日 周六 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月20日 周六 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        // Hot News Section
-        const hotNewsTabs = document.querySelectorAll('.hot-news-tab');
-        const hotNewsList = document.getElementById('hot-news-list');
-        let currentSource = 'weibo';
+        <a href="/brief-2026-06-19.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月19日 周五 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月19日 周五 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        // Tab switching
-        hotNewsTabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                hotNewsTabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                currentSource = this.dataset.source;
-                loadHotNews(currentSource);
-            });
-        });
+        <a href="/brief-2026-06-18.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月18日 周四 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月18日 周四 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        // Load hot news
-        async function loadHotNews(source) {
-            hotNewsList.innerHTML = '<li class="hot-news-loading">正在加载热点新闻...</li>';
-            
-            try {
-                let data = [];
-                const today = new Date();
-                const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
-                
-                if (source === 'weibo') {
-                    // Fetch Weibo hot search
-                    const response = await fetch('https://weibo.com/ajax/side/hotSearch');
-                    const json = await response.json();
-                    if (json.data && json.data.realtime) {
-                        data = json.data.realtime.slice(0, 20).map((item, index) => ({
-                            rank: index + 1,
-                            title: item.word,
-                            url: `https://s.weibo.com/weibo?q=${encodeURIComponent(item.word)}`,
-                            date: dateStr
-                        }));
-                    }
-                } else if (source === 'toutiao') {
-                    // Fetch Toutiao hot list
-                    const response = await fetch('https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc');
-                    const json = await response.json();
-                    if (json.data) {
-                        data = json.data.slice(0, 20).map((item, index) => ({
-                            rank: index + 1,
-                            title: item.Title,
-                            url: item.Url,
-                            date: dateStr
-                        }));
-                    }
-                }
-                
-                renderHotNews(data);
-            } catch (e) {
-                console.error('加载热点新闻失败:', e);
-                hotNewsList.innerHTML = '<li class="hot-news-loading">加载失败，请稍后刷新重试</li>';
-            }
-        }
+        <a href="/brief-2026-06-17.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月17日 周三 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月17日 周三 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        // Render hot news
-        function renderHotNews(data) {
-            if (data.length === 0) {
-                hotNewsList.innerHTML = '<li class="hot-news-loading">暂无数据</li>';
-                return;
-            }
-            
-            hotNewsList.innerHTML = data.map(item => `
-                <li class="hot-news-item">
-                    <span class="hot-news-rank ${item.rank <= 3 ? 'top3' : ''}">${item.rank}</span>
-                    <div class="hot-news-title">
-                        <a href="${item.url}" target="_blank" rel="noopener">${item.title}</a>
-                    </div>
-                    <span class="hot-news-date">${item.date}</span>
-                </li>
-            `).join('');
-        }
+        <a href="/brief-2026-06-16.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月16日 周二 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月16日 周二 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
 
-        // Load initial hot news
-        loadHotNews('weibo');
-    </script>
+        <a href="/brief-2026-06-15.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月15日 周一 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月15日 周一 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
+
+        <a href="/brief-2026-06-14.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月14日 周日 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月14日 周日 · 4场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
+
+        <a href="/brief-2026-06-13.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月13日 周六 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月13日 周六 · 2场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
+
+        <a href="/brief-2026-06-12.html" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;">
+            <div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;">6月12日 周五 AI预测简报</div>
+                <div style="font-size:13px;color:var(--text-secondary);">6月12日 周五 · 2场赛事</div>
+            </div>
+            <div style="font-size:20px;color:var(--text-secondary);">→</div>
+        </a>
+
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>AI实验室·体彩好伙伴 - 数据仅供参考，请理性看待</p>
+    </footer>
 </body>
 </html>
