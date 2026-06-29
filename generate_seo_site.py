@@ -157,6 +157,26 @@ def generate_news_html(news_data):
     return html
 
 
+def fetch_briefs():
+    """
+    Fetch all briefs from the briefs table.
+    Returns a list of brief objects sorted by date descending.
+    """
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/briefs?select=*&order=date.desc"
+        req = urllib.request.Request(url, headers={
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}'
+        })
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            print(f"✓ 从 briefs 表获取到 {len(data)} 条简报")
+            return data
+    except Exception as e:
+        print(f"✗ 获取简报列表失败: {e}")
+        return []
+
+
 def fetch_match_dates():
     """
     Fetch all unique match dates from the matches table.
@@ -336,6 +356,54 @@ def generate_brief_page(news_data, all_dates):
         </a>
 '''
     
+    # Build brief list HTML (collapsible list of all briefs)
+    brief_list_html = ''
+    for article in article_list:
+        date_str = article['date']
+        match_count = article['match_count']
+        article_type = article.get('type', 'prediction')
+        
+        # Format date for display
+        try:
+            dt = datetime.strptime(date_str, '%Y-%m-%d')
+            display_date = dt.strftime('%m月%d日')
+            weekday = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][dt.weekday()]
+            display_date_full = f"{dt.month}月{dt.day}日 {weekday}"
+        except:
+            display_date = date_str
+            display_date_full = date_str
+        
+        # Get title and icon based on type
+        if article_type == 'prediction':
+            icon = '🔮'
+            type_label = '预测'
+            type_bg = 'var(--turf-soft)'
+            type_color = 'var(--turf)'
+            title = f"{display_date_full} AI预测简报"
+        else:
+            icon = '📊'
+            type_label = '复盘'
+            type_bg = 'var(--gold-soft)'
+            type_color = 'var(--gold)'
+            title = f"{display_date_full} AI复盘简报"
+        
+        # Generate article URL
+        article_url = f"/brief-{date_str}.html"
+        
+        brief_list_html += f'''
+        <details style="margin-bottom:8px;border:1px solid var(--divider);border-radius:8px;overflow:hidden;">
+            <summary style="padding:12px 16px;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;gap:12px;list-style:none;">
+                <span style="font-size:20px;">{icon}</span>
+                <span style="flex:1;font-weight:500;">{title}</span>
+                <span style="font-size:12px;color:var(--text-secondary);">{match_count}场</span>
+                <span style="font-size:12px;color:var(--text-secondary);">▼</span>
+            </summary>
+            <div style="padding:12px 16px;background:var(--bg-deep);border-top:1px solid var(--divider);">
+                <a href="{article_url}" style="display:inline-block;padding:8px 16px;background:var(--turf);color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500;">查看详情 →</a>
+            </div>
+        </details>
+'''
+    
     html = f'''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -472,7 +540,7 @@ def generate_brief_page(news_data, all_dates):
         <!-- All Briefs List (Collapsible) -->
         <section style="margin-bottom:24px;">
             <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-                📋 全部简报 <span style="font-size:14px;color:var(--text-secondary);font-weight:400;">({len(articles)}篇)</span>
+                📋 全部简报 <span style="font-size:14px;color:var(--text-secondary);font-weight:400;">({len(article_list)}篇)</span>
             </h2>
             <div class="brief-list">
                 {brief_list_html}
@@ -812,34 +880,41 @@ def main():
     
     # Update index.html brief section with latest data
     print("更新首页简报区块...")
-    update_index_brief(output_dir, all_dates)
+    update_index_brief(output_dir, article_list)
     
     # Update brief.html with collapsible list
     print("更新简报列表页...")
-    update_brief_page(output_dir, all_dates)
+    update_brief_page(output_dir, article_list)
     
     print("完成！")
 
 
-def update_index_brief(output_dir, all_dates):
-    """Update the brief section in index.html with a list of brief titles."""
-    if not all_dates:
+def update_index_brief(output_dir, article_list):
+    """Update the brief section in index.html with a list of brief titles from article_list."""
+    if not article_list:
+        print("  ⚠ 没有简报数据")
         return
     
-    # Generate brief list HTML (latest 5 dates)
+    # Generate brief list HTML (latest 5 briefs)
     brief_items = []
-    for date_str in all_dates[:5]:
+    for article in article_list[:5]:
+        date_str = article.get('date', '')
+        article_type = article.get('type', 'prediction')
+        match_count = article.get('match_count', 0)
+        
         # Parse date for display
         try:
-            dt = datetime.strptime(date_str, '%Y-%m-%d')
+            if isinstance(date_str, str):
+                dt = datetime.strptime(date_str, '%Y-%m-%d')
+            else:
+                dt = datetime.combine(date_str, datetime.min.time())
             weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
             date_display = f"{dt.month}月{dt.day}日 {weekdays[dt.weekday()]}"
         except:
             date_display = date_str
         
-        # Determine if it's prediction or review
-        today = datetime.now().date()
-        is_prediction = dt.date() >= today
+        # Determine label and icon based on type
+        is_prediction = article_type == 'prediction'
         label = "预测" if is_prediction else "复盘"
         icon = "🔮" if is_prediction else "📊"
         
@@ -850,7 +925,7 @@ def update_index_brief(output_dir, all_dates):
                     <div class="top">
                         <span class="icon">{icon}</span>
                         <span class="title">{date_display} {label}</span>
-                        <span class="date">{date_str}</span>
+                        <span class="count">{match_count}场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>''')
@@ -870,9 +945,9 @@ def update_index_brief(output_dir, all_dates):
         return
     
     # Update brief-content
-    new_brief_content = f'<!-- BRIEF_CONTENT_START -->\n{brief_list_html}\n                <!-- BRIEF_CONTENT_END -->'
+    new_brief_content = f'<!-- BRIEF_LIST_START -->\n{brief_list_html}\n                <!-- BRIEF_LIST_END -->'
     content = re.sub(
-        r'<!-- BRIEF_CONTENT_START -->.*?<!-- BRIEF_CONTENT_END -->',
+        r'<!-- BRIEF_LIST_START -->.*?<!-- BRIEF_LIST_END -->',
         new_brief_content,
         content,
         flags=re.DOTALL
@@ -887,25 +962,32 @@ def update_index_brief(output_dir, all_dates):
         print(f"  ✗ 写入index.html失败: {e}")
 
 
-def update_brief_page(output_dir, all_dates):
-    """Update brief.html with collapsible list of all briefs."""
-    if not all_dates:
+def update_brief_page(output_dir, article_list):
+    """Update brief.html with collapsible list of all briefs from article_list."""
+    if not article_list:
+        print("  ⚠ 没有简报数据")
         return
     
     # Generate collapsible list HTML
     brief_sections = []
-    for date_str in all_dates:
+    for article in article_list:
+        date_str = article.get('date', '')
+        article_type = article.get('type', 'prediction')
+        match_count = article.get('match_count', 0)
+        
         # Parse date for display
         try:
-            dt = datetime.strptime(date_str, '%Y-%m-%d')
+            if isinstance(date_str, str):
+                dt = datetime.strptime(date_str, '%Y-%m-%d')
+            else:
+                dt = datetime.combine(date_str, datetime.min.time())
             weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
             date_display = f"{dt.year}年{dt.month}月{dt.day}日 {weekdays[dt.weekday()]}"
         except:
             date_display = date_str
         
-        # Determine if it's prediction or review
-        today = datetime.now().date()
-        is_prediction = dt.date() >= today
+        # Determine label and icon based on type
+        is_prediction = article_type == 'prediction'
         label = "AI预测" if is_prediction else "AI复盘"
         icon = "🔮" if is_prediction else "📊"
         
@@ -917,6 +999,7 @@ def update_brief_page(output_dir, all_dates):
                     <span class="arrow">▶</span>
                     <span class="icon">{icon}</span>
                     <span class="title">{date_display} {label}</span>
+                    <span class="count">{match_count}场</span>
                     <a href="{article_url}" class="view-link" onclick="event.stopPropagation()">查看 →</a>
                 </div>
                 <div class="brief-body hidden">
