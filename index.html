@@ -583,6 +583,16 @@ function renderPredictionTable(details, match, isDone) {
     // 计算实际结果
     const actualResult = isDone ? getMatchResult(match) : null;
     
+    // 篮球实际结果（主胜/主负，没有平）
+    let actualBasketballResult = null;
+    if (isBasketball && isDone) {
+        const h = parseInt(match.home_score);
+        const a = parseInt(match.away_score);
+        if (!isNaN(h) && !isNaN(a)) {
+            actualBasketballResult = h > a ? '主胜' : '主负';
+        }
+    }
+    
     // 计算实际进球数（仅足球）
     const actualGoals = (!isBasketball && isDone) ? (match.home_score + match.away_score) : null;
     
@@ -613,7 +623,14 @@ function renderPredictionTable(details, match, isDone) {
         html += '<td class="ai-col">' + esc(d.ai) + '</td>';
 
         // 胜平负/胜负维度
-        const spfHit = isDone && actualResult && d.spf === actualResult;
+        let spfHit = false;
+        if (isDone) {
+            if (isBasketball) {
+                spfHit = actualBasketballResult && d.spf === actualBasketballResult;
+            } else {
+                spfHit = actualResult && d.spf === actualResult;
+            }
+        }
         html += renderPredCell(d.spf, spfHit, isDone);
 
         // 让球/让分维度
