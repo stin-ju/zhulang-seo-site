@@ -345,8 +345,16 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+    // Add cache-busting headers for HTML files to prevent browser caching
+    const headers = { 'Content-Type': contentType };
+    if (ext === '.html') {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+    }
+
     const stream = fs.createReadStream(filePath);
-    res.writeHead(200, { 'Content-Type': contentType });
+    res.writeHead(200, headers);
     stream.pipe(res);
     stream.on('error', () => {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
