@@ -15,60 +15,36 @@ import re
 from datetime import datetime
 
 # Supabase configuration
-SUPABASE_URL = "https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM"
+SUPABASE_URL = "https://br-vocal-kea-f584f76e.supabase2.aidap-global.cn-beijing.volces.com"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjIzOTkzNjQsInJvbGUiOiJhbm9uIn0.xsFs4vB78Be6TmqVsak9C0aTGqNxrU0_He6zKR2_kqg"
 
 
 def fetch_today_matches():
     """
-    Fetch today's pending matches from database using psycopg2.
+    Fetch today's pending matches from Supabase database using REST API.
     Returns a list of match dicts with odds data.
     """
     try:
-        import psycopg2
-        
-        # 数据库连接配置
-        conn = psycopg2.connect(
-            host='cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com',
-            port=5432,
-            database='postgres',
-            user='postgres',
-            password='1538PQKpnIj0buIb6Y'
-        )
-        cur = conn.cursor()
+        import urllib.request
+        import json
         
         # 查询所有有赔率的赛事（包括已确认和待比赛），供计算器展示
-        # 赔率转换为 float
-        cur.execute("""
-            SELECT 
-                id, 
-                teams,
-                match_time,
-                handicap,
-                status,
-                (win_odds)::float as win_odds,
-                (draw_odds)::float as draw_odds,
-                (lose_odds)::float as lose_odds,
-                (handicap_win_odds)::float as handicap_win_odds,
-                (handicap_draw_odds)::float as handicap_draw_odds,
-                (handicap_lose_odds)::float as handicap_lose_odds
-            FROM matches 
-            WHERE win_odds IS NOT NULL
-              AND draw_odds IS NOT NULL
-              AND lose_odds IS NOT NULL
-            ORDER BY match_time DESC
-            LIMIT 50
-        """)
+        url = f"{SUPABASE_URL}/rest/v1/matches?select=id,teams,match_time,handicap,status,win_odds,draw_odds,lose_odds,handicap_win_odds,handicap_draw_odds,handicap_lose_odds&win_odds=not.is.null&draw_odds=not.is.null&lose_odds=not.is.null&order=match_time.desc&limit=50"
         
-        rows = cur.fetchall()
-        columns = [desc[0] for desc in cur.description]
-        matches = [dict(zip(columns, row)) for row in rows]
+        req = urllib.request.Request(url, headers={
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}'
+        })
         
-        cur.close()
-        conn.close()
+        with urllib.request.urlopen(req, timeout=30) as response:
+            matches = json.loads(response.read().decode('utf-8'))
         
-        # 从 teams 字段解析 home_team/away_team
+        # 转换赔率为 float
         for m in matches:
+            for key in ['win_odds', 'draw_odds', 'lose_odds', 'handicap_win_odds', 'handicap_draw_odds', 'handicap_lose_odds']:
+                if m.get(key):
+                    m[key] = float(m[key])
+            # 从 teams 字段解析 home_team/away_team
             if m.get('teams') and 'VS' in m['teams']:
                 parts = m['teams'].split('VS')
                 m['home_team'] = parts[0].strip()
@@ -77,11 +53,11 @@ def fetch_today_matches():
             if m.get('match_time'):
                 m['match_date'] = str(m['match_time'])[:10]
         
-        print(f"📊 从数据库获取到 {len(matches)} 场待比赛赛事")
+        print(f"📊 从 Supabase 获取到 {len(matches)} 场待比赛赛事")
         return matches
         
     except Exception as e:
-        print(f"⚠️ 数据库查询失败: {e}")
+        print(f"⚠️ Supabase 查询失败: {e}")
         return []
 
 
