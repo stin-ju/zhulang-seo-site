@@ -262,14 +262,14 @@ def fetch_match_dates():
 
 def fetch_matches_for_date(date_str):
     """
-    Fetch all matches for a specific date.
-    Returns a list of match objects.
+    Fetch all matches for a specific date with predictions.
+    Returns a list of match objects with predictions nested.
     """
     try:
-        # Use gte/lt for timestamp range query
+        # Use gte/lt for timestamp range query, include predictions
         start_time = f"{date_str}T00:00:00"
         end_time = f"{date_str}T23:59:59"
-        url = f"{SUPABASE_URL}/rest/v1/matches?select=*&match_time=gte.{start_time}&match_time=lte.{end_time}&order=match_time.asc"
+        url = f"{SUPABASE_URL}/rest/v1/matches?select=*,predictions(*)&match_time=gte.{start_time}&match_time=lte.{end_time}&order=match_time.asc"
         req = urllib.request.Request(url, headers={
             'apikey': SUPABASE_KEY,
             'Authorization': f'Bearer {SUPABASE_KEY}'
@@ -332,6 +332,38 @@ def fetch_metadata_for_date(date_str):
         return None
 
 
+def fetch_chain_bets_for_date(date_str):
+    """
+    Fetch chain bets (parlay recommendations) for a specific date.
+    Returns a list of chain bet objects.
+    """
+    try:
+        # Convert date format from 'YYYY-MM-DD' to 'M月DD日' (e.g., '2026-07-02' -> '7月02日')
+        dt = datetime.strptime(date_str, '%Y-%m-%d')
+        bet_date = f"{dt.month}月{dt.day:02d}日"
+        
+        # Use requests library for better Unicode handling
+        import requests
+        url = f"{SUPABASE_URL}/rest/v1/chain_bets"
+        params = {
+            'select': '*',
+            'bet_date': f'eq.{bet_date}'
+        }
+        headers = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}'
+        }
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"✗ 获取 {date_str} 串关数据失败: HTTP {response.status_code}")
+            return []
+    except Exception as e:
+        print(f"✗ 获取 {date_str} 串关数据失败: {e}")
+        return []
+
+
 def generate_brief_page(news_data, all_dates):
     """
     Generate the brief index page HTML with collapsible list of all briefs.
@@ -345,12 +377,14 @@ def generate_brief_page(news_data, all_dates):
     for date_str in all_dates:
         matches = fetch_matches_for_date(date_str)
         metadata = fetch_metadata_for_date(date_str)
+        chain_bets = fetch_chain_bets_for_date(date_str)
         # Determine type: latest date is prediction, others are review
         article_type = 'prediction' if date_str == all_dates[0] else 'review'
         article_list.append({
             'date': date_str,
             'matches': matches,
             'metadata': metadata,
+            'chain_bets': chain_bets,
             'match_count': len(matches),
             'type': article_type
         })
@@ -611,6 +645,66 @@ def generate_brief_page(news_data, all_dates):
     return html, article_list
 
 
+def generate_chain_bets_html(chain_bets):
+    """Generate HTML for chain bets (parlay recommendations) section."""
+    if not chain_bets:
+        return ''
+    
+    # Group by ai_name
+    grouped = {}
+    for bet in chain_bets:
+        ai_name = bet.get('ai_name', '未知')
+        if ai_name not in grouped:
+            grouped[ai_name] = []
+        grouped[ai_name].append(bet)
+    
+    html = '''
+        <div class="matches-section">
+            <h2>🔗 串关推荐</h2>
+    '''
+    
+    for ai_name, bets in grouped.items():
+        html += f'''
+            <div style="background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;margin-bottom:16px;overflow:hidden;">
+                <div style="padding:12px 20px;background:var(--bg-elevated);border-bottom:1px solid var(--divider);">
+                    <span style="font-size:15px;font-weight:600;color:var(--gold);">🤖 {ai_name}</span>
+                </div>
+                <div style="padding:16px 20px;">
+        '''
+        
+        for bet in bets:
+            bet_name = bet.get('bet_name', '未知串关')
+            selections = bet.get('selections', [])
+            total_odds = bet.get('total_odds', 0)
+            
+            html += f'''
+                <div style="margin-bottom:12px;padding:12px;background:var(--bg-elevated);border-radius:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-weight:600;color:var(--turf);">{bet_name}</span>
+                        <span style="font-size:14px;color:var(--text-secondary);">总赔率: <strong style="color:var(--gold);">{total_odds:.2f}</strong></span>
+                    </div>
+            '''
+            
+            if selections:
+                html += '<div style="font-size:13px;color:var(--text-secondary);line-height:1.8;">'
+                for sel in selections:
+                    match_id = sel.get('match_id', '')
+                    pick = sel.get('pick', '-')
+                    odds = sel.get('odds', 0)
+                    html += f'<div style="padding:4px 0;border-bottom:1px dashed var(--divider);">{match_id}: <strong style="color:var(--text-primary);">{pick}</strong> @ {odds:.2f}</div>'
+                html += '</div>'
+            
+            html += '</div>'
+        
+        html += '''
+                </div>
+            </div>
+        '''
+    
+    html += '</div>'
+    return html
+
+
 def generate_brief_article(article, news_data):
     """
     Generate an individual article page for a specific date.
@@ -648,7 +742,7 @@ def generate_brief_article(article, news_data):
         if metadata.get('daily_commentary'):
             commentary = metadata['daily_commentary']
     
-    # Generate matches table HTML
+    # Generate matches table HTML with predictions
     matches_html = ''
     for match in matches:
         match_id = match.get('id', '')
@@ -657,6 +751,7 @@ def generate_brief_article(article, news_data):
         home_score = match.get('home_score')
         away_score = match.get('away_score')
         status = match.get('status', '')
+        predictions = match.get('predictions', [])
         
         # Format time
         try:
@@ -668,18 +763,68 @@ def generate_brief_article(article, news_data):
         # Score display
         if home_score is not None and away_score is not None:
             score_str = f'{home_score}-{away_score}'
+            status_class = 'confirmed'
+            status_text = '已确认'
         else:
             score_str = 'VS'
+            status_class = 'pending'
+            status_text = '待确认'
+        
+        # Parse teams
+        team_parts = teams.split('VS') if 'VS' in teams else teams.split('vs')
+        home_team = team_parts[0].strip() if len(team_parts) > 0 else teams
+        away_team = team_parts[1].strip() if len(team_parts) > 1 else ''
+        
+        # Generate prediction table for this match
+        prediction_rows = ''
+        for pred in predictions:
+            ai_name = pred.get('ai_name', '未知')
+            spf = pred.get('spf', '-')
+            handicap_spf = pred.get('handicap_spf', '-')
+            score = pred.get('score', '-')
+            goals = pred.get('goals', '-')
+            half_full = pred.get('half_full', '-')
+            
+            prediction_rows += f'''
+            <tr>
+                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);font-weight:500;">{ai_name}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{spf or '-'}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{handicap_spf or '-'}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{score or '-'}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{goals or '-'}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{half_full or '-'}</td>
+            </tr>'''
         
         matches_html += f'''
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-elevated);border:1px solid var(--divider);border-radius:8px;margin-bottom:8px;">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <span style="font-size:13px;color:var(--text-secondary);min-width:40px;">{time_str}</span>
-                <span style="font-size:14px;font-weight:500;">{teams}</span>
+        <div style="background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;margin-bottom:20px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-elevated);border-bottom:1px solid var(--divider);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:13px;color:var(--text-secondary);">{time_str}</span>
+                    <span style="font-size:16px;font-weight:600;">{home_team}</span>
+                    <span style="font-size:14px;color:var(--text-secondary);">VS</span>
+                    <span style="font-size:16px;font-weight:600;">{away_team}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:18px;font-weight:700;color:var(--gold);">{score_str}</span>
+                    <span style="font-size:11px;padding:3px 8px;border-radius:4px;background:{'var(--turf-soft)' if status_class == 'confirmed' else 'var(--miss)'};color:{'var(--turf)' if status_class == 'confirmed' else 'var(--text-secondary)'};">{status_text}</span>
+                </div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:16px;font-weight:700;color:var(--gold);">{score_str}</span>
-                <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:{'var(--turf-soft)' if status == 'confirmed' else 'var(--miss)'};color:{'var(--turf)' if status == 'confirmed' else 'var(--text-secondary)'};">{'已确认' if status == 'confirmed' else '待确认'}</span>
+            <div style="padding:16px 20px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:var(--bg-elevated);">
+                            <th style="padding:10px 12px;text-align:left;color:var(--text-secondary);font-weight:500;">AI</th>
+                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">胜平负</th>
+                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">让球</th>
+                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">比分</th>
+                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">进球数</th>
+                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">半全场</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {prediction_rows if prediction_rows else '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-secondary);">暂无预测数据</td></tr>'}
+                    </tbody>
+                </table>
             </div>
         </div>
 '''
@@ -865,6 +1010,9 @@ def generate_brief_article(article, news_data):
             <h2>赛事列表</h2>
             {matches_html if matches_html else '<p style="color:var(--text-secondary);">暂无赛事数据</p>'}
         </div>
+        
+        <!-- Chain Bets -->
+        {generate_chain_bets_html(article.get('chain_bets', []))}
     </main>
     
     <footer>
