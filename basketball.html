@@ -198,6 +198,14 @@
       </div>
     </details>
 </section>
+
+<!-- 篮球AI串关推荐 -->
+<section class="mb-8" aria-label="串关推荐">
+  <h2 class="text-lg font-bold mb-4">🎯 篮球AI串关推荐</h2>
+  <div id="basketball-parlay-section">
+    <div class="text-center text-gray-500 py-4">加载篮球串关数据中...</div>
+  </div>
+</section>
 </main>
 <footer class="border-t border-border py-5 mt-auto">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs text-dimmed">
@@ -205,5 +213,217 @@
     <p class="mt-1">AI实验室-体彩模拟实验 · <a href="/" class="text-accent hover:underline">足球预测</a></p>
   </div>
 </footer>
+
+<script>
+// ============ 动态加载篮球串关推荐 ============
+(async function loadBasketballParlayData() {
+  // Basketball team keywords to filter
+  const BASKETBALL_KEYWORDS = ['天猫', '飞马', '火焰', '神秘人', '王牌', '天空', '自由', '女武神', '阳光', '风暴', '水星', '梦想', '翅膀', '狂热', '火花', '银星', '太阳', '震动', '群蜂', '飞翼'];
+
+  const AI_LOGOS = {
+    '混元': ['#8b5cf6', 'HX'],
+    '豆包': ['#ff6b35', 'DB'],
+    'DeepSeek': ['#3b82f6', 'DS'],
+    'MiniMax': ['#ef4444', 'MM'],
+    '扣子（皮皮）': ['#06b6d4', 'KZ'],
+    'BetAgent': ['#f59e0b', 'BA'],
+    'Grok': ['#10b981', 'GK'],
+    '文心': ['#ec4899', 'WX'],
+    '智谱清言': ['#6366f1', 'ZP']
+  };
+
+  function getAiLogoHtml(aiName) {
+    const [color, abbr] = AI_LOGOS[aiName] || ['#6b7280', aiName.slice(0, 2)];
+    return `<span class="ai-logo"><span class="dot" style="background:${color}">${abbr}</span><span>${aiName}</span></span>`;
+  }
+
+  function isBasketballMatch(teams) {
+    return BASKETBALL_KEYWORDS.some(k => teams.includes(k));
+  }
+
+  function renderSelection(sel) {
+    const teams = sel.teams || 'N/A';
+    const prediction = sel.prediction || 'N/A';
+    const hit = sel.hit;
+    if (teams === 'N/A' || !teams) return '';
+    const hitClass = hit ? 'text-win' : 'text-lose';
+    const hitIcon = hit ? '✓' : '✗';
+    return `<div class="flex justify-between"><span>${teams}</span><span class="${hitClass}">${prediction} ${hitIcon}</span></div>`;
+  }
+
+  function renderCard(record) {
+    const betType = record.bet_type || '';
+    const odds = record.odds || 1.0;
+    const selections = (record.selections || []).filter(s => isBasketballMatch(s.teams || ''));
+    
+    if (selections.length < 2) return '';
+
+    const hitCount = selections.filter(s => s.hit === true).length;
+    const total = selections.filter(s => s.hit !== null && s.hit !== undefined).length;
+    
+    let statusHtml;
+    if (total > 0) {
+      if (hitCount === total) statusHtml = `<span class="text-xs text-win">✓全中 ${hitCount}</span>`;
+      else if (hitCount === 0) statusHtml = `<span class="text-xs text-lose">✗未中 ${hitCount}</span>`;
+      else statusHtml = `<span class="text-xs text-yellow-400">◐中${hitCount} ${hitCount}/${total}</span>`;
+    } else {
+      statusHtml = '<span class="text-xs text-gray-500">待确认</span>';
+    }
+
+    const selectionsHtml = selections.map(renderSelection).join('');
+    if (!selectionsHtml) return '';
+
+    return `
+    <div class="rounded-lg bg-elevated/30 border border-border/40 p-3">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs font-medium text-gray-400">${betType}</span>
+        ${statusHtml}
+      </div>
+      <div class="text-sm font-semibold text-accent mb-2">赔率 ${odds}</div>
+      <div class="text-xs text-gray-300 space-y-1">
+        ${selectionsHtml}
+      </div>
+    </div>`;
+  }
+
+  function renderAiParlay(aiName, records) {
+    const cardsHtml = records.map(renderCard).join('');
+    if (!cardsHtml) return '';
+    return `
+    <div class="mb-4">
+      <div class="flex items-center gap-2 mb-2">
+        ${getAiLogoHtml(aiName)}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        ${cardsHtml}
+      </div>
+    </div>`;
+  }
+
+  function renderDateSection(date, records) {
+    const byAi = {};
+    records.forEach(r => {
+      if (!byAi[r.ai_name]) byAi[r.ai_name] = [];
+      byAi[r.ai_name].push(r);
+    });
+
+    const aiOrder = ['DeepSeek', '豆包', 'MiniMax', '混元', '扣子（皮皮）', 'BetAgent', 'Grok', '文心', '智谱清言'];
+    const sortedAis = Object.keys(byAi).sort((a, b) => {
+      const ia = aiOrder.indexOf(a);
+      const ib = aiOrder.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
+    const aiHtml = sortedAis.map(ai => renderAiParlay(ai, byAi[ai])).join('');
+    if (!aiHtml) return '';
+
+    return `
+    <div class="mb-4 border-b border-border/30 pb-4">
+      <h4 class="text-sm font-semibold text-gray-400 mb-3">${date}</h4>
+      ${aiHtml}
+    </div>`;
+  }
+
+  try {
+    const resp = await fetch('/api/chain_bets');
+    const data = await resp.json();
+
+    // Filter for basketball matches
+    const basketballData = data.filter(r => {
+      const sels = r.selections || [];
+      return sels.some(s => isBasketballMatch(s.teams || ''));
+    });
+
+    if (basketballData.length === 0) {
+      document.getElementById('basketball-parlay-section').innerHTML = 
+        '<div class="text-center text-gray-500 py-8">暂无篮球串关数据<br><span class="text-xs">篮球串关推荐即将上线</span></div>';
+      return;
+    }
+
+    // Filter valid records and deduplicate
+    const validData = basketballData.filter(r => {
+      const sels = (r.selections || []).filter(s => isBasketballMatch(s.teams || ''));
+      return sels.length >= 2;
+    });
+
+    const grouped = {};
+    validData.forEach(r => {
+      const key = `${r.bet_date}|${r.ai_name}|${r.bet_type}`;
+      const validCount = (r.selections || []).filter(s => isBasketballMatch(s.teams || '')).length;
+      if (!grouped[key] || validCount > grouped[key]._validCount) {
+        grouped[key] = { ...r, _validCount: validCount };
+      }
+    });
+    const deduped = Object.values(grouped);
+
+    // Group by date
+    const byDate = {};
+    deduped.forEach(r => {
+      if (!byDate[r.bet_date]) byDate[r.bet_date] = [];
+      byDate[r.bet_date].push(r);
+    });
+
+    const dates = Object.keys(byDate).sort((a, b) => {
+      const da = parseInt(a.replace('月', '').replace('日', ''));
+      const db = parseInt(b.replace('月', '').replace('日', ''));
+      return db - da;
+    });
+
+    const today = dates[0];
+    const histDates = dates.slice(1);
+
+    let html = '';
+
+    // Today's basketball parlay
+    if (byDate[today]) {
+      const todayHtml = renderDateSection(today, byDate[today]);
+      if (todayHtml) {
+        html += `
+        <details class="group bg-card rounded-xl border border-border/50 overflow-hidden mb-4" open>
+          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
+            <h3 class="font-semibold">🎯 ${today} 篮球串关推荐</h3>
+            <span class="ml-auto text-xs text-accent bg-accent/10 px-2 py-0.5 rounded-full">最新</span>
+          </summary>
+          <div class="p-4 space-y-4">
+            ${todayHtml}
+            <p class="text-xs text-muted text-center">* 串关推荐基于各AI预测生成，仅供参考</p>
+          </div>
+        </details>`;
+      }
+    }
+
+    // Historical basketball parlay
+    if (histDates.length > 0) {
+      let histHtml = '';
+      histDates.slice(0, 5).forEach(date => {
+        histHtml += renderDateSection(date, byDate[date]);
+      });
+      if (histHtml) {
+        html += `
+        <details class="group bg-card rounded-xl border border-border/50 overflow-hidden">
+          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
+            <h3 class="font-semibold">📊 历史篮球串关推荐</h3>
+            <span class="ml-auto text-xs text-muted">共${Math.min(histDates.length, 5)}天</span>
+          </summary>
+          <div class="p-4 space-y-4 max-h-96 overflow-y-auto">
+            ${histHtml}
+          </div>
+        </details>`;
+      }
+    }
+
+    const section = document.getElementById('basketball-parlay-section');
+    if (html) {
+      section.innerHTML = html;
+    } else {
+      section.innerHTML = '<div class="text-center text-gray-500 py-8">暂无篮球串关数据<br><span class="text-xs">篮球串关推荐即将上线</span></div>';
+    }
+  } catch (err) {
+    console.error('Failed to load basketball parlay data:', err);
+    document.getElementById('basketball-parlay-section').innerHTML = 
+      '<div class="text-center text-red-400 py-4">加载篮球串关数据失败</div>';
+  }
+})();
+</script>
 </body>
 </html>
