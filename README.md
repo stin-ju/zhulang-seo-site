@@ -400,14 +400,21 @@ console.log(apiUrl); // https://api.example.com
 
 **Q: 如何添加数据库？**
 
-```bash
-# 安装数据库客户端（以 PostgreSQL 为例）
-pnpm add pg
-pnpm add -D @types/pg
+本项目使用 Supabase 作为唯一数据库。所有数据操作通过 Supabase REST API 进行：
 
-# 在 server.ts 中使用
-import { Pool } from 'pg';
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+```javascript
+// 在 server.js 中使用 Supabase REST API
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+
+// 查询数据
+const response = await fetch(`${SUPABASE_URL}/rest/v1/table_name?select=*`, {
+  headers: {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`
+  }
+});
+const data = await response.json();
 ```
 
 **Q: 如何部署？**
