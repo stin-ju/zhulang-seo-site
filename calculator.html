@@ -4,156 +4,90 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI实验室 · 奖金计算器</title>
-    <meta name="description" content="竞彩足球奖金计算器，支持胜平负、让球、比分、总进球、半全场5种玩法，混合过关，串关计算。">
-    <meta name="keywords" content="竞彩足球,奖金计算器,串关计算,混合过关,世界杯预测">
+    <meta name="description" content="竞彩足球奖金计算器，支持串关计算，点击赔率自动填入。">
+    <meta name="keywords" content="竞彩足球,奖金计算器,串关计算,世界杯预测">
     <link rel="canonical" href="https://zhulang.coze.site/calculator.html">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="AI实验室 · 奖金计算器">
+    <meta property="og:description" content="竞彩足球奖金计算器，支持串关计算。">
+    <meta property="og:url" content="https://zhulang.coze.site/calculator.html">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "AI实验室奖金计算器",
+        "description": "竞彩足球奖金计算器，支持串关计算",
+        "url": "https://zhulang.coze.site/calculator.html",
+        "applicationCategory": "SportsApplication"
+    }
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: #0b0b14; color: #e5e7eb; min-height: 100vh; padding-bottom: 120px; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-
-        /* 导航 */
-        .navbar { background: rgba(11, 11, 20, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.04); padding: 10px 0; position: sticky; top: 0; z-index: 100; }
-        .navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: #0b0b14; color: #e5e7eb; min-height: 100vh; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+        .navbar { background: rgba(11, 11, 20, 0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.04); padding: 10px 0; position: sticky; top: 0; z-index: 50; }
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 1200px; }
         .logo { font-size: 18px; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 8px; }
         .logo .icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 8px; font-size: 14px; color: #fff; }
         .logo .name { color: #e5e7eb; }
         .logo .name .accent { color: #8b5cf6; }
         .nav-links { display: flex; gap: 2px; flex-wrap: wrap; }
         .nav-links a { padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #9ca3af; text-decoration: none; transition: all 0.2s; }
-        .nav-links a:hover { color: #e5e7eb; background: rgba(255,255,255,0.04); }
-        .nav-links a.active { color: #a78bfa; background: rgba(139,92,246,0.12); }
-        .nav-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.06); margin: 0 2px; }
-
-        /* 运动切换 */
-        .sport-switch { display: flex; gap: 0; background: #1a1a2a; border-radius: 8px; padding: 3px; margin: 12px 0; width: fit-content; }
-        .sport-switch button { padding: 8px 24px; border-radius: 6px; border: none; background: transparent; color: #9ca3af; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .sport-switch button.active { background: #8b5cf6; color: #fff; }
-
-        /* 玩法Tab */
-        .bet-tabs { display: flex; gap: 0; background: #0f0f1a; border-radius: 10px; padding: 3px; margin-bottom: 12px; border: 1px solid #1e1e30; flex-wrap: wrap; }
-        .bet-tabs .tab { flex: 1; min-width: 80px; text-align: center; padding: 8px 8px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s; border: none; background: transparent; white-space: nowrap; }
-        .bet-tabs .tab:hover { color: #9ca3af; }
-        .bet-tabs .tab.active { background: #8b5cf6; color: #fff; box-shadow: 0 2px 8px rgba(139,92,246,0.3); }
-
-        /* 比赛卡片 */
-        .match-card { background: #14141f; border: 1px solid #2a2a3e; border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; }
-        .match-card:hover { border-color: #3a3a5e; }
-        .match-card.banker { border-color: #f59e0b; background: rgba(245,158,11,0.03); }
-        .match-card.banker::before { content: '胆'; position: absolute; top: 0; left: 0; background: #f59e0b; color: #000; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 0 0 6px 0; }
-        .match-card { position: relative; }
-        .match-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #1a1a2a; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
-        .match-header .match-id { color: #6b7280; font-weight: 600; min-width: 60px; }
-        .match-header .match-time { color: #9ca3af; min-width: 42px; }
-        .match-header .match-teams { font-weight: 600; font-size: 14px; flex: 1; }
-        .match-header .match-teams .vs { color: #6b7280; font-weight: 400; font-size: 12px; margin: 0 4px; }
-        .match-header .handicap-tag { background: rgba(251,191,36,0.15); color: #fbbf24; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-        .match-header .banker-btn { background: transparent; border: 1px solid #3a3a5e; color: #6b7280; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
-        .match-header .banker-btn:hover { border-color: #f59e0b; color: #f59e0b; }
-        .match-header .banker-btn.active { background: #f59e0b; color: #000; border-color: #f59e0b; }
-
-        /* 胜平负 / 让球胜平负 选项 */
-        .odds-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-        .odds-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 8px; cursor: pointer; transition: all 0.15s; border-right: 1px solid rgba(255,255,255,0.04); position: relative; }
-        .odds-btn:last-child { border-right: none; }
-        .odds-btn:hover { background: rgba(139,92,246,0.08); }
-        .odds-btn.selected { background: rgba(139,92,246,0.2); }
-        .odds-btn.selected::after { content: '✓'; position: absolute; top: 4px; right: 6px; font-size: 10px; color: #8b5cf6; }
-        .odds-btn .opt-label { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
-        .odds-btn .opt-odds { font-size: 16px; font-weight: 700; }
-        .odds-btn.win .opt-odds { color: #22c55e; }
-        .odds-btn.draw .opt-odds { color: #fbbf24; }
-        .odds-btn.lose .opt-odds { color: #ef4444; }
-
-        /* 比分网格 */
-        .score-grid { padding: 8px 10px; }
-        .score-group { margin-bottom: 8px; }
-        .score-group-title { font-size: 11px; color: #6b7280; font-weight: 600; margin-bottom: 4px; padding-left: 2px; }
-        .score-options { display: flex; flex-wrap: wrap; gap: 4px; }
-        .score-btn { padding: 6px 8px; border-radius: 6px; background: #1a1a2a; border: 1px solid #2a2a3e; font-size: 12px; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 52px; }
-        .score-btn:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.08); }
-        .score-btn.selected { border-color: #8b5cf6; background: rgba(139,92,246,0.2); }
-        .score-btn .score-label { font-weight: 600; color: #e5e7eb; font-size: 12px; }
-        .score-btn .score-odds { color: #9ca3af; font-size: 10px; }
-
-        /* 总进球 */
-        .goals-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px; }
-        .goals-btn { padding: 10px 6px; border-radius: 8px; background: #1a1a2a; border: 1px solid #2a2a3e; text-align: center; cursor: pointer; transition: all 0.15s; }
-        .goals-btn:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.08); }
-        .goals-btn.selected { border-color: #8b5cf6; background: rgba(139,92,246,0.2); }
-        .goals-btn .goals-label { font-size: 13px; font-weight: 600; color: #e5e7eb; }
-        .goals-btn .goals-odds { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-
-        /* 半全场 */
-        .h2h-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 12px; }
-        .h2h-btn { padding: 10px 6px; border-radius: 8px; background: #1a1a2a; border: 1px solid #2a2a3e; text-align: center; cursor: pointer; transition: all 0.15s; }
-        .h2h-btn:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.08); }
-        .h2h-btn.selected { border-color: #8b5cf6; background: rgba(139,92,246,0.2); }
-        .h2h-btn .h2h-label { font-size: 13px; font-weight: 600; color: #e5e7eb; }
-        .h2h-btn .h2h-odds { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-
-        /* 底部固定计算栏 */
-        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a2a; border-top: 1px solid #2a2a3e; padding: 12px 16px; z-index: 99; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); }
-        .bottom-bar .container { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-        .bar-left { display: flex; align-items: center; gap: 12px; flex: 1; }
-        .bar-right { display: flex; align-items: center; gap: 16px; }
-        .selected-count-btn { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; padding: 8px 16px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-        .selected-count-btn .count { font-size: 18px; }
-        .pass-mode-switch { display: flex; gap: 0; background: #0f0f1a; border-radius: 6px; padding: 2px; }
-        .pass-mode-switch button { padding: 6px 12px; border-radius: 4px; border: none; background: transparent; color: #6b7280; font-size: 12px; font-weight: 500; cursor: pointer; }
-        .pass-mode-switch button.active { background: #8b5cf6; color: #fff; }
-        .multiplier-box { display: flex; align-items: center; gap: 0; }
-        .multiplier-box button { width: 28px; height: 28px; border: 1px solid #3a3a5e; background: #14141f; color: #9ca3af; font-size: 16px; cursor: pointer; }
-        .multiplier-box button:first-child { border-radius: 4px 0 0 4px; }
-        .multiplier-box button:last-child { border-radius: 0 4px 4px 0; }
-        .multiplier-box input { width: 40px; height: 28px; border: 1px solid #3a3a5e; border-left: none; border-right: none; background: #0f0f1a; color: #fff; text-align: center; font-size: 14px; font-weight: 600; }
-        .bar-info { font-size: 13px; color: #9ca3af; }
-        .bar-info .amount { color: #f59e0b; font-weight: 700; }
-        .bar-info .prize { color: #22c55e; font-weight: 700; }
-        .bar-detail-btn { background: #f59e0b; color: #000; padding: 8px 16px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-
-        /* 过关方式选择面板 */
-        .pass-panel { display: none; position: fixed; bottom: 70px; left: 0; right: 0; background: #14141f; border-top: 1px solid #2a2a3e; padding: 16px; z-index: 98; max-height: 50vh; overflow-y: auto; }
-        .pass-panel.show { display: block; }
-        .pass-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #e5e7eb; }
-        .pass-options { display: flex; flex-wrap: wrap; gap: 8px; }
-        .pass-options button { padding: 8px 14px; border-radius: 6px; border: 1px solid #2a2a3e; background: #1a1a2a; color: #9ca3af; font-size: 13px; cursor: pointer; transition: all 0.15s; }
-        .pass-options button:hover { border-color: #8b5cf6; }
-        .pass-options button.active { border-color: #8b5cf6; background: rgba(139,92,246,0.15); color: #a78bfa; }
-
-        /* 已选比赛弹窗 */
-        .selected-panel { display: none; position: fixed; bottom: 70px; left: 0; right: 0; background: #14141f; border-top: 1px solid #2a2a3e; padding: 16px; z-index: 98; max-height: 60vh; overflow-y: auto; }
-        .selected-panel.show { display: block; }
-        .selected-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .selected-panel h3 button { background: none; border: none; color: #6b7280; font-size: 12px; cursor: pointer; }
-        .sel-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: #1a1a2a; border-radius: 8px; margin-bottom: 8px; }
-        .sel-item .sel-info { flex: 1; }
-        .sel-item .sel-match { font-size: 13px; font-weight: 600; }
-        .sel-item .sel-pick { font-size: 12px; color: #8b5cf6; margin-top: 2px; }
-        .sel-item .sel-banker { font-size: 10px; background: #f59e0b; color: #000; padding: 1px 4px; border-radius: 3px; margin-left: 6px; }
-        .sel-item .sel-remove { background: none; border: none; color: #6b7280; font-size: 18px; cursor: pointer; padding: 4px 8px; }
-        .sel-item .sel-remove:hover { color: #ef4444; }
-        
-        /* 复式投注分组样式 */
-        .sel-match-group { background: #1a1a2a; border-radius: 8px; margin-bottom: 10px; padding: 10px; }
-        .sel-match-header { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #e5e7eb; }
-        .sel-match-header .sel-banker { font-size: 10px; background: #f59e0b; color: #000; padding: 1px 4px; border-radius: 3px; margin-left: 6px; }
-        .sel-picks { display: flex; flex-wrap: wrap; gap: 6px; }
-        .sel-pick-tag { display: inline-flex; align-items: center; gap: 4px; background: #2d1b4e; border: 1px solid #8b5cf6; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #a78bfa; }
-        .sel-pick-tag button { background: none; border: none; color: #6b7280; font-size: 14px; cursor: pointer; padding: 0 2px; margin-left: 2px; }
-        .sel-pick-tag button:hover { color: #ef4444; }
-
-        .empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
-        .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
-        .empty-state .title { font-size: 15px; font-weight: 600; margin-bottom: 4px; color: #9ca3af; }
-
-        @media (max-width: 768px) {
-            .bet-tabs .tab { font-size: 11px; padding: 7px 4px; min-width: 60px; }
-            .odds-btn .opt-odds { font-size: 14px; }
-            .bottom-bar .container { flex-direction: column; align-items: stretch; }
-            .bar-left, .bar-right { justify-content: center; }
-            .score-btn { min-width: 46px; padding: 5px 6px; }
-        }
+        .nav-links a:hover { color: #e5e7eb; background: rgba(255, 255, 255, 0.04); }
+        .nav-links a.active { color: #a78bfa; background: rgba(139, 92, 246, 0.12); }
+        .nav-divider { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.06); margin: 0 2px; }
+        .calc-layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; padding: 20px 0; }
+        @media (max-width: 820px) { .calc-layout { grid-template-columns: 1fr; } }
+        .card { background: #14141f; border: 1px solid #2a2a3e; border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; }
+        .match-row { display: grid; grid-template-columns: 50px 80px 1fr 50px 60px 60px 60px 36px; gap: 4px; align-items: center; padding: 6px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; border-radius: 4px; }
+        .match-row .id { color: #6b7280; font-weight: 500; font-size: 12px; }
+        .match-row .time { color: #9ca3af; font-size: 12px; }
+        .match-row .teams { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .match-row .handicap { color: #fbbf24; font-weight: 600; text-align: center; font-size: 12px; }
+        .match-row .odds { text-align: center; padding: 2px 4px; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 13px; transition: all 0.2s; border: 1px solid transparent; }
+        .match-row .odds:hover { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+        .match-row .odds.selected { background: rgba(139, 92, 246, 0.25); color: #a78bfa; border-color: rgba(139, 92, 246, 0.3); }
+        .match-row .odds.win { color: #22c55e; }
+        .match-row .odds.draw { color: #fbbf24; }
+        .match-row .odds.lose { color: #ef4444; }
+        .match-row .add-btn { color: #6b7280; font-size: 16px; cursor: pointer; text-align: center; transition: color 0.2s; }
+        .match-row .add-btn:hover { color: #8b5cf6; }
+        .date-group { margin-bottom: 4px; }
+        .date-group .group-header { display: flex; align-items: center; gap: 12px; padding: 6px 4px; cursor: pointer; border-radius: 6px; transition: background 0.15s; font-size: 14px; font-weight: 600; }
+        .date-group .group-header:hover { background: rgba(255, 255, 255, 0.03); }
+        .date-group .group-header .arrow { transition: transform 0.2s; color: #6b7280; font-size: 12px; }
+        .date-group .group-header .arrow.open { transform: rotate(90deg); }
+        .date-group .group-header .count { font-size: 12px; font-weight: 400; color: #6b7280; }
+        .date-group .group-body { padding-left: 8px; }
+        .date-group .group-body.hidden { display: none; }
+        .calculator-panel { position: sticky; top: 80px; align-self: start; }
+        .calculator-panel .card { padding: 16px 18px; }
+        .calc-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .calc-title .clear-btn { font-size: 12px; color: #6b7280; cursor: pointer; background: none; border: none; transition: color 0.2s; }
+        .calc-title .clear-btn:hover { color: #ef4444; }
+        .selected-match { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+        .selected-match .info { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .selected-match .info .odds-val { color: #8b5cf6; font-weight: 600; }
+        .selected-match .remove-selected { color: #6b7280; cursor: pointer; background: none; border: none; font-size: 14px; transition: color 0.2s; }
+        .selected-match .remove-selected:hover { color: #ef4444; }
+        .selected-empty { color: #6b7280; font-size: 13px; padding: 8px 0; }
+        .pass-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 8px 0 10px; }
+        .pass-grid button { padding: 4px 6px; border-radius: 4px; border: 1px solid #2a2a3e; background: transparent; color: #9ca3af; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .pass-grid button:hover { border-color: #6b7280; }
+        .pass-grid button.active { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); color: #a78bfa; }
+        .btn-calc { width: 100%; padding: 10px; border-radius: 8px; border: none; background: #8b5cf6; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 4px; }
+        .btn-calc:hover { background: #7c3aed; }
+        .result-box { background: #1a1a2a; border-radius: 8px; padding: 12px 16px; margin-top: 10px; border: 1px solid #2a2a3e; }
+        .result-box .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px; }
+        .result-box .row .val.win { color: #22c55e; font-weight: 600; }
+        .result-box .row .val.highlight { color: #8b5cf6; font-weight: 600; }
+        .result-box .divider { border-top: 1px solid #2a2a3e; margin: 6px 0; }
+        .loading { text-align: center; padding: 30px; color: #6b7280; }
+        .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(139, 92, 246, 0.1); border-top-color: #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading .text { margin-top: 8px; font-size: 13px; }
+        @media (max-width: 820px) { .calculator-panel { position: static; } .match-row { grid-template-columns: 36px 60px 1fr 40px 44px 44px 44px 28px; font-size: 12px; gap: 2px; } .pass-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 600px) { .match-row { grid-template-columns: 30px 50px 1fr 32px 34px 34px 34px 24px; font-size: 11px; padding: 4px 2px; } .match-row .odds { padding: 1px 2px; font-size: 11px; } .card { padding: 12px 14px; } .pass-grid { grid-template-columns: repeat(3, 1fr); } }
     </style>
 </head>
 <body>
@@ -173,664 +107,194 @@
             </div>
         </div>
     </nav>
-
     <main class="container">
-        <!-- 运动切换 -->
-        <div class="sport-switch">
-            <button class="active" onclick="switchSport('football')">⚽ 足球</button>
-            <button onclick="switchSport('basketball')">🏀 篮球</button>
+        <div style="padding: 16px 0 4px;">
+            <h1 style="font-size: 24px; font-weight: 900;">🧮 奖金计算器</h1>
+            <p style="color: #6b7280; font-size: 13px;">点击赔率自动填入 · 支持串关计算</p>
         </div>
-
-        <!-- 玩法Tab -->
-        <div class="bet-tabs" id="betTabs"></div>
-
-        <!-- 比赛列表 -->
-        <div id="matchList"></div>
+        <div class="calc-layout">
+            <div>
+                <div class="card" style="padding:10px 16px;margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                        <div style="display:flex;align-items:center;gap:12px;font-size:13px;">
+                            <span style="font-weight:600;">⚽ 竞彩足球</span>
+                            <span style="color:#6b7280;">|</span>
+                            <span style="color:#6b7280;">共 <span id="totalMatches">2</span> 场可投注</span>
+                        </div>
+                        <div style="display:flex;gap:8px;font-size:12px;">
+                            <span style="color:#22c55e;">● 胜</span>
+                            <span style="color:#fbbf24;">● 平</span>
+                            <span style="color:#ef4444;">● 负</span>
+                            <span style="color:#6b7280;margin-left:4px;">点击赔率选场</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="matchList"></div>
+                <div style="font-size:11px;color:#6b7280;text-align:right;padding:4px 0;">
+                    数据更新：2026-06-30 22:08:18
+                </div>
+            </div>
+            <div class="calculator-panel">
+                <div class="card">
+                    <div class="calc-title">
+                        <span>📋 我的串关</span>
+                        <button class="clear-btn" id="clearSelected">清空</button>
+                    </div>
+                    <div id="selectedList">
+                        <div class="selected-empty">👆 点击左侧赔率添加比赛</div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">串关方式</div>
+                        <div class="pass-grid" id="passGrid">
+                            <button data-pass="2串1">2串1</button>
+                            <button data-pass="3串1" class="active">3串1</button>
+                            <button data-pass="4串1">4串1</button>
+                            <button data-pass="5串1">5串1</button>
+                            <button data-pass="6串1">6串1</button>
+                            <button data-pass="7串1">7串1</button>
+                            <button data-pass="8串1">8串1</button>
+                            <button data-pass="3串4">3串4</button>
+                            <button data-pass="4串5">4串5</button>
+                            <button data-pass="4串11">4串11</button>
+                            <button data-pass="5串16">5串16</button>
+                            <button data-pass="5串26">5串26</button>
+                            <button data-pass="6串20">6串20</button>
+                            <button data-pass="6串35">6串35</button>
+                            <button data-pass="6串42">6串42</button>
+                            <button data-pass="6串57">6串57</button>
+                        </div>
+                    </div>
+                    <button class="btn-calc" id="calcBtn">💰 计算奖金</button>
+                    <div id="resultBox" class="result-box" style="display:none;">
+                        <div class="row"><span>串关</span><span class="val" id="resultPass">3串1</span></div>
+                        <div class="row"><span>场次</span><span class="val" id="resultCount">0</span></div>
+                        <div class="row"><span>投注</span><span class="val">2元/注</span></div>
+                        <div class="divider"></div>
+                        <div class="row"><span>🏆 单注奖金</span><span class="val win" id="resultPrize">0.00 元</span></div>
+                        <div class="row"><span>综合赔率</span><span class="val highlight" id="resultOdds">0.00</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
-
-    <!-- 已选比赛面板 -->
-    <div class="selected-panel" id="selectedPanel">
-        <h3>
-            <span>已选比赛 (<span id="selectedCountPanel">0</span>)</span>
-            <button onclick="closeAllPanels()">关闭</button>
-        </h3>
-        <div id="selectedListPanel"></div>
-    </div>
-
-    <!-- 过关方式面板 -->
-    <div class="pass-panel" id="passPanel">
-        <h3>选择过关方式</h3>
-        <div class="pass-options" id="passOptions"></div>
-    </div>
-
-    <!-- 底部固定计算栏 -->
-    <div class="bottom-bar">
-        <div class="container">
-            <div class="bar-left">
-                <button class="selected-count-btn" onclick="toggleSelectedPanel()">
-                    <span>已选</span>
-                    <span class="count" id="selectedCount">0</span>
-                    <span>场</span>
-                </button>
-                <div class="pass-mode-switch">
-                    <button class="active" onclick="setPassMode('normal')">M串N</button>
-                    <button onclick="setPassMode('free')">自由过关</button>
-                </div>
-            </div>
-            <div class="bar-right">
-                <div class="multiplier-box">
-                    <button onclick="changeMultiplier(-1)">−</button>
-                    <input type="number" id="multiplier" value="1" min="1" max="50" onchange="updateCalc()">
-                    <button onclick="changeMultiplier(1)">+</button>
-                </div>
-                <div class="bar-info">
-                    投注: <span class="amount" id="totalAmount">0</span>元
-                </div>
-                <div class="bar-info">
-                    最高奖金: <span class="prize" id="maxPrize">0.00</span>元
-                </div>
-                <button class="bar-detail-btn" onclick="showPassPanel()">过关方式</button>
-            </div>
-        </div>
-    </div>
-
+    <footer style="text-align:center;padding:16px 0;border-top:1px solid rgba(255,255,255,0.04);font-size:12px;color:#6b7280;margin-top:8px;">
+        <p>🧪 AI实验室 · 体彩好伙伴 · 数据仅供模拟参考</p>
+    </footer>
     <script>
-        // ========== 嵌入数据 ==========
-        window.MATCH_DATA = [{"id":"周一076","teams":"荷兰VS摩洛哥","match_time":"2026-06-30 09:00:00","handicap":"-1","status":"待比赛","win_odds":1.89,"draw_odds":3.07,"lose_odds":3.64,"handicap_win_odds":3.82,"handicap_draw_odds":3.58,"handicap_lose_odds":1.7,"home_team":"荷兰","away_team":"摩洛哥","match_date":"2026-06-30"}];
-
-        // ========== 状态 ==========
-        let currentSport = 'football';
-        let currentBetType = 'spf';
-        let selectedMatches = []; // {matchId, matchName, pickType, pickLabel, odds, isBanker, key}
-        let passMode = 'normal'; // 'normal' or 'free'
-        let selectedPass = '3串1';
-        let multiplier = 1;
-
-        // ========== 玩法配置 ==========
-        const FOOTBALL_BET_TYPES = {
-            'spf': { name: '胜平负', options: ['胜','平','负'] },
-            'rqspf': { name: '让球胜平负', options: ['让胜','让平','让负'] },
-            'bf': { name: '比分', options: [] },
-            'zjq': { name: '总进球', options: [] },
-            'bqc': { name: '半全场', options: [] }
-        };
-
-        const BASKETBALL_BET_TYPES = {
-            'spf': { name: '胜负', options: ['胜','负'] },
-            'rqspf': { name: '让分胜负', options: ['让胜','让负'] },
-            'dx': { name: '大小分', options: ['大','小'] },
-            'sfc': { name: '胜分差', options: [] }
-        };
-
-        // ========== 比分赔率表 ==========
-        const SCORE_ODDS = {
-            '1:0':6.5,'2:0':7.0,'2:1':7.5,'3:0':9.0,'3:1':10.0,'3:2':13.0,
-            '4:0':15.0,'4:1':18.0,'4:2':23.0,'5:0':30.0,'5:1':40.0,'5:2':50.0,
-            '0:0':8.0,'1:1':6.0,'2:2':10.0,'3:3':25.0,
-            '0:1':8.5,'0:2':11.0,'1:2':9.0,'0:3':15.0,'1:3':17.0,'2:3':23.0,
-            '0:4':28.0,'1:4':35.0,'2:4':45.0,'0:5':50.0,'1:5':65.0,'2:5':80.0,
-            '胜其他':20.0,'平其他':25.0,'负其他':40.0
-        };
-        const SCORE_GROUPS = [
-            { title: '主胜', scores: ['1:0','2:0','2:1','3:0','3:1','3:2','4:0','4:1','4:2','5:0','5:1','5:2','胜其他'] },
-            { title: '平局', scores: ['0:0','1:1','2:2','3:3','平其他'] },
-            { title: '主负', scores: ['0:1','0:2','1:2','0:3','1:3','2:3','0:4','1:4','2:4','0:5','1:5','2:5','负其他'] }
-        ];
-
-        const GOALS_ODDS = [
-            {label:'0球',odds:8.0},{label:'1球',odds:4.5},{label:'2球',odds:3.2},{label:'3球',odds:3.0},
-            {label:'4球',odds:4.0},{label:'5球',odds:6.5},{label:'6球',odds:11.0},{label:'7+球',odds:20.0}
-        ];
-
-        const H2H_ODDS = [
-            {label:'胜胜',odds:2.8},{label:'胜平',odds:13.0},{label:'胜负',odds:25.0},
-            {label:'平胜',odds:6.5},{label:'平平',odds:5.5},{label:'平负',odds:8.0},
-            {label:'负胜',odds:15.0},{label:'负平',odds:10.0},{label:'负负',odds:4.2}
-        ];
-
-        // ========== 工具函数 ==========
-        function esc(s) { if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-        function fmtTime(dt) { try { return dt.slice(11,16); } catch(e) { return ''; } }
-        function fmtDate(dt) { try { const d=new Date(dt); const wd=['周日','周一','周二','周三','周四','周五','周六']; return wd[d.getDay()]+' '+(d.getMonth()+1)+'/'+d.getDate(); } catch(e) { return dt?.slice(5,10)||''; } }
-
-        // ========== 运动切换 ==========
-        function switchSport(sport) {
-            currentSport = sport;
-            document.querySelectorAll('.sport-switch button').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            renderBetTabs();
-            renderMatches();
-        }
-
-        // ========== 渲染玩法Tab ==========
-        function renderBetTabs() {
-            const tabs = document.getElementById('betTabs');
-            const types = currentSport === 'football' ? FOOTBALL_BET_TYPES : BASKETBALL_BET_TYPES;
-            currentBetType = Object.keys(types)[0];
-            let html = '';
-            Object.keys(types).forEach(key => {
-                html += `<button class="tab ${key===currentBetType?'active':''}" onclick="switchBetType('${key}')">${types[key].name}</button>`;
-            });
-            tabs.innerHTML = html;
-        }
-
-        function switchBetType(type) {
-            currentBetType = type;
-            document.querySelectorAll('.bet-tabs .tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            renderMatches();
-        }
-
-        // ========== 渲染比赛列表 ==========
-        function renderMatches() {
-            const allMatches = window.MATCH_DATA || [];
-            // 过滤：待比赛 + 比赛时间还没到（提前10分钟截止）
-            const now = new Date();
-            const cutoffBuffer = 10 * 60 * 1000; // 10分钟
-            const matches = allMatches.filter(m => {
-                if (m.status !== '待比赛') return false;
-                if (!m.match_time) return false;
-                const matchTime = new Date(m.match_time.replace(' ', 'T'));
-                return matchTime.getTime() > now.getTime() + cutoffBuffer;
-            });
+        // 嵌入的比赛数据（SEO友好，爬虫可抓取）
+        window.MATCH_DATA = [{"id": "周一074", "teams": "巴西VS日本", "match_time": "2026-06-30 04:00", "handicap": -1, "status": "已确认", "win_odds": 1.65, "draw_odds": 3.4, "lose_odds": 4.5, "handicap_win_odds": 2.1, "handicap_draw_odds": 3.2, "handicap_lose_odds": 3.5, "home_score": 2, "away_score": 1, "predictions": [], "home_team": "巴西", "away_team": "日本", "match_date": "2026-06-30"}, {"id": "周一075", "teams": "德国VS巴拉圭", "match_time": "2026-06-30 04:00", "handicap": 0, "status": "已确认", "win_odds": 1.45, "draw_odds": 4.0, "lose_odds": 6.5, "handicap_win_odds": 2.4, "handicap_draw_odds": 3.2, "handicap_lose_odds": 2.8, "home_score": 2, "away_score": 0, "predictions": [], "home_team": "德国", "away_team": "巴拉圭", "match_date": "2026-06-30"}];
+        
+        // 状态
+        let selectedMatches = [];
+        
+        // 工具函数
+        function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        function fmtDate(dt) { if (!dt) return ''; try { const d = new Date(dt); const weekdays = ['周日','周一','周二','周三','周四','周五','周六']; return weekdays[d.getDay()] + ' ' + (d.getMonth()+1) + '/' + d.getDate(); } catch(e) { return dt.slice(5,10); } }
+        function fmtTime(dt) { if (!dt) return ''; try { return dt.slice(11,16); } catch(e) { return ''; } }
+        
+        // 渲染赛事列表
+        function renderMatches(matches) {
             const container = document.getElementById('matchList');
-
-            if (matches.length === 0) {
-                container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div class="title">暂无待比赛赛事</div><div>当前没有可投注的${currentSport==='football'?'足球':'篮球'}比赛</div></div>`;
+            if (!container) return;
+            if (!matches || matches.length === 0) {
+                container.innerHTML = '<div class="card" style="text-align:center;padding:30px;color:#6b7280;"><div style="font-size:28px;margin-bottom:8px;">📭</div>暂无待比赛的足球赛事</div>';
                 return;
             }
-
             const groups = {};
             matches.forEach(m => {
-                const dk = m.match_date || m.match_time?.slice(0,10) || 'unknown';
-                if (!groups[dk]) groups[dk] = [];
-                groups[dk].push(m);
+                const dateKey = m.match_date || (m.match_time ? m.match_time.slice(0,10) : 'unknown');
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(m);
             });
             const sortedDates = Object.keys(groups).sort();
-            const today = new Date().toISOString().slice(0,10);
-
             let html = '';
-            sortedDates.forEach(dk => {
-                const dayMatches = groups[dk];
-                const isToday = dk === today;
-                html += '<div style="margin-bottom:12px;">';
-                html += '<div style="font-size:13px;font-weight:600;color:#9ca3af;padding:6px 4px;display:flex;align-items:center;gap:8px;">';
-                html += '<span>' + fmtDate(dk) + '</span>';
-                html += '<span style="font-size:11px;color:#6b7280;">' + dayMatches.length + '场</span>';
-                if (isToday) html += '<span style="font-size:10px;color:#22c55e;background:rgba(34,197,94,0.12);padding:1px 6px;border-radius:3px;">今日</span>';
-                html += '</div>';
-
+            sortedDates.forEach((dateKey) => {
+                const dayMatches = groups[dateKey];
+                const dateLabel = fmtDate(dateKey);
+                const isToday = dateKey === new Date().toISOString().slice(0,10);
+                html += '<div class="date-group"><div class="group-header" onclick="toggleGroup(this)"><span class="arrow ' + (isToday?'open':'') + '">▶</span><span>' + dateLabel + '</span><span class="count">' + dayMatches.length + '场</span>' + (isToday?'<span style="font-size:11px;color:#22c55e;">● 今日</span>':'') + '</div><div class="group-body ' + (isToday?'':'hidden') + '"><div class="card" style="padding:8px 12px;"><div class="match-row" style="font-size:11px;color:#6b7280;border-bottom:1px solid #2a2a3e;padding-bottom:4px;margin-bottom:2px;"><span>编号</span><span>时间</span><span>对阵</span><span>让球</span><span>胜</span><span>平</span><span>负</span><span></span></div>';
                 dayMatches.forEach(m => {
-                    html += renderMatchCard(m);
+                    const displayName = m.home_team && m.away_team ? m.home_team + ' VS ' + m.away_team : (m.teams || '-- VS --');
+                    const id = m.id || '---';
+                    const time = fmtTime(m.match_time);
+                    const handicap = m.handicap || '0';
+                    const winOdds = m.win_odds || '--';
+                    const drawOdds = m.draw_odds || '--';
+                    const loseOdds = m.lose_odds || '--';
+                    html += '<div class="match-row" data-id="' + m.id + '"><span class="id">' + esc(id) + '</span><span class="time">' + time + '</span><span class="teams">' + esc(displayName) + '</span><span class="handicap">' + handicap + '</span><span class="odds win" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'胜\',' + winOdds + ')">' + winOdds + '</span><span class="odds draw" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'平\',' + drawOdds + ')">' + drawOdds + '</span><span class="odds lose" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'负\',' + loseOdds + ')">' + loseOdds + '</span><span class="add-btn" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'胜\',' + winOdds + ')">＋</span></div>';
                 });
-                html += '</div>';
+                html += '</div></div></div>';
             });
-
             container.innerHTML = html;
         }
-
-        function renderMatchCard(m) {
-            const home = m.home_team || '主队';
-            const away = m.away_team || '客队';
-            const id = m.id || '---';
-            const time = fmtTime(m.match_time);
-            const handicap = m.handicap || '0';
-            const isBanker = selectedMatches.some(s => s.matchId === id && s.isBanker);
-
-            let html = `<div class="match-card ${isBanker?'banker':''}" data-match-id="${id}">`;
-            html += '<div class="match-header">';
-            html += `<span class="match-id">${esc(id)}</span>`;
-            html += `<span class="match-time">${time}</span>`;
-            html += `<span class="match-teams">${esc(home)}<span class="vs">VS</span>${esc(away)}</span>`;
-            if (currentBetType === 'rqspf') {
-                html += `<span class="handicap-tag">让${handicap.replace('+','')}</span>`;
-            }
-            html += `<button class="banker-btn ${isBanker?'active':''}" onclick="toggleBanker('${id}','${esc(home)} VS ${esc(away)}')">设胆</button>`;
-            html += '</div>';
-
-            if (currentSport === 'football') {
-                if (currentBetType === 'spf') {
-                    html += renderSPF(m, 'win_odds', 'draw_odds', 'lose_odds', ['胜','平','负']);
-                } else if (currentBetType === 'rqspf') {
-                    html += renderSPF(m, 'handicap_win_odds', 'handicap_draw_odds', 'handicap_lose_odds', ['让胜','让平','让负']);
-                } else if (currentBetType === 'bf') {
-                    html += renderScore(m);
-                } else if (currentBetType === 'zjq') {
-                    html += renderGoals(m);
-                } else if (currentBetType === 'bqc') {
-                    html += renderH2H(m);
-                }
-            } else {
-                // 篮球玩法
-                if (currentBetType === 'spf') {
-                    html += renderBasketballSPF(m);
-                } else if (currentBetType === 'rqspf') {
-                    html += renderBasketballHandicap(m);
-                } else {
-                    html += '<div style="padding:20px;text-align:center;color:#6b7280;">篮球其他玩法开发中...</div>';
-                }
-            }
-
-            html += '</div>';
-            return html;
-        }
-
-        // ========== 足球玩法渲染 ==========
-        function renderSPF(m, wk, dk, lk, labels) {
-            const w = m[wk] || '--';
-            const d = m[dk] || '--';
-            const l = m[lk] || '--';
-            const cls = ['win', 'draw', 'lose'];
-            const vals = [w, d, l];
-            let html = '<div class="odds-row">';
-            labels.forEach((label, i) => {
-                const key = m.id + '_' + currentBetType + '_' + label;
-                const isSel = selectedMatches.some(s => s.key === key);
-                html += `<div class="odds-btn ${cls[i]} ${isSel?'selected':''}" onclick="pickSPF('${m.id}','${esc(m.home_team||'')} VS ${esc(m.away_team||'')}','${label}',${vals[i]},'${currentBetType}')">`;
-                html += `<span class="opt-label">${label}</span>`;
-                html += `<span class="opt-odds">${vals[i]}</span>`;
-                html += '</div>';
-            });
-            html += '</div>';
-            return html;
-        }
-
-        function renderScore(m) {
-            let html = '<div class="score-grid">';
-            SCORE_GROUPS.forEach(g => {
-                html += '<div class="score-group">';
-                html += `<div class="score-group-title">${g.title}</div>`;
-                html += '<div class="score-options">';
-                g.scores.forEach(sc => {
-                    const odds = SCORE_ODDS[sc] || '--';
-                    const key = m.id + '_bf_' + sc;
-                    const isSel = selectedMatches.some(s => s.key === key);
-                    html += `<div class="score-btn ${isSel?'selected':''}" onclick="pickOption('${m.id}','${esc(m.home_team||'')} VS ${esc(m.away_team||'')}','比分 ${sc}',${odds},'bf')">`;
-                    html += `<span class="score-label">${sc}</span>`;
-                    html += `<span class="score-odds">${odds}</span>`;
-                    html += '</div>';
-                });
-                html += '</div></div>';
-            });
-            html += '</div>';
-            return html;
-        }
-
-        function renderGoals(m) {
-            let html = '<div class="goals-grid">';
-            GOALS_ODDS.forEach(g => {
-                const key = m.id + '_zjq_' + g.label;
-                const isSel = selectedMatches.some(s => s.key === key);
-                html += `<div class="goals-btn ${isSel?'selected':''}" onclick="pickOption('${m.id}','${esc(m.home_team||'')} VS ${esc(m.away_team||'')}','总进球 ${g.label}',${g.odds},'zjq')">`;
-                html += `<div class="goals-label">${g.label}</div>`;
-                html += `<div class="goals-odds">${g.odds}</div>`;
-                html += '</div>';
-            });
-            html += '</div>';
-            return html;
-        }
-
-        function renderH2H(m) {
-            let html = '<div class="h2h-grid">';
-            H2H_ODDS.forEach(h => {
-                const key = m.id + '_bqc_' + h.label;
-                const isSel = selectedMatches.some(s => s.key === key);
-                html += `<div class="h2h-btn ${isSel?'selected':''}" onclick="pickOption('${m.id}','${esc(m.home_team||'')} VS ${esc(m.away_team||'')}','半全场 ${h.label}',${h.odds},'bqc')">`;
-                html += `<div class="h2h-label">${h.label}</div>`;
-                html += `<div class="h2h-odds">${h.odds}</div>`;
-                html += '</div>';
-            });
-            html += '</div>';
-            return html;
-        }
-
-        // ========== 篮球玩法渲染 ==========
-        function renderBasketballSPF(m) {
-            const w = m.win_odds || 1.85;
-            const l = m.lose_odds || 1.95;
-            let html = '<div class="odds-row" style="grid-template-columns: repeat(2, 1fr);">';
-            [['胜', w, 'win'], ['负', l, 'lose']].forEach(([label, odds, cls]) => {
-                const key = m.id + '_bb_spf_' + label;
-                const isSel = selectedMatches.some(s => s.key === key);
-                html += `<div class="odds-btn ${cls} ${isSel?'selected':''}" onclick="pickOption('${m.id}','${esc(m.home_team||'')} VS ${esc(m.away_team||'')}','${label}',${odds},'bb_spf')">`;
-                html += `<span class="opt-label">${label}</span>`;
-                html += `<span class="opt-odds">${odds}</span>`;
-                html += '</div>';
-            });
-            html += '</div>';
-            return html;
-        }
-
-        function renderBasketballHandicap(m) {
-            const handicap = m.handicap || '-5.5';
-            const w = m.handicap_win_odds || 1.90;
-            const l = m.handicap_lose_odds || 1.90;
-            let html = '<div class="match-header" style="padding:6px 14px;font-size:12px;background:transparent;border:none;">';
-            html += `<span class="handicap-tag">让分 ${handicap}</span>`;
-            html += '</div>';
-            html += '<div class="odds-row" style="grid-template-columns: repeat(2, 1fr);">';
-            [['让胜', w, 'win'], ['让负', l, 'lose']].forEach(([label, odds, cls]) => {
-                const key = m.id + '_bb_rq_' + label;
-                const isSel = selectedMatches.some(s => s.key === key);
-                html += `<div class="odds-btn ${cls} ${isSel?'selected':''}" onclick="pickOption('${m.id}','${esc(m.home_team||'')} VS ${esc(m.away_team||'')}','${label}',${odds},'bb_rq')">`;
-                html += `<span class="opt-label">${label}</span>`;
-                html += `<span class="opt-odds">${odds}</span>`;
-                html += '</div>';
-            });
-            html += '</div>';
-            return html;
-        }
-
-        // ========== 选择逻辑 ==========
-        function pickSPF(matchId, matchName, label, odds, betType) {
-            const key = matchId + '_' + betType + '_' + label;
-            toggleSelection(matchId, matchName, betType, label, odds, key);
-        }
-
-        function pickOption(matchId, matchName, label, odds, betType) {
-            const key = matchId + '_' + betType + '_' + label.replace(/\s+/g, '');
-            toggleSelection(matchId, matchName, betType, label, odds, key);
-        }
-
-        function toggleSelection(matchId, matchName, pickType, pickLabel, odds, key) {
+        
+        function toggleGroup(header) { const body = header.nextElementSibling; const arrow = header.querySelector('.arrow'); if (body) { body.classList.toggle('hidden'); if (arrow) arrow.classList.toggle('open'); } }
+        
+        function selectMatch(id, teams, result, odds) {
             if (odds === '--' || isNaN(odds) || odds <= 0) { alert('该赔率暂不可用'); return; }
-            const idx = selectedMatches.findIndex(s => s.key === key);
-            if (idx >= 0) {
-                // 点击已选中的选项，取消选择
-                selectedMatches.splice(idx, 1);
-            } else {
-                // 竞彩复式投注：同一场比赛同一玩法可以选多个选项（双选、三选）
-                // 但不同玩法不能同时选（如不能同时选A场的胜平负和A场的比分）
-                const sameMatchDiffType = selectedMatches.findIndex(s => s.matchId === matchId && s.pickType !== pickType);
-                if (sameMatchDiffType >= 0) {
-                    alert('同一场比赛不同玩法不能混合选择，请先取消其他玩法的选择');
-                    return;
-                }
-                // 同一玩法内，检查是否已选（避免重复）
-                const sameKey = selectedMatches.findIndex(s => s.key === key);
-                if (sameKey >= 0) {
-                    selectedMatches.splice(sameKey, 1);
-                    renderMatches();
-                    updateBottomBar();
-                    return;
-                }
-                if (selectedMatches.length >= 24) { alert('最多选择24个选项'); return; }
-                selectedMatches.push({ matchId, matchName, pickType, pickLabel, odds, isBanker: false, key });
-            }
-            renderMatches();
-            updateBottomBar();
+            const existing = selectedMatches.findIndex(m => m.id === id && m.result === result);
+            if (existing >= 0) { selectedMatches.splice(existing, 1); renderSelected(); updateOddsHighlight(); return; }
+            const sameMatch = selectedMatches.findIndex(m => m.id === id);
+            if (sameMatch >= 0) { selectedMatches.splice(sameMatch, 1); }
+            if (selectedMatches.length >= 8) { alert('最多选择8场比赛'); return; }
+            selectedMatches.push({ id, teams, result, odds });
+            renderSelected();
+            updateOddsHighlight();
         }
-
-        function toggleBanker(matchId, matchName) {
-            // 竞彩规则：同一场比赛只能选1个选项，设胆就是给这个选项标记为胆码
-            const matchSel = selectedMatches.find(s => s.matchId === matchId);
-            if (!matchSel) { alert('请先选择该比赛的投注选项'); return; }
-            matchSel.isBanker = !matchSel.isBanker;
-            renderMatches();
-            updateBottomBar();
-        }
-
-        // ========== 底部栏更新 ==========
-        function updateBottomBar() {
-            // 按比赛分组计数（复式投注时，同一场比赛多个选项算1场）
-            const uniqueMatches = new Set(selectedMatches.map(s => s.matchId));
-            const matchCount = uniqueMatches.size;
-            const totalSelections = selectedMatches.length;
-            
-            // 显示：X场Y选（如果是复式）或X场（如果是单式）
-            const countText = totalSelections > matchCount ? `${matchCount}场${totalSelections}选` : `${matchCount}场`;
-            document.getElementById('selectedCount').textContent = countText;
-            document.getElementById('selectedCountPanel').textContent = countText;
-            
-            const totalBets = calculateTotalBets();
-            const amount = totalBets * 2 * multiplier;
-            document.getElementById('totalAmount').textContent = amount;
-            
-            const maxOdds = calculateMaxOdds();
-            const maxPrize = amount * maxOdds;
-            document.getElementById('maxPrize').textContent = maxPrize.toFixed(2);
-            
-            renderSelectedPanel();
-        }
-
-        function calculateTotalBets() {
-            if (selectedMatches.length === 0) return 0;
-            
-            // 按比赛分组，统计每场比赛的选项数（复式投注）
-            const matchSelections = {};
-            selectedMatches.forEach(s => {
-                if (!matchSelections[s.matchId]) matchSelections[s.matchId] = [];
-                matchSelections[s.matchId].push(s);
-            });
-            const matchIds = Object.keys(matchSelections);
-            const matchCounts = matchIds.map(id => matchSelections[id].length);
-            
-            // 检查是否为纯单式（每场比赛只有1个选项）
-            const isSingleBet = matchCounts.every(c => c === 1);
-            
-            // M串N的注数计算
-            if (selectedPass === '2串1') {
-                // 2串1：所有选项组合数
-                return matchCounts.reduce((a, b) => a * b, 1);
-            }
-            
-            if (selectedPass === '3串1') {
-                // 3串1：所有选项组合数
-                return matchCounts.reduce((a, b) => a * b, 1);
-            }
-            
-            if (selectedPass === '3串4') {
-                // 3串4 = 3个2串1 + 1个3串1
-                // 2串1组合：C(3,2) = 3种
-                // 每种2串1的注数 = 两场比赛选项数的乘积
-                let total = 0;
-                // 3个2串1
-                for (let i = 0; i < matchIds.length; i++) {
-                    for (let j = i + 1; j < matchIds.length; j++) {
-                        total += matchCounts[i] * matchCounts[j];
-                    }
-                }
-                // 1个3串1
-                total += matchCounts.reduce((a, b) => a * b, 1);
-                return total;
-            }
-            
-            if (selectedPass === '4串1') {
-                return matchCounts.reduce((a, b) => a * b, 1);
-            }
-            
-            if (selectedPass === '4串5') {
-                // 4串5 = 4个3串1 + 1个4串1
-                let total = 0;
-                // 4个3串1
-                for (let i = 0; i < matchIds.length; i++) {
-                    for (let j = i + 1; j < matchIds.length; j++) {
-                        for (let k = j + 1; k < matchIds.length; k++) {
-                            total += matchCounts[i] * matchCounts[j] * matchCounts[k];
-                        }
-                    }
-                }
-                // 1个4串1
-                total += matchCounts.reduce((a, b) => a * b, 1);
-                return total;
-            }
-            
-            if (selectedPass === '4串11') {
-                // 4串11 = 6个2串1 + 4个3串1 + 1个4串1
-                let total = 0;
-                // 6个2串1
-                for (let i = 0; i < matchIds.length; i++) {
-                    for (let j = i + 1; j < matchIds.length; j++) {
-                        total += matchCounts[i] * matchCounts[j];
-                    }
-                }
-                // 4个3串1
-                for (let i = 0; i < matchIds.length; i++) {
-                    for (let j = i + 1; j < matchIds.length; j++) {
-                        for (let k = j + 1; k < matchIds.length; k++) {
-                            total += matchCounts[i] * matchCounts[j] * matchCounts[k];
-                        }
-                    }
-                }
-                // 1个4串1
-                total += matchCounts.reduce((a, b) => a * b, 1);
-                return total;
-            }
-            
-            if (selectedPass === '5串1' || selectedPass === '6串1' || selectedPass === '7串1' || selectedPass === '8串1') {
-                return matchCounts.reduce((a, b) => a * b, 1);
-            }
-            
-            if (selectedPass === '5串16') {
-                // 5串16 = 10个2串1 + 10个3串1 + 5个4串1 + 1个5串1
-                let total = 0;
-                const n = matchIds.length;
-                // 10个2串1
-                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) total += matchCounts[i] * matchCounts[j];
-                // 10个3串1
-                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) total += matchCounts[i] * matchCounts[j] * matchCounts[k];
-                // 5个4串1
-                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) for (let l = k + 1; l < n; l++) total += matchCounts[i] * matchCounts[j] * matchCounts[k] * matchCounts[l];
-                // 1个5串1
-                total += matchCounts.reduce((a, b) => a * b, 1);
-                return total;
-            }
-            
-            if (selectedPass === '5串26') {
-                // 5串26 = 10个2串1 + 10个3串1 + 5个4串1 + 1个5串1 (重复计算)
-                // 实际上是所有可能的组合
-                let total = 0;
-                const n = matchIds.length;
-                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) total += matchCounts[i] * matchCounts[j];
-                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) total += matchCounts[i] * matchCounts[j] * matchCounts[k];
-                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) for (let l = k + 1; l < n; l++) total += matchCounts[i] * matchCounts[j] * matchCounts[k] * matchCounts[l];
-                total += matchCounts.reduce((a, b) => a * b, 1);
-                return total * 2; // 近似值
-            }
-            
-            // 默认：按单式计算
-            const passMap = {
-                '2串1': 1, '3串1': 1, '4串1': 1, '5串1': 1, '6串1': 1, '7串1': 1, '8串1': 1,
-                '3串4': 4, '4串5': 5, '4串11': 11, '5串16': 16, '5串26': 26,
-                '6串20': 20, '6串35': 35, '6串42': 42, '6串57': 57
-            };
-            return (passMap[selectedPass] || 1) * (isSingleBet ? 1 : matchCounts.reduce((a, b) => a * b, 1));
-        }
-
-        function calculateMaxOdds() {
-            if (selectedMatches.length === 0) return 0;
-            
-            // 按比赛分组
-            const matchSelections = {};
-            selectedMatches.forEach(s => {
-                if (!matchSelections[s.matchId]) matchSelections[s.matchId] = [];
-                matchSelections[s.matchId].push(s);
-            });
-            const matchIds = Object.keys(matchSelections);
-            
-            // 对于复式投注，计算最高奖金（取每场比赛最高赔率的组合）
-            // 这是简化计算，实际应该计算所有组合的最高值
-            let maxOdds = 1;
-            matchIds.forEach(id => {
-                const maxMatchOdds = Math.max(...matchSelections[id].map(s => s.odds));
-                maxOdds *= maxMatchOdds;
-            });
-            return maxOdds;
-        }
-
-        function renderSelectedPanel() {
-            const container = document.getElementById('selectedListPanel');
-            if (selectedMatches.length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;">暂无选择</div>';
-                return;
-            }
-            
-            // 按比赛分组显示
-            const matchGroups = {};
-            selectedMatches.forEach((s, idx) => {
-                if (!matchGroups[s.matchId]) matchGroups[s.matchId] = { name: s.matchName, picks: [], indices: [] };
-                matchGroups[s.matchId].picks.push(s);
-                matchGroups[s.matchId].indices.push(idx);
-            });
-            
+        
+        function renderSelected() {
+            const container = document.getElementById('selectedList');
+            if (!container) return;
+            if (selectedMatches.length === 0) { container.innerHTML = '<div class="selected-empty">👆 点击左侧赔率添加比赛</div>'; document.getElementById('resultBox').style.display = 'none'; return; }
             let html = '';
-            Object.keys(matchGroups).forEach(matchId => {
-                const group = matchGroups[matchId];
-                const isBanker = group.picks[0].isBanker;
-                html += `<div class="sel-match-group">`;
-                html += `<div class="sel-match-header">${matchId} ${group.name}${isBanker?'<span class="sel-banker">胆</span>':''}</div>`;
-                html += `<div class="sel-picks">`;
-                group.picks.forEach((s, i) => {
-                    const globalIdx = group.indices[i];
-                    html += `<span class="sel-pick-tag">${s.pickLabel} @${s.odds}<button onclick="removeSelection(${globalIdx})">×</button></span>`;
+            selectedMatches.forEach((m, idx) => {
+                html += '<div class="selected-match"><div class="info"><span style="font-size:11px;color:#6b7280;">' + (idx+1) + '</span><span style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(m.teams) + '</span><span style="font-size:12px;color:' + (m.result==='胜'?'#22c55e':m.result==='平'?'#fbbf24':'#ef4444') + ';">' + m.result + '</span><span class="odds-val">' + m.odds + '</span></div><button class="remove-selected" onclick="removeSelected(' + idx + ')">✕</button></div>';
+            });
+            container.innerHTML = html;
+        }
+        
+        function removeSelected(idx) { selectedMatches.splice(idx, 1); renderSelected(); updateOddsHighlight(); document.getElementById('resultBox').style.display = 'none'; }
+        
+        function updateOddsHighlight() {
+            document.querySelectorAll('.odds').forEach(el => el.classList.remove('selected'));
+            selectedMatches.forEach(m => {
+                document.querySelectorAll('.match-row').forEach(row => {
+                    const id = row.querySelector('.id')?.textContent;
+                    if (id === m.id) {
+                        const oddsEls = row.querySelectorAll('.odds');
+                        const resultMap = { '胜': 0, '平': 1, '负': 2 };
+                        const idx = resultMap[m.result];
+                        if (idx !== undefined && oddsEls[idx]) { oddsEls[idx].classList.add('selected'); }
+                    }
                 });
-                html += `</div>`;
-                html += `</div>`;
             });
-            container.innerHTML = html;
         }
-
-        function removeSelection(idx) {
-            selectedMatches.splice(idx, 1);
-            renderMatches();
-            updateBottomBar();
-        }
-
-        // ========== 面板控制 ==========
-        function toggleSelectedPanel() {
-            const panel = document.getElementById('selectedPanel');
-            const passPanel = document.getElementById('passPanel');
-            passPanel.classList.remove('show');
-            panel.classList.toggle('show');
-        }
-
-        function showPassPanel() {
-            const panel = document.getElementById('passPanel');
-            const selectedPanel = document.getElementById('selectedPanel');
-            selectedPanel.classList.remove('show');
-            panel.classList.toggle('show');
-            renderPassOptions();
-        }
-
-        function closeAllPanels() {
-            document.getElementById('selectedPanel').classList.remove('show');
-            document.getElementById('passPanel').classList.remove('show');
-        }
-
-        function renderPassOptions() {
-            const container = document.getElementById('passOptions');
-            const options = ['2串1','3串1','4串1','5串1','6串1','7串1','8串1','3串4','4串5','4串11','5串16','5串26','6串20','6串35','6串42','6串57'];
-            let html = '';
-            options.forEach(opt => {
-                html += `<button class="${opt===selectedPass?'active':''}" onclick="selectPass('${opt}')">${opt}</button>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function selectPass(pass) {
-            selectedPass = pass;
-            renderPassOptions();
-            updateBottomBar();
-        }
-
-        function setPassMode(mode) {
-            passMode = mode;
-            document.querySelectorAll('.pass-mode-switch button').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-        }
-
-        function changeMultiplier(delta) {
-            const input = document.getElementById('multiplier');
-            multiplier = Math.max(1, Math.min(50, parseInt(input.value) + delta));
-            input.value = multiplier;
-            updateBottomBar();
-        }
-
-        // ========== 初始化 ==========
+        
+        document.getElementById('clearSelected').addEventListener('click', function() { selectedMatches = []; renderSelected(); updateOddsHighlight(); document.getElementById('resultBox').style.display = 'none'; });
+        document.querySelectorAll('#passGrid button').forEach(btn => { btn.addEventListener('click', function() { document.querySelectorAll('#passGrid button').forEach(b => b.classList.remove('active')); this.classList.add('active'); }); });
+        document.getElementById('calcBtn').addEventListener('click', function() {
+            if (selectedMatches.length < 2) { alert('至少选择2场比赛（当前已选 ' + selectedMatches.length + ' 场）'); return; }
+            const odds = selectedMatches.map(m => m.odds);
+            const activeBtn = document.querySelector('#passGrid button.active');
+            const passType = activeBtn ? activeBtn.dataset.pass : '3串1';
+            const combined = odds.reduce((a, b) => a * b, 1);
+            const prize = 2 * combined;
+            document.getElementById('resultPass').textContent = passType;
+            document.getElementById('resultCount').textContent = selectedMatches.length + ' 场';
+            document.getElementById('resultPrize').textContent = prize.toFixed(2) + ' 元';
+            document.getElementById('resultOdds').textContent = combined.toFixed(2);
+            document.getElementById('resultBox').style.display = 'block';
+        });
+        
+        window.selectMatch = selectMatch;
+        window.removeSelected = removeSelected;
+        window.toggleGroup = toggleGroup;
+        
+        // 初始化：使用嵌入的数据
         document.addEventListener('DOMContentLoaded', function() {
-            renderBetTabs();
-            renderMatches();
-            updateBottomBar();
+            const matches = window.MATCH_DATA || [];
+            renderMatches(matches);
+            console.log('✅ 加载完成，共 ' + matches.length + ' 场（嵌入数据）');
         });
     </script>
 </body>

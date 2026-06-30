@@ -248,7 +248,8 @@ def fetch_match_dates():
             for item in data:
                 match_time = item.get('match_time', '')
                 if match_time:
-                    date_str = match_time.split('T')[0]
+                    # Handle both "2026-06-30 04:00" and "2026-06-30T04:00:00" formats
+                    date_str = match_time.split('T')[0].split(' ')[0]
                     dates.add(date_str)
             # Sort descending
             sorted_dates = sorted(dates, reverse=True)
