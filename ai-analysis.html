@@ -5178,14 +5178,12 @@ document.addEventListener('DOMContentLoaded', function() {
       titleRow.style.alignItems = 'center';
       titleRow.appendChild(toggleBtn);
       
-      // 默认折叠（除了第一场比赛）
-      if (index > 0) {
-        const content = section.querySelector('.mt-3');
-        const table = section.querySelector('.overflow-x-auto');
-        if (content) content.style.display = 'none';
-        if (table) table.style.display = 'none';
-        toggleBtn.textContent = '展开';
-      }
+      // 默认全部折叠
+      const content = section.querySelector('.mt-3');
+      const table = section.querySelector('.overflow-x-auto');
+      if (content) content.style.display = 'none';
+      if (table) table.style.display = 'none';
+      toggleBtn.textContent = '展开';
     }
   });
 
