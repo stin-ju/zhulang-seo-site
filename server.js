@@ -190,7 +190,7 @@ const server = http.createServer(async (req, res) => {
       // Get the latest match date
       const matches = await querySupabase('matches', {
         select: '*',
-        order: 'match_date.desc,match_time.asc',
+        order: 'match_time.desc',
         limit: '100'
       });
       if (matches.length === 0) {
@@ -198,8 +198,13 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ date: null, matches: [], predictions: [] }));
         return;
       }
-      const latestDate = matches[0].match_date;
-      const recentMatches = matches.filter(m => m.match_date === latestDate);
+      // Extract date from match_time (format: "2025-06-30T12:00:00" or similar)
+      const getDateFromMatchTime = (matchTime) => {
+        if (!matchTime) return null;
+        return matchTime.substring(0, 10); // Get "YYYY-MM-DD" part
+      };
+      const latestDate = getDateFromMatchTime(matches[0].match_time);
+      const recentMatches = matches.filter(m => getDateFromMatchTime(m.match_time) === latestDate);
       const matchIds = recentMatches.map(m => m.id);
       
       // Get predictions for these matches
@@ -218,18 +223,26 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/football-history' && req.method === 'GET') {
       const matches = await querySupabase('matches', {
         select: '*',
-        order: 'match_date.desc,match_time.asc'
+        order: 'match_time.desc'
       });
       const allPredictions = await querySupabase('predictions', {
         select: '*',
         order: 'id.asc'
       });
       
+      // Extract date from match_time
+      const getDateFromMatchTime = (matchTime) => {
+        if (!matchTime) return null;
+        return matchTime.substring(0, 10); // Get "YYYY-MM-DD" part
+      };
+      
       // Group by date
       const byDate = {};
       for (const m of matches) {
-        if (!byDate[m.match_date]) byDate[m.match_date] = [];
-        byDate[m.match_date].push(m);
+        const date = getDateFromMatchTime(m.match_time);
+        if (!date) continue;
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push(m);
       }
       
       // Get all dates except the latest
