@@ -15,8 +15,8 @@ import re
 from datetime import datetime
 
 # Supabase configuration
-SUPABASE_URL = "https://br-vocal-kea-f584f76e.supabase2.aidap-global.cn-beijing.volces.com"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjIzOTkzNjQsInJvbGUiOiJhbm9uIn0.xsFs4vB78Be6TmqVsak9C0aTGqNxrU0_He6zKR2_kqg"
+SUPABASE_URL = "https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM"
 
 
 def fetch_today_matches():
