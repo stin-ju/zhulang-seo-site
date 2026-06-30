@@ -21,15 +21,23 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjIzOTkzNjQsInJ
 
 def fetch_today_matches():
     """
-    Fetch today's pending matches from Supabase database using REST API.
-    Returns a list of match dicts with odds data.
+    Fetch today's matches with predictions from Supabase using nested query.
+    Returns a list of match dicts with odds data and predictions.
     """
     try:
-        import urllib.request
-        import json
+        from datetime import datetime, timedelta
         
-        # 查询所有有赔率的赛事（包括已确认和待比赛），供计算器展示
-        url = f"{SUPABASE_URL}/rest/v1/matches?select=id,teams,match_time,handicap,status,win_odds,draw_odds,lose_odds,handicap_win_odds,handicap_draw_odds,handicap_lose_odds&win_odds=not.is.null&draw_odds=not.is.null&lose_odds=not.is.null&order=match_time.desc&limit=50"
+        # 获取今天的日期范围
+        today = datetime.now().strftime('%Y-%m-%d')
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        # 使用 Supabase 嵌套查询，一次获取比赛和预测数据
+        # 字段说明：
+        # - matches: id, teams, match_time, handicap, status, 各种赔率
+        # - predictions(*): 关联的预测数据
+        select_fields = 'id,teams,match_time,handicap,status,win_odds,draw_odds,lose_odds,handicap_win_odds,handicap_draw_odds,handicap_lose_odds,home_score,away_score,predictions(id,ai_name,spf,handicap_spf,score,goals,half_full,hit_handicap,hit_score,hit_goals,hit_half)'
+        
+        url = f"{SUPABASE_URL}/rest/v1/matches?select={urllib.parse.quote(select_fields)}&match_time=gte.{today}&match_time=lt.{tomorrow}&order=match_time.asc"
         
         req = urllib.request.Request(url, headers={
             'apikey': SUPABASE_KEY,
@@ -53,7 +61,7 @@ def fetch_today_matches():
             if m.get('match_time'):
                 m['match_date'] = str(m['match_time'])[:10]
         
-        print(f"📊 从 Supabase 获取到 {len(matches)} 场待比赛赛事")
+        print(f"📊 从 Supabase 获取到 {len(matches)} 场今日赛事（含预测数据）")
         return matches
         
     except Exception as e:
