@@ -1,0 +1,9223 @@
+[
+  {
+    "bet_date": "6月19日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.62,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 24.14,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 109.86,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "千问",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.42,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "千问",
+    "bet_type": "3串1(均衡串)",
+    "odds": 10.78,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "千问",
+    "bet_type": "4串1(博高串)",
+    "odds": 35.8,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.42,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 8.11,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 23.53,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.26,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 16.57,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 55.01,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 9.13,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 28.78,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 102.15,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "Kimi",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.42,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "Kimi",
+    "bet_type": "3串1(均衡串)",
+    "odds": 8.11,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "Kimi",
+    "bet_type": "4串1(博高串)",
+    "odds": 23.53,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.42,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 8.11,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月19日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 23.53,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "加拿大VS卡塔尔",
+        "match_id": "周四027",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS南非",
+        "match_id": "周四025",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "瑞士VS波黑",
+        "match_id": "周四026",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "墨西哥VS韩国",
+        "match_id": "周四028",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.79,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 16.29,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 55.39,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "千问",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.86,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "千问",
+    "bet_type": "3串1(均衡串)",
+    "odds": 12.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "千问",
+    "bet_type": "4串1(博高串)",
+    "odds": 40.1,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.79,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 16.29,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 55.39,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.82,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 22.15,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 91.93,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.82,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 23.17,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 85.75,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "Kimi",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.82,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "Kimi",
+    "bet_type": "3串1(均衡串)",
+    "odds": 25.22,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "Kimi",
+    "bet_type": "4串1(博高串)",
+    "odds": 104.66,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.35,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 23.49,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月18日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 97.46,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS刚果民主共和国",
+        "match_id": "周三021",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "英格兰VS克罗地亚",
+        "match_id": "周三022",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "加纳VS巴拿马",
+        "match_id": "周三023",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "乌兹别克斯坦VS哥伦比亚",
+        "match_id": "周三024",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.72,
+    "hit": true,
+    "pnl": 5.44,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 16.38,
+    "hit": true,
+    "pnl": 30.76,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 45.91,
+    "hit": true,
+    "pnl": 89.82,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "千问",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.85,
+    "hit": true,
+    "pnl": 3.7,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "千问",
+    "bet_type": "3串1(均衡串)",
+    "odds": 4.62,
+    "hit": true,
+    "pnl": 7.24,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "千问",
+    "bet_type": "4串1(博高串)",
+    "odds": 7.38,
+    "hit": true,
+    "pnl": 12.76,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.52,
+    "hit": true,
+    "pnl": 1.05,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 3.36,
+    "hit": true,
+    "pnl": 4.72,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 14.4,
+    "hit": true,
+    "pnl": 26.8,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.68,
+    "hit": true,
+    "pnl": 1.35,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 6.7,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 33.0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": false,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": false,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.3,
+    "hit": true,
+    "pnl": 2.6,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 2.03,
+    "hit": true,
+    "pnl": 2.06,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 12.5,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "Kimi",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.87,
+    "hit": true,
+    "pnl": 1.74,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "胜平负",
+        "prediction": "客胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "Kimi",
+    "bet_type": "3串1(均衡串)",
+    "odds": 2.03,
+    "hit": true,
+    "pnl": 2.06,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "Kimi",
+    "bet_type": "4串1(博高串)",
+    "odds": 26.5,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.4,
+    "hit": true,
+    "pnl": 2.8,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 4.1,
+    "hit": true,
+    "pnl": 6.2,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月17日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 8.2,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS塞内加尔",
+        "match_id": "周二017",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "伊拉克VS挪威",
+        "match_id": "周二018",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "阿根廷VS阿尔及利亚",
+        "match_id": "周二019",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "奥地利VS约旦",
+        "match_id": "周二020",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.58,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 8.99,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 36.85,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.54,
+    "hit": true,
+    "pnl": 9.08,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 17.99,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 61.17,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 13.03,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 44.29,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.54,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 17.99,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 61.17,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.19,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 16.87,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 57.35,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "天工",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.58,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "天工",
+    "bet_type": "3串1(均衡串)",
+    "odds": 8.99,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "天工",
+    "bet_type": "4串1(博高串)",
+    "odds": 30.56,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球平局"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.58,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 8.99,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "MiniMax",
+    "bet_type": "4串1(博高串)",
+    "odds": 36.85,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.58,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 8.99,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月20日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 36.85,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS海地",
+        "match_id": "周五031",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "苏格兰VS摩洛哥",
+        "match_id": "周五030",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "美国VS澳大利亚",
+        "match_id": "周五029",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其VS巴拉圭",
+        "match_id": "周五032",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.73,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 23.88,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 77.62,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": true,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 9.76,
+    "hit": true,
+    "pnl": 17.53,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": true,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 17.24,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 47.4,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 22.5,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 45.9,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 39.8,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 77.62,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "天工",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.65,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "天工",
+    "bet_type": "3串1(均衡串)",
+    "odds": 11.02,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "天工",
+    "bet_type": "4串1(博高串)",
+    "odds": 22.48,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.43,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 15.27,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 49.63,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.6,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 2.54,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": true,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      },
+      {
+        "hit": false,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "胜平负",
+        "prediction": "主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 46.33,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": true,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      },
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.4,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 18.64,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月21日",
+    "ai_name": "MiniMax",
+    "bet_type": "4串1(博高串)",
+    "odds": 73.62,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "荷兰VS瑞典",
+        "match_id": "周六033",
+        "dimension": "让球胜平负",
+        "prediction": "让球主平"
+      },
+      {
+        "hit": false,
+        "teams": "德国VS科特迪瓦",
+        "match_id": "周六034",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": false,
+        "teams": "突尼斯VS日本",
+        "match_id": "周六036",
+        "dimension": "让球胜平负",
+        "prediction": "让球主胜"
+      },
+      {
+        "hit": true,
+        "teams": "厄瓜多尔VS库拉索",
+        "match_id": "周六035",
+        "dimension": "让球胜平负",
+        "prediction": "让球客胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.85,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 4.85,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 47.29,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 12.02,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "半全场",
+        "prediction": "胜平"
+      },
+      {
+        "hit": null,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "总进球",
+        "prediction": "2球"
+      },
+      {
+        "hit": null,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "总进球",
+        "prediction": "1球"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.3,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 22.1,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "总进球",
+        "prediction": "3球"
+      },
+      {
+        "hit": null,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "半全场",
+        "prediction": "平胜"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.38,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 28.0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "半全场",
+        "prediction": "平胜"
+      },
+      {
+        "hit": null,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "比分",
+        "prediction": "2-1"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "半全场",
+        "prediction": "平胜"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "比分",
+        "prediction": "1-1"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 7.96,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "总进球",
+        "prediction": "1球"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "比分",
+        "prediction": "2-0"
+      },
+      {
+        "hit": null,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "半全场",
+        "prediction": "胜胜"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "总进球",
+        "prediction": "2球"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.36,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 2.9,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 12.17,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": true,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.94,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 13.26,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "MiniMax",
+    "bet_type": "4串1(博高串)",
+    "odds": 47.29,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "天工",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.85,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "天工",
+    "bet_type": "3串1(均衡串)",
+    "odds": 2.94,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月22日",
+    "ai_name": "天工",
+    "bet_type": "4串1(博高串)",
+    "odds": 17.6,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "西班牙VS沙特",
+        "match_id": "周日037",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "比利时VS伊朗",
+        "match_id": "周日038",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "乌拉圭VS佛得角",
+        "match_id": "周日039",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "新西兰VS埃及",
+        "match_id": "周日040",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.03,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 15.18,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": false,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 35.88,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 6.39,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 21.41,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 34.26,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.19,
+    "hit": true,
+    "pnl": 2.38,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 4.12,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 15.69,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.19,
+    "hit": true,
+    "pnl": 2.38,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 42.24,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 143.61,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.19,
+    "hit": true,
+    "pnl": 2.38,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 31.06,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 84.3,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.42,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 14.71,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 194.77,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.77,
+    "hit": true,
+    "pnl": 5.54,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 16.96,
+    "hit": true,
+    "pnl": 31.93,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "MiniMax",
+    "bet_type": "4串1(博高串)",
+    "odds": 27.14,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "天工",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 2.73,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "天工",
+    "bet_type": "3串1(均衡串)",
+    "odds": 4.12,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月23日",
+    "ai_name": "天工",
+    "bet_type": "4串1(博高串)",
+    "odds": 52.2,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "阿根廷VS奥地利",
+        "match_id": "周一041",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "法国VS伊拉克",
+        "match_id": "周一042",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "挪威VS塞内加尔",
+        "match_id": "周一043",
+        "dimension": "胜平负",
+        "prediction": "平"
+      },
+      {
+        "hit": false,
+        "teams": "约旦VS阿尔及利亚",
+        "match_id": "周一044",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.95,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 11.68,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 66.77,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 12.87,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 20.01,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "豆包",
+    "bet_type": "4串1(博高串)",
+    "odds": 66.03,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.88,
+    "hit": true,
+    "pnl": 1.75,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 39.55,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 134.46,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 7.89,
+    "hit": true,
+    "pnl": 13.77,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 18.69,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 72.9,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.95,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 13.51,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 45.93,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 12.87,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 50.19,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "MiniMax",
+    "bet_type": "4串1(博高串)",
+    "odds": 170.66,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "天工",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 5.9,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "天工",
+    "bet_type": "3串1(均衡串)",
+    "odds": 19.64,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "天工",
+    "bet_type": "4串1(博高串)",
+    "odds": 46.54,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 8.47,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 19.22,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月24日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 74.95,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "葡萄牙VS乌兹别克斯坦",
+        "match_id": "周二045",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "巴拿马VS克罗地亚",
+        "match_id": "周二047",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "哥伦比亚VS刚果金",
+        "match_id": "周二048",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "英格兰VS加纳",
+        "match_id": "周二046",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 3.33,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 3.46,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "DeepSeek",
+    "bet_type": "6串1(博高串)",
+    "odds": 154.62,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "胜平负",
+        "prediction": "平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 32.83,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "豆包",
+    "bet_type": "6串1(博高串)",
+    "odds": 521.82,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 7.43,
+    "hit": true,
+    "pnl": 12.86,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 22.23,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "文心",
+    "bet_type": "6串1(博高串)",
+    "odds": 223.41,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 7.77,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "智谱清言",
+    "bet_type": "6串1(博高串)",
+    "odds": 173.12,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "天工",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "天工",
+    "bet_type": "3串1(均衡串)",
+    "odds": 11.46,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "天工",
+    "bet_type": "6串1(博高串)",
+    "odds": 291.4,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 8.1,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 32.4,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "混元",
+    "bet_type": "6串1(博高串)",
+    "odds": 710.36,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.43,
+    "hit": true,
+    "pnl": 0.86,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": true,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 19.49,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "MiniMax",
+    "bet_type": "6串1(博高串)",
+    "odds": 848.24,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": true,
+        "teams": "瑞士VS加拿大",
+        "match_id": "周三049",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": true,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 4.34,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 14.85,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月25日",
+    "ai_name": "扣子",
+    "bet_type": "5串1(博高串)",
+    "odds": 143.5,
+    "hit": false,
+    "pnl": -2.0,
+    "selections": [
+      {
+        "hit": false,
+        "teams": "摩洛哥VS海地",
+        "match_id": "周三052",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "苏格兰VS巴西",
+        "match_id": "周三051",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": true,
+        "teams": "波黑VS卡塔尔",
+        "match_id": "周三050",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": false,
+        "teams": "南非VS韩国",
+        "match_id": "周三053",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": true,
+        "teams": "捷克VS墨西哥",
+        "match_id": "周三054",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "豆包",
+    "bet_type": "5串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "常规",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "常规",
+        "prediction": "负"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "常规",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "常规",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "文心",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "文心",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "文心",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "智谱清言",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "智谱清言",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "天工",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "天工",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "天工",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "常规",
+        "prediction": "平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "常规",
+        "prediction": "胜"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "常规",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "MiniMax",
+    "bet_type": "6串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "混元",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "混元",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "混元",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "日本vs瑞典",
+        "match_id": "周四058",
+        "dimension": "让球",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "厄瓜多尔vs德国",
+        "match_id": "周四055",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月26日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "库拉索vs科特迪瓦",
+        "match_id": "周四056",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "突尼斯vs荷兰",
+        "match_id": "周四057",
+        "dimension": "让球",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "巴拉圭vs澳大利亚",
+        "match_id": "周四059",
+        "dimension": "让球",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "土耳其vs美国",
+        "match_id": "周四060",
+        "dimension": "让球",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "塞内加尔VS伊拉克",
+        "match_id": "周五062",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS比利时",
+        "match_id": "周五066",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "挪威VS法国",
+        "match_id": "周五061",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "埃及VS伊朗",
+        "match_id": "周五065",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "挪威VS法国",
+        "match_id": "周五061",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "佛得角VS沙特",
+        "match_id": "周五063",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS比利时",
+        "match_id": "周五066",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "挪威VS法国",
+        "match_id": "周五061",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "挪威VS法国",
+        "match_id": "周五061",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "塞内加尔VS伊拉克",
+        "match_id": "周五062",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "埃及VS伊朗",
+        "match_id": "周五065",
+        "dimension": "让球胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "MiniMax",
+    "bet_type": "4串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "挪威VS法国",
+        "match_id": "周五061",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "塞内加尔VS伊拉克",
+        "match_id": "周五062",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "佛得角VS沙特",
+        "match_id": "周五063",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "埃及VS伊朗",
+        "match_id": "周五065",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS比利时",
+        "match_id": "周五066",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "智谱清言",
+    "bet_type": "5串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "塞内加尔VS伊拉克",
+        "match_id": "周五062",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "佛得角VS沙特",
+        "match_id": "周五063",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "埃及VS伊朗",
+        "match_id": "周五065",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS比利时",
+        "match_id": "周五066",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "DeepSeek",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS比利时",
+        "match_id": "周五066",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "DeepSeek",
+    "bet_type": "3串1(均衡串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "挪威VS法国",
+        "match_id": "周五061",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "佛得角VS沙特",
+        "match_id": "周五063",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "埃及VS伊朗",
+        "match_id": "周五065",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "DeepSeek",
+    "bet_type": "4串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "挪威VS法国",
+        "match_id": "周五061",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "塞内加尔VS伊拉克",
+        "match_id": "周五062",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "佛得角VS沙特",
+        "match_id": "周五063",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "埃及VS伊朗",
+        "match_id": "周五065",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS比利时",
+        "match_id": "周五066",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "MiniMax",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "match_id": "周六067",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "match_id": "周六068",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "MiniMax",
+    "bet_type": "3串1(均衡串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "match_id": "周六069",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "match_id": "周六070",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "match_id": "周六071",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "MiniMax",
+    "bet_type": "4串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "match_id": "周六067",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "match_id": "周六068",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "match_id": "周六070",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "match_id": "周六072",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "智谱清言",
+    "bet_type": "4串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "塞内加尔VS伊拉克",
+        "match_id": "周五062",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "佛得角VS沙特",
+        "match_id": "周五063",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "乌拉圭VS西班牙",
+        "match_id": "周五064",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "埃及VS伊朗",
+        "match_id": "周五065",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "新西兰VS比利时",
+        "match_id": "周五066",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "豆包",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "teams": "巴拿马VS英格兰",
+        "match_id": "周六068",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "teams": "约旦VS阿根廷",
+        "match_id": "周六072",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "豆包",
+    "bet_type": "3串1(均衡串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "teams": "克罗地亚VS加纳",
+        "match_id": "周六067",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "teams": "哥伦比亚VS葡萄牙",
+        "match_id": "周六069",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "teams": "阿尔及利VS奥地利",
+        "match_id": "周六071",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "豆包",
+    "bet_type": "5串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "teams": "克罗地亚VS加纳",
+        "match_id": "周六067",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "teams": "巴拿马VS英格兰",
+        "match_id": "周六068",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "teams": "哥伦比亚VS葡萄牙",
+        "match_id": "周六069",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "teams": "阿尔及利VS奥地利",
+        "match_id": "周六071",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "teams": "约旦VS阿根廷",
+        "match_id": "周六072",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "扣子",
+    "bet_type": "2串1(稳胆串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "teams": "克罗地亚VS加纳",
+        "match_id": "周六067",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "teams": "巴拿马VS英格兰",
+        "match_id": "周六068",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "扣子",
+    "bet_type": "3串1(均衡串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "teams": "克罗地亚VS加纳",
+        "match_id": "周六067",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "teams": "巴拿马VS英格兰",
+        "match_id": "周六068",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "teams": "阿尔及利VS奥地利",
+        "match_id": "周六071",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月28日",
+    "ai_name": "扣子",
+    "bet_type": "4串1(博高串)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "teams": "克罗地亚VS加纳",
+        "match_id": "周六067",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "teams": "哥伦比亚VS葡萄牙",
+        "match_id": "周六069",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "teams": "刚果金VS乌兹别克",
+        "match_id": "周六070",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "teams": "阿尔及利VS奥地利",
+        "match_id": "周六071",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "DeepSeek",
+    "bet_type": "博高串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "大分",
+        "match_id": "周日301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "DeepSeek",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜6-10",
+        "match_id": "周日301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日302",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "DeepSeek",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日304",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "DeepSeek",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "MiniMax",
+    "bet_type": "博高串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "大分",
+        "match_id": "周日301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "MiniMax",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜6-10",
+        "match_id": "周日301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日302",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "MiniMax",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日304",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "MiniMax",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "扣子（皮皮）",
+    "bet_type": "博高串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "大分",
+        "match_id": "周日301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "扣子（皮皮）",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "明尼苏达天猫VS达拉斯飞马",
+        "match_id": "周日301",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "南非VS加拿大",
+        "match_id": "周日073",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": null,
+        "teams": "拉斯维加斯王牌VS芝加哥天空",
+        "match_id": "周日303",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "纽约自由VS金州女武神",
+        "match_id": "周日304",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "扣子（皮皮）",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "明尼苏达天猫VS达拉斯飞马",
+        "match_id": "周日301",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "波特兰火焰VS华盛顿神秘人",
+        "match_id": "周日302",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": null,
+        "teams": "纽约自由VS金州女武神",
+        "match_id": "周日304",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "扣子（皮皮）",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "明尼苏达天猫VS达拉斯飞马",
+        "match_id": "周日301",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": null,
+        "teams": "纽约自由VS金州女武神",
+        "match_id": "周日304",
+        "dimension": "胜平负",
+        "prediction": "负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "文心",
+    "bet_type": "博高串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "大分",
+        "match_id": "周日301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "文心",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜6-10",
+        "match_id": "周日301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日302",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "文心",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日304",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "文心",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "智谱清言",
+    "bet_type": "博高串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "大分",
+        "match_id": "周日301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "智谱清言",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜6-10",
+        "match_id": "周日301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日302",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "智谱清言",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日304",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "智谱清言",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "混元",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "南非VS加拿大",
+        "match_id": "周日073",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "混元",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "南非VS加拿大",
+        "match_id": "周日073",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "混元",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "南非VS加拿大",
+        "match_id": "周日073",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "豆包",
+    "bet_type": "博高串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "大分",
+        "match_id": "周日301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "豆包",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜6-10",
+        "match_id": "周日301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日302",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周日304",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "豆包",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "大分",
+        "match_id": "周日303",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日304",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月29日",
+    "ai_name": "豆包",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周日301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "让分主胜",
+        "match_id": "周日303",
+        "dimension": "handicap_result"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "DeepSeek",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "DeepSeek",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "胜平负",
+        "prediction": "平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "DeepSeek",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "MiniMax",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "MiniMax",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "MiniMax",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "扣子（皮皮）",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜1-5",
+        "match_id": "周一301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "主胜11-15",
+        "match_id": "周一302",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周一301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周一302",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "扣子（皮皮）",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "胜平负",
+        "prediction": "负"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "让球胜平负",
+        "prediction": "让负"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "扣子（皮皮）",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "文心",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "文心",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "文心",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "智谱清言",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜1-5",
+        "match_id": "周一301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "主胜11-15",
+        "match_id": "周一302",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周一301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周一302",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "智谱清言",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "胜平负",
+        "prediction": "平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "智谱清言",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "混元",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜1-5",
+        "match_id": "周一301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "主胜11-15",
+        "match_id": "周一302",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周一301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周一302",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "混元",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "让分主胜",
+        "match_id": "周一301",
+        "dimension": "handicap_result"
+      },
+      {
+        "choice": "让分主负",
+        "match_id": "周一302",
+        "dimension": "handicap_result"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周一302",
+        "dimension": "total_points"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "混元",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜",
+        "match_id": "周一301",
+        "dimension": "win_loss"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周一302",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "豆包",
+    "bet_type": "博高串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "让球胜平负",
+        "prediction": "让胜"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "豆包",
+    "bet_type": "博高串(4串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "choice": "主胜1-5",
+        "match_id": "周一301",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "主胜11-15",
+        "match_id": "周一302",
+        "dimension": "score_diff"
+      },
+      {
+        "choice": "小分",
+        "match_id": "周一301",
+        "dimension": "total_points"
+      },
+      {
+        "choice": "主胜",
+        "match_id": "周一302",
+        "dimension": "win_loss"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "豆包",
+    "bet_type": "均衡串(3串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": null,
+        "teams": "荷兰VS摩洛哥",
+        "match_id": "周一076",
+        "dimension": "让球胜平负",
+        "prediction": "让平"
+      }
+    ]
+  },
+  {
+    "bet_date": "6月30日",
+    "ai_name": "豆包",
+    "bet_type": "稳胆串(2串1)",
+    "odds": 1.0,
+    "hit": null,
+    "pnl": 0,
+    "selections": [
+      {
+        "hit": null,
+        "teams": "巴西VS日本",
+        "match_id": "周一074",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      },
+      {
+        "hit": null,
+        "teams": "德国VS巴拉圭",
+        "match_id": "周一075",
+        "dimension": "胜平负",
+        "prediction": "胜"
+      }
+    ]
+  }
+]
