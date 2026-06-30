@@ -180,25 +180,7 @@
 <!-- 历史篮球比赛详情 -->
 <section class="mb-8" aria-label="历史赛程">
   <h2 class="text-lg font-bold mb-4">📋 历史赛程</h2>
-  <details class="group bg-card rounded-xl border border-border/50 overflow-hidden mb-4" open>
-          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
-            <h3 class="font-semibold">🎯 ${today} 篮球串关推荐</h3>
-            <span class="ml-auto text-xs text-accent bg-accent/10 px-2 py-0.5 rounded-full">最新</span>
-          </summary>
-          <div class="p-4 space-y-4">
-            ${todayHtml}
-            <p class="text-xs text-muted text-center">* 串关推荐基于各AI预测生成，仅供参考</p>
-          </div>
-        </details>
-<details class="group bg-card rounded-xl border border-border/50 overflow-hidden">
-          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
-            <h3 class="font-semibold">📊 历史篮球串关推荐</h3>
-            <span class="ml-auto text-xs text-muted">共${Math.min(histDates.length, 5)}天</span>
-          </summary>
-          <div class="p-4 space-y-4 max-h-96 overflow-y-auto">
-            ${histHtml}
-          </div>
-        </details>
+  <div class="text-center text-gray-500 py-4">暂无历史赛程数据</div>
 </section>
 
 
@@ -370,9 +352,6 @@
 
 // ============ 动态加载篮球串关推荐 ============
 (async function loadBasketballParlayData() {
-  // Basketball team keywords to filter
-  const BASKETBALL_KEYWORDS = ['天猫', '飞马', '火焰', '神秘人', '王牌', '天空', '自由', '女武神', '阳光', '风暴', '水星', '梦想', '翅膀', '狂热', '火花', '银星', '太阳', '震动', '群蜂', '飞翼'];
-
   const AI_LOGOS = {
     '混元': ['#8b5cf6', 'HX'],
     '豆包': ['#ff6b35', 'DB'],
@@ -390,24 +369,41 @@
     return `<span class="ai-logo"><span class="dot" style="background:${color}">${abbr}</span><span>${aiName}</span></span>`;
   }
 
-  function isBasketballMatch(teams) {
-    return BASKETBALL_KEYWORDS.some(k => teams.includes(k));
+  // Format match date for display (e.g., "周四001 6/29")
+  function formatMatchLabel(matchId, matchTime) {
+    if (!matchTime) return matchId;
+    const date = new Date(matchTime);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${matchId} ${month}/${day}`;
   }
 
-  function renderSelection(sel) {
-    const teams = sel.teams || 'N/A';
+  function renderSelection(sel, matchesMap) {
+    const matchId = sel.match_id;
+    const match = matchesMap[matchId];
+    const teams = match?.teams || 'N/A';
     const prediction = sel.prediction || 'N/A';
     const hit = sel.hit;
     if (teams === 'N/A' || !teams) return '';
-    const hitClass = hit ? 'text-win' : 'text-lose';
-    const hitIcon = hit ? '✓' : '✗';
-    return `<div class="flex justify-between"><span>${teams}</span><span class="${hitClass}">${prediction} ${hitIcon}</span></div>`;
+    
+    const hitClass = hit === true ? 'text-win' : (hit === false ? 'text-lose' : 'text-gray-400');
+    const hitIcon = hit === true ? '✓' : (hit === false ? '✗' : '');
+    const matchLabel = formatMatchLabel(matchId, match?.match_time);
+    
+    return `<div class="flex justify-between items-center">
+      <span class="text-gray-400 text-xs">${matchLabel}</span>
+      <span class="${hitClass}">${prediction} ${hitIcon}</span>
+    </div>
+    <div class="text-gray-300 text-xs mb-1">${teams}</div>`;
   }
 
-  function renderCard(record) {
+  function renderCard(record, matchesMap) {
     const betType = record.bet_type || '';
     const odds = record.odds || 1.0;
-    const selections = (record.selections || []).filter(s => isBasketballMatch(s.teams || ''));
+    const selections = (record.selections || []).filter(s => {
+      const match = matchesMap[s.match_id];
+      return match && match.sport_type === 'basketball';
+    });
     
     if (selections.length < 2) return '';
 
@@ -423,7 +419,7 @@
       statusHtml = '<span class="text-xs text-gray-500">待确认</span>';
     }
 
-    const selectionsHtml = selections.map(renderSelection).join('');
+    const selectionsHtml = selections.map(s => renderSelection(s, matchesMap)).join('');
     if (!selectionsHtml) return '';
 
     return `
@@ -433,14 +429,14 @@
         ${statusHtml}
       </div>
       <div class="text-sm font-semibold text-accent mb-2">赔率 ${odds}</div>
-      <div class="text-xs text-gray-300 space-y-1">
+      <div class="text-xs space-y-2">
         ${selectionsHtml}
       </div>
     </div>`;
   }
 
-  function renderAiParlay(aiName, records) {
-    const cardsHtml = records.map(renderCard).join('');
+  function renderAiParlay(aiName, records, matchesMap) {
+    const cardsHtml = records.map(r => renderCard(r, matchesMap)).join('');
     if (!cardsHtml) return '';
     return `
     <div class="mb-4">
@@ -453,7 +449,7 @@
     </div>`;
   }
 
-  function renderDateSection(date, records) {
+  function renderDateSection(date, records, matchesMap) {
     const byAi = {};
     records.forEach(r => {
       if (!byAi[r.ai_name]) byAi[r.ai_name] = [];
@@ -467,7 +463,7 @@
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     });
 
-    const aiHtml = sortedAis.map(ai => renderAiParlay(ai, byAi[ai])).join('');
+    const aiHtml = sortedAis.map(ai => renderAiParlay(ai, byAi[ai], matchesMap)).join('');
     if (!aiHtml) return '';
 
     return `
@@ -478,13 +474,27 @@
   }
 
   try {
-    const resp = await fetch('/api/chain_bets');
-    const data = await resp.json();
+    // Fetch both chain_bets and matches data
+    const [chainBetsResp, matchesResp] = await Promise.all([
+      fetch('/api/chain_bets'),
+      fetch('/api/matches')
+    ]);
+    const chainBetsData = await chainBetsResp.json();
+    const matchesData = await matchesResp.json();
 
-    // Filter for basketball matches
-    const basketballData = data.filter(r => {
+    // Create a lookup map for matches by match_id
+    const matchesMap = {};
+    matchesData.forEach(m => {
+      matchesMap[m.id] = m;
+    });
+
+    // Filter for basketball matches (check sport_type from matches table)
+    const basketballData = chainBetsData.filter(r => {
       const sels = r.selections || [];
-      return sels.some(s => isBasketballMatch(s.teams || ''));
+      return sels.some(s => {
+        const match = matchesMap[s.match_id];
+        return match && match.sport_type === 'basketball';
+      });
     });
 
     if (basketballData.length === 0) {
@@ -497,14 +507,20 @@
 
     // Filter valid records and deduplicate
     const validData = basketballData.filter(r => {
-      const sels = (r.selections || []).filter(s => isBasketballMatch(s.teams || ''));
+      const sels = (r.selections || []).filter(s => {
+        const match = matchesMap[s.match_id];
+        return match && match.sport_type === 'basketball';
+      });
       return sels.length >= 2;
     });
 
     const grouped = {};
     validData.forEach(r => {
       const key = `${r.bet_date}|${r.ai_name}|${r.bet_type}`;
-      const validCount = (r.selections || []).filter(s => isBasketballMatch(s.teams || '')).length;
+      const validCount = (r.selections || []).filter(s => {
+        const match = matchesMap[s.match_id];
+        return match && match.sport_type === 'basketball';
+      }).length;
       if (!grouped[key] || validCount > grouped[key]._validCount) {
         grouped[key] = { ...r, _validCount: validCount };
       }
@@ -530,7 +546,7 @@
 
     // Render today's basketball parlay
     if (byDate[today]) {
-      const todayHtml = renderDateSection(today, byDate[today]);
+      const todayHtml = renderDateSection(today, byDate[today], matchesMap);
       const todayEl = document.getElementById('today-basketball-parlay');
       if (todayEl && todayHtml) {
         todayEl.innerHTML = todayHtml;
@@ -541,7 +557,7 @@
     if (histDates.length > 0) {
       let histHtml = '';
       histDates.slice(0, 5).forEach(date => {
-        histHtml += renderDateSection(date, byDate[date]);
+        histHtml += renderDateSection(date, byDate[date], matchesMap);
       });
       const histEl = document.getElementById('hist-basketball-parlay');
       if (histEl && histHtml) {
