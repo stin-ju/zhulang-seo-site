@@ -378,8 +378,9 @@ def generate_brief_page(news_data, all_dates):
         matches = fetch_matches_for_date(date_str)
         metadata = fetch_metadata_for_date(date_str)
         chain_bets = fetch_chain_bets_for_date(date_str)
-        # Determine type: latest date is prediction, others are review
-        article_type = 'prediction' if date_str == all_dates[0] else 'review'
+        # Determine type: prediction if matches haven't been played, review if they have
+        has_unplayed = any(m.get('status') != '已确认' for m in matches)
+        article_type = 'prediction' if has_unplayed else 'review'
         article_list.append({
             'date': date_str,
             'matches': matches,
@@ -705,10 +706,395 @@ def generate_chain_bets_html(chain_bets):
     return html
 
 
+def generate_prediction_content(matches, commentary, display_date):
+    """
+    生成预测简报文章内容：
+    1. 今日热点：当天赛事的热门话题、看点
+    2. 赛事前瞻：每场比赛的背景分析
+    3. AI观点汇总：用文字总结7个AI的预测倾向和分歧点
+    4. 推荐关注：哪些比赛最值得看，哪些可能有冷门
+    """
+    content = ''
+    
+    # 1. 今日热点
+    content += '<section class="article-section">'
+    content += '<h2>🔥 今日热点</h2>'
+    
+    # 分析比赛特点生成热点
+    hot_teams = []
+    big_matches = []
+    for m in matches:
+        teams = m.get('teams', '')
+        if 'VS' in teams:
+            parts = teams.split('VS')
+            home, away = parts[0].strip(), parts[1].strip()
+            hot_teams.extend([home, away])
+            # 判断是否是焦点战（强队对决）
+            strong_teams = ['法国', '巴西', '阿根廷', '德国', '西班牙', '英格兰', '葡萄牙', '荷兰']
+            if home in strong_teams and away in strong_teams:
+                big_matches.append(teams)
+    
+    if big_matches:
+        content += f'<p>今日最受瞩目的焦点战：<strong>{"、".join(big_matches[:2])}</strong>。'
+        content += '强强对话，悬念十足，AI们也出现了明显分歧。</p>'
+    else:
+        content += f'<p>今日共有{len(matches)}场世界杯赛事，各队蓄势待发。</p>'
+    
+    content += '</section>'
+    
+    # 2. 赛事前瞻
+    content += '<section class="article-section">'
+    content += '<h2>📋 赛事前瞻</h2>'
+    
+    for m in matches:
+        teams = m.get('teams', '')
+        match_time = m.get('match_time', '')
+        handicap = m.get('handicap', 0)
+        predictions = m.get('predictions', [])
+        
+        # 解析队伍
+        if 'VS' in teams:
+            parts = teams.split('VS')
+            home, away = parts[0].strip(), parts[1].strip()
+        else:
+            home, away = teams, ''
+        
+        # 格式化时间
+        try:
+            mt = datetime.fromisoformat(match_time.replace('Z', '+00:00'))
+            time_str = mt.strftime('%H:%M')
+        except:
+            time_str = match_time
+        
+        content += f'<div class="match-preview">'
+        content += f'<h3>{home} VS {away} <span class="match-time">{time_str}</span></h3>'
+        
+        # 让球分析
+        if handicap:
+            handicap_val = float(handicap) if handicap else 0
+            if handicap_val < 0:
+                favorite, underdog = home, away
+                handicap_text = f"{home}让{-handicap_val}球"
+            else:
+                favorite, underdog = away, home
+                handicap_text = f"{away}让{handicap_val}球"
+            content += f'<p>盘口：<strong>{handicap_text}</strong>，{favorite}被看好。</p>'
+        
+        # AI预测汇总
+        if predictions:
+            win_count = 0
+            draw_count = 0
+            lose_count = 0
+            ai_predictions = []
+            
+            for p in predictions:
+                ai_name = p.get('ai_name', '')
+                spf = p.get('spf', '')
+                if spf:
+                    ai_predictions.append(f"{ai_name}预测{spf}")
+                    if '胜' in spf:
+                        win_count += 1
+                    elif '平' in spf:
+                        draw_count += 1
+                    elif '负' in spf:
+                        lose_count += 1
+            
+            total = len(predictions)
+            if win_count > 0:
+                content += f'<p>AI观点：{total}个AI中有<strong>{win_count}个看好{home}胜</strong>'
+                if draw_count > 0:
+                    content += f'，{draw_count}个预测平局'
+                if lose_count > 0:
+                    content += f'，{lose_count}个看好{away}胜'
+                content += '。</p>'
+            
+            # 分歧点
+            if win_count > 0 and lose_count > 0:
+                content += f'<p class="highlight">⚠️ <strong>分歧明显</strong>：AI们对这场比赛看法不一，可能存在冷门机会。</p>'
+            elif draw_count >= 2:
+                content += f'<p class="highlight">⚠️ 多个AI预测平局，这场可能比较胶着。</p>'
+        
+        content += '</div>'
+    
+    content += '</section>'
+    
+    # 3. AI观点汇总
+    content += '<section class="article-section">'
+    content += '<h2>🔮 AI观点汇总</h2>'
+    
+    # 统计所有AI的预测倾向
+    all_predictions = []
+    for m in matches:
+        predictions = m.get('predictions', [])
+        for p in predictions:
+            ai_name = p.get('ai_name', '')
+            spf = p.get('spf', '')
+            if ai_name and spf:
+                all_predictions.append((ai_name, spf))
+    
+    if all_predictions:
+        # 按AI分组统计
+        ai_stats = {}
+        for ai_name, spf in all_predictions:
+            if ai_name not in ai_stats:
+                ai_stats[ai_name] = {'胜': 0, '平': 0, '负': 0}
+            if spf in ai_stats[ai_name]:
+                ai_stats[ai_name][spf] += 1
+        
+        # 生成汇总文字
+        content += '<p>综合今日所有比赛，7个AI的预测倾向如下：</p>'
+        content += '<ul>'
+        for ai_name, stats in sorted(ai_stats.items()):
+            total = stats['胜'] + stats['平'] + stats['负']
+            if total > 0:
+                content += f'<li><strong>{ai_name}</strong>：预测胜{stats["胜"]}场、平{stats["平"]}场、负{stats["负"]}场</li>'
+        content += '</ul>'
+        
+        # 找出分歧最大的比赛
+        分歧比赛 = []
+        for m in matches:
+            teams = m.get('teams', '')
+            predictions = m.get('predictions', [])
+            spf_set = set()
+            for p in predictions:
+                spf = p.get('spf', '')
+                if spf:
+                    spf_set.add(spf)
+            if len(spf_set) >= 2:
+                分歧比赛.append((teams, len(spf_set)))
+        
+        if 分歧比赛:
+            分歧比赛.sort(key=lambda x: x[1], reverse=True)
+            content += f'<p class="highlight">⚠️ <strong>分歧焦点</strong>：{分歧比赛[0][0]}，AI们看法不一，可能存在冷门。</p>'
+    
+    if commentary:
+        content += f'<p><strong>豆包总评：</strong>{commentary}</p>'
+    
+    content += '</section>'
+    
+    # 4. 推荐关注
+    content += '<section class="article-section">'
+    content += '<h2>⭐ 推荐关注</h2>'
+    
+    # 找出最值得看的比赛
+    recommended = []
+    for m in matches:
+        teams = m.get('teams', '')
+        predictions = m.get('predictions', [])
+        
+        # 计算分歧度
+        spf_set = set()
+        for p in predictions:
+            spf = p.get('spf', '')
+            if spf:
+                spf_set.add(spf)
+        
+        # 分歧越大越值得看
+        if len(spf_set) >= 2:
+            recommended.append((teams, len(spf_set)))
+    
+    if recommended:
+        recommended.sort(key=lambda x: x[1], reverse=True)
+        content += '<p>以下比赛AI观点分歧较大，可能存在冷门，值得关注：</p>'
+        content += '<ul>'
+        for teams,分歧度 in recommended[:3]:
+            content += f'<li><strong>{teams}</strong> - AI预测出现分歧，悬念十足</li>'
+        content += '</ul>'
+    else:
+        content += '<p>今日比赛AI观点相对一致，可按赔率参考。</p>'
+    
+    content += '</section>'
+    
+    return content
+
+
+def generate_review_content(matches, commentary, display_date):
+    """
+    生成复盘简报文章内容：
+    1. 比赛结果概览
+    2. AI预测准确率分析
+    3. 关键回顾：比赛中的亮点/意外
+    4. 经验总结
+    """
+    content = ''
+    
+    # 统计已完赛的比赛
+    completed_matches = [m for m in matches if m.get('status') == '已确认']
+    pending_matches = [m for m in matches if m.get('status') != '已确认']
+    
+    # 1. 比赛结果概览
+    content += '<section class="article-section">'
+    content += '<h2>📊 比赛结果</h2>'
+    
+    if completed_matches:
+        content += '<div class="results-grid">'
+        for m in completed_matches:
+            teams = m.get('teams', '')
+            home_score = m.get('home_score', 0)
+            away_score = m.get('away_score', 0)
+            
+            if 'VS' in teams:
+                parts = teams.split('VS')
+                home, away = parts[0].strip(), parts[1].strip()
+            else:
+                home, away = teams, ''
+            
+            # 判断结果
+            if home_score > away_score:
+                result = '主胜'
+                result_class = 'win'
+            elif home_score < away_score:
+                result = '客胜'
+                result_class = 'lose'
+            else:
+                result = '平局'
+                result_class = 'draw'
+            
+            content += f'''
+            <div class="result-card">
+                <div class="teams">{home} {home_score}-{away_score} {away}</div>
+                <div class="result {result_class}">{result}</div>
+            </div>
+            '''
+        content += '</div>'
+    else:
+        content += '<p>今日暂无已完赛的比赛。</p>'
+    
+    content += '</section>'
+    
+    # 2. AI预测准确率分析
+    content += '<section class="article-section">'
+    content += '<h2>🎯 AI预测准确率</h2>'
+    
+    if completed_matches:
+        # 统计每个AI的命中率
+        ai_stats = {}
+        for m in completed_matches:
+            predictions = m.get('predictions', [])
+            home_score = m.get('home_score', 0)
+            away_score = m.get('away_score', 0)
+            
+            # 实际结果
+            if home_score > away_score:
+                actual_result = '胜'
+            elif home_score < away_score:
+                actual_result = '负'
+            else:
+                actual_result = '平'
+            
+            for p in predictions:
+                ai_name = p.get('ai_name', '')
+                spf = p.get('spf', '')
+                
+                if ai_name not in ai_stats:
+                    ai_stats[ai_name] = {'correct': 0, 'total': 0}
+                
+                if spf:
+                    ai_stats[ai_name]['total'] += 1
+                    if actual_result in spf:
+                        ai_stats[ai_name]['correct'] += 1
+        
+        # 显示排名
+        if ai_stats:
+            sorted_stats = sorted(ai_stats.items(), key=lambda x: x[1]['correct']/max(x[1]['total'], 1), reverse=True)
+            
+            content += '<div class="ai-ranking">'
+            for i, (ai_name, stats) in enumerate(sorted_stats):
+                total = stats['total']
+                correct = stats['correct']
+                rate = (correct / total * 100) if total > 0 else 0
+                
+                medal = ['🥇', '🥈', '🥉'][i] if i < 3 else f'{i+1}.'
+                content += f'''
+                <div class="ai-row">
+                    <span class="rank">{medal}</span>
+                    <span class="name">{ai_name}</span>
+                    <span class="stats">{correct}/{total} ({rate:.0f}%)</span>
+                </div>
+                '''
+            content += '</div>'
+            
+            # 点评
+            best_ai = sorted_stats[0][0] if sorted_stats else ''
+            worst_ai = sorted_stats[-1][0] if sorted_stats else ''
+            if best_ai and worst_ai and best_ai != worst_ai:
+                best_rate = sorted_stats[0][1]['correct'] / max(sorted_stats[0][1]['total'], 1) * 100
+                worst_rate = sorted_stats[-1][1]['correct'] / max(sorted_stats[-1][1]['total'], 1) * 100
+                content += f'<p>今日<strong>{best_ai}</strong>表现最佳（命中率{best_rate:.0f}%），'
+                content += f'<strong>{worst_ai}</strong>需要加油（命中率{worst_rate:.0f}%）。</p>'
+    else:
+        content += '<p>暂无可分析的预测数据。</p>'
+    
+    content += '</section>'
+    
+    # 3. 关键回顾
+    content += '<section class="article-section">'
+    content += '<h2>🔍 关键回顾</h2>'
+    
+    # 找出冷门比赛
+    upsets = []
+    for m in completed_matches:
+        predictions = m.get('predictions', [])
+        home_score = m.get('home_score', 0)
+        away_score = m.get('away_score', 0)
+        handicap = m.get('handicap', 0)
+        
+        # 判断是否是冷门
+        if predictions:
+            # 统计AI预测
+            favorite_count = 0
+            for p in predictions:
+                spf = p.get('spf', '')
+                if handicap and float(handicap) < 0:
+                    if '胜' in spf:
+                        favorite_count += 1
+                elif handicap and float(handicap) > 0:
+                    if '负' in spf:
+                        favorite_count += 1
+            
+            # 如果大多数AI看好的一方输了，就是冷门
+            actual_result = ''
+            if home_score > away_score:
+                actual_result = '胜'
+            elif home_score < away_score:
+                actual_result = '负'
+            else:
+                actual_result = '平'
+            
+            if handicap and float(handicap) < 0 and actual_result == '负':
+                if favorite_count >= len(predictions) * 0.6:
+                    teams = m.get('teams', '')
+                    upsets.append(teams)
+    
+    if upsets:
+        content += '<p class="highlight">⚠️ <strong>今日冷门</strong>：</p>'
+        content += '<ul>'
+        for teams in upsets:
+            content += f'<li><strong>{teams}</strong> - 多数AI看好强队，但结果出人意料</li>'
+        content += '</ul>'
+    else:
+        content += '<p>今日比赛结果与AI预测基本吻合，没有明显冷门。</p>'
+    
+    content += '</section>'
+    
+    # 4. 经验总结
+    if commentary:
+        content += '<section class="article-section">'
+        content += '<h2>💡 经验总结</h2>'
+        content += f'<p>{commentary}</p>'
+        content += '</section>'
+    
+    return content
+
+
 def generate_brief_article(article, news_data):
     """
     Generate an individual article page for a specific date.
     Returns the HTML string.
+    
+    简报定位为【文章】，不是数据表格的重复展示：
+    - 预测简报：今日热点、赛事前瞻、AI观点汇总、推荐关注
+    - 复盘简报：比赛结果概览、AI预测准确率分析、关键回顾、经验总结
     """
     date_str = article['date']
     matches = article['matches']
@@ -742,92 +1128,11 @@ def generate_brief_article(article, news_data):
         if metadata.get('daily_commentary'):
             commentary = metadata['daily_commentary']
     
-    # Generate matches table HTML with predictions
-    matches_html = ''
-    for match in matches:
-        match_id = match.get('id', '')
-        teams = match.get('teams', '')
-        match_time = match.get('match_time', '')
-        home_score = match.get('home_score')
-        away_score = match.get('away_score')
-        status = match.get('status', '')
-        predictions = match.get('predictions', [])
-        
-        # Format time
-        try:
-            mt = datetime.fromisoformat(match_time.replace('Z', '+00:00'))
-            time_str = mt.strftime('%H:%M')
-        except:
-            time_str = match_time
-        
-        # Score display
-        if home_score is not None and away_score is not None:
-            score_str = f'{home_score}-{away_score}'
-            status_class = 'confirmed'
-            status_text = '已确认'
-        else:
-            score_str = 'VS'
-            status_class = 'pending'
-            status_text = '待确认'
-        
-        # Parse teams
-        team_parts = teams.split('VS') if 'VS' in teams else teams.split('vs')
-        home_team = team_parts[0].strip() if len(team_parts) > 0 else teams
-        away_team = team_parts[1].strip() if len(team_parts) > 1 else ''
-        
-        # Generate prediction table for this match
-        prediction_rows = ''
-        for pred in predictions:
-            ai_name = pred.get('ai_name', '未知')
-            spf = pred.get('spf', '-')
-            handicap_spf = pred.get('handicap_spf', '-')
-            score = pred.get('score', '-')
-            goals = pred.get('goals', '-')
-            half_full = pred.get('half_full', '-')
-            
-            prediction_rows += f'''
-            <tr>
-                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);font-weight:500;">{ai_name}</td>
-                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{spf or '-'}</td>
-                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{handicap_spf or '-'}</td>
-                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{score or '-'}</td>
-                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{goals or '-'}</td>
-                <td style="padding:8px 12px;border-bottom:1px solid var(--divider);text-align:center;">{half_full or '-'}</td>
-            </tr>'''
-        
-        matches_html += f'''
-        <div style="background:var(--bg-deep);border:1px solid var(--divider);border-radius:12px;margin-bottom:20px;overflow:hidden;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-elevated);border-bottom:1px solid var(--divider);">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <span style="font-size:13px;color:var(--text-secondary);">{time_str}</span>
-                    <span style="font-size:16px;font-weight:600;">{home_team}</span>
-                    <span style="font-size:14px;color:var(--text-secondary);">VS</span>
-                    <span style="font-size:16px;font-weight:600;">{away_team}</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:18px;font-weight:700;color:var(--gold);">{score_str}</span>
-                    <span style="font-size:11px;padding:3px 8px;border-radius:4px;background:{'var(--turf-soft)' if status_class == 'confirmed' else 'var(--miss)'};color:{'var(--turf)' if status_class == 'confirmed' else 'var(--text-secondary)'};">{status_text}</span>
-                </div>
-            </div>
-            <div style="padding:16px 20px;">
-                <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                    <thead>
-                        <tr style="background:var(--bg-elevated);">
-                            <th style="padding:10px 12px;text-align:left;color:var(--text-secondary);font-weight:500;">AI</th>
-                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">胜平负</th>
-                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">让球</th>
-                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">比分</th>
-                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">进球数</th>
-                            <th style="padding:10px 12px;text-align:center;color:var(--text-secondary);font-weight:500;">半全场</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {prediction_rows if prediction_rows else '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-secondary);">暂无预测数据</td></tr>'}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-'''
+    # Generate article content based on type
+    if article_type == 'review':
+        article_content = generate_review_content(matches, commentary, display_date_full)
+    else:
+        article_content = generate_prediction_content(matches, commentary, display_date_full)
     
     html = f'''<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1005,11 +1310,8 @@ def generate_brief_article(article, news_data):
         <!-- Commentary -->
         {f'<div class="commentary"><h2>{section_title}</h2><p>{commentary}</p></div>' if commentary else ''}
         
-        <!-- Matches -->
-        <div class="matches-section">
-            <h2>赛事列表</h2>
-            {matches_html if matches_html else '<p style="color:var(--text-secondary);">暂无赛事数据</p>'}
-        </div>
+        <!-- Article Content -->
+        {article_content}
         
         <!-- Chain Bets -->
         {generate_chain_bets_html(article.get('chain_bets', []))}
