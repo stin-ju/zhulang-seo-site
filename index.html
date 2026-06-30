@@ -497,7 +497,7 @@ let CURRENT_DATE = '';
 async function loadAll() {
     // 并行加载
     const [matches, rank] = await Promise.all([
-        sbQuery('matches', 'id,teams,match_time,status,handicap,win_odds,draw_odds,lose_odds,home_score,away_score,metadata,sport_type', 'order=match_time.asc'),
+        sbQuery('matches', 'id,teams,match_time,status,handicap,win_odds,draw_odds,lose_odds,home_score,away_score,sport_type', 'order=match_time.asc'),
         sbQuery('ai_stats', 'ai_name,rank,total_pnl,hit_rate,matches,is_active', 'order=rank.asc')
     ]);
 
