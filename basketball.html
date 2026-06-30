@@ -108,10 +108,40 @@
 </section>
 
 <!-- 赛程 -->
+<!-- 今日AI总评 -->
+<section class="mb-4">
+  <details open class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">今日AI篮球总评</h2>
+      <span class="text-xs text-muted">6月29日</span>
+    </summary>
+    <div class="p-4">
+      <div class="text-center text-gray-500 py-4">暂无篮球总评数据</div>
+    </div>
+  </details>
+</section>
+
+<!-- 今日篮球串关推荐 -->
+<section class="mb-4">
+  <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">今日篮球串关推荐</h2>
+      <span class="text-xs text-muted">6月29日</span>
+    </summary>
+    <div class="p-4">
+      <div id="today-basketball-parlay">
+        <div class="text-center text-gray-500 py-4">暂无篮球串关数据</div>
+      </div>
+    </div>
+  </details>
+</section>
+
+<!-- 今日篮球比赛详情 -->
 <section id="matches" class="mb-8" aria-label="赛程">
-  <h2 class="text-lg font-bold mb-4">📋 赛程</h2>
-  
-    <details open class="rounded-xl bg-card/50 border border-border overflow-hidden mb-4">
+  <h2 class="text-lg font-bold mb-4">📋 今日赛程</h2>
+  <details open class="rounded-xl bg-card/50 border border-border overflow-hidden mb-4">
       <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
         <span class="chevron text-accent text-sm">▶</span>
         <h2 class="font-bold text-lg">6月29日 周一</h2>
@@ -199,13 +229,61 @@
     </details>
 </section>
 
-<!-- 篮球AI串关推荐 -->
-<section class="mb-8" aria-label="串关推荐">
-  <h2 class="text-lg font-bold mb-4">🎯 篮球AI串关推荐</h2>
-  <div id="basketball-parlay-section">
-    <div class="text-center text-gray-500 py-4">加载篮球串关数据中...</div>
-  </div>
+<!-- 历史AI总评 -->
+<section class="mb-4">
+  <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">历史AI篮球总评</h2>
+      <span class="text-xs text-muted">共2天</span>
+    </summary>
+    <div class="p-4">
+      <div class="text-center text-gray-500 py-4">暂无历史篮球总评数据</div>
+    </div>
+  </details>
 </section>
+
+<!-- 历史篮球串关推荐 -->
+<section class="mb-4">
+  <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">历史篮球串关推荐</h2>
+      <span class="text-xs text-muted">共2天</span>
+    </summary>
+    <div class="p-4">
+      <div id="hist-basketball-parlay">
+        <div class="text-center text-gray-500 py-4">暂无历史篮球串关数据</div>
+      </div>
+    </div>
+  </details>
+</section>
+
+<!-- 历史篮球比赛详情 -->
+<section class="mb-8" aria-label="历史赛程">
+  <h2 class="text-lg font-bold mb-4">📋 历史赛程</h2>
+  <details class="group bg-card rounded-xl border border-border/50 overflow-hidden mb-4" open>
+          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
+            <h3 class="font-semibold">🎯 ${today} 篮球串关推荐</h3>
+            <span class="ml-auto text-xs text-accent bg-accent/10 px-2 py-0.5 rounded-full">最新</span>
+          </summary>
+          <div class="p-4 space-y-4">
+            ${todayHtml}
+            <p class="text-xs text-muted text-center">* 串关推荐基于各AI预测生成，仅供参考</p>
+          </div>
+        </details>
+<details class="group bg-card rounded-xl border border-border/50 overflow-hidden">
+          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
+            <h3 class="font-semibold">📊 历史篮球串关推荐</h3>
+            <span class="ml-auto text-xs text-muted">共${Math.min(histDates.length, 5)}天</span>
+          </summary>
+          <div class="p-4 space-y-4 max-h-96 overflow-y-auto">
+            ${histHtml}
+          </div>
+        </details>
+</section>
+
+
 </main>
 <footer class="border-t border-border py-5 mt-auto">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs text-dimmed">
