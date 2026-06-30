@@ -3,299 +3,713 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI实验室 · 奖金计算器</title>
-    <meta name="description" content="竞彩足球奖金计算器，支持串关计算，点击赔率自动填入。">
-    <meta name="keywords" content="竞彩足球,奖金计算器,串关计算,世界杯预测">
-    <link rel="canonical" href="https://zhulang.coze.site/calculator.html">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="AI实验室 · 奖金计算器">
-    <meta property="og:description" content="竞彩足球奖金计算器，支持串关计算。">
-    <meta property="og:url" content="https://zhulang.coze.site/calculator.html">
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "AI实验室奖金计算器",
-        "description": "竞彩足球奖金计算器，支持串关计算",
-        "url": "https://zhulang.coze.site/calculator.html",
-        "applicationCategory": "SportsApplication"
-    }
-    </script>
+    <title>竞彩足球奖金计算器</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: #0b0b14; color: #e5e7eb; min-height: 100vh; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
-        .navbar { background: rgba(11, 11, 20, 0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.04); padding: 10px 0; position: sticky; top: 0; z-index: 50; }
-        .navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 1200px; }
-        .logo { font-size: 18px; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 8px; }
-        .logo .icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 8px; font-size: 14px; color: #fff; }
-        .logo .name { color: #e5e7eb; }
-        .logo .name .accent { color: #8b5cf6; }
-        .nav-links { display: flex; gap: 2px; flex-wrap: wrap; }
-        .nav-links a { padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #9ca3af; text-decoration: none; transition: all 0.2s; }
-        .nav-links a:hover { color: #e5e7eb; background: rgba(255, 255, 255, 0.04); }
-        .nav-links a.active { color: #a78bfa; background: rgba(139, 92, 246, 0.12); }
-        .nav-divider { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.06); margin: 0 2px; }
-        .calc-layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; padding: 20px 0; }
-        @media (max-width: 820px) { .calc-layout { grid-template-columns: 1fr; } }
-        .card { background: #14141f; border: 1px solid #2a2a3e; border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; }
-        .match-row { display: grid; grid-template-columns: 50px 80px 1fr 50px 60px 60px 60px 36px; gap: 4px; align-items: center; padding: 6px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; border-radius: 4px; }
-        .match-row .id { color: #6b7280; font-weight: 500; font-size: 12px; }
-        .match-row .time { color: #9ca3af; font-size: 12px; }
-        .match-row .teams { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .match-row .handicap { color: #fbbf24; font-weight: 600; text-align: center; font-size: 12px; }
-        .match-row .odds { text-align: center; padding: 2px 4px; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 13px; transition: all 0.2s; border: 1px solid transparent; }
-        .match-row .odds:hover { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
-        .match-row .odds.selected { background: rgba(139, 92, 246, 0.25); color: #a78bfa; border-color: rgba(139, 92, 246, 0.3); }
-        .match-row .odds.win { color: #22c55e; }
-        .match-row .odds.draw { color: #fbbf24; }
-        .match-row .odds.lose { color: #ef4444; }
-        .match-row .add-btn { color: #6b7280; font-size: 16px; cursor: pointer; text-align: center; transition: color 0.2s; }
-        .match-row .add-btn:hover { color: #8b5cf6; }
-        .date-group { margin-bottom: 4px; }
-        .date-group .group-header { display: flex; align-items: center; gap: 12px; padding: 6px 4px; cursor: pointer; border-radius: 6px; transition: background 0.15s; font-size: 14px; font-weight: 600; }
-        .date-group .group-header:hover { background: rgba(255, 255, 255, 0.03); }
-        .date-group .group-header .arrow { transition: transform 0.2s; color: #6b7280; font-size: 12px; }
-        .date-group .group-header .arrow.open { transform: rotate(90deg); }
-        .date-group .group-header .count { font-size: 12px; font-weight: 400; color: #6b7280; }
-        .date-group .group-body { padding-left: 8px; }
-        .date-group .group-body.hidden { display: none; }
-        .calculator-panel { position: sticky; top: 80px; align-self: start; }
-        .calculator-panel .card { padding: 16px 18px; }
-        .calc-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .calc-title .clear-btn { font-size: 12px; color: #6b7280; cursor: pointer; background: none; border: none; transition: color 0.2s; }
-        .calc-title .clear-btn:hover { color: #ef4444; }
-        .selected-match { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
-        .selected-match .info { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .selected-match .info .odds-val { color: #8b5cf6; font-weight: 600; }
-        .selected-match .remove-selected { color: #6b7280; cursor: pointer; background: none; border: none; font-size: 14px; transition: color 0.2s; }
-        .selected-match .remove-selected:hover { color: #ef4444; }
-        .selected-empty { color: #6b7280; font-size: 13px; padding: 8px 0; }
-        .pass-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 8px 0 10px; }
-        .pass-grid button { padding: 4px 6px; border-radius: 4px; border: 1px solid #2a2a3e; background: transparent; color: #9ca3af; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; }
-        .pass-grid button:hover { border-color: #6b7280; }
-        .pass-grid button.active { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); color: #a78bfa; }
-        .btn-calc { width: 100%; padding: 10px; border-radius: 8px; border: none; background: #8b5cf6; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 4px; }
-        .btn-calc:hover { background: #7c3aed; }
-        .result-box { background: #1a1a2a; border-radius: 8px; padding: 12px 16px; margin-top: 10px; border: 1px solid #2a2a3e; }
-        .result-box .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px; }
-        .result-box .row .val.win { color: #22c55e; font-weight: 600; }
-        .result-box .row .val.highlight { color: #8b5cf6; font-weight: 600; }
-        .result-box .divider { border-top: 1px solid #2a2a3e; margin: 6px 0; }
-        .loading { text-align: center; padding: 30px; color: #6b7280; }
-        .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(139, 92, 246, 0.1); border-top-color: #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loading .text { margin-top: 8px; font-size: 13px; }
-        @media (max-width: 820px) { .calculator-panel { position: static; } .match-row { grid-template-columns: 36px 60px 1fr 40px 44px 44px 44px 28px; font-size: 12px; gap: 2px; } .pass-grid { grid-template-columns: repeat(4, 1fr); } }
-        @media (max-width: 600px) { .match-row { grid-template-columns: 30px 50px 1fr 32px 34px 34px 34px 24px; font-size: 11px; padding: 4px 2px; } .match-row .odds { padding: 1px 2px; font-size: 11px; } .card { padding: 12px 14px; } .pass-grid { grid-template-columns: repeat(3, 1fr); } }
+        /* ========== 全局重置 & 基础样式 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f5f7fa;
+            color: #1f2937;
+            padding: 20px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        /* ========== 头部 ========== */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f, #2a5f8a);
+            color: white;
+            padding: 24px 28px;
+            border-radius: 16px;
+            margin-bottom: 28px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .header p {
+            opacity: 0.85;
+            margin-top: 6px;
+            font-size: 15px;
+        }
+
+        /* ========== 面板卡片 ========== */
+        .panel {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            border: 1px solid #e9edf4;
+        }
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-title .badge {
+            background: #eef2ff;
+            color: #4f46e5;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 2px 12px;
+            border-radius: 20px;
+        }
+
+        /* ========== 比赛列表 ========== */
+        .match-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .match-card {
+            background: #fafcff;
+            border: 1px solid #e9edf4;
+            border-radius: 12px;
+            padding: 16px 18px;
+            transition: border-color 0.2s;
+        }
+        .match-card:hover {
+            border-color: #cbd5e1;
+        }
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            margin-bottom: 12px;
+        }
+        .match-teams {
+            font-weight: 600;
+            font-size: 17px;
+            color: #0f172a;
+        }
+        .match-teams .vs {
+            color: #94a3b8;
+            font-weight: 400;
+            margin: 0 6px;
+        }
+        .match-time {
+            font-size: 14px;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 2px 12px;
+            border-radius: 20px;
+        }
+        .odds-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+        }
+        .odds-btn {
+            background: white;
+            border: 1px solid #dce2ec;
+            border-radius: 8px;
+            padding: 6px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: #1e293b;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .odds-btn:hover {
+            border-color: #3b82f6;
+            background: #f0f7ff;
+        }
+        .odds-btn .label {
+            color: #64748b;
+            font-weight: 400;
+        }
+        .odds-btn .value {
+            color: #dc2626;
+            font-weight: 700;
+        }
+        .odds-btn.selected {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.25);
+        }
+        .odds-btn.selected .value {
+            color: #2563eb;
+        }
+
+        /* ========== 串关选择 ========== */
+        .pass-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .pass-btn {
+            background: white;
+            border: 1px solid #dce2ec;
+            border-radius: 8px;
+            padding: 6px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: #1e293b;
+        }
+        .pass-btn:hover {
+            border-color: #94a3b8;
+        }
+        .pass-btn.active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        /* ========== 已选摘要 ========== */
+        .selected-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .selected-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            border-left: 3px solid #3b82f6;
+        }
+        .selected-item .remove {
+            color: #ef4444;
+            cursor: pointer;
+            font-weight: 600;
+            background: none;
+            border: none;
+            font-size: 16px;
+            padding: 0 4px;
+        }
+        .selected-item .remove:hover {
+            color: #b91c1c;
+        }
+
+        /* ========== 结果区 ========== */
+        .result-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 18px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .result-box .label {
+            font-size: 16px;
+            color: #166534;
+        }
+        .result-box .bonus {
+            font-size: 28px;
+            font-weight: 700;
+            color: #16a34a;
+        }
+        .result-box .bonus .unit {
+            font-size: 16px;
+            font-weight: 400;
+            color: #4ade80;
+            margin-left: 4px;
+        }
+        .result-box .detail {
+            font-size: 14px;
+            color: #15803d;
+        }
+
+        .empty-state {
+            color: #94a3b8;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 15px;
+        }
+
+        /* ========== 操作按钮 ========== */
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .btn {
+            padding: 8px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .btn-primary {
+            background: #1e3a5f;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2a5f8a;
+        }
+        .btn-danger {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #16a34a;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 20px; }
+            .panel { padding: 16px; }
+            .match-teams { font-size: 15px; }
+            .odds-btn { padding: 4px 12px; font-size: 13px; }
+            .result-box .bonus { font-size: 22px; }
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <a href="/" class="logo">
-                <span class="icon">🧪</span>
-                <span class="name">AI实验室 <span class="accent">·</span> <span class="accent">体彩</span>好伙伴</span>
-            </a>
-            <div class="nav-links">
-                <a href="/">首页</a>
-                <a href="/football.html">足球</a>
-                <a href="/basketball.html">篮球</a>
-                <a href="/calculator.html" class="active">计算器</a>
-                <span class="nav-divider"></span>
-                <a href="/rank.html">排行</a>
-            </div>
+<div class="container">
+
+    <!-- ======== 头部 ======== -->
+    <header class="header">
+        <h1>⚽ 竞彩足球奖金计算器</h1>
+        <p>选择比赛赔率 → 选择串关方式 → 自动计算奖金</p>
+    </header>
+
+    <!-- ======== 比赛列表 ======== -->
+    <section class="panel" id="matchPanel">
+        <div class="panel-title">
+            📋 今日比赛
+            <span class="badge" id="matchCount">0 场</span>
         </div>
-    </nav>
-    <main class="container">
-        <div style="padding: 16px 0 4px;">
-            <h1 style="font-size: 24px; font-weight: 900;">🧮 奖金计算器</h1>
-            <p style="color: #6b7280; font-size: 13px;">点击赔率自动填入 · 支持串关计算</p>
+        <div class="match-grid" id="matchList">
+            <div class="empty-state">暂无比赛数据，请稍后刷新</div>
         </div>
-        <div class="calc-layout">
+    </section>
+
+    <!-- ======== 串关方式 ======== -->
+    <section class="panel">
+        <div class="panel-title">🔗 串关方式</div>
+        <div class="pass-grid" id="passGrid">
+            <!-- 由 JS 动态生成 -->
+        </div>
+    </section>
+
+    <!-- ======== 我的串关 ======== -->
+    <section class="panel">
+        <div class="panel-title">
+            🧾 我的串关
+            <span class="badge" id="selectedCount">0 场</span>
+        </div>
+        <div class="selected-list" id="selectedList">
+            <div class="empty-state">点击左侧比赛赔率添加</div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+            <button class="btn btn-danger" id="clearBtn">🗑️ 清空</button>
+            <button class="btn btn-success" id="calcBtn">💰 计算奖金</button>
+        </div>
+    </section>
+
+    <!-- ======== 计算结果 ======== -->
+    <section class="panel" id="resultPanel" style="display:none;">
+        <div class="result-box">
             <div>
-                <div class="card" style="padding:10px 16px;margin-bottom:8px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-                        <div style="display:flex;align-items:center;gap:12px;font-size:13px;">
-                            <span style="font-weight:600;">⚽ 竞彩足球</span>
-                            <span style="color:#6b7280;">|</span>
-                            <span style="color:#6b7280;">共 <span id="totalMatches">5</span> 场可投注</span>
-                        </div>
-                        <div style="display:flex;gap:8px;font-size:12px;">
-                            <span style="color:#22c55e;">● 胜</span>
-                            <span style="color:#fbbf24;">● 平</span>
-                            <span style="color:#ef4444;">● 负</span>
-                            <span style="color:#6b7280;margin-left:4px;">点击赔率选场</span>
-                        </div>
-                    </div>
-                </div>
-                <div id="matchList"></div>
-                <div style="font-size:11px;color:#6b7280;text-align:right;padding:4px 0;">
-                    数据更新：2026-06-30 22:12:55
-                </div>
+                <div class="label">💰 预计奖金</div>
+                <div class="detail" id="resultDetail">投注 2 元 × 1 注</div>
             </div>
-            <div class="calculator-panel">
-                <div class="card">
-                    <div class="calc-title">
-                        <span>📋 我的串关</span>
-                        <button class="clear-btn" id="clearSelected">清空</button>
-                    </div>
-                    <div id="selectedList">
-                        <div class="selected-empty">👆 点击左侧赔率添加比赛</div>
-                    </div>
-                    <div style="margin-top:10px;">
-                        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">串关方式</div>
-                        <div class="pass-grid" id="passGrid">
-                            <button data-pass="2串1">2串1</button>
-                            <button data-pass="3串1" class="active">3串1</button>
-                            <button data-pass="4串1">4串1</button>
-                            <button data-pass="5串1">5串1</button>
-                            <button data-pass="6串1">6串1</button>
-                            <button data-pass="7串1">7串1</button>
-                            <button data-pass="8串1">8串1</button>
-                            <button data-pass="3串4">3串4</button>
-                            <button data-pass="4串5">4串5</button>
-                            <button data-pass="4串11">4串11</button>
-                            <button data-pass="5串16">5串16</button>
-                            <button data-pass="5串26">5串26</button>
-                            <button data-pass="6串20">6串20</button>
-                            <button data-pass="6串35">6串35</button>
-                            <button data-pass="6串42">6串42</button>
-                            <button data-pass="6串57">6串57</button>
-                        </div>
-                    </div>
-                    <button class="btn-calc" id="calcBtn">💰 计算奖金</button>
-                    <div id="resultBox" class="result-box" style="display:none;">
-                        <div class="row"><span>串关</span><span class="val" id="resultPass">3串1</span></div>
-                        <div class="row"><span>场次</span><span class="val" id="resultCount">0</span></div>
-                        <div class="row"><span>投注</span><span class="val">2元/注</span></div>
-                        <div class="divider"></div>
-                        <div class="row"><span>🏆 单注奖金</span><span class="val win" id="resultPrize">0.00 元</span></div>
-                        <div class="row"><span>综合赔率</span><span class="val highlight" id="resultOdds">0.00</span></div>
-                    </div>
-                </div>
-            </div>
+            <div class="bonus" id="resultBonus">0.00 <span class="unit">元</span></div>
         </div>
-    </main>
-    <footer style="text-align:center;padding:16px 0;border-top:1px solid rgba(255,255,255,0.04);font-size:12px;color:#6b7280;margin-top:8px;">
-        <p>🧪 AI实验室 · 体彩好伙伴 · 数据仅供模拟参考</p>
-    </footer>
-    <script>
-        // 嵌入的比赛数据（SEO友好，爬虫可抓取）
-        window.MATCH_DATA = [{"id": "周一301", "teams": "沙特阿拉伯VS卡塔尔", "match_time": "2026-06-30T00:00:00", "handicap": "-4.5", "status": "待比赛", "win_odds": 2.31, "draw_odds": null, "lose_odds": 1.34, "handicap_win_odds": null, "handicap_draw_odds": null, "handicap_lose_odds": null, "home_score": null, "away_score": null, "predictions": [{"id": 1374, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "MiniMax", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1376, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "豆包", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}, {"id": 1378, "spf": "主胜", "goals": null, "score": "主胜11-15", "ai_name": "智谱清言", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1380, "spf": "主胜", "goals": null, "score": "主胜6-10", "ai_name": "文心", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1382, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "混元", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1384, "spf": "主胜", "goals": null, "score": "主胜6-10", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}], "home_team": "沙特阿拉伯", "away_team": "卡塔尔", "match_date": "2026-06-30"}, {"id": "周一302", "teams": "约旦VS伊拉克", "match_time": "2026-06-30T00:30:00", "handicap": "19.5", "status": "待比赛", "win_odds": null, "draw_odds": null, "lose_odds": null, "handicap_win_odds": null, "handicap_draw_odds": null, "handicap_lose_odds": null, "home_score": null, "away_score": null, "predictions": [{"id": 1375, "spf": "主胜", "goals": null, "score": "主胜11-15", "ai_name": "MiniMax", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}, {"id": 1377, "spf": "主胜", "goals": null, "score": "主胜21-25", "ai_name": "豆包", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1379, "spf": "主胜", "goals": null, "score": "主胜16-20", "ai_name": "智谱清言", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1381, "spf": "主胜", "goals": null, "score": "主负1-5", "ai_name": "文心", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}, {"id": 1383, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "混元", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1385, "spf": "主胜", "goals": null, "score": "主胜6-10", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}], "home_team": "约旦", "away_team": "伊拉克", "match_date": "2026-06-30"}, {"id": "周一074", "teams": "巴西VS日本", "match_time": "2026-06-30T01:00:00", "handicap": "-1", "status": "已确认", "win_odds": 1.6, "draw_odds": 3.35, "lose_odds": 4.85, "handicap_win_odds": 2.95, "handicap_draw_odds": 3.38, "handicap_lose_odds": 1.97, "home_score": 2, "away_score": 1, "predictions": [{"id": 1320, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "DeepSeek", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1371, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "混元", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1322, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "MiniMax", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1361, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "豆包", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1326, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "文心", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1330, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "智谱清言", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1367, "spf": "胜", "goals": 1, "score": "0-1", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": "负负", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}], "home_team": "巴西", "away_team": "日本", "match_date": "2026-06-30"}, {"id": "周一075", "teams": "德国VS巴拉圭", "match_time": "2026-06-30T04:30:00", "handicap": null, "status": "已确认", "win_odds": null, "draw_odds": null, "lose_odds": null, "handicap_win_odds": null, "handicap_draw_odds": null, "handicap_lose_odds": null, "home_score": 1, "away_score": 1, "predictions": [{"id": 1323, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "MiniMax", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1331, "spf": "胜", "goals": 3, "score": "3-0", "ai_name": "智谱清言", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1327, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "文心", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1372, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "混元", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1364, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "豆包", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1365, "spf": "胜", "goals": 3, "score": "3-0", "ai_name": "DeepSeek", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1368, "spf": "负", "goals": 1, "score": "0-1", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": "负负", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}], "home_team": "德国", "away_team": "巴拉圭", "match_date": "2026-06-30"}, {"id": "周一076", "teams": "荷兰VS摩洛哥", "match_time": "2026-06-30T09:00:00", "handicap": "-1", "status": "已确认", "win_odds": 1.89, "draw_odds": 3.07, "lose_odds": 3.64, "handicap_win_odds": 3.82, "handicap_draw_odds": 3.58, "handicap_lose_odds": 1.7, "home_score": 1, "away_score": 1, "predictions": [{"id": 1324, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "MiniMax", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1332, "spf": "平", "goals": 2, "score": "1-1", "ai_name": "智谱清言", "hit_half": null, "half_full": "平平", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1366, "spf": "平", "goals": 2, "score": "1-1", "ai_name": "DeepSeek", "hit_half": null, "half_full": "平平", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1373, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "混元", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1362, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "豆包", "hit_half": null, "half_full": "平胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1328, "spf": "胜", "goals": 1, "score": "1-0", "ai_name": "文心", "hit_half": null, "half_full": "平胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1369, "spf": "胜", "goals": 1, "score": "0-1", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": "负负", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}], "home_team": "荷兰", "away_team": "摩洛哥", "match_date": "2026-06-30"}];
-        
-        // 状态
-        let selectedMatches = [];
-        
-        // 工具函数
-        function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-        function fmtDate(dt) { if (!dt) return ''; try { const d = new Date(dt); const weekdays = ['周日','周一','周二','周三','周四','周五','周六']; return weekdays[d.getDay()] + ' ' + (d.getMonth()+1) + '/' + d.getDate(); } catch(e) { return dt.slice(5,10); } }
-        function fmtTime(dt) { if (!dt) return ''; try { return dt.slice(11,16); } catch(e) { return ''; } }
-        
-        // 渲染赛事列表
-        function renderMatches(matches) {
-            const container = document.getElementById('matchList');
-            if (!container) return;
-            if (!matches || matches.length === 0) {
-                container.innerHTML = '<div class="card" style="text-align:center;padding:30px;color:#6b7280;"><div style="font-size:28px;margin-bottom:8px;">📭</div>暂无待比赛的足球赛事</div>';
-                return;
+    </section>
+
+</div>
+
+<script>
+// ================================================================
+//  1. 数据定义（由 generate_seo_site.py 生成时注入）
+// ================================================================
+window.MATCH_DATA = [{"id": "周一301", "teams": "沙特阿拉伯VS卡塔尔", "match_time": "2026-06-30T00:00:00", "handicap": "-4.5", "status": "待比赛", "win_odds": 2.31, "draw_odds": null, "lose_odds": 1.34, "handicap_win_odds": null, "handicap_draw_odds": null, "handicap_lose_odds": null, "home_score": null, "away_score": null, "predictions": [{"id": 1374, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "MiniMax", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1376, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "豆包", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}, {"id": 1378, "spf": "主胜", "goals": null, "score": "主胜11-15", "ai_name": "智谱清言", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1380, "spf": "主胜", "goals": null, "score": "主胜6-10", "ai_name": "文心", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1382, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "混元", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1384, "spf": "主胜", "goals": null, "score": "主胜6-10", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}], "home_team": "沙特阿拉伯", "away_team": "卡塔尔", "match_date": "2026-06-30"}, {"id": "周一302", "teams": "约旦VS伊拉克", "match_time": "2026-06-30T00:30:00", "handicap": "19.5", "status": "待比赛", "win_odds": null, "draw_odds": null, "lose_odds": null, "handicap_win_odds": null, "handicap_draw_odds": null, "handicap_lose_odds": null, "home_score": null, "away_score": null, "predictions": [{"id": 1375, "spf": "主胜", "goals": null, "score": "主胜11-15", "ai_name": "MiniMax", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}, {"id": 1377, "spf": "主胜", "goals": null, "score": "主胜21-25", "ai_name": "豆包", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1379, "spf": "主胜", "goals": null, "score": "主胜16-20", "ai_name": "智谱清言", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1381, "spf": "主胜", "goals": null, "score": "主负1-5", "ai_name": "文心", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}, {"id": 1383, "spf": "主胜", "goals": null, "score": "主胜1-5", "ai_name": "混元", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主胜", "hit_handicap": null}, {"id": 1385, "spf": "主胜", "goals": null, "score": "主胜6-10", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": null, "hit_goals": null, "hit_score": null, "handicap_spf": "让分主负", "hit_handicap": null}], "home_team": "约旦", "away_team": "伊拉克", "match_date": "2026-06-30"}, {"id": "周一074", "teams": "巴西VS日本", "match_time": "2026-06-30T01:00:00", "handicap": "-1", "status": "已确认", "win_odds": 1.6, "draw_odds": 3.35, "lose_odds": 4.85, "handicap_win_odds": 2.95, "handicap_draw_odds": 3.38, "handicap_lose_odds": 1.97, "home_score": 2, "away_score": 1, "predictions": [{"id": 1320, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "DeepSeek", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1371, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "混元", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1322, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "MiniMax", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1361, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "豆包", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1326, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "文心", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1330, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "智谱清言", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1367, "spf": "胜", "goals": 1, "score": "0-1", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": "负负", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}], "home_team": "巴西", "away_team": "日本", "match_date": "2026-06-30"}, {"id": "周一075", "teams": "德国VS巴拉圭", "match_time": "2026-06-30T04:30:00", "handicap": null, "status": "已确认", "win_odds": null, "draw_odds": null, "lose_odds": null, "handicap_win_odds": null, "handicap_draw_odds": null, "handicap_lose_odds": null, "home_score": 1, "away_score": 1, "predictions": [{"id": 1323, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "MiniMax", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1331, "spf": "胜", "goals": 3, "score": "3-0", "ai_name": "智谱清言", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1327, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "文心", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1372, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "混元", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1364, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "豆包", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1365, "spf": "胜", "goals": 3, "score": "3-0", "ai_name": "DeepSeek", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让胜", "hit_handicap": null}, {"id": 1368, "spf": "负", "goals": 1, "score": "0-1", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": "负负", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}], "home_team": "德国", "away_team": "巴拉圭", "match_date": "2026-06-30"}, {"id": "周一076", "teams": "荷兰VS摩洛哥", "match_time": "2026-06-30T09:00:00", "handicap": "-1", "status": "已确认", "win_odds": 1.89, "draw_odds": 3.07, "lose_odds": 3.64, "handicap_win_odds": 3.82, "handicap_draw_odds": 3.58, "handicap_lose_odds": 1.7, "home_score": 1, "away_score": 1, "predictions": [{"id": 1324, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "MiniMax", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1332, "spf": "平", "goals": 2, "score": "1-1", "ai_name": "智谱清言", "hit_half": null, "half_full": "平平", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1366, "spf": "平", "goals": 2, "score": "1-1", "ai_name": "DeepSeek", "hit_half": null, "half_full": "平平", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1373, "spf": "胜", "goals": 2, "score": "2-0", "ai_name": "混元", "hit_half": null, "half_full": "胜胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}, {"id": 1362, "spf": "胜", "goals": 3, "score": "2-1", "ai_name": "豆包", "hit_half": null, "half_full": "平胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1328, "spf": "胜", "goals": 1, "score": "1-0", "ai_name": "文心", "hit_half": null, "half_full": "平胜", "hit_goals": null, "hit_score": null, "handicap_spf": "让平", "hit_handicap": null}, {"id": 1369, "spf": "胜", "goals": 1, "score": "0-1", "ai_name": "扣子（皮皮）", "hit_half": null, "half_full": "负负", "hit_goals": null, "hit_score": null, "handicap_spf": "让负", "hit_handicap": null}], "home_team": "荷兰", "away_team": "摩洛哥", "match_date": "2026-06-30"}];
+
+// 解析 teams 字段，拆分为 home / away
+if (window.MATCH_DATA) {
+    window.MATCH_DATA.forEach(m => {
+        const parts = (m.teams || '').split(' VS ');
+        m.home_team = parts[0] || '';
+        m.away_team = parts[1] || '';
+    });
+}
+
+// ================================================================
+//  2. 组合算法核心库（替代硬编码 if-else）
+// ================================================================
+
+/**
+ * 从数组 arr 中取出 k 个元素的所有组合（递归回溯）
+ */
+function getCombinations(arr, k) {
+    if (k === 0) return [[]];
+    if (arr.length === 0 || k > arr.length) return [];
+    const result = [];
+    const [first, ...rest] = arr;
+    // 包含第一个
+    for (const combo of getCombinations(rest, k - 1)) {
+        result.push([first, ...combo]);
+    }
+    // 不包含第一个
+    for (const combo of getCombinations(rest, k)) {
+        result.push(combo);
+    }
+    return result;
+}
+
+/**
+ * 获取复合串关拆解规则
+ */
+function getSubCombinationsForMxN(passType) {
+    const rules = {
+        '3串4': [{ m: 2 }, { m: 3 }],
+        '4串5': [{ m: 3 }, { m: 4 }],
+        '4串11': [{ m: 2 }, { m: 3 }, { m: 4 }],
+        '5串16': [{ m: 3 }, { m: 4 }, { m: 5 }],
+        '5串26': [{ m: 2 }, { m: 3 }, { m: 4 }, { m: 5 }],
+        '6串20': [{ m: 3 }, { m: 4 }, { m: 5 }, { m: 6 }],
+        '6串35': [{ m: 2 }, { m: 3 }, { m: 4 }, { m: 5 }, { m: 6 }],
+        '6串42': [{ m: 3 }, { m: 4 }, { m: 5 }, { m: 6 }],
+        '6串57': [{ m: 2 }, { m: 3 }, { m: 4 }, { m: 5 }, { m: 6 }],
+    };
+    return rules[passType] || [{ m: parseInt(passType.match(/\d+/)?.[0] || 0) }];
+}
+
+/**
+ * 计算 M串N 总注数（核心）
+ */
+function calculateMxNCombinations(matchIds, matchCounts, passType) {
+    const passParts = passType.match(/(\d+)串(\d+)/);
+    if (!passParts) return 0;
+    const m = parseInt(passParts[1]);
+    const totalMatches = matchIds.length;
+    if (totalMatches < m) return 0;
+
+    const isStandard = passType.endsWith('串1');
+    const allCombos = getCombinations(matchIds, m);
+
+    if (isStandard) {
+        let total = 0;
+        for (const combo of allCombos) {
+            let bet = 1;
+            for (const id of combo) {
+                const idx = matchIds.indexOf(id);
+                bet *= matchCounts[idx];
             }
-            const groups = {};
-            matches.forEach(m => {
-                const dateKey = m.match_date || (m.match_time ? m.match_time.slice(0,10) : 'unknown');
-                if (!groups[dateKey]) groups[dateKey] = [];
-                groups[dateKey].push(m);
-            });
-            const sortedDates = Object.keys(groups).sort();
-            let html = '';
-            sortedDates.forEach((dateKey) => {
-                const dayMatches = groups[dateKey];
-                const dateLabel = fmtDate(dateKey);
-                const isToday = dateKey === new Date().toISOString().slice(0,10);
-                html += '<div class="date-group"><div class="group-header" onclick="toggleGroup(this)"><span class="arrow ' + (isToday?'open':'') + '">▶</span><span>' + dateLabel + '</span><span class="count">' + dayMatches.length + '场</span>' + (isToday?'<span style="font-size:11px;color:#22c55e;">● 今日</span>':'') + '</div><div class="group-body ' + (isToday?'':'hidden') + '"><div class="card" style="padding:8px 12px;"><div class="match-row" style="font-size:11px;color:#6b7280;border-bottom:1px solid #2a2a3e;padding-bottom:4px;margin-bottom:2px;"><span>编号</span><span>时间</span><span>对阵</span><span>让球</span><span>胜</span><span>平</span><span>负</span><span></span></div>';
-                dayMatches.forEach(m => {
-                    const displayName = m.home_team && m.away_team ? m.home_team + ' VS ' + m.away_team : (m.teams || '-- VS --');
-                    const id = m.id || '---';
-                    const time = fmtTime(m.match_time);
-                    const handicap = m.handicap || '0';
-                    const winOdds = m.win_odds || '--';
-                    const drawOdds = m.draw_odds || '--';
-                    const loseOdds = m.lose_odds || '--';
-                    html += '<div class="match-row" data-id="' + m.id + '"><span class="id">' + esc(id) + '</span><span class="time">' + time + '</span><span class="teams">' + esc(displayName) + '</span><span class="handicap">' + handicap + '</span><span class="odds win" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'胜\',' + winOdds + ')">' + winOdds + '</span><span class="odds draw" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'平\',' + drawOdds + ')">' + drawOdds + '</span><span class="odds lose" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'负\',' + loseOdds + ')">' + loseOdds + '</span><span class="add-btn" onclick="selectMatch(\'' + m.id + '\',\'' + esc(displayName) + '\',\'胜\',' + winOdds + ')">＋</span></div>';
-                });
-                html += '</div></div></div>';
-            });
-            container.innerHTML = html;
+            total += bet;
         }
-        
-        function toggleGroup(header) { const body = header.nextElementSibling; const arrow = header.querySelector('.arrow'); if (body) { body.classList.toggle('hidden'); if (arrow) arrow.classList.toggle('open'); } }
-        
-        function selectMatch(id, teams, result, odds) {
-            if (odds === '--' || isNaN(odds) || odds <= 0) { alert('该赔率暂不可用'); return; }
-            const existing = selectedMatches.findIndex(m => m.id === id && m.result === result);
-            if (existing >= 0) { selectedMatches.splice(existing, 1); renderSelected(); updateOddsHighlight(); return; }
-            const sameMatch = selectedMatches.findIndex(m => m.id === id);
-            if (sameMatch >= 0) { selectedMatches.splice(sameMatch, 1); }
-            if (selectedMatches.length >= 8) { alert('最多选择8场比赛'); return; }
-            selectedMatches.push({ id, teams, result, odds });
+        return total;
+    }
+
+    // 复合串关
+    const subs = getSubCombinationsForMxN(passType);
+    let total = 0;
+    for (const sub of subs) {
+        const subCombos = getCombinations(matchIds, sub.m);
+        for (const combo of subCombos) {
+            let bet = 1;
+            for (const id of combo) {
+                const idx = matchIds.indexOf(id);
+                bet *= matchCounts[idx];
+            }
+            total += bet;
+        }
+    }
+    return total;
+}
+
+// ================================================================
+//  3. 应用状态
+// ================================================================
+
+const state = {
+    matches: window.MATCH_DATA || [],
+    selected: [],
+    passType: '2串1',
+};
+
+// ================================================================
+//  4. DOM 引用
+// ================================================================
+
+const $ = id => document.getElementById(id);
+const matchList = $('matchList');
+const matchCount = $('matchCount');
+const passGrid = $('passGrid');
+const selectedList = $('selectedList');
+const selectedCount = $('selectedCount');
+const clearBtn = $('clearBtn');
+const calcBtn = $('calcBtn');
+const resultPanel = $('resultPanel');
+const resultBonus = $('resultBonus');
+const resultDetail = $('resultDetail');
+
+// ================================================================
+//  5. 渲染函数
+// ================================================================
+
+function renderMatches() {
+    if (!state.matches.length) {
+        matchList.innerHTML = '<div class="empty-state">暂无比赛数据</div>';
+        matchCount.textContent = '0 场';
+        return;
+    }
+    matchCount.textContent = state.matches.length + ' 场';
+    let html = '';
+    state.matches.forEach(m => {
+        const isSelected = (type) => state.selected.some(s => s.matchId === m.id && s.type === type);
+        html += `
+            <div class="match-card">
+                <div class="match-header">
+                    <span class="match-teams">${m.home_team} <span class="vs">VS</span> ${m.away_team}</span>
+                    <span class="match-time">${m.match_time || ''}</span>
+                </div>
+                <div class="odds-row">
+                    <button class="odds-btn ${isSelected('win') ? 'selected' : ''}" data-matchid="${m.id}" data-type="win" data-odds="${m.win_odds}">
+                        <span class="label">胜</span> <span class="value">${m.win_odds || '-'}</span>
+                    </button>
+                    <button class="odds-btn ${isSelected('draw') ? 'selected' : ''}" data-matchid="${m.id}" data-type="draw" data-odds="${m.draw_odds}">
+                        <span class="label">平</span> <span class="value">${m.draw_odds || '-'}</span>
+                    </button>
+                    <button class="odds-btn ${isSelected('lose') ? 'selected' : ''}" data-matchid="${m.id}" data-type="lose" data-odds="${m.lose_odds}">
+                        <span class="label">负</span> <span class="value">${m.lose_odds || '-'}</span>
+                    </button>
+                    ${m.handicap ? `<span style="font-size:13px;color:#94a3b8;margin-left:4px;">让球 ${m.handicap}</span>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    matchList.innerHTML = html;
+
+    matchList.querySelectorAll('.odds-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const matchId = btn.dataset.matchid;
+            const type = btn.dataset.type;
+            const odds = parseFloat(btn.dataset.odds);
+            if (isNaN(odds) || odds <= 0) return;
+            toggleSelection(matchId, type, odds);
+        });
+    });
+}
+
+function renderPassTypes() {
+    const types = ['2串1', '3串1', '4串1', '5串1', '6串1', '7串1', '8串1',
+                   '3串4', '4串5', '4串11', '5串16', '5串26',
+                   '6串20', '6串35', '6串42', '6串57'];
+    let html = '';
+    types.forEach(t => {
+        const active = t === state.passType ? 'active' : '';
+        html += `<button class="pass-btn ${active}" data-pass="${t}">${t}</button>`;
+    });
+    passGrid.innerHTML = html;
+    passGrid.querySelectorAll('.pass-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.passType = btn.dataset.pass;
+            renderPassTypes();
+            updateResult();
+        });
+    });
+}
+
+function renderSelected() {
+    if (!state.selected.length) {
+        selectedList.innerHTML = '<div class="empty-state">点击左侧比赛赔率添加</div>';
+        selectedCount.textContent = '0 场';
+        return;
+    }
+    const grouped = {};
+    state.selected.forEach(s => {
+        if (!grouped[s.matchId]) grouped[s.matchId] = [];
+        grouped[s.matchId].push(s);
+    });
+    const matchMap = {};
+    state.matches.forEach(m => { matchMap[m.id] = m; });
+
+    let html = '';
+    Object.keys(grouped).forEach(mid => {
+        const match = matchMap[mid];
+        const label = match ? `${match.home_team} VS ${match.away_team}` : mid;
+        const items = grouped[mid].map(s => `${s.label}(${s.odds})`).join('、');
+        html += `
+            <div class="selected-item">
+                <span><strong>${label}</strong> ${items}</span>
+                <button class="remove" data-matchid="${mid}">✕</button>
+            </div>
+        `;
+    });
+    selectedList.innerHTML = html;
+    selectedCount.textContent = state.selected.length + ' 场';
+
+    selectedList.querySelectorAll('.remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mid = btn.dataset.matchid;
+            state.selected = state.selected.filter(s => s.matchId !== mid);
             renderSelected();
-            updateOddsHighlight();
-        }
-        
-        function renderSelected() {
-            const container = document.getElementById('selectedList');
-            if (!container) return;
-            if (selectedMatches.length === 0) { container.innerHTML = '<div class="selected-empty">👆 点击左侧赔率添加比赛</div>'; document.getElementById('resultBox').style.display = 'none'; return; }
-            let html = '';
-            selectedMatches.forEach((m, idx) => {
-                html += '<div class="selected-match"><div class="info"><span style="font-size:11px;color:#6b7280;">' + (idx+1) + '</span><span style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(m.teams) + '</span><span style="font-size:12px;color:' + (m.result==='胜'?'#22c55e':m.result==='平'?'#fbbf24':'#ef4444') + ';">' + m.result + '</span><span class="odds-val">' + m.odds + '</span></div><button class="remove-selected" onclick="removeSelected(' + idx + ')">✕</button></div>';
-            });
-            container.innerHTML = html;
-        }
-        
-        function removeSelected(idx) { selectedMatches.splice(idx, 1); renderSelected(); updateOddsHighlight(); document.getElementById('resultBox').style.display = 'none'; }
-        
-        function updateOddsHighlight() {
-            document.querySelectorAll('.odds').forEach(el => el.classList.remove('selected'));
-            selectedMatches.forEach(m => {
-                document.querySelectorAll('.match-row').forEach(row => {
-                    const id = row.querySelector('.id')?.textContent;
-                    if (id === m.id) {
-                        const oddsEls = row.querySelectorAll('.odds');
-                        const resultMap = { '胜': 0, '平': 1, '负': 2 };
-                        const idx = resultMap[m.result];
-                        if (idx !== undefined && oddsEls[idx]) { oddsEls[idx].classList.add('selected'); }
-                    }
-                });
-            });
-        }
-        
-        document.getElementById('clearSelected').addEventListener('click', function() { selectedMatches = []; renderSelected(); updateOddsHighlight(); document.getElementById('resultBox').style.display = 'none'; });
-        document.querySelectorAll('#passGrid button').forEach(btn => { btn.addEventListener('click', function() { document.querySelectorAll('#passGrid button').forEach(b => b.classList.remove('active')); this.classList.add('active'); }); });
-        document.getElementById('calcBtn').addEventListener('click', function() {
-            if (selectedMatches.length < 2) { alert('至少选择2场比赛（当前已选 ' + selectedMatches.length + ' 场）'); return; }
-            const odds = selectedMatches.map(m => m.odds);
-            const activeBtn = document.querySelector('#passGrid button.active');
-            const passType = activeBtn ? activeBtn.dataset.pass : '3串1';
-            const combined = odds.reduce((a, b) => a * b, 1);
-            const prize = 2 * combined;
-            document.getElementById('resultPass').textContent = passType;
-            document.getElementById('resultCount').textContent = selectedMatches.length + ' 场';
-            document.getElementById('resultPrize').textContent = prize.toFixed(2) + ' 元';
-            document.getElementById('resultOdds').textContent = combined.toFixed(2);
-            document.getElementById('resultBox').style.display = 'block';
+            renderMatches();
+            updateResult();
         });
-        
-        window.selectMatch = selectMatch;
-        window.removeSelected = removeSelected;
-        window.toggleGroup = toggleGroup;
-        
-        // 初始化：使用嵌入的数据
-        document.addEventListener('DOMContentLoaded', function() {
-            const matches = window.MATCH_DATA || [];
-            renderMatches(matches);
-            console.log('✅ 加载完成，共 ' + matches.length + ' 场（嵌入数据）');
-        });
-    </script>
+    });
+}
+
+// ================================================================
+//  6. 核心操作函数
+// ================================================================
+
+function toggleSelection(matchId, type, odds) {
+    const idx = state.selected.findIndex(s => s.matchId === matchId && s.type === type);
+    if (idx >= 0) {
+        state.selected.splice(idx, 1);
+    } else {
+        const labelMap = { win: '胜', draw: '平', lose: '负' };
+        state.selected.push({ matchId, type, odds, label: labelMap[type] || type });
+    }
+    renderMatches();
+    renderSelected();
+    updateResult();
+}
+
+function clearAll() {
+    state.selected = [];
+    renderMatches();
+    renderSelected();
+    updateResult();
+}
+
+// ================================================================
+//  7. 计算奖金（使用新组合算法）
+// ================================================================
+
+function calculateTotalBets() {
+    if (state.selected.length === 0) return 0;
+
+    const groups = {};
+    state.selected.forEach(s => {
+        if (!groups[s.matchId]) groups[s.matchId] = [];
+        groups[s.matchId].push(s);
+    });
+
+    const matchIds = Object.keys(groups);
+    const matchCounts = matchIds.map(id => groups[id].length);
+
+    return calculateMxNCombinations(matchIds, matchCounts, state.passType);
+}
+
+function calculateBonus() {
+    if (state.selected.length === 0) return { total: 0, bets: 0 };
+
+    const groups = {};
+    state.selected.forEach(s => {
+        if (!groups[s.matchId]) groups[s.matchId] = [];
+        groups[s.matchId].push(s);
+    });
+
+    const matchIds = Object.keys(groups);
+    const passParts = state.passType.match(/(\d+)串(\d+)/);
+    if (!passParts) return { total: 0, bets: 0 };
+    const m = parseInt(passParts[1]);
+
+    if (matchIds.length < m) return { total: 0, bets: 0 };
+
+    const isStandard = state.passType.endsWith('串1');
+    const allCombos = getCombinations(matchIds, m);
+
+    let totalOdds = 0;
+    let totalBets = 0;
+
+    if (isStandard) {
+        for (const combo of allCombos) {
+            let comboOdds = 1;
+            let comboBets = 1;
+            for (const id of combo) {
+                const matchOdds = groups[id].map(s => s.odds);
+                comboOdds *= matchOdds.reduce((a, b) => a * b, 1);
+                comboBets *= groups[id].length;
+            }
+            totalOdds += comboOdds;
+            totalBets += comboBets;
+        }
+    } else {
+        const subs = getSubCombinationsForMxN(state.passType);
+        for (const sub of subs) {
+            const subCombos = getCombinations(matchIds, sub.m);
+            for (const combo of subCombos) {
+                let comboOdds = 1;
+                let comboBets = 1;
+                for (const id of combo) {
+                    const matchOdds = groups[id].map(s => s.odds);
+                    comboOdds *= matchOdds.reduce((a, b) => a * b, 1);
+                    comboBets *= groups[id].length;
+                }
+                totalOdds += comboOdds;
+                totalBets += comboBets;
+            }
+        }
+    }
+
+    return { total: totalOdds, bets: totalBets };
+}
+
+function updateResult() {
+    const bets = calculateTotalBets();
+    if (bets === 0) {
+        resultPanel.style.display = 'none';
+        return;
+    }
+
+    const { total, bets: totalBets } = calculateBonus();
+    const stake = 2;
+    const bonus = total * stake;
+
+    resultPanel.style.display = 'block';
+    resultDetail.textContent = `投注 ${stake} 元 × ${totalBets} 注 = ${stake * totalBets} 元`;
+    resultBonus.innerHTML = `${bonus.toFixed(2)} <span class="unit">元</span>`;
+}
+
+// ================================================================
+//  8. 初始化
+// ================================================================
+
+clearBtn.addEventListener('click', clearAll);
+calcBtn.addEventListener('click', updateResult);
+
+renderMatches();
+renderPassTypes();
+renderSelected();
+</script>
 </body>
 </html>

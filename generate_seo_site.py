@@ -880,6 +880,7 @@ def generate_calculator_page():
     """
     Generate calculator.html with embedded match data for SEO.
     The match data is embedded as window.MATCH_DATA so crawlers can see it.
+    Uses the new calculator.html template with improved combination algorithm.
     """
     # Fetch today's pending matches
     matches = fetch_today_matches()
@@ -896,7 +897,16 @@ def generate_calculator_page():
     # Convert matches to JSON for embedding
     matches_json = json.dumps(matches, default=str, ensure_ascii=False)
     
-    html = f'''<!DOCTYPE html>
+    # Read the calculator template
+    template_path = os.path.join(os.path.dirname(__file__), 'calculator.html')
+    if os.path.exists(template_path):
+        with open(template_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+        # Replace the placeholder with actual data
+        html = html.replace('__MATCH_DATA_PLACEHOLDER__', matches_json)
+    else:
+        # Fallback: generate minimal HTML if template not found
+        html = f'''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
