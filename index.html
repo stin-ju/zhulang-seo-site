@@ -559,7 +559,7 @@ async function loadPredictions() {
         const batch = matchIds.slice(i, i + batchSize);
         const orFilter = 'or=(' + batch.map(function (id) { return 'match_id.eq.' + id; }).join(',') + ')';
         const data = await sbQuery('predictions',
-            'match_id,ai_name,spf,handicap_spf,score,goals,half_full,hit_handicap,hit_score,hit_goals,hit_half,total_hits',
+            'match_id,ai_name,spf,handicap_spf,score,goals,half_full,total_points,score_diff_range,hit_handicap,hit_score,hit_goals,hit_half,total_hits',
             orFilter
         );
         all.push(...(data || []));
@@ -588,6 +588,8 @@ function computeVotes(matchId) {
             spf: spf,
             handicap: p.handicap_spf,
             score: p.score,
+            total_points: p.total_points,
+            score_diff_range: p.score_diff_range,
             goals: p.goals,
             half_full: p.half_full,
             hit_handicap: p.hit_handicap,
@@ -641,11 +643,12 @@ function renderDateBar() {
 function renderPredictionTable(details, match, isDone) {
     const isBasketball = match.sport_type === 'basketball';
     
-    // 足球5维度，篮球3维度
+    // 足球5维度，篮球4维度
     const dims = isBasketball ? [
         { key: 'spf', label: '胜负' },
         { key: 'handicap', label: `让分(${match.handicap || '?'})` },
-        { key: 'score', label: '比分' }
+        { key: 'total_points', label: '大小分' },
+        { key: 'score_diff_range', label: '胜分差' }
     ] : [
         { key: 'spf', label: '胜平负' },
         { key: 'handicap', label: `让球(${match.handicap || '?'})` },
@@ -664,6 +667,16 @@ function renderPredictionTable(details, match, isDone) {
         const a = parseInt(match.away_score);
         if (!isNaN(h) && !isNaN(a)) {
             actualBasketballResult = h > a ? '主胜' : '主负';
+        }
+    }
+    
+    // 篮球实际大小分结果
+    let actualTotalPointsResult = null;
+    if (isBasketball && isDone && match.total_points_odds) {
+        const actualTotal = parseInt(match.home_score) + parseInt(match.away_score);
+        const line = parseFloat(match.total_points_odds);
+        if (!isNaN(actualTotal) && !isNaN(line)) {
+            actualTotalPointsResult = actualTotal > line ? '大分' : '小分';
         }
     }
     
@@ -710,14 +723,12 @@ function renderPredictionTable(details, match, isDone) {
         // 让球/让分维度 - 实时计算命中
         let handicapHit = false;
         if (isDone && d.handicap && match.handicap !== null && match.home_score !== null && match.away_score !== null) {
-            // 计算让球后的比分（确保是数字类型）
             const homeScore = parseInt(match.home_score) || 0;
             const awayScore = parseInt(match.away_score) || 0;
-            const handicap = parseInt(match.handicap) || 0;
+            const handicap = parseFloat(match.handicap) || 0;
             const adjustedHomeScore = homeScore + handicap;
             const adjustedAwayScore = awayScore;
             
-            // 确定让球结果
             let actualHandicapResult = '';
             if (adjustedHomeScore > adjustedAwayScore) {
                 actualHandicapResult = '让胜';
@@ -727,8 +738,6 @@ function renderPredictionTable(details, match, isDone) {
                 actualHandicapResult = '让负';
             }
             
-            // 比较预测与实际结果
-            // 预测格式可能是 "让胜"/"让平"/"让负" 或 "胜"/"平"/"负"
             const pred = d.handicap;
             if (pred.includes('胜') && actualHandicapResult === '让胜') handicapHit = true;
             else if (pred.includes('平') && actualHandicapResult === '让平') handicapHit = true;
@@ -736,23 +745,33 @@ function renderPredictionTable(details, match, isDone) {
         }
         html += renderPredCell(d.handicap, handicapHit, isDone);
 
-        // 比分维度 - 自己计算命中
-        let scoreHit = false;
-        if (isDone && d.score) {
-            if (isBasketball) {
-                // 篮球比分格式: "主胜6-10" 或 "主负6-10"
-                // 表示：主胜/主负 + 分差范围
-                const scoreMatch = d.score.match(/(主胜|主负)(\d+)-(\d+)/);
-                if (scoreMatch) {
-                    const predWinner = scoreMatch[1]; // 主胜 or 主负
-                    const minDiff = parseInt(scoreMatch[2]);
-                    const maxDiff = parseInt(scoreMatch[3]);
-                    const actualDiff = Math.abs(match.home_score - match.away_score);
-                    const actualWinner = match.home_score > match.away_score ? '主胜' : '主负';
-                    scoreHit = (predWinner === actualWinner && actualDiff >= minDiff && actualDiff <= maxDiff);
+        if (isBasketball) {
+            // 篮球：大小分维度
+            let totalPointsHit = false;
+            if (isDone && d.total_points && actualTotalPointsResult) {
+                totalPointsHit = d.total_points === actualTotalPointsResult;
+            }
+            html += renderPredCell(d.total_points, totalPointsHit, isDone);
+
+            // 篮球：胜分差维度
+            let scoreDiffHit = false;
+            if (isDone && d.score_diff_range) {
+                // 格式: "主胜6-10" 或 "主负6-10"
+                const sdMatch = d.score_diff_range.match(/(主胜|主负)(\d+)-(\d+)/);
+                if (sdMatch) {
+                    const predWinner = sdMatch[1];
+                    const minDiff = parseInt(sdMatch[2]);
+                    const maxDiff = parseInt(sdMatch[3]);
+                    const actualDiff = Math.abs(parseInt(match.home_score) - parseInt(match.away_score));
+                    const actualWinner = parseInt(match.home_score) > parseInt(match.away_score) ? '主胜' : '主负';
+                    scoreDiffHit = (predWinner === actualWinner && actualDiff >= minDiff && actualDiff <= maxDiff);
                 }
-            } else {
-                // 足球比分格式: "1-2" 或 "2-1"
+            }
+            html += renderPredCell(d.score_diff_range, scoreDiffHit, isDone);
+        } else {
+            // 足球：比分维度
+            let scoreHit = false;
+            if (isDone && d.score) {
                 const scoreMatch = d.score.match(/(\d+)-(\d+)/);
                 if (scoreMatch) {
                     const predHome = parseInt(scoreMatch[1]);
@@ -760,20 +779,16 @@ function renderPredictionTable(details, match, isDone) {
                     scoreHit = (predHome === match.home_score && predAway === match.away_score);
                 }
             }
-        }
-        html += renderPredCell(d.score, scoreHit, isDone);
+            html += renderPredCell(d.score, scoreHit, isDone);
 
-        // 进球数维度（仅足球）
-        if (!isBasketball) {
+            // 进球数维度（仅足球）
             let goalsHit = false;
             if (isDone && actualGoals !== null && d.goals !== null) {
                 goalsHit = parseInt(d.goals) === actualGoals;
             }
             html += renderPredCell(d.goals, goalsHit, isDone);
-        }
 
-        // 半全场维度（仅足球）
-        if (!isBasketball) {
+            // 半全场维度（仅足球）
             let halfFullHit = false;
             if (isDone && actualHalfFull && d.half_full) {
                 halfFullHit = d.half_full === actualHalfFull;
@@ -781,13 +796,43 @@ function renderPredictionTable(details, match, isDone) {
             html += renderPredCell(d.half_full, halfFullHit, isDone);
         }
 
-        // 命中总数 - 自己计算
+        // 命中总数
         if (isDone) {
             let hits = 0;
             if (spfHit) hits++;
             if (handicapHit) hits++;
-            if (scoreHit) hits++;
-            if (!isBasketball) {
+            if (isBasketball) {
+                // 篮球：大小分 + 胜分差
+                let totalPointsHit = false;
+                if (d.total_points && actualTotalPointsResult) {
+                    totalPointsHit = d.total_points === actualTotalPointsResult;
+                }
+                if (totalPointsHit) hits++;
+                
+                let scoreDiffHit = false;
+                if (d.score_diff_range) {
+                    const sdMatch = d.score_diff_range.match(/(主胜|主负)(\d+)-(\d+)/);
+                    if (sdMatch) {
+                        const predWinner = sdMatch[1];
+                        const minDiff = parseInt(sdMatch[2]);
+                        const maxDiff = parseInt(sdMatch[3]);
+                        const actualDiff = Math.abs(parseInt(match.home_score) - parseInt(match.away_score));
+                        const actualWinner = parseInt(match.home_score) > parseInt(match.away_score) ? '主胜' : '主负';
+                        scoreDiffHit = (predWinner === actualWinner && actualDiff >= minDiff && actualDiff <= maxDiff);
+                    }
+                }
+                if (scoreDiffHit) hits++;
+            } else {
+                // 足球：比分 + 进球数 + 半全场
+                let scoreHit = false;
+                if (d.score) {
+                    const scoreMatch = d.score.match(/(\d+)-(\d+)/);
+                    if (scoreMatch) {
+                        scoreHit = (parseInt(scoreMatch[1]) === match.home_score && parseInt(scoreMatch[2]) === match.away_score);
+                    }
+                }
+                if (scoreHit) hits++;
+                
                 let goalsHit = false;
                 if (actualGoals !== null && d.goals !== null) {
                     goalsHit = parseInt(d.goals) === actualGoals;
@@ -800,7 +845,7 @@ function renderPredictionTable(details, match, isDone) {
                 }
                 if (halfFullHit) hits++;
             }
-            const totalDims = isBasketball ? 3 : 5;
+            const totalDims = isBasketball ? 4 : 5;
             html += '<td class="hits-col"><span class="hits-num">' + hits + '/' + totalDims + '</span></td>';
         }
 
