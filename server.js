@@ -1,3 +1,4 @@
+require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -26,8 +27,8 @@ const MIME_TYPES = {
 
 function getSupabaseConfig() {
   return {
-    url: process.env.COZE_SUPABASE_URL || 'https://br-vocal-kea-f584f76e.supabase2.aidap-global.cn-beijing.volces.com',
-    key: process.env.COZE_SUPABASE_ANON_KEY || ''
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY
   };
 }
 
