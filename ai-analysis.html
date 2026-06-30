@@ -5231,14 +5231,9 @@ document.addEventListener('DOMContentLoaded', function() {
         nameRow.appendChild(toggleBtn);
       }
       
-      // DeepSeek默认展开，其他默认折叠
-      if (aiName.includes('DeepSeek')) {
-        analysisBody.style.display = '';
-        toggleBtn.textContent = '收起';
-      } else {
-        analysisBody.style.display = 'none';
-        toggleBtn.textContent = '展开';
-      }
+      // 全部默认折叠
+      analysisBody.style.display = 'none';
+      toggleBtn.textContent = '展开';
     }
   });
 
@@ -5261,24 +5256,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         expandAllBtn.textContent = '收起全部';
       } else {
-        // 收起全部，但保留DeepSeek展开
+        // 收起全部
         const matchSections = document.querySelectorAll('.rounded-lg.bg-elevated\\/50');
         matchSections.forEach((section, index) => {
           const content = section.querySelector('.mt-3');
           const table = section.querySelector('.overflow-x-auto');
-          if (index > 0) {
-            if (content) content.style.display = 'none';
-            if (table) table.style.display = 'none';
-          }
+          if (content) content.style.display = 'none';
+          if (table) table.style.display = 'none';
         });
         
         const aiCards = document.querySelectorAll('.rounded-lg.bg-elevated\\/30');
         aiCards.forEach(card => {
-          const aiName = card.querySelector('.text-sm.font-medium')?.textContent || '';
           const analysisBody = card.querySelector('.commentary-body');
-          if (analysisBody && !aiName.includes('DeepSeek')) {
+          if (analysisBody) {
             analysisBody.style.display = 'none';
           }
+        });
+        
+        // 更新所有按钮文字
+        document.querySelectorAll('.rounded-lg.bg-elevated\\/50 button, .rounded-lg.bg-elevated\\/30 button').forEach(btn => {
+          if (btn.textContent === '收起') btn.textContent = '展开';
         });
         
         expandAllBtn.textContent = '展开全部';
