@@ -157,6 +157,119 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify(data));
       return;
     }
+
+    // ============ New API Routes for AI Analysis Page ============
+
+    // GET /api/football-recent - Latest date's matches + predictions
+    if (pathname === '/api/football-recent' && req.method === 'GET') {
+      // Get the latest match date
+      const matches = await querySupabase('matches', {
+        select: '*',
+        order: 'match_date.desc,match_time.asc',
+        limit: '100'
+      });
+      if (matches.length === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ date: null, matches: [], predictions: [] }));
+        return;
+      }
+      const latestDate = matches[0].match_date;
+      const recentMatches = matches.filter(m => m.match_date === latestDate);
+      const matchIds = recentMatches.map(m => m.id);
+      
+      // Get predictions for these matches
+      const allPredictions = await querySupabase('predictions', {
+        select: '*',
+        order: 'id.asc'
+      });
+      const recentPredictions = allPredictions.filter(p => matchIds.includes(p.match_id));
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ date: latestDate, matches: recentMatches, predictions: recentPredictions }));
+      return;
+    }
+
+    // GET /api/football-history - Historical dates' matches + predictions
+    if (pathname === '/api/football-history' && req.method === 'GET') {
+      const matches = await querySupabase('matches', {
+        select: '*',
+        order: 'match_date.desc,match_time.asc'
+      });
+      const allPredictions = await querySupabase('predictions', {
+        select: '*',
+        order: 'id.asc'
+      });
+      
+      // Group by date
+      const byDate = {};
+      for (const m of matches) {
+        if (!byDate[m.match_date]) byDate[m.match_date] = [];
+        byDate[m.match_date].push(m);
+      }
+      
+      // Get all dates except the latest
+      const dates = Object.keys(byDate).sort().reverse();
+      const latestDate = dates[0];
+      const historyDates = dates.slice(1);
+      
+      const result = historyDates.map(date => ({
+        date,
+        matches: byDate[date],
+        predictions: allPredictions.filter(p => byDate[date].some(m => m.id === p.match_id))
+      }));
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    // GET /api/parlay-latest - Latest date's chain_bets
+    if (pathname === '/api/parlay-latest' && req.method === 'GET') {
+      const chainBets = await querySupabase('chain_bets', {
+        select: '*',
+        order: 'bet_date.desc,ai_name.asc'
+      });
+      if (chainBets.length === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ date: null, records: [] }));
+        return;
+      }
+      const latestDate = chainBets[0].bet_date;
+      const latestRecords = chainBets.filter(r => r.bet_date === latestDate);
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ date: latestDate, records: latestRecords }));
+      return;
+    }
+
+    // GET /api/parlay-history - Historical chain_bets
+    if (pathname === '/api/parlay-history' && req.method === 'GET') {
+      const chainBets = await querySupabase('chain_bets', {
+        select: '*',
+        order: 'bet_date.desc,ai_name.asc'
+      });
+      
+      // Group by date
+      const byDate = {};
+      for (const r of chainBets) {
+        if (!byDate[r.bet_date]) byDate[r.bet_date] = [];
+        byDate[r.bet_date].push(r);
+      }
+      
+      // Get all dates except the latest
+      const dates = Object.keys(byDate).sort().reverse();
+      const latestDate = dates[0];
+      const historyDates = dates.slice(1);
+      
+      const result = historyDates.map(date => ({
+        date,
+        records: byDate[date]
+      }));
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(result));
+      return;
+    }
   } catch (err) {
     console.error('API error:', err);
     res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
