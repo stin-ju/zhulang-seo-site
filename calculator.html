@@ -101,6 +101,8 @@
         .action-row .btn-primary:hover { background:#2a5f8a; }
         .action-row .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
         .action-row .btn-secondary:hover { background:#e5e7eb; }
+        .action-row .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .action-row .btn-secondary:disabled:hover { background: #f3f4f6; }
         .footer-tip { max-width: 1280px; margin: 0 auto; padding: 0 16px 16px; font-size: 11px; color: #9ca3af; line-height: 1.8; }
         .footer-tip strong { color:#6b7280; }
     </style>
@@ -174,8 +176,8 @@
                 </div>
                 <div class="action-row">
                     <button class="btn btn-primary" id="confirmBtn">📋 确认方案</button>
-                    <button class="btn btn-secondary" id="saveBtn">💾 保存策略</button>
-                    <button class="btn btn-secondary" id="emailBtn">📧 发送邮箱</button>
+                    <button class="btn btn-secondary" id="saveBtn" disabled title="会员功能即将上线">💾 保存策略 🔒</button>
+                    <button class="btn btn-secondary" id="emailBtn" disabled title="会员功能即将上线">📧 发送邮箱 🔒</button>
                 </div>
             </div>
         </div>
@@ -631,11 +633,11 @@
             alert('✅ 确认成功！' + isMix + '\n过关：' + state.passType + '\n注数：' + betCount.textContent + '\n金额：' + betAmount.textContent + '\n奖金：' + bonusAmount.textContent);
         });
         saveBtn.addEventListener('click', () => {
-            if (state.selections.length < 2) { alert('请至少选择2场比赛'); return; }
-            console.log('💾 保存策略:', { selections: state.selections, passType: state.passType, multiplier: state.multiplier });
-            alert('💾 策略已保存（控制台可查看）');
+            alert('💾 保存策略功能即将上线，敬请期待！');
         });
-        emailBtn.addEventListener('click', () => { alert('📧 发送到邮箱（功能预留）'); });
+        emailBtn.addEventListener('click', () => {
+            alert('📧 发送邮箱功能即将上线，敬请期待！');
+        });
         multiplierInput.addEventListener('input', () => {
             let val = parseInt(multiplierInput.value) || 1;
             if (val < 1) val = 1;
