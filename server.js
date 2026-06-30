@@ -53,6 +53,11 @@ function getSupabaseConfig() {
 
 async function querySupabase(table, params = {}) {
   const { url, key } = getSupabaseConfig();
+  if (!key) {
+    console.error('Supabase anon key is not set');
+    return [];
+  }
+  console.error('Querying Supabase:', url, 'key:', key.substring(0, 20) + '...');
   const queryStr = new URLSearchParams();
   if (params.select) queryStr.set('select', params.select);
   if (params.order) queryStr.set('order', params.order);
@@ -339,6 +344,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}/`);
-  console.log(`Supabase URL: ${getSupabaseConfig().url}`);
+  console.log(`Supabase URL: ${getSupabaseConfig().url}`); console.log(`Supabase Key: ${getSupabaseConfig().key ? getSupabaseConfig().key.substring(0, 20) + '...' : 'not set'}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
 });
