@@ -710,9 +710,12 @@ function renderPredictionTable(details, match, isDone) {
         // 让球/让分维度 - 实时计算命中
         let handicapHit = false;
         if (isDone && d.handicap && match.handicap !== null && match.home_score !== null && match.away_score !== null) {
-            // 计算让球后的比分
-            const adjustedHomeScore = match.home_score + match.handicap;
-            const adjustedAwayScore = match.away_score;
+            // 计算让球后的比分（确保是数字类型）
+            const homeScore = parseInt(match.home_score) || 0;
+            const awayScore = parseInt(match.away_score) || 0;
+            const handicap = parseInt(match.handicap) || 0;
+            const adjustedHomeScore = homeScore + handicap;
+            const adjustedAwayScore = awayScore;
             
             // 确定让球结果
             let actualHandicapResult = '';
