@@ -707,8 +707,30 @@ function renderPredictionTable(details, match, isDone) {
         }
         html += renderPredCell(d.spf, spfHit, isDone);
 
-        // 让球/让分维度
-        const handicapHit = isDone && d.hit_handicap === true;
+        // 让球/让分维度 - 实时计算命中
+        let handicapHit = false;
+        if (isDone && d.handicap && match.handicap !== null && match.home_score !== null && match.away_score !== null) {
+            // 计算让球后的比分
+            const adjustedHomeScore = match.home_score + match.handicap;
+            const adjustedAwayScore = match.away_score;
+            
+            // 确定让球结果
+            let actualHandicapResult = '';
+            if (adjustedHomeScore > adjustedAwayScore) {
+                actualHandicapResult = '让胜';
+            } else if (adjustedHomeScore === adjustedAwayScore) {
+                actualHandicapResult = '让平';
+            } else {
+                actualHandicapResult = '让负';
+            }
+            
+            // 比较预测与实际结果
+            // 预测格式可能是 "让胜"/"让平"/"让负" 或 "胜"/"平"/"负"
+            const pred = d.handicap;
+            if (pred.includes('胜') && actualHandicapResult === '让胜') handicapHit = true;
+            else if (pred.includes('平') && actualHandicapResult === '让平') handicapHit = true;
+            else if (pred.includes('负') && actualHandicapResult === '让负') handicapHit = true;
+        }
         html += renderPredCell(d.handicap, handicapHit, isDone);
 
         // 比分维度 - 自己计算命中
