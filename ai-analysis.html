@@ -5090,13 +5090,13 @@
 <script>
 // AI分析页面折叠功能
 document.addEventListener('DOMContentLoaded', function() {
-  // 总评区域默认展开（不折叠）
-  // const summaryDetails = document.querySelectorAll('details[open]');
-  // summaryDetails.forEach(detail => {
-  //   if (detail.querySelector('summary')?.textContent.includes('AI总评')) {
-  //     detail.removeAttribute('open');
-  //   }
-  // });
+  // 总评区域默认折叠
+  const summaryDetails = document.querySelectorAll('details[open]');
+  summaryDetails.forEach(detail => {
+    if (detail.querySelector('summary')?.textContent.includes('AI总评')) {
+      detail.removeAttribute('open');
+    }
+  });
 
   // 为每场比赛添加折叠功能
   const matchSections = document.querySelectorAll('.rounded-lg.bg-elevated\\/50');
