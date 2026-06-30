@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
+Disallow: /matches/
 Sitemap: https://zhulang.coze.site/sitemap.xml

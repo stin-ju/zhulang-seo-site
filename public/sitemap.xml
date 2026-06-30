@@ -6,223 +6,128 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches</loc>
+    <loc>https://zhulang.coze.site/brief.html</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/betting</loc>
+    <loc>https://zhulang.coze.site/basketball.html</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/%E6%B7%B7%E5%85%83</loc>
+    <loc>https://zhulang.coze.site/ai-analysis.html</loc>
     <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://zhulang.coze.site/brief-2026-06-12.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/%E8%B1%86%E5%8C%85</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://zhulang.coze.site/brief-2026-06-13.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/%E6%89%A3%E5%AD%90%EF%BC%88%E7%9A%AE%E7%9A%AE%EF%BC%89</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://zhulang.coze.site/brief-2026-06-14.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/%E6%96%87%E5%BF%83</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://zhulang.coze.site/brief-2026-06-15.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/%E6%99%BA%E8%B0%B1%E6%B8%85%E8%A8%80</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://zhulang.coze.site/brief-2026-06-16.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/DeepSeek</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://zhulang.coze.site/brief-2026-06-17.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/%E5%A4%A9%E5%B7%A5</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://zhulang.coze.site/brief-2026-06-18.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/MiniMax</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://zhulang.coze.site/brief-2026-06-19.html</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/ai/%E5%8D%83%E9%97%AE</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/ai/Kimi</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%9B%9B001</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-20.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%9B%9B002</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-21.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%94003</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-22.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%94004</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-23.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%85%AD005</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-24.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%85%AD006</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-25.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%85%AD007</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-26.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%85%AD008</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-27.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E6%97%A5009</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-28.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E6%97%A5010</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-29.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E6%97%A5011</loc>
+    <loc>https://zhulang.coze.site/brief-2026-06-30.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E6%97%A5012</loc>
+    <loc>https://zhulang.coze.site/brief-2026-07-01.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%80013</loc>
+    <loc>https://zhulang.coze.site/brief-2026-07-02.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%80014</loc>
+    <loc>https://zhulang.coze.site/brief-2026-07-03.html</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%80015</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%80016</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%8C017</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%8C018</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%8C019</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%8C020</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%89021</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%89022</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%89023</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%B8%89024</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%9B%9B025</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%9B%9B026</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%9B%9B027</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E5%9B%9B028</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%94029</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%94030</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%94031</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://zhulang.coze.site/matches/%E5%91%A8%E4%BA%94032</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
 </urlset>
