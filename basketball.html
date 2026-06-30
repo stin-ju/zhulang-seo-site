@@ -141,92 +141,259 @@
 <!-- 今日篮球比赛详情 -->
 <section id="matches" class="mb-8" aria-label="赛程">
   <h2 class="text-lg font-bold mb-4">📋 今日赛程</h2>
-  <details open class="rounded-xl bg-card/50 border border-border overflow-hidden mb-4">
-      <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-        <span class="chevron text-accent text-sm">▶</span>
-        <h2 class="font-bold text-lg">6月29日 周一</h2>
-        <span class="text-xs text-muted">4 场</span>
-      </summary>
-      <div class="p-4 pt-0 grid gap-3 grid-cols-1 sm:grid-cols-2">
-        
-        <article class="rounded-xl bg-card border border-border p-4">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <time class="text-xs text-muted">06月29日 02:00</time>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+  <details open>
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h3 class="font-semibold">6月29日</h3>
+      <span class="text-xs text-muted">4场</span>
+    </summary>
+    <div class="p-4 pt-0 space-y-4">
+      <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-semibold">周日301 明尼苏达天猫VS达拉斯飞马</h4>
+        </div>
+        <div class="mt-3 space-y-1">
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#3b82f6">DS</span><span>DeepSeek</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:小分 胜分差:主胜6-10</span>
             </div>
-            <span class="text-xs text-muted">周日301</span>
-          </div>
-          <h3 class="text-base font-semibold mb-2">明尼苏达天猫VS达拉斯飞马</h3>
-          <div class="flex items-center justify-between text-sm">
-            <div class="text-muted">
-              让分 +3.5 · 总分 162.5
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>明尼苏达天猫主场作战，达拉斯飞马客场挑战。天猫近期状态稳定，主场优势明显。飞马客场作战能力有限，预计天猫能够取胜。</p>
             </div>
-            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
           </div>
-          <div class="mt-2 text-sm text-accent">AI共识：主胜 4/6</div>
-          
-          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主负1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr></tbody></table></div>
-        </article>
-        <article class="rounded-xl bg-card border border-border p-4">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <time class="text-xs text-muted">06月29日 03:00</time>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ef4444">MM</span><span>MiniMax</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主负 大小:小分 胜分差:主负1-5</span>
             </div>
-            <span class="text-xs text-muted">周日302</span>
-          </div>
-          <h3 class="text-base font-semibold mb-2">波特兰火焰VS华盛顿神秘人</h3>
-          <div class="flex items-center justify-between text-sm">
-            <div class="text-muted">
-              让分 -6.5 · 总分 165.5
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>达拉斯飞马虽然客场作战，但近期状态出色。天猫主场优势可能被高估，预计飞马能够爆冷取胜。</p>
             </div>
-            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
           </div>
-          <div class="mt-2 text-sm text-accent">AI共识：主胜 4/6</div>
-          
-          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center"></td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主胜11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主胜11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr></tbody></table></div>
-        </article>
-        <article class="rounded-xl bg-card border border-border p-4">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <time class="text-xs text-muted">06月29日 04:00</time>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#f59e0b">豆</span><span>豆包</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分 胜分差:主胜6-10</span>
             </div>
-            <span class="text-xs text-muted">周日303</span>
-          </div>
-          <h3 class="text-base font-semibold mb-2">拉斯维加斯王牌VS芝加哥天空</h3>
-          <div class="flex items-center justify-between text-sm">
-            <div class="text-muted">
-              让分 +7.5 · 总分 170.5
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>明尼苏达天猫主场作战，进攻火力强劲。达拉斯飞马防守端存在漏洞，预计天猫能够大胜。</p>
             </div>
-            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
           </div>
-          <div class="mt-2 text-sm text-accent">AI共识：主负 4/6</div>
-          
-          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center"></td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主负11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主负11-15</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主负</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主负</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主负6-10</td></tr></tbody></table></div>
-        </article>
-        <article class="rounded-xl bg-card border border-border p-4">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <time class="text-xs text-muted">06月29日 07:00</time>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-win/15 text-win">已确认</span>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#6366f1">ZP</span><span>智谱清言</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:小分 胜分差:主胜1-5</span>
             </div>
-            <span class="text-xs text-muted">周日304</span>
-          </div>
-          <h3 class="text-base font-semibold mb-2">纽约自由VS金州女武神</h3>
-          <div class="flex items-center justify-between text-sm">
-            <div class="text-muted">
-              让分 -1.5 · 总分 168.5
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>明尼苏达天猫主场优势明显，但达拉斯飞马防守出色。预计天猫小胜。</p>
             </div>
-            <div class="font-mono text-lg font-bold text-gray-100">vs</div>
           </div>
-          <div class="mt-2 text-sm text-accent">AI共识：主胜 6/6</div>
-          
-          <div class="mt-3 overflow-x-auto"><table class="w-full text-xs"><thead class="text-muted"><tr><th class="py-1 px-2 text-left">AI</th><th class="py-1 px-2 text-center">胜负</th><th class="py-1 px-2 text-center">让分</th><th class="py-1 px-2 text-center">大小分</th><th class="py-1 px-2 text-center">胜分差</th></tr></thead><tbody><tr class="border-t border-border/30"><td class="py-1.5 px-2">🔍 DeepSeek</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center"></td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">⚡ MiniMax</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🫘 豆包</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🧠 智谱</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">📖 文心</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">小分</td><td class="py-1.5 px-2 text-center">主胜1-5</td></tr><tr class="border-t border-border/30"><td class="py-1.5 px-2">🐾 扣子</td><td class="py-1.5 px-2 text-center">主胜</td><td class="py-1.5 px-2 text-center">让分主胜</td><td class="py-1.5 px-2 text-center">大分</td><td class="py-1.5 px-2 text-center">主胜6-10</td></tr></tbody></table></div>
-        </article>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ec4899">WX</span><span>文心</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:小分 胜分差:主胜6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>明尼苏达天猫主场作战，整体实力占优。达拉斯飞马客场作战能力有限，预计天猫能够取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#06b6d4">KZ</span><span>扣子（皮皮）</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主胜 大小:大分 胜分差:主负6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>达拉斯飞马虽然客场作战，但近期状态出色。天猫主场优势可能被高估，预计飞马能够爆冷取胜。</p>
+            </div>
+          </div>
+        </div>
       </div>
-    </details>
+      <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-semibold">周日302 波特兰火焰VS华盛顿神秘人</h4>
+        </div>
+        <div class="mt-3 space-y-1">
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#3b82f6">DS</span><span>DeepSeek</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主负 大小:大分</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>华盛顿神秘人客场作战，但整体实力占优。波特兰火焰主场优势有限，预计神秘人能够取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ef4444">MM</span><span>MiniMax</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分 胜分差:主胜6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>波特兰火焰主场作战，进攻火力强劲。华盛顿神秘人防守端存在漏洞，预计火焰能够大胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#f59e0b">豆</span><span>豆包</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主负 大小:小分 胜分差:主负6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>华盛顿神秘人客场作战，但整体实力占优。波特兰火焰主场优势有限，预计神秘人能够取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#6366f1">ZP</span><span>智谱清言</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分 胜分差:主胜11-15</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>波特兰火焰主场作战，进攻火力强劲。华盛顿神秘人防守端存在漏洞，预计火焰能够大胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ec4899">WX</span><span>文心</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分 胜分差:主胜11-15</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>波特兰火焰主场作战，整体实力占优。华盛顿神秘人客场作战能力有限，预计火焰能够大胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#06b6d4">KZ</span><span>扣子（皮皮）</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分 胜分差:主胜6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>波特兰火焰主场作战，进攻火力强劲。华盛顿神秘人防守端存在漏洞，预计火焰能够取胜。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-semibold">周日303 拉斯维加斯王牌VS芝加哥天空</h4>
+        </div>
+        <div class="mt-3 space-y-1">
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#3b82f6">DS</span><span>DeepSeek</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>拉斯维加斯王牌主场作战，整体实力占优。芝加哥天空客场作战能力有限，预计王牌能够取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ef4444">MM</span><span>MiniMax</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主负 大小:大分 胜分差:主负11-15</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>芝加哥天空虽然客场作战，但近期状态出色。拉斯维加斯王牌主场优势可能被高估，预计天空能够爆冷取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#f59e0b">豆</span><span>豆包</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主负 大小:大分 胜分差:主负11-15</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>芝加哥天空客场作战，但整体实力占优。拉斯维加斯王牌主场优势有限，预计天空能够取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#6366f1">ZP</span><span>智谱清言</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主胜 让:让分主负 大小:大分 胜分差:主负6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>拉斯维加斯王牌主场作战，但芝加哥天空防守出色。预计天空小胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ec4899">WX</span><span>文心</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主负 大小:大分 胜分差:主负6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>芝加哥天空客场作战，但整体实力占优。拉斯维加斯王牌主场优势有限，预计天空能够取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#06b6d4">KZ</span><span>扣子（皮皮）</span></span>
+              <span class="text-xs font-semibold text-lose bg-lose/10 px-2 py-0.5 rounded">胜:主负 让:让分主胜 大小:小分 胜分差:主负6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>芝加哥天空虽然客场作战，但近期状态出色。拉斯维加斯王牌主场优势可能被高估，预计天空能够爆冷取胜。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-lg bg-elevated/50 border border-border/50 p-4 mb-3">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-semibold">周日304 纽约自由VS金州女武神</h4>
+        </div>
+        <div class="mt-3 space-y-1">
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#3b82f6">DS</span><span>DeepSeek</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:小分</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>纽约自由主场作战，整体实力占优。金州女武神客场作战能力有限，预计自由能够取胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ef4444">MM</span><span>MiniMax</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:小分 胜分差:主胜1-5</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>纽约自由主场作战，防守出色。金州女武神进攻端存在漏洞，预计自由小胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#f59e0b">豆</span><span>豆包</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分 胜分差:主胜6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>纽约自由主场作战，进攻火力强劲。金州女武神防守端存在漏洞，预计自由能够大胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#6366f1">ZP</span><span>智谱清言</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:小分 胜分差:主胜1-5</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>纽约自由主场作战，防守出色。金州女武神进攻端存在漏洞，预计自由小胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#ec4899">WX</span><span>文心</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:小分 胜分差:主胜1-5</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>纽约自由主场作战，整体实力占优。金州女武神客场作战能力有限，预计自由小胜。</p>
+            </div>
+          </div>
+          <div class="rounded-lg bg-elevated/30 border border-border/40 p-3 mb-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="ai-logo"><span class="dot" style="background:#06b6d4">KZ</span><span>扣子（皮皮）</span></span>
+              <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">胜:主胜 让:让分主胜 大小:大分 胜分差:主胜6-10</span>
+            </div>
+            <div class="commentary-body text-gray-100 text-sm leading-relaxed">
+              <p>纽约自由主场作战，进攻火力强劲。金州女武神防守端存在漏洞，预计自由能够取胜。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
 </section>
 
 <!-- 历史AI总评 -->
