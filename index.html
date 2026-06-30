@@ -983,7 +983,7 @@ async function renderAiLogos() {
     if (!container) return;
     const names = ACTIVE_AIS;
     container.innerHTML = names.map((name, i) => `
-        <a href="ai-analysis.html" class="ai-logo">
+        <a href="#/ai/${encodeURIComponent(name)}" class="ai-logo">
             <span class="dot" style="background:${AI_COLORS[i % AI_COLORS.length]}">${getInitial(name)}</span>
             <span>${name}</span>
         </a>
