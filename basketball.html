@@ -488,8 +488,10 @@
     });
 
     if (basketballData.length === 0) {
-      document.getElementById('basketball-parlay-section').innerHTML = 
-        '<div class="text-center text-gray-500 py-8">暂无篮球串关数据<br><span class="text-xs">篮球串关推荐即将上线</span></div>';
+      const todayEl = document.getElementById('today-basketball-parlay');
+      if (todayEl) {
+        todayEl.innerHTML = '<div class="text-center text-gray-500 py-4">暂无篮球串关数据</div>';
+      }
       return;
     }
 
@@ -522,59 +524,36 @@
       return db - da;
     });
 
+    // Split into today and historical
     const today = dates[0];
     const histDates = dates.slice(1);
 
-    let html = '';
-
-    // Today's basketball parlay
+    // Render today's basketball parlay
     if (byDate[today]) {
       const todayHtml = renderDateSection(today, byDate[today]);
-      if (todayHtml) {
-        html += `
-        <details class="group bg-card rounded-xl border border-border/50 overflow-hidden mb-4" open>
-          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
-            <h3 class="font-semibold">🎯 ${today} 篮球串关推荐</h3>
-            <span class="ml-auto text-xs text-accent bg-accent/10 px-2 py-0.5 rounded-full">最新</span>
-          </summary>
-          <div class="p-4 space-y-4">
-            ${todayHtml}
-            <p class="text-xs text-muted text-center">* 串关推荐基于各AI预测生成，仅供参考</p>
-          </div>
-        </details>`;
+      const todayEl = document.getElementById('today-basketball-parlay');
+      if (todayEl && todayHtml) {
+        todayEl.innerHTML = todayHtml;
       }
     }
 
-    // Historical basketball parlay
+    // Render historical basketball parlay
     if (histDates.length > 0) {
       let histHtml = '';
       histDates.slice(0, 5).forEach(date => {
         histHtml += renderDateSection(date, byDate[date]);
       });
-      if (histHtml) {
-        html += `
-        <details class="group bg-card rounded-xl border border-border/50 overflow-hidden">
-          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer bg-elevated/50">
-            <h3 class="font-semibold">📊 历史篮球串关推荐</h3>
-            <span class="ml-auto text-xs text-muted">共${Math.min(histDates.length, 5)}天</span>
-          </summary>
-          <div class="p-4 space-y-4 max-h-96 overflow-y-auto">
-            ${histHtml}
-          </div>
-        </details>`;
+      const histEl = document.getElementById('hist-basketball-parlay');
+      if (histEl && histHtml) {
+        histEl.innerHTML = histHtml;
       }
-    }
-
-    const section = document.getElementById('basketball-parlay-section');
-    if (html) {
-      section.innerHTML = html;
-    } else {
-      section.innerHTML = '<div class="text-center text-gray-500 py-8">暂无篮球串关数据<br><span class="text-xs">篮球串关推荐即将上线</span></div>';
     }
   } catch (err) {
     console.error('Failed to load basketball parlay data:', err);
-    document.getElementById('basketball-parlay-section').innerHTML = 
-      '<div class="text-center text-red-400 py-4">加载篮球串关数据失败</div>';
+    const todayEl = document.getElementById('today-basketball-parlay');
+    if (todayEl) {
+      todayEl.innerHTML = '<div class="text-center text-red-400 py-4">加载篮球串关数据失败</div>';
+    }
   }
 })();
 </script>
