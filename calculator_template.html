@@ -132,7 +132,7 @@
             </div>
             <div class="card">
                 <div class="card-title">
-                    <span>🏆 今日赛事</span>
+                    <span>🏆 在售赛事</span>
                     <span class="badge" id="matchCount">0 场</span>
                 </div>
                 <div id="matchList">
@@ -189,7 +189,7 @@
         <strong>提示：</strong> 同一场比赛只能选择一种玩法 · 混合过关支持不同场次不同玩法 · 胜分差/比分/半全场最高4关
     </div>
     <script>
-        // 数据注入
+        // 备用数据（静态嵌入）
         window.MATCH_DATA = {matches_json};
         window.MATCH_DATA.forEach(m => {
             const parts = (m.teams || '').split(' VS ');
@@ -197,6 +197,30 @@
             m.away_team = parts[1] || '';
             m.sport = m.sport_type;
         });
+
+        // 从API加载所有在售比赛
+        async function loadMatches() {
+            try {
+                const resp = await fetch('/api/matches');
+                const data = await resp.json();
+                // 过滤：只保留待比赛的赛事
+                const availableMatches = data.filter(m => m.status === '待比赛');
+                // 处理队伍名称和sport字段
+                availableMatches.forEach(m => {
+                    const parts = (m.teams || '').split(' VS ');
+                    m.home_team = parts[0] || '';
+                    m.away_team = parts[1] || '';
+                    m.sport = m.sport_type;
+                });
+                state.matches = availableMatches;
+                renderMatches();
+                console.log('✅ 从API加载', availableMatches.length, '场在售比赛');
+            } catch (e) {
+                console.warn('API加载失败，使用备用数据:', e);
+                state.matches = window.MATCH_DATA || [];
+                renderMatches();
+            }
+        }
 
         // 配置
         const FOOTBALL_PLAYS = [
@@ -661,10 +685,10 @@
         // 初始化
         document.querySelector('.quick-btns button[data-mult="1"]')?.classList.add('active');
         renderPlayTabs();
-        renderMatches();
         renderBetSlip();
+        // 从API加载在售比赛数据
+        loadMatches();
         console.log('✅ 竞彩计算器已加载');
-        console.log('📊 数据条数:', state.matches.length);
     </script>
 </body>
 </html>
