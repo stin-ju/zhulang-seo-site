@@ -674,8 +674,11 @@
                     html += `<div class="match-item" style="color:#9ca3af;text-align:center;padding:8px 0;">${m.home_team} VS ${m.away_team} - 无${play.label}数据</div>`;
                     return;
                 }
-                const isSelectedPlay = selectedPlay === state.currentPlay;
-                const isDisabled = selectedPlay && selectedPlay !== state.currentPlay;
+                // 检查该场比赛已选的玩法（支持容错：同玩法可多选）
+                const matchSelections = state.selections.filter(s => s.matchId === m.id);
+                const selectedPlays = [...new Set(matchSelections.map(s => s.playKey))];
+                const isSelectedPlay = selectedPlays.includes(state.currentPlay);
+                const isDisabled = selectedPlays.length > 0 && !selectedPlays.includes(state.currentPlay);
                 const isScoreDiff = state.currentPlay === 'scorediff';
                 const isScorePlay = state.currentPlay === 'bf';
                 const handicap = getHandicap(m, state.currentSport);
@@ -684,6 +687,9 @@
                 // Format match time
                 const matchTime = m.match_time || '';
                 const timeDisplay = matchTime ? matchTime.substring(5, 16).replace('T', ' ') : '';
+                
+                // 检查某个选项是否已选中
+                const isOptionSelected = (type) => state.selections.some(s => s.matchId === m.id && s.type === type);
                 
                 // Generate odds HTML
                 let oddsHtml = '';
@@ -699,7 +705,7 @@
                                     // 将连字符格式(1-0)转换为冒号格式(1:0)显示
                                     const displayLabel = o.label.includes('-') ? o.label.replace('-', ':') : o.label;
                                     return `
-                                    <button class="odds-btn ${isSelectedPlay && state.selections.some(s => s.matchId === m.id && s.type === o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+                                    <button class="odds-btn ${isOptionSelected(o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
                                             data-matchid="${m.id}" data-play="${state.currentPlay}" data-type="${o.type}" 
                                             data-odds="${o.value || 0}" data-label="${displayLabel}">
                                         <span class="label">${displayLabel}</span>
@@ -717,7 +723,7 @@
                 } else {
                     oddsHtml = `<div class="odds-group ${isScoreDiff ? 'score-diff' : ''}">
                         ${validOdds.map(o => `
-                            <button class="odds-btn ${isSelectedPlay && state.selections.some(s => s.matchId === m.id && s.type === o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+                            <button class="odds-btn ${isOptionSelected(o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
                                     data-matchid="${m.id}" data-play="${state.currentPlay}" data-type="${o.type}" 
                                     data-odds="${o.value || 0}" data-label="${o.label}">
                                 <span class="label">${o.label}</span>
@@ -798,17 +804,29 @@
         }
 
         function toggleSelection(matchId, playKey, type, odds, label) {
-            const existing = state.selections.find(s => s.matchId === matchId);
-            if (existing) {
-                if (existing.type === type && existing.playKey === playKey) {
-                    state.selections = state.selections.filter(s => !(s.matchId === matchId && s.type === type));
-                    if (state.danMatchId === matchId) state.danMatchId = null;
-                    renderMatches(); renderBetSlip(); renderPlayTabs();
-                    return;
-                }
-                state.selections = state.selections.filter(s => s.matchId !== matchId);
+            // 检查是否已存在相同选择
+            const existingIdx = state.selections.findIndex(s => s.matchId === matchId && s.type === type && s.playKey === playKey);
+            if (existingIdx >= 0) {
+                // 取消选择
+                state.selections.splice(existingIdx, 1);
                 if (state.danMatchId === matchId) state.danMatchId = null;
+                renderMatches(); renderBetSlip(); renderPlayTabs();
+                return;
             }
+            
+            // 检查是否已存在同场比赛的其他选择
+            const existingForMatch = state.selections.filter(s => s.matchId === matchId);
+            if (existingForMatch.length > 0) {
+                // 如果已有选择，检查是否同一种玩法
+                const existingPlay = existingForMatch[0].playKey;
+                if (existingPlay !== playKey) {
+                    // 不同玩法，替换（同一场只能选一种玩法）
+                    state.selections = state.selections.filter(s => s.matchId !== matchId);
+                    if (state.danMatchId === matchId) state.danMatchId = null;
+                }
+                // 同玩法不同选项，允许添加（容错模式）
+            }
+            
             state.selections.push({ matchId, playKey, type, odds, label, sport: state.currentSport });
             renderMatches(); renderBetSlip(); renderPlayTabs();
         }
@@ -924,35 +942,80 @@
                 detailContent.classList.remove('open');
                 return;
             }
-            const oddsMap = {};
-            sel.forEach(s => { oddsMap[s.matchId] = s.odds; });
-            const matchIds = Object.keys(oddsMap);
+            
+            // 按比赛分组，支持容错（同一场多个选项）
+            const matchGroups = {};
+            sel.forEach(s => {
+                if (!matchGroups[s.matchId]) matchGroups[s.matchId] = [];
+                matchGroups[s.matchId].push(s);
+            });
+            
+            const matchIds = Object.keys(matchGroups);
             const totalMatches = matchIds.length;
+            
+            // 检查是否有容错（某场比赛有多个选项）
+            const hasRongCuo = Object.values(matchGroups).some(group => group.length > 1);
+            
             const subs = PASS_SUBS[state.passType] || [{ m: 0 }];
             let totalPrize = 0, detailRows = [], actualBets = 0;
+            
             for (const sub of subs) {
                 const subM = sub.m;
                 if (totalMatches < subM) continue;
-                const combos = getCombinations(matchIds, subM);
-                for (const combo of combos) {
-                    let comboOdds = 1, comboLabel = '';
-                    for (const id of combo) {
-                        const odds = oddsMap[id];
-                        if (odds) {
-                            comboOdds *= odds;
-                            const match = state.matches.find(m => m.id === id);
-                            const selItem = state.selections.find(s => s.matchId === id);
-                            comboLabel += `${match ? match.home_team : id}(${selItem ? selItem.label : '?'}) `;
+                
+                const matchCombos = getCombinations(matchIds, subM);
+                
+                for (const matchCombo of matchCombos) {
+                    if (hasRongCuo) {
+                        // 容错模式：每场比赛的多个选项都要组合
+                        // 生成所有选项组合
+                        const selectionCombos = matchCombo.reduce((acc, mid) => {
+                            const selections = matchGroups[mid];
+                            if (acc.length === 0) {
+                                return selections.map(s => [s]);
+                            }
+                            const newCombos = [];
+                            acc.forEach(existing => {
+                                selections.forEach(s => {
+                                    newCombos.push([...existing, s]);
+                                });
+                            });
+                            return newCombos;
+                        }, []);
+                        
+                        for (const combo of selectionCombos) {
+                            let comboOdds = 1, comboLabel = '';
+                            for (const s of combo) {
+                                comboOdds *= s.odds;
+                                const match = state.matches.find(m => m.id === s.matchId);
+                                comboLabel += `${match ? match.home_team : s.matchId}(${s.label}) `;
+                            }
+                            if (comboLabel) {
+                                const prize = comboOdds * 2 * state.multiplier;
+                                totalPrize += prize;
+                                actualBets++;
+                                detailRows.push({ combo: comboLabel.trim(), odds: comboOdds, prize: prize.toFixed(2) });
+                            }
                         }
-                    }
-                    if (comboLabel) {
-                        const prize = comboOdds * 2 * state.multiplier;
-                        totalPrize += prize;
-                        actualBets++;
-                        detailRows.push({ combo: comboLabel.trim(), odds: comboOdds, prize: prize.toFixed(2) });
+                    } else {
+                        // 普通模式：每场一个选项
+                        let comboOdds = 1, comboLabel = '';
+                        for (const id of matchCombo) {
+                            const s = matchGroups[id][0];
+                            comboOdds *= s.odds;
+                            const match = state.matches.find(m => m.id === id);
+                            comboLabel += `${match ? match.home_team : id}(${s.label}) `;
+                        }
+                        if (comboLabel) {
+                            const prize = comboOdds * 2 * state.multiplier;
+                            totalPrize += prize;
+                            actualBets++;
+                            detailRows.push({ combo: comboLabel.trim(), odds: comboOdds, prize: prize.toFixed(2) });
+                        }
                     }
                 }
             }
+            
             const displayBets = actualBets > 0 ? actualBets : 0;
             const perBet = 2, multiplier = state.multiplier || 1;
             const totalAmount = perBet * multiplier * displayBets;
@@ -960,7 +1023,7 @@
             betAmount.textContent = totalAmount.toFixed(2) + ' 元';
             amountBreakdown.textContent = `每注 ${perBet} 元 × ${displayBets} 注 × ${multiplier} 倍`;
             bonusAmount.innerHTML = `${totalPrize.toFixed(2)} <span class="unit">元</span>`;
-            calcHint.textContent = `${totalMatches} 场比赛 · ${state.passType || '未选择'}`;
+            calcHint.textContent = `${totalMatches} 场比赛${hasRongCuo ? ' · 容错' : ''} · ${state.passType || '未选择'}`;
             if (detailRows.length > 0) {
                 let detailHtml = '';
                 detailRows.slice(0, 20).forEach((row, i) => {
