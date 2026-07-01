@@ -45,10 +45,10 @@ const MIME_TYPES = {
 // ============ Supabase API Proxy ============
 
 function getSupabaseConfig() {
-  return {
-    url: process.env.SUPABASE_URL || process.env.COZE_SUPABASE_URL,
-    key: process.env.SUPABASE_ANON_KEY || process.env.COZE_SUPABASE_ANON_KEY
-  };
+  // 优先使用 br-hip-deer 数据库（有 selling_status 列和最新数据）
+  const url = process.env.SUPABASE_URL || 'https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com';
+  const key = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM';
+  return { url, key };
 }
 
 async function querySupabase(table, params = {}) {
