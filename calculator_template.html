@@ -957,7 +957,7 @@
             const hasRongCuo = Object.values(matchGroups).some(group => group.length > 1);
             
             const subs = PASS_SUBS[state.passType] || [{ m: 0 }];
-            let totalPrize = 0, detailRows = [], actualBets = 0;
+            let totalPrize = 0, maxPrize = 0, detailRows = [], actualBets = 0;
             
             for (const sub of subs) {
                 const subM = sub.m;
@@ -993,6 +993,7 @@
                             if (comboLabel) {
                                 const prize = comboOdds * 2 * state.multiplier;
                                 totalPrize += prize;
+                                if (prize > maxPrize) maxPrize = prize;
                                 actualBets++;
                                 detailRows.push({ combo: comboLabel.trim(), odds: comboOdds, prize: prize.toFixed(2) });
                             }
@@ -1009,6 +1010,7 @@
                         if (comboLabel) {
                             const prize = comboOdds * 2 * state.multiplier;
                             totalPrize += prize;
+                            if (prize > maxPrize) maxPrize = prize;
                             actualBets++;
                             detailRows.push({ combo: comboLabel.trim(), odds: comboOdds, prize: prize.toFixed(2) });
                         }
@@ -1022,7 +1024,7 @@
             betCount.textContent = displayBets;
             betAmount.textContent = totalAmount.toFixed(2) + ' 元';
             amountBreakdown.textContent = `每注 ${perBet} 元 × ${displayBets} 注 × ${multiplier} 倍`;
-            bonusAmount.innerHTML = `${totalPrize.toFixed(2)} <span class="unit">元</span>`;
+            bonusAmount.innerHTML = `${maxPrize.toFixed(2)} <span class="unit">元</span>`;
             calcHint.textContent = `${totalMatches} 场比赛${hasRongCuo ? ' · 容错' : ''} · ${state.passType || '未选择'}`;
             if (detailRows.length > 0) {
                 let detailHtml = '';
