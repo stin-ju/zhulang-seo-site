@@ -1024,7 +1024,9 @@
             betCount.textContent = displayBets;
             betAmount.textContent = totalAmount.toFixed(2) + ' 元';
             amountBreakdown.textContent = `每注 ${perBet} 元 × ${displayBets} 注 × ${multiplier} 倍`;
-            bonusAmount.innerHTML = `${maxPrize.toFixed(2)} <span class="unit">元</span>`;
+            // 理论最高奖金：无容错时=所有注数总和，有容错时=单版本最高
+            const displayPrize = hasRongCuo ? maxPrize : totalPrize;
+            bonusAmount.innerHTML = `${displayPrize.toFixed(2)} <span class="unit">元</span>`;
             calcHint.textContent = `${totalMatches} 场比赛${hasRongCuo ? ' · 容错' : ''} · ${state.passType || '未选择'}`;
             if (detailRows.length > 0) {
                 let detailHtml = '';
