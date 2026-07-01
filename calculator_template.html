@@ -190,7 +190,7 @@
     </div>
     <script>
         // 备用数据（静态嵌入）
-        window.MATCH_DATA = {matches_json};
+        window.MATCH_DATA = []; // 保留作为fallback，实际数据从API动态获取
         window.MATCH_DATA.forEach(m => {
             const parts = (m.teams || '').split(' VS ');
             m.home_team = parts[0] || '';
