@@ -112,7 +112,13 @@ const server = http.createServer(async (req, res) => {
         select: '*',
         order: 'match_time.asc'
       });
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        ...CORS_HEADERS 
+      });
       res.end(JSON.stringify(data));
       return;
     }
@@ -123,7 +129,13 @@ const server = http.createServer(async (req, res) => {
         select: '*',
         order: 'id.asc'
       });
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        ...CORS_HEADERS 
+      });
       res.end(JSON.stringify(data));
       return;
     }
@@ -134,7 +146,13 @@ const server = http.createServer(async (req, res) => {
         select: '*',
         order: 'bet_date.desc,ai_name.asc'
       });
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        ...CORS_HEADERS 
+      });
       res.end(JSON.stringify(data));
       return;
     }
