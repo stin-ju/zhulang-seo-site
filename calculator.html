@@ -13,32 +13,171 @@
         .topbar .sub { font-size:12px; opacity:0.8; }
         .app { max-width: 1280px; margin: 0 auto; padding: 12px 16px; padding-bottom: 280px; }
         .left-col { width: 100%; }
-        /* 底部浮动选单 */
+        /* 底部浮动选单 - 深色单行布局 */
         .bottom-bet-slip {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: #fff;
-            border-top: 2px solid #1a3c6e;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-            padding: 12px 16px;
-            z-index: 99;
-            max-height: 50vh;
-            overflow-y: auto;
+            background: #1a1a2e;
+            border-top: 2px solid #2d2d44;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+            padding: 10px 16px;
+            z-index: 999;
         }
-        .bottom-bet-slip .slip-container {
-            max-width: 1280px;
+        .slip-container {
+            max-width: 1400px;
             margin: 0 auto;
             display: flex;
+            align-items: center;
             gap: 16px;
-            align-items: flex-start;
         }
-        .bottom-bet-slip .slip-left { flex: 1; min-width: 0; }
-        .bottom-bet-slip .slip-right { width: 300px; flex-shrink: 0; }
-        @media (max-width: 820px) { 
-            .bottom-bet-slip .slip-container { flex-direction: column; }
-            .bottom-bet-slip .slip-right { width: 100%; }
+        /* 左侧：选单按钮 */
+        .slip-left-btn { flex-shrink: 0; }
+        .dan-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #facc15;
+            color: #1a1a2e;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+        }
+        .dan-btn:hover { background: #fbbf24; }
+        .dan-btn .count { font-size: 18px; font-weight: 700; }
+        .dan-btn .arrow { font-size: 10px; }
+        /* 中间：过关方式 + 倍数 */
+        .slip-middle {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+        }
+        .pass-type-section { display: flex; align-items: center; gap: 8px; }
+        .pass-type-section .label { font-size: 13px; color: #9ca3af; }
+        .pass-type-options { display: flex; gap: 4px; }
+        .pass-type-options button {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .pass-type-options button.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .multiplier-section { display: flex; align-items: center; gap: 8px; }
+        .multiplier-section .label { font-size: 13px; color: #9ca3af; }
+        .multiplier-control { display: flex; align-items: center; gap: 4px; }
+        .multiplier-control button {
+            width: 28px; height: 28px;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .multiplier-control button:hover { background: #374151; }
+        .multiplier-control input {
+            width: 50px; height: 28px;
+            text-align: center;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            background: #2d2d44;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .multiplier-control input:focus { outline: none; border-color: #3b82f6; }
+        .multiplier-hint { font-size: 11px; color: #6b7280; }
+        /* 右侧：金额 + 奖金 */
+        .slip-right-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+        .amount-display { text-align: right; }
+        .amount-display .bet-amount { font-size: 13px; color: #9ca3af; }
+        .amount-display .bet-amount strong { color: #fff; font-size: 15px; }
+        .amount-display .bonus-amount { font-size: 13px; color: #9ca3af; }
+        .amount-display .bonus-amount strong { color: #10b981; font-size: 16px; font-weight: 700; }
+        .detail-btn {
+            padding: 10px 16px;
+            background: #f97316;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .detail-btn:hover { background: #ea580c; }
+        /* 选单展开面板 */
+        .slip-panel {
+            position: fixed;
+            bottom: 58px;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border-top: 1px solid #2d2d44;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            z-index: 998;
+        }
+        .slip-panel.open { max-height: 300px; overflow-y: auto; }
+        .slip-panel-content { padding: 12px 16px; max-width: 1400px; margin: 0 auto; }
+        .slip-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2d2d44;
+        }
+        .slip-panel-header h4 { font-size: 14px; color: #e5e7eb; }
+        .slip-panel-header button { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 12px; }
+        .slip-panel-header button:hover { color: #ef4444; }
+        .panel-bet-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .panel-bet-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #2d2d44;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .panel-bet-item .dan-star { color: #6b7280; cursor: pointer; font-size: 14px; }
+        .panel-bet-item .dan-star.active { color: #facc15; }
+        .panel-bet-item .match-name { color: #e5e7eb; font-weight: 500; }
+        .panel-bet-item .bet-info { color: #9ca3af; }
+        .panel-bet-item .del-btn { color: #6b7280; cursor: pointer; margin-left: 4px; }
+        .panel-bet-item .del-btn:hover { color: #ef4444; }
+        .panel-pass-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #2d2d44; }
+        .panel-pass-section .label { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
+        .panel-pass-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .panel-pass-grid button {
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .panel-pass-grid button.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .panel-empty { text-align: center; color: #6b7280; padding: 20px; font-size: 13px; }
+        @media (max-width: 768px) {
+            .slip-container { flex-wrap: wrap; gap: 8px; }
+            .slip-middle { order: 3; width: 100%; justify-content: space-between; }
+            .slip-right-info { margin-left: auto; }
         }
         .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; padding: 14px 16px; margin-bottom: 12px; }
         .card-title { font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -209,53 +348,78 @@
     <div class="footer-tip">
         <strong>提示：</strong> 同一场比赛只能选择一种玩法 · 混合过关支持不同场次不同玩法 · 胜分差/比分/半全场最高4关
     </div>
-    <!-- 底部浮动选单 -->
+    <!-- 选单展开面板 -->
+    <div class="slip-panel" id="slipPanel">
+        <div class="slip-panel-content">
+            <div class="slip-panel-header">
+                <h4>🧾 我的选单 (<span id="panelSelCount">0</span>场)</h4>
+                <button id="clearAllBtn">清空</button>
+            </div>
+            <div id="betList"><div class="panel-empty">点击赔率添加</div></div>
+            <div class="panel-pass-section" id="passSection" style="display:none;">
+                <div class="label">过关方式</div>
+                <div class="panel-pass-grid" id="passGrid"></div>
+                <div class="pass-hint" id="passHint" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
+            </div>
+        </div>
+    </div>
+    <!-- 底部浮动选单栏 -->
     <div class="bottom-bet-slip">
         <div class="slip-container">
-            <div class="slip-left">
-                <div class="bet-slip">
-                    <div class="header">
-                        <h3>🧾 我的选单</h3>
-                        <button id="clearAllBtn">清空</button>
+            <!-- 左侧：选单按钮 -->
+            <div class="slip-left-btn">
+                <button class="dan-btn" id="danBtn">
+                    <span>已选</span>
+                    <span class="count" id="selCount">0</span>
+                    <span>场</span>
+                    <span class="arrow">▲</span>
+                </button>
+            </div>
+            <!-- 中间：过关方式 + 倍数 -->
+            <div class="slip-middle">
+                <div class="pass-type-section">
+                    <span class="label">过关方式：</span>
+                    <div class="pass-type-options">
+                        <button class="active" data-type="mn">M串N</button>
+                        <button data-type="free">自由过关</button>
                     </div>
-                    <div class="slip-info">
-                        <span>已选 <strong class="highlight" id="selCount">0</strong> 场</span>
-                        <span id="danInfo"></span>
-                        <span id="mixInfo" style="display:none;"><span class="mix-tag">混合过关</span></span>
+                </div>
+                <div class="multiplier-section">
+                    <span class="label">倍数：</span>
+                    <div class="multiplier-control">
+                        <button id="multMinus">−</button>
+                        <input type="number" id="multiplierInput" value="1" min="1" max="50" />
+                        <button id="multPlus">+</button>
                     </div>
-                    <div id="betList"><div class="empty">点击赔率添加</div></div>
-                    <div class="pass-section" id="passSection">
-                        <label>过关方式</label>
-                        <div class="pass-grid" id="passGrid"></div>
-                        <div class="pass-hint" id="passHint"></div>
-                    </div>
+                    <span class="multiplier-hint">[最高50倍]</span>
                 </div>
             </div>
-            <div class="slip-right">
-                <div class="result-area">
-                    <div class="row"><span class="label">注数</span><span class="value" id="betCount">0</span></div>
-                    <div class="bet-multiplier">
-                        <label>倍数</label>
-                        <input type="number" id="multiplierInput" value="1" min="1" max="999" step="1" />
-                        <span class="unit">倍</span>
-                        <div class="quick-btns">
-                            <button data-mult="1">1</button><button data-mult="2">2</button><button data-mult="5">5</button><button data-mult="10">10</button><button data-mult="50">50</button>
-                        </div>
-                    </div>
-                    <div class="row"><span class="label">投注金额</span><span class="value" id="betAmount">0.00 元</span></div>
-                    <div class="bet-amount-breakdown" id="amountBreakdown">每注 2 元 × 0 注 × 1 倍</div>
-                    <div class="bonus">
-                        <span class="label">💰 理论最高奖金</span>
-                        <span class="amount" id="bonusAmount">0.00 <span class="unit">元</span></span>
-                    </div>
-                    <div class="hint" id="calcHint">每注 2 元 · 请选择至少 2 场比赛</div>
-                    <button class="detail-toggle" id="detailToggle">▼ 奖金详情</button>
-                    <div class="detail-content" id="detailContent"></div>
+            <!-- 右侧：金额 + 奖金 -->
+            <div class="slip-right-info">
+                <div class="amount-display">
+                    <div class="bet-amount">投注金额：<strong id="betAmount">0</strong>元</div>
+                    <div class="bonus-amount">理论最高奖金：<strong id="bonusAmount">0.00</strong>元</div>
                 </div>
-                <div class="action-row">
-                    <button class="btn btn-primary" id="confirmBtn">📋 确认方案</button>
-                    <button class="btn btn-secondary" id="saveBtn" disabled title="会员功能即将上线">💾 保存策略 🔒</button>
-                    <button class="btn btn-secondary" id="emailBtn" disabled title="会员功能即将上线">📧 发送邮箱 🔒</button>
+                <button class="detail-btn" id="detailBtn">奖金详情</button>
+            </div>
+        </div>
+    </div>
+    <!-- 奖金详情弹窗 -->
+    <div id="detailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center;">
+        <div style="background:#1a1a2e;border-radius:12px;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #2d2d44;">
+                <h4 style="color:#e5e7eb;font-size:16px;">奖金详情</h4>
+                <button id="closeDetail" style="background:none;border:none;color:#9ca3af;font-size:20px;cursor:pointer;">×</button>
+            </div>
+            <div id="detailContent"></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #2d2d44;">
+                <div style="display:flex;justify-content:space-between;color:#9ca3af;font-size:13px;">
+                    <span>注数：<span id="betCount" style="color:#fff;">0</span></span>
+                    <span id="amountBreakdown">每注 2 元 × 0 注 × 1 倍</span>
+                </div>
+                <div style="text-align:right;margin-top:8px;">
+                    <span style="color:#9ca3af;font-size:12px;">提示：</span>
+                    <span id="calcHint" style="color:#6b7280;font-size:12px;">请选择至少 2 场比赛</span>
                 </div>
             </div>
         </div>
@@ -360,12 +524,12 @@
         const $ = id => document.getElementById(id);
         const matchList = $('matchList'), matchCount = $('matchCount'), betList = $('betList');
         const passGrid = $('passGrid'), passSection = $('passSection'), passHint = $('passHint');
-        const clearAllBtn = $('clearAllBtn'), selCount = $('selCount'), danInfo = $('danInfo'), mixInfo = $('mixInfo');
+        const clearAllBtn = $('clearAllBtn'), selCount = $('selCount');
         const betCount = $('betCount'), betAmount = $('betAmount'), bonusAmount = $('bonusAmount');
         const calcHint = $('calcHint'), amountBreakdown = $('amountBreakdown');
-        const detailToggle = $('detailToggle'), detailContent = $('detailContent');
-        const confirmBtn = $('confirmBtn'), saveBtn = $('saveBtn'), emailBtn = $('emailBtn');
+        const detailContent = $('detailContent');
         const playTabs = $('playTabs'), multiplierInput = $('multiplierInput');
+        const panelSelCount = $('panelSelCount');
 
         // 比分三排分类
         function categorizeScores(oddsList) {
@@ -653,23 +817,16 @@
             });
             const count = Object.keys(groups).length;
             selCount.textContent = count;
-            mixInfo.style.display = isMixPass() && count >= 2 ? 'inline' : 'none';
-            if (state.danMatchId) {
-                const danMatch = state.matches.find(m => m.id === state.danMatchId);
-                const danSel = state.selections.find(s => s.matchId === state.danMatchId);
-                if (danMatch && danSel) {
-                    danInfo.textContent = `⭐ 已设胆：${danMatch.home_team}（${danSel.label}）`;
-                    danInfo.className = 'gold';
-                } else { danInfo.textContent = ''; danInfo.className = ''; }
-            } else { danInfo.textContent = ''; danInfo.className = ''; }
+            if (panelSelCount) panelSelCount.textContent = count;
+            
             if (!state.selections.length) {
-                betList.innerHTML = '<div class="empty">点击左侧赔率添加</div>';
+                betList.innerHTML = '<div class="panel-empty">点击赔率添加</div>';
                 passSection.style.display = 'none';
                 updateResult();
                 return;
             }
             const allPlays = [...FOOTBALL_PLAYS, ...BASKETBALL_PLAYS];
-            let html = '';
+            let html = '<div class="panel-bet-list">';
             Object.keys(groups).forEach(mid => {
                 const items = groups[mid];
                 const match = state.matches.find(m => m.id === mid);
@@ -679,10 +836,28 @@
                     const play = allPlays.find(p => p.key === s.playKey);
                     return `${s.label} ${s.odds}${play ? ' ('+play.label+')' : ''}`;
                 }).join('、');
-                html += `<div class="bet-item"><div class="info">${isDan ? '<span class="star">⭐</span>' : ''}<span style="font-weight:500;">${label}</span><span class="tag">${tags}</span></div><button class="del" data-matchid="${mid}">✕</button></div>`;
+                html += `<div class="panel-bet-item">
+                    <span class="dan-star ${isDan ? 'active' : ''}" data-matchid="${mid}" title="设胆">⭐</span>
+                    <span class="match-name">${label}</span>
+                    <span class="bet-info">${tags}</span>
+                    <span class="del-btn" data-matchid="${mid}">✕</span>
+                </div>`;
             });
+            html += '</div>';
             betList.innerHTML = html;
-            betList.querySelectorAll('.del').forEach(btn => {
+            
+            // 设胆点击
+            betList.querySelectorAll('.dan-star').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mid = btn.dataset.matchid;
+                    state.danMatchId = state.danMatchId === mid ? null : mid;
+                    renderBetSlip();
+                    renderMatches();
+                });
+            });
+            
+            // 删除点击
+            betList.querySelectorAll('.del-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const mid = btn.dataset.matchid;
                     state.selections = state.selections.filter(s => s.matchId !== mid);
@@ -795,15 +970,64 @@
         }
 
         // 事件绑定
+        const danBtn = document.getElementById('danBtn');
+        const slipPanel = document.getElementById('slipPanel');
+        const detailModal = document.getElementById('detailModal');
+        const detailBtn = document.getElementById('detailBtn');
+        const closeDetail = document.getElementById('closeDetail');
+        const multMinus = document.getElementById('multMinus');
+        const multPlus = document.getElementById('multPlus');
+
+        // 选单面板展开/收起
+        danBtn.addEventListener('click', () => {
+            slipPanel.classList.toggle('open');
+            danBtn.querySelector('.arrow').textContent = slipPanel.classList.contains('open') ? '▼' : '▲';
+        });
+
+        // 清空选单
         clearAllBtn.addEventListener('click', () => {
             state.selections = []; state.danMatchId = null;
             renderMatches(); renderBetSlip(); renderPlayTabs();
         });
-        detailToggle.addEventListener('click', () => {
-            state.detailOpen = !state.detailOpen;
-            detailContent.classList.toggle('open', state.detailOpen);
-            detailToggle.textContent = state.detailOpen ? '▲ 收起' : '▼ 奖金详情';
+
+        // 奖金详情弹窗
+        detailBtn.addEventListener('click', () => {
+            detailModal.style.display = 'flex';
         });
+        closeDetail.addEventListener('click', () => {
+            detailModal.style.display = 'none';
+        });
+        detailModal.addEventListener('click', (e) => {
+            if (e.target === detailModal) detailModal.style.display = 'none';
+        });
+
+        // 过关方式切换
+        document.querySelectorAll('.pass-type-options button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pass-type-options button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // 这里可以添加M串N和自由过关的切换逻辑
+            });
+        });
+
+        // 倍数控制
+        multMinus.addEventListener('click', () => {
+            let val = parseInt(multiplierInput.value) || 1;
+            if (val > 1) {
+                multiplierInput.value = val - 1;
+                state.multiplier = val - 1;
+                updateResult();
+            }
+        });
+        multPlus.addEventListener('click', () => {
+            let val = parseInt(multiplierInput.value) || 1;
+            if (val < 50) {
+                multiplierInput.value = val + 1;
+                state.multiplier = val + 1;
+                updateResult();
+            }
+        });
+
         document.querySelectorAll('#sportTabs .tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('#sportTabs .tab').forEach(t => t.classList.remove('active'));
@@ -812,41 +1036,19 @@
                 state.currentPlay = state.currentSport === 'football' ? 'spf' : 'winlose';
                 state.selections = []; state.danMatchId = null; state.multiplier = 1;
                 multiplierInput.value = 1;
-                document.querySelectorAll('.quick-btns button').forEach(b => b.classList.remove('active'));
-                document.querySelector('.quick-btns button[data-mult="1"]')?.classList.add('active');
                 renderPlayTabs(); renderMatches(); renderBetSlip();
             });
         });
-        confirmBtn.addEventListener('click', () => {
-            if (state.selections.length < 2) { alert('请至少选择2场比赛'); return; }
-            const isMix = isMixPass() ? '（混合过关）' : '';
-            alert('✅ 确认成功！' + isMix + '\n过关：' + state.passType + '\n注数：' + betCount.textContent + '\n金额：' + betAmount.textContent + '\n奖金：' + bonusAmount.textContent);
-        });
-        saveBtn.addEventListener('click', () => {
-            alert('💾 保存策略功能即将上线，敬请期待！');
-        });
-        emailBtn.addEventListener('click', () => {
-            alert('📧 发送邮箱功能即将上线，敬请期待！');
-        });
+
         multiplierInput.addEventListener('input', () => {
             let val = parseInt(multiplierInput.value) || 1;
             if (val < 1) val = 1;
-            if (val > 999) val = 999;
+            if (val > 50) val = 50;
             state.multiplier = val;
             updateResult();
         });
-        document.querySelectorAll('.quick-btns button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                state.multiplier = parseInt(btn.dataset.mult) || 1;
-                multiplierInput.value = state.multiplier;
-                document.querySelectorAll('.quick-btns button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                updateResult();
-            });
-        });
 
         // 初始化
-        document.querySelector('.quick-btns button[data-mult="1"]')?.classList.add('active');
         renderPlayTabs();
         renderMatches();
         renderBetSlip();
