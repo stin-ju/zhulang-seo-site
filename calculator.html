@@ -959,11 +959,26 @@
             const subs = PASS_SUBS[state.passType] || [{ m: 0 }];
             let totalPrize = 0, maxPrize = 0, detailRows = [], actualBets = 0;
             
+            // 设胆处理：胆码必须包含在所有组合中
+            const danId = state.danMatchId;
+            const hasDan = danId && matchIds.includes(danId);
+            const otherIds = matchIds.filter(id => id !== danId);
+            
             for (const sub of subs) {
                 const subM = sub.m;
                 if (totalMatches < subM) continue;
                 
-                const matchCombos = getCombinations(matchIds, subM);
+                // 生成比赛组合（胆码必须包含）
+                let matchCombos;
+                if (hasDan) {
+                    // 有胆码：从其他比赛中选 subM-1 场，加上胆码
+                    const needOthers = subM - 1;
+                    if (needOthers > otherIds.length) continue;
+                    const otherCombos = getCombinations(otherIds, needOthers);
+                    matchCombos = otherCombos.map(combo => [danId, ...combo]);
+                } else {
+                    matchCombos = getCombinations(matchIds, subM);
+                }
                 
                 for (const matchCombo of matchCombos) {
                     if (hasRongCuo) {
