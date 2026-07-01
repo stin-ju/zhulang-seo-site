@@ -744,7 +744,7 @@
                         </div>
                         <div class="match-body" data-matchid="${m.id}">
                             <div class="teams-row">
-                                <button class="star-btn ${isDan ? 'active' : ''}" data-matchid="${m.id}" title="设胆">⭐</button>
+                                <button class="star-btn ${isDan ? 'active' : ''}" data-matchid="${m.id}" title="设胆">${isDan ? '★' : '☆'}</button>
                                 ${m.home_team} <span class="vs">VS</span> ${m.away_team}
                             </div>
                             <div class="tags-row">
@@ -859,7 +859,7 @@
                     return `${s.label} ${s.odds}${play ? ' ('+play.label+')' : ''}`;
                 }).join('、');
                 html += `<div class="panel-bet-item">
-                    <span class="dan-star ${isDan ? 'active' : ''}" data-matchid="${mid}" title="设胆">⭐</span>
+                    <span class="dan-star ${isDan ? 'active' : ''}" data-matchid="${mid}" title="设胆">${isDan ? '★' : '☆'}</span>
                     <span class="match-name">${label}</span>
                     <span class="bet-info">${tags}</span>
                     <span class="del-btn" data-matchid="${mid}">✕</span>
