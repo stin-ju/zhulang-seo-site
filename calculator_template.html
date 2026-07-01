@@ -534,9 +534,10 @@
         // 比分三排分类
         function categorizeScores(oddsList) {
             const win = [], draw = [], lose = [];
-            const winOrder = ['1:0','2:0','2:1','3:0','3:1','3:2','4:0','4:1','4:2','5:0','5:1','5:2','胜其它'];
-            const drawOrder = ['0:0','1:1','2:2','3:3','平其它'];
-            const loseOrder = ['0:1','0:2','1:2','0:3','1:3','2:3','0:4','1:4','2:4','0:5','1:5','2:5','负其它'];
+            // 支持连字符(1-0)和冒号(1:0)两种格式
+            const winOrder = ['1-0','2-0','2-1','3-0','3-1','3-2','4-0','4-1','4-2','5-0','5-1','5-2','胜其它'];
+            const drawOrder = ['0-0','1-1','2-2','3-3','平其它'];
+            const loseOrder = ['0-1','0-2','1-2','0-3','1-3','2-3','0-4','1-4','2-4','0-5','1-5','2-5','负其它'];
             
             oddsList.forEach(o => {
                 if (winOrder.includes(o.type)) win.push(o);
@@ -694,14 +695,17 @@
                         return `<div class="score-row ${rowClass}">
                             <span class="row-label">${label}</span>
                             <div class="row-options">
-                                ${items.map(o => `
+                                ${items.map(o => {
+                                    // 将连字符格式(1-0)转换为冒号格式(1:0)显示
+                                    const displayLabel = o.label.includes('-') ? o.label.replace('-', ':') : o.label;
+                                    return `
                                     <button class="odds-btn ${isSelectedPlay && state.selections.some(s => s.matchId === m.id && s.type === o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
                                             data-matchid="${m.id}" data-play="${state.currentPlay}" data-type="${o.type}" 
-                                            data-odds="${o.value || 0}" data-label="${o.label}">
-                                        <span class="label">${o.label}</span>
+                                            data-odds="${o.value || 0}" data-label="${displayLabel}">
+                                        <span class="label">${displayLabel}</span>
                                         <span class="value">${o.value || '-'}</span>
                                     </button>
-                                `).join('')}
+                                `}).join('')}
                             </div>
                         </div>`;
                     };
