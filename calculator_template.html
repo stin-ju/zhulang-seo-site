@@ -517,7 +517,7 @@
         const state = {
             matches: window.MATCH_DATA || [],
             selections: [], passType: '', currentSport: 'football', currentPlay: 'spf',
-            danMatchId: null, detailOpen: false, multiplier: 1,
+            danMatchIds: [], detailOpen: false, multiplier: 1,
         };
 
         // DOM 引用
@@ -664,7 +664,7 @@
             matchCount.textContent = data.length + ' 场';
             let html = '';
             data.forEach(m => {
-                const isDan = state.danMatchId === m.id;
+                const isDan = state.danMatchIds.includes(m.id);
                 const selectedPlay = getSelectedPlayForMatch(m.id);
                 const play = (state.currentSport === 'football' ? FOOTBALL_PLAYS : BASKETBALL_PLAYS).find(p => p.key === state.currentPlay);
                 if (!play) return;
@@ -782,7 +782,11 @@
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const mid = btn.dataset.matchid;
-                    state.danMatchId = state.danMatchId === mid ? null : mid;
+                    if (state.danMatchIds.includes(mid)) {
+                        state.danMatchIds = state.danMatchIds.filter(id => id !== mid);
+                    } else {
+                        state.danMatchIds.push(mid);
+                    }
                     renderMatches();
                     renderBetSlip();
                 });
@@ -809,7 +813,7 @@
             if (existingIdx >= 0) {
                 // 取消选择
                 state.selections.splice(existingIdx, 1);
-                if (state.danMatchId === matchId) state.danMatchId = null;
+                if (state.danMatchIds.includes(matchId)) state.danMatchIds = state.danMatchIds.filter(id => id !== matchId);
                 renderMatches(); renderBetSlip(); renderPlayTabs();
                 return;
             }
@@ -822,7 +826,7 @@
                 if (existingPlay !== playKey) {
                     // 不同玩法，替换（同一场只能选一种玩法）
                     state.selections = state.selections.filter(s => s.matchId !== matchId);
-                    if (state.danMatchId === matchId) state.danMatchId = null;
+                    if (state.danMatchIds.includes(matchId)) state.danMatchIds = state.danMatchIds.filter(id => id !== matchId);
                 }
                 // 同玩法不同选项，允许添加（容错模式）
             }
@@ -853,7 +857,7 @@
                 const items = groups[mid];
                 const match = state.matches.find(m => m.id === mid);
                 const label = match ? `${match.home_team} VS ${match.away_team}` : mid;
-                const isDan = state.danMatchId === mid;
+                const isDan = state.danMatchIds.includes(mid);
                 const tags = items.map(s => {
                     const play = allPlays.find(p => p.key === s.playKey);
                     return `${s.label} ${s.odds}${play ? ' ('+play.label+')' : ''}`;
@@ -872,7 +876,11 @@
             betList.querySelectorAll('.dan-star').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const mid = btn.dataset.matchid;
-                    state.danMatchId = state.danMatchId === mid ? null : mid;
+                    if (state.danMatchIds.includes(mid)) {
+                        state.danMatchIds = state.danMatchIds.filter(id => id !== mid);
+                    } else {
+                        state.danMatchIds.push(mid);
+                    }
                     renderBetSlip();
                     renderMatches();
                 });
@@ -883,7 +891,7 @@
                 btn.addEventListener('click', () => {
                     const mid = btn.dataset.matchid;
                     state.selections = state.selections.filter(s => s.matchId !== mid);
-                    if (state.danMatchId === mid) state.danMatchId = null;
+                    if (state.danMatchIds.includes(mid)) state.danMatchIds = state.danMatchIds.filter(id => id !== mid);
                     renderBetSlip(); renderMatches(); renderPlayTabs(); updateResult();
                 });
             });
@@ -960,9 +968,10 @@
             let totalPrize = 0, maxPrize = 0, detailRows = [], actualBets = 0;
             
             // 设胆处理：胆码必须包含在所有组合中
-            const danId = state.danMatchId;
-            const hasDan = danId && matchIds.includes(danId);
-            const otherIds = matchIds.filter(id => id !== danId);
+            const danIds = state.danMatchIds.filter(id => matchIds.includes(id));
+            const hasDan = danIds.length > 0;
+            const otherIds = matchIds.filter(id => !danIds.includes(id));
+            const danCount = danIds.length;
             
             for (const sub of subs) {
                 const subM = sub.m;
@@ -971,11 +980,11 @@
                 // 生成比赛组合（胆码必须包含）
                 let matchCombos;
                 if (hasDan) {
-                    // 有胆码：从其他比赛中选 subM-1 场，加上胆码
-                    const needOthers = subM - 1;
-                    if (needOthers > otherIds.length) continue;
+                    // 有胆码：从其他比赛中选 subM-danCount 场，加上所有胆码
+                    const needOthers = subM - danCount;
+                    if (needOthers > otherIds.length || needOthers < 0) continue;
                     const otherCombos = getCombinations(otherIds, needOthers);
-                    matchCombos = otherCombos.map(combo => [danId, ...combo]);
+                    matchCombos = otherCombos.map(combo => [...danIds, ...combo]);
                 } else {
                     matchCombos = getCombinations(matchIds, subM);
                 }
@@ -1072,7 +1081,7 @@
 
         // 清空选单
         clearAllBtn.addEventListener('click', () => {
-            state.selections = []; state.danMatchId = null;
+            state.selections = []; state.danMatchIds = [];
             renderMatches(); renderBetSlip(); renderPlayTabs();
         });
 
@@ -1120,7 +1129,7 @@
                 tab.classList.add('active');
                 state.currentSport = tab.dataset.sport;
                 state.currentPlay = state.currentSport === 'football' ? 'spf' : 'winlose';
-                state.selections = []; state.danMatchId = null; state.multiplier = 1;
+                state.selections = []; state.danMatchIds = []; state.multiplier = 1;
                 multiplierInput.value = 1;
                 renderPlayTabs(); renderMatches(); renderBetSlip();
             });
