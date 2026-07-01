@@ -203,8 +203,11 @@
             try {
                 const resp = await fetch('/api/matches');
                 const data = await resp.json();
-                // 过滤：只保留待比赛的赛事
-                const availableMatches = data.filter(m => m.status === '待比赛');
+                // 过滤：只保留在售且待比赛的赛事
+                const availableMatches = data.filter(m => 
+                    m.status === '待比赛' && 
+                    m.selling_status === 'on_sale'
+                );
                 // 处理队伍名称和sport字段
                 availableMatches.forEach(m => {
                     const parts = (m.teams || '').split(' VS ');
@@ -217,7 +220,11 @@
                 console.log('✅ 从API加载', availableMatches.length, '场在售比赛');
             } catch (e) {
                 console.warn('API加载失败，使用备用数据:', e);
-                state.matches = window.MATCH_DATA || [];
+                // fallback也过滤selling_status
+                state.matches = (window.MATCH_DATA || []).filter(m => 
+                    m.selling_status === 'on_sale'
+                );
+                state.matches.forEach(m => { m.sport = m.sport_type; });
                 renderMatches();
             }
         }
