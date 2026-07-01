@@ -26,16 +26,38 @@
         .play-tabs .play-tab.active { border-color: #1a3c6e; background: #eef2ff; color: #1a3c6e; }
         .play-tabs .play-tab .max-tag { font-size:10px; color:#9ca3af; }
         .play-tabs .play-tab .check { color:#16a34a; font-weight:700; margin-left:4px; }
-        .match-item { border-bottom: 1px solid #f0f2f5; padding: 8px 0; }
+        .match-item { border-bottom: 1px solid #f0f2f5; padding: 0; }
         .match-item:last-child { border-bottom: none; }
-        .match-item .info { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #6b7280; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-        .match-item .info .teams { font-weight: 600; color: #1a1a2e; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-        .match-item .info .teams .vs { color:#9ca3af; font-weight:400; }
-        .match-item .info .time { font-size: 11px; background: #f3f4f6; padding: 0 10px; border-radius: 10px; line-height: 20px; }
-        .match-item .info .handicap-label { font-size: 11px; background: #f3f4f6; padding: 0 10px; border-radius: 10px; line-height: 20px; color: #6b7280; }
-        .match-item .info .selected-play-label { font-size: 11px; background: #dbeafe; color: #1a3c6e; padding: 0 8px; border-radius: 4px; line-height: 20px; }
-        .match-item .star-btn { background: none; border: none; font-size: 16px; cursor: pointer; color: #d1d5db; padding: 0 4px; }
-        .match-item .star-btn.active { color: #facc15; }
+        .match-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 8px 0 4px 0; cursor: pointer;
+        }
+        .match-header .match-meta {
+            display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280;
+        }
+        .match-header .match-id {
+            font-weight: 600; color: #1a3c6e; background: #eef2ff; padding: 1px 6px; border-radius: 3px;
+        }
+        .match-header .match-time { color: #6b7280; }
+        .match-header .match-league { color: #9ca3af; font-size: 11px; }
+        .match-header .collapse-btn {
+            background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 12px; padding: 2px 6px;
+            transition: transform 0.2s;
+        }
+        .match-header .collapse-btn.collapsed { transform: rotate(-90deg); }
+        .match-body { padding: 0 0 8px 0; }
+        .match-body.hidden { display: none; }
+        .match-item .teams-row { 
+            display: flex; align-items: center; gap: 6px; 
+            font-weight: 600; color: #1a1a2e; font-size: 14px; 
+            margin-bottom: 6px;
+        }
+        .match-item .teams-row .vs { color:#9ca3af; font-weight:400; }
+        .match-item .teams-row .star-btn { background: none; border: none; font-size: 14px; cursor: pointer; color: #d1d5db; padding: 0 2px; }
+        .match-item .teams-row .star-btn.active { color: #facc15; }
+        .match-item .tags-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+        .match-item .handicap-label { font-size: 11px; background: #f3f4f6; padding: 0 8px; border-radius: 10px; line-height: 18px; color: #6b7280; }
+        .match-item .selected-play-label { font-size: 11px; background: #dbeafe; color: #1a3c6e; padding: 0 6px; border-radius: 4px; line-height: 18px; }
         .match-item .play-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
         .match-item .play-row .play-label { font-size: 11px; font-weight: 500; color: #6b7280; min-width: 44px; flex-shrink: 0; }
         .match-item .play-row .odds-group { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; }
@@ -413,7 +435,7 @@
                 const oddsList = getOddsMapForMatch(m, state.currentSport, state.currentPlay);
                 const validOdds = oddsList.filter(o => o.value && o.value > 0);
                 if (!validOdds.length) {
-                    html += `<div class="match-item" style="color:#9ca3af;text-align:center;padding:4px 0;">${m.home_team} VS ${m.away_team} - 无${play.label}数据</div>`;
+                    html += `<div class="match-item" style="color:#9ca3af;text-align:center;padding:8px 0;">${m.home_team} VS ${m.away_team} - 无${play.label}数据</div>`;
                     return;
                 }
                 const isSelectedPlay = selectedPlay === state.currentPlay;
@@ -421,47 +443,79 @@
                 const isScoreDiff = state.currentPlay === 'scorediff';
                 const handicap = getHandicap(m, state.currentSport);
                 const totalLine = state.currentSport === 'basketball' ? getTotalLine(m) : null;
+                
+                // Format match time
+                const matchTime = m.match_time || '';
+                const timeDisplay = matchTime ? matchTime.substring(5, 16).replace('T', ' ') : '';
+                
                 html += `
-                    <div class="match-item">
-                        <div class="info">
-                            <span class="teams">
+                    <div class="match-item" data-matchid="${m.id}">
+                        <div class="match-header" data-matchid="${m.id}">
+                            <div class="match-meta">
+                                <span class="match-id">${m.id}</span>
+                                <span class="match-time">${timeDisplay}</span>
+                            </div>
+                            <button class="collapse-btn" data-matchid="${m.id}">▼</button>
+                        </div>
+                        <div class="match-body" data-matchid="${m.id}">
+                            <div class="teams-row">
                                 <button class="star-btn ${isDan ? 'active' : ''}" data-matchid="${m.id}" title="设胆">⭐</button>
                                 ${m.home_team} <span class="vs">VS</span> ${m.away_team}
-                            </span>
-                            <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                            </div>
+                            <div class="tags-row">
                                 ${handicap ? `<span class="handicap-label">让${handicap}</span>` : ''}
                                 ${totalLine ? `<span class="handicap-label">总分${totalLine}</span>` : ''}
-                                <span class="time">${m.match_time || ''}</span>
                                 ${selectedPlay ? `<span class="selected-play-label">已选 ${play.label}</span>` : ''}
                             </div>
-                        </div>
-                        <div class="play-row">
-                            <span class="play-label">${play.label}</span>
-                            <div class="odds-group ${isScoreDiff ? 'score-diff' : ''}">
-                                ${validOdds.map(o => `
-                                    <button class="odds-btn ${isSelectedPlay && state.selections.some(s => s.matchId === m.id && s.type === o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
-                                            data-matchid="${m.id}" data-play="${state.currentPlay}" data-type="${o.type}" 
-                                            data-odds="${o.value || 0}" data-label="${o.label}">
-                                        <span class="label">${o.label}</span>
-                                        <span class="value">${o.value || '-'}</span>
-                                    </button>
-                                `).join('')}
+                            <div class="play-row">
+                                <span class="play-label">${play.label}</span>
+                                <div class="odds-group ${isScoreDiff ? 'score-diff' : ''}">
+                                    ${validOdds.map(o => `
+                                        <button class="odds-btn ${isSelectedPlay && state.selections.some(s => s.matchId === m.id && s.type === o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+                                                data-matchid="${m.id}" data-play="${state.currentPlay}" data-type="${o.type}" 
+                                                data-odds="${o.value || 0}" data-label="${o.label}">
+                                            <span class="label">${o.label}</span>
+                                            <span class="value">${o.value || '-'}</span>
+                                        </button>
+                                    `).join('')}
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
             });
             matchList.innerHTML = html;
+            
+            // Collapse/expand handlers
+            matchList.querySelectorAll('.match-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    // Don't toggle if clicking on odds button or star button
+                    if (e.target.closest('.odds-btn') || e.target.closest('.star-btn')) return;
+                    const matchId = header.dataset.matchid;
+                    const body = matchList.querySelector(`.match-body[data-matchid="${matchId}"]`);
+                    const btn = header.querySelector('.collapse-btn');
+                    if (body && btn) {
+                        body.classList.toggle('hidden');
+                        btn.classList.toggle('collapsed');
+                    }
+                });
+            });
+            
+            // Star button handlers
             matchList.querySelectorAll('.star-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const mid = btn.dataset.matchid;
                     state.danMatchId = state.danMatchId === mid ? null : mid;
                     renderMatches();
                     renderBetSlip();
                 });
             });
+            
+            // Odds button handlers
             matchList.querySelectorAll('.odds-btn:not(.disabled)').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const matchId = btn.dataset.matchid;
                     const playKey = btn.dataset.play;
                     const type = btn.dataset.type;
