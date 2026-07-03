@@ -12,7 +12,7 @@ import urllib.parse
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Supabase configuration
 SUPABASE_URL = "https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com"
@@ -309,8 +309,10 @@ def fetch_predictions_for_matches(match_ids):
 def fetch_metadata_for_date(date_str):
     """
     Fetch metadata for a specific date from betting_daily table.
+    Falls back to matches table metadata if betting_daily is empty.
     Returns the metadata object or None.
     """
+    # First try betting_daily table
     try:
         url = f"{SUPABASE_URL}/rest/v1/betting_daily?select=*&match_date=eq.{date_str}"
         req = urllib.request.Request(url, headers={
@@ -326,10 +328,30 @@ def fetch_metadata_for_date(date_str):
                     'title': item.get('daily_summary', {}).get('title', ''),
                     'daily_commentary': item.get('daily_commentary', '')
                 }
-            return None
     except Exception as e:
         print(f"✗ 获取 {date_str} 元数据失败: {e}")
-        return None
+    
+    # Fallback: try to get daily_commentary from matches table metadata
+    try:
+        next_date = (datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        url = f"{SUPABASE_URL}/rest/v1/matches?match_time=gte.{date_str}&match_time=lt.{next_date}&select=metadata&limit=1"
+        req = urllib.request.Request(url, headers={
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}'
+        })
+        with urllib.request.urlopen(req, timeout=10) as response:
+            matches = json.loads(response.read().decode('utf-8'))
+            if matches and matches[0].get('metadata'):
+                meta = matches[0]['metadata']
+                if isinstance(meta, dict) and meta.get('daily_commentary'):
+                    return {
+                        'title': '',
+                        'daily_commentary': meta['daily_commentary']
+                    }
+    except Exception as e:
+        print(f"✗ 从matches表获取 {date_str} 元数据失败: {e}")
+    
+    return None
 
 
 def fetch_chain_bets_for_date(date_str):
@@ -380,6 +402,12 @@ def generate_brief_page(news_data, all_dates):
         chain_bets = fetch_chain_bets_for_date(date_str)
         # Determine type: prediction if matches haven't been played, review if they have
         has_unplayed = any(m.get('status') != '已确认' for m in matches)
+        has_completed = any(m.get('status') == '已确认' for m in matches)
+        has_commentary = metadata and metadata.get('daily_commentary')
+        
+        # If there's a daily_commentary and completed matches, mark as having review content
+        has_review = has_completed and has_commentary
+        
         article_type = 'prediction' if has_unplayed else 'review'
         article_list.append({
             'date': date_str,
@@ -387,7 +415,8 @@ def generate_brief_page(news_data, all_dates):
             'metadata': metadata,
             'chain_bets': chain_bets,
             'match_count': len(matches),
-            'type': article_type
+            'type': article_type,
+            'has_review': has_review  # Flag for showing review section
         })
     
     # Build pinned articles HTML
@@ -451,6 +480,7 @@ def generate_brief_page(news_data, all_dates):
         date_str = article['date']
         match_count = article['match_count']
         article_type = article.get('type', 'prediction')
+        has_review = article.get('has_review', False)
         
         # Format date for display
         try:
@@ -463,7 +493,14 @@ def generate_brief_page(news_data, all_dates):
             display_date_full = date_str
         
         # Get title and icon based on type
-        if article_type == 'prediction':
+        if has_review:
+            # Has completed matches with daily_commentary - show as "赛后复盘"
+            icon = '📊'
+            type_label = '赛后复盘'
+            type_bg = 'var(--gold-soft)'
+            type_color = 'var(--gold)'
+            title = f"{display_date_full} 赛后复盘"
+        elif article_type == 'prediction':
             icon = '🔮'
             type_label = '预测'
             type_bg = 'var(--turf-soft)'
@@ -1087,6 +1124,176 @@ def generate_review_content(matches, commentary, display_date):
     return content
 
 
+def generate_post_match_review(completed_matches, daily_commentary):
+    """
+    Generate post-match review section for completed matches.
+    Shows the final scores and AI prediction accuracy.
+    """
+    if not completed_matches or not daily_commentary:
+        return ""
+    
+    html = '''<section class="post-match-review">
+    <div class="review-header">
+        <h2>🏆 赛后复盘</h2>
+        <p class="review-summary">''' + daily_commentary + '''</p>
+    </div>
+    <div class="review-matches">'''
+    
+    for match in completed_matches:
+        match_id = match.get('id', '')
+        teams = match.get('teams', '')
+        score = match.get('score', '')
+        
+        # Parse teams
+        if 'VS' in teams:
+            home_team, away_team = teams.split('VS', 1)
+            home_team = home_team.strip()
+            away_team = away_team.strip()
+        else:
+            home_team, away_team = teams, ''
+        
+        # Parse score
+        if score and '-' in str(score):
+            home_score, away_score = str(score).split('-', 1)
+            home_score = home_score.strip()
+            away_score = away_score.strip()
+        else:
+            home_score, away_score = '?', '?'
+        
+        # Determine result
+        try:
+            if int(home_score) > int(away_score):
+                result = '主胜'
+                result_class = 'win'
+            elif int(home_score) < int(away_score):
+                result = '客胜'
+                result_class = 'lose'
+            else:
+                result = '平局'
+                result_class = 'draw'
+        except:
+            result = '未知'
+            result_class = 'unknown'
+        
+        html += f'''
+        <div class="review-match">
+            <div class="match-info">
+                <span class="match-id">{match_id}</span>
+                <span class="teams">{home_team} vs {away_team}</span>
+            </div>
+            <div class="match-result">
+                <span class="score">{home_score} - {away_score}</span>
+                <span class="result {result_class}">{result}</span>
+            </div>
+        </div>'''
+    
+    html += '''
+    </div>
+</section>
+
+<style>
+.post-match-review {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #0f3460;
+}
+.review-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #0f3460;
+}
+.review-header h2 {
+    color: #e94560;
+    font-size: 1.5em;
+    margin: 0 0 10px 0;
+}
+.review-summary {
+    color: #a8b2d1;
+    font-size: 0.95em;
+    line-height: 1.6;
+    margin: 0;
+}
+.review-matches {
+    display: grid;
+    gap: 15px;
+}
+.review-match {
+    background: rgba(15, 52, 96, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.match-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.match-id {
+    background: #e94560;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+.teams {
+    color: #ccd6f6;
+    font-weight: 500;
+}
+.match-result {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.score {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #64ffda;
+}
+.result {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+.result.win {
+    background: rgba(100, 255, 218, 0.2);
+    color: #64ffda;
+}
+.result.lose {
+    background: rgba(233, 69, 96, 0.2);
+    color: #e94560;
+}
+.result.draw {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+.result.unknown {
+    background: rgba(168, 178, 209, 0.2);
+    color: #a8b2d1;
+}
+@media (max-width: 600px) {
+    .review-match {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .match-result {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+</style>'''
+    
+    return html
+
+
 def generate_brief_article(article, news_data):
     """
     Generate an individual article page for a specific date.
@@ -1113,7 +1320,13 @@ def generate_brief_article(article, news_data):
         display_date_full = date_str
     
     # Get title and commentary from metadata, with type-based defaults
-    if article_type == 'review':
+    has_review = article.get('has_review', False)
+    
+    if has_review:
+        # Has completed matches with daily_commentary
+        default_title = f"{display_date_full} 赛后复盘"
+        section_title = "📊 赛后复盘"
+    elif article_type == 'review':
         default_title = f"{display_date_full} AI复盘简报"
         section_title = "📊 AI复盘"
     else:
@@ -1133,6 +1346,13 @@ def generate_brief_article(article, news_data):
         article_content = generate_review_content(matches, commentary, display_date_full)
     else:
         article_content = generate_prediction_content(matches, commentary, display_date_full)
+    
+    # If there's a review section (completed matches with daily_commentary), add it at the top
+    review_section = ""
+    if has_review and commentary:
+        completed_matches = [m for m in matches if m.get('status') == '已确认']
+        if completed_matches:
+            review_section = generate_post_match_review(completed_matches, commentary)
     
     html = f'''<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1307,8 +1527,11 @@ def generate_brief_article(article, news_data):
             <div class="meta">{display_date_full} · {match_count}场赛事</div>
         </div>
         
+        <!-- Post-match Review Section (if has completed matches) -->
+        {review_section}
+        
         <!-- Commentary -->
-        {f'<div class="commentary"><h2>{section_title}</h2><p>{commentary}</p></div>' if commentary else ''}
+        {f'<div class="commentary"><h2>{section_title}</h2><p>{commentary}</p></div>' if commentary and not has_review else ''}
         
         <!-- Article Content -->
         {article_content}
