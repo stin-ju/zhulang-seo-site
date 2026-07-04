@@ -429,9 +429,16 @@
         // 备用数据（静态嵌入）
         window.MATCH_DATA = []; // 保留作为fallback，实际数据从API动态获取
         window.MATCH_DATA.forEach(m => {
-            const parts = (m.teams || '').split(' VS ');
-            m.home_team = parts[0] || '';
-            m.away_team = parts[1] || '';
+            // 兼容 ' VS ' 和 'VS' 两种格式
+            const teams = m.teams || '';
+            const match = teams.match(/^(.+?)\s*VS\s*(.+)$/);
+            if (match) {
+                m.home_team = match[1].trim();
+                m.away_team = match[2].trim();
+            } else {
+                m.home_team = teams;
+                m.away_team = '';
+            }
             m.sport = m.sport_type;
         });
 
@@ -440,16 +447,34 @@
             try {
                 const resp = await fetch('/api/matches');
                 const data = await resp.json();
-                // 过滤：只保留在售且未结束的比赛（反向排除"已确认"状态）
-                const availableMatches = data.filter(m => 
-                    m.status !== '已确认' && 
-                    m.selling_status === 'on_sale'
-                );
+                const now = new Date();
+                // 过滤：只保留在售且未结束的比赛
+                // 1. status 不是"已确认"（容错：反向排除）
+                // 2. selling_status 是 "on_sale"
+                // 3. 当前时间 < match_time - 25分钟（体彩规则：开赛前25分钟停售）
+                const availableMatches = data.filter(m => {
+                    if (m.status === '已确认') return false;
+                    if (m.selling_status !== 'on_sale') return false;
+                    // 时间容错：如果当前时间已超过开赛前25分钟，视为停售
+                    if (m.match_time) {
+                        const matchStart = new Date(m.match_time);
+                        const cutoff = new Date(matchStart.getTime() - 25 * 60 * 1000);
+                        if (now >= cutoff) return false;
+                    }
+                    return true;
+                });
                 // 处理队伍名称和sport字段
                 availableMatches.forEach(m => {
-                    const parts = (m.teams || '').split(' VS ');
-                    m.home_team = parts[0] || '';
-                    m.away_team = parts[1] || '';
+                    // 兼容 ' VS ' 和 'VS' 两种格式
+                    const teams = m.teams || '';
+                    const match = teams.match(/^(.+?)\s*VS\s*(.+)$/);
+                    if (match) {
+                        m.home_team = match[1].trim();
+                        m.away_team = match[2].trim();
+                    } else {
+                        m.home_team = teams;
+                        m.away_team = '';
+                    }
                     m.sport = m.sport_type;
                 });
                 state.matches = availableMatches;
