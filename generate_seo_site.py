@@ -401,8 +401,8 @@ def generate_brief_page(news_data, all_dates):
         metadata = fetch_metadata_for_date(date_str)
         chain_bets = fetch_chain_bets_for_date(date_str)
         # Determine type: prediction if matches haven't been played, review if they have
-        has_unplayed = any(m.get('status') != '已确认' for m in matches)
-        has_completed = any(m.get('status') == '已确认' for m in matches)
+        has_unplayed = any(m.get('status') not in ['已确认', '已完赛'] for m in matches)
+        has_completed = any(m.get('status') in ['已确认', '已完赛'] for m in matches)
         has_commentary = metadata and metadata.get('daily_commentary')
         
         # If there's a daily_commentary and completed matches, mark as having review content
@@ -967,8 +967,12 @@ def generate_review_content(matches, commentary, display_date):
         content += '<div class="results-grid">'
         for m in completed_matches:
             teams = m.get('teams', '')
-            home_score = m.get('home_score', 0)
-            away_score = m.get('away_score', 0)
+            home_score = m.get('home_score')
+            away_score = m.get('away_score')
+            
+            # 确保分数不为None
+            if home_score is None or away_score is None:
+                continue
             
             if 'VS' in teams:
                 parts = teams.split('VS')
@@ -1008,8 +1012,8 @@ def generate_review_content(matches, commentary, display_date):
         ai_stats = {}
         for m in completed_matches:
             predictions = m.get('predictions', [])
-            home_score = m.get('home_score', 0)
-            away_score = m.get('away_score', 0)
+            home_score = m.get('home_score') or 0
+            away_score = m.get('away_score') or 0
             
             # 实际结果
             if home_score > away_score:
@@ -1072,8 +1076,8 @@ def generate_review_content(matches, commentary, display_date):
     upsets = []
     for m in completed_matches:
         predictions = m.get('predictions', [])
-        home_score = m.get('home_score', 0)
-        away_score = m.get('away_score', 0)
+        home_score = m.get('home_score') or 0
+        away_score = m.get('away_score') or 0
         handicap = m.get('handicap', 0)
         
         # 判断是否是冷门
@@ -1081,7 +1085,7 @@ def generate_review_content(matches, commentary, display_date):
             # 统计AI预测
             favorite_count = 0
             for p in predictions:
-                spf = p.get('spf', '')
+                spf = p.get('spf') or ''
                 if handicap and float(handicap) < 0:
                     if '胜' in spf:
                         favorite_count += 1
