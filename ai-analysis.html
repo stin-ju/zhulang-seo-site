@@ -329,28 +329,42 @@
         preds.forEach(pred => {
           // Parse analysis - show full content
           let analysisText = '';
-          let analysisObj = pred.analysis;
-          if (analysisObj) {
-            try {
-              if (typeof analysisObj === 'string') {
-                analysisObj = JSON.parse(analysisObj.replace(/'/g, '"'));
-              }
-              if (typeof analysisObj === 'object' && analysisObj !== null) {
-                const parts = [];
-                if (analysisObj.core_logic) parts.push(`【核心逻辑】${analysisObj.core_logic}`);
-                if (analysisObj.risk) parts.push(`【风险提示】${analysisObj.risk}`);
-                for (const [key, value] of Object.entries(analysisObj)) {
-                  if (key !== 'core_logic' && key !== 'risk' && value) {
-                    parts.push(`【${key}】${value}`);
+          const analysis = pred.analysis;
+          if (analysis) {
+              if (typeof analysis === 'object' && analysis !== null) {
+                  // 已经是对象
+                  const parts = [];
+                  if (analysis.core_logic) parts.push('【核心逻辑】' + analysis.core_logic);
+                  if (analysis.risk) parts.push('【风险提示】' + analysis.risk);
+                  for (const [key, value] of Object.entries(analysis)) {
+                      if (key !== 'core_logic' && key !== 'risk' && value) {
+                          parts.push('【' + key + '】' + value);
+                      }
                   }
-                }
-                analysisText = parts.join('\n');
-              } else if (typeof analysisObj === 'string') {
-                analysisText = analysisObj;
+                  analysisText = parts.join('\n');
+              } else if (typeof analysis === 'string') {
+                  // 先尝试JSON解析
+                  try {
+                      const parsed = JSON.parse(analysis.replace(/'/g, '"'));
+                      if (typeof parsed === 'object' && parsed !== null) {
+                          // 是JSON对象，结构化显示
+                          const parts = [];
+                          if (parsed.core_logic) parts.push('【核心逻辑】' + parsed.core_logic);
+                          if (parsed.risk) parts.push('【风险提示】' + parsed.risk);
+                          for (const [key, value] of Object.entries(parsed)) {
+                              if (key !== 'core_logic' && key !== 'risk' && value) {
+                                  parts.push('【' + key + '】' + value);
+                              }
+                          }
+                          analysisText = parts.join('\n');
+                      } else {
+                          analysisText = String(parsed);
+                      }
+                  } catch (e) {
+                      // 纯文本，直接显示
+                      analysisText = analysis;
+                  }
               }
-            } catch (e) {
-              analysisText = typeof pred.analysis === 'string' ? pred.analysis : '';
-            }
           }
           
           html += `

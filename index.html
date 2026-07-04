@@ -591,22 +591,28 @@ function computeVotes(matchId) {
     const details = [];
 
     preds.forEach(p => {
-        const spf = (p.spf || '').trim();
-        if (spf === '胜') votes['胜']++;
-        else if (spf === '平') votes['平']++;
-        else if (spf === '负') votes['负']++;
-        else if (spf.includes('胜') && !spf.includes('负')) votes['胜']++;
-        else if (spf.includes('负') && !spf.includes('胜')) votes['负']++;
-        else if (spf.includes('平')) votes['平']++;
+        // 篮球用win_loss，足球用spf
+        let choice = (p.spf || '').trim();
+        if (!choice && p.win_loss) {
+            choice = p.win_loss.trim();
+        }
+        if (choice === '胜') votes['胜']++;
+        else if (choice === '平') votes['平']++;
+        else if (choice === '负') votes['负']++;
+        else if (choice.includes('胜') && !choice.includes('负')) votes['胜']++;
+        else if (choice.includes('负') && !choice.includes('胜')) votes['负']++;
+        else if (choice.includes('平')) votes['平']++;
         details.push({
             ai: p.ai_name,
-            spf: spf,
-            handicap: p.handicap_spf,
-            score: p.score,
-            total_points: p.total_points,
-            score_diff_range: p.score_diff_range,
-            goals: p.goals,
-            half_full: p.half_full,
+            spf: p.spf || '',
+            win_loss: p.win_loss || '',
+            handicap: p.handicap_spf || '',
+            score: p.score || '',
+            total_points: p.total_points || '',
+            score_diff_range: p.score_diff_range || '',
+            goals: p.goals || '',
+            half_full: p.half_full || '',
+            half_win_loss: p.half_win_loss || '',
             hit_handicap: p.hit_handicap,
             hit_score: p.hit_score,
             hit_goals: p.hit_goals,
@@ -660,7 +666,7 @@ function renderPredictionTable(details, match, isDone) {
     
     // 足球5维度，篮球5维度
     const dims = isBasketball ? [
-        { key: 'spf', label: '胜负' },
+        { key: 'win_loss', label: '胜负' },
         { key: 'handicap', label: `让分(${match.handicap || '?'})` },
         { key: 'total_points', label: '总分' },
         { key: 'score_diff_range', label: '分差' },
@@ -729,12 +735,16 @@ function renderPredictionTable(details, match, isDone) {
         let spfHit = false;
         if (isDone) {
             if (isBasketball) {
-                spfHit = actualBasketballResult && d.spf === actualBasketballResult;
+                // 篮球用win_loss字段
+                const winLoss = d.win_loss || d.spf;
+                spfHit = actualBasketballResult && winLoss === actualBasketballResult;
             } else {
                 spfHit = actualResult && d.spf === actualResult;
             }
         }
-        html += renderPredCell(d.spf, spfHit, isDone);
+        // 篮球用win_loss，足球用spf
+        const spfValue = isBasketball ? (d.win_loss || d.spf) : d.spf;
+        html += renderPredCell(spfValue, spfHit, isDone);
 
         // 让球/让分维度 - 实时计算命中
         let handicapHit = false;
