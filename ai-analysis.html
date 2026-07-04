@@ -276,10 +276,23 @@
       return;
     }
 
-    // Group predictions by date
+    // Get lottery date based on match_time (if hour < 12, use previous day)
+    function getLotteryDate(matchId) {
+      const match = matchMap[matchId];
+      if (!match || !match.match_time) return 'unknown';
+      const date = new Date(match.match_time.replace(' ', 'T'));
+      const hour = date.getHours();
+      if (hour < 12) {
+        // Previous day
+        date.setDate(date.getDate() - 1);
+      }
+      return date.toISOString().split('T')[0];
+    }
+
+    // Group predictions by lottery date
     const byDate = {};
     footballPreds.forEach(p => {
-      const matchDate = p.match_date || p.created_at?.split('T')[0] || 'unknown';
+      const matchDate = getLotteryDate(p.match_id);
       if (!byDate[matchDate]) byDate[matchDate] = {};
       if (!byDate[matchDate][p.match_id]) byDate[matchDate][p.match_id] = [];
       byDate[matchDate][p.match_id].push(p);

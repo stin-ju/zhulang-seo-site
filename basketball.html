@@ -233,11 +233,26 @@
     const predictions = await predsResp.json();
     const matches = await matchesResp.json();
 
-    // Create a map of match_id to teams
+    // Create a map of match_id to teams and match_time
     const matchTeams = {};
+    const matchTimes = {};
     matches.forEach(m => {
       matchTeams[m.id] = m.teams;
+      matchTimes[m.id] = m.match_time;
     });
+
+    // Get lottery date based on match_time (if hour < 12, use previous day)
+    function getLotteryDate(matchId) {
+      const matchTime = matchTimes[matchId];
+      if (!matchTime) return '未知日期';
+      const date = new Date(matchTime.replace(' ', 'T'));
+      const hour = date.getHours();
+      if (hour < 12) {
+        // Previous day
+        date.setDate(date.getDate() - 1);
+      }
+      return date.toISOString().split('T')[0];
+    }
 
     // Filter for basketball matches
     const basketballPreds = predictions.filter(p => p.sport_type === 'basketball');
@@ -248,10 +263,10 @@
       return;
     }
 
-    // Group by date
+    // Group by lottery date
     const byDate = {};
     basketballPreds.forEach(p => {
-      const date = p.match_date || '未知日期';
+      const date = getLotteryDate(p.match_id);
       if (!byDate[date]) byDate[date] = {};
       const matchId = p.match_id || 'N/A';
       const teams = matchTeams[matchId] || matchId;

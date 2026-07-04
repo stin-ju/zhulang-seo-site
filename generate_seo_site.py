@@ -19,6 +19,31 @@ SUPABASE_URL = "https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.v
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM"
 
 
+def get_lottery_date(match_time_str):
+    """
+    根据体彩规则计算比赛所属的彩票日期。
+    如果比赛时间的小时 < 12，则归属前一天（凌晨比赛归前一天）。
+    例如：2026-07-06 01:00:00 -> 2026-07-05
+    """
+    if not match_time_str:
+        return None
+    try:
+        # 解析日期时间字符串
+        if 'T' in match_time_str:
+            dt = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
+        else:
+            dt = datetime.strptime(match_time_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
+        
+        # 如果小时 < 12，归属前一天
+        if dt.hour < 12:
+            dt = dt - timedelta(days=1)
+        
+        return dt.strftime('%Y-%m-%d')
+    except Exception:
+        # 如果解析失败，返回原始日期部分
+        return match_time_str.split('T')[0].split(' ')[0]
+
+
 def fetch_today_matches():
     """
     Fetch today's matches with predictions from Supabase using nested query.
@@ -234,6 +259,7 @@ def fetch_match_dates():
     """
     Fetch all unique match dates from the matches table.
     Returns a list of date strings in YYYY-MM-DD format, sorted descending.
+    Uses the lottery date rule: if hour < 12, the match belongs to the previous day.
     """
     try:
         url = f"{SUPABASE_URL}/rest/v1/matches?select=match_time&order=match_time.desc"
@@ -243,14 +269,15 @@ def fetch_match_dates():
         })
         with urllib.request.urlopen(req, timeout=10) as response:
             data = json.loads(response.read().decode('utf-8'))
-            # Extract unique dates
+            # Extract unique dates using lottery date rule
             dates = set()
             for item in data:
                 match_time = item.get('match_time', '')
                 if match_time:
-                    # Handle both "2026-06-30 04:00" and "2026-06-30T04:00:00" formats
-                    date_str = match_time.split('T')[0].split(' ')[0]
-                    dates.add(date_str)
+                    # Use lottery date rule (hour < 12 -> previous day)
+                    lottery_date = get_lottery_date(match_time)
+                    if lottery_date:
+                        dates.add(lottery_date)
             # Sort descending
             sorted_dates = sorted(dates, reverse=True)
             print(f"✓ 获取到 {len(sorted_dates)} 个比赛日期")
@@ -262,13 +289,20 @@ def fetch_match_dates():
 
 def fetch_matches_for_date(date_str):
     """
-    Fetch all matches for a specific date with predictions.
+    Fetch all matches for a specific lottery date with predictions.
+    Uses the lottery date rule: matches with hour < 12 belong to the previous day.
+    So for date_str, we fetch matches from date_str 12:00:00 to date_str+1 11:59:59.
     Returns a list of match objects with predictions nested.
     """
     try:
-        # Use gte/lt for timestamp range query, include predictions
-        start_time = f"{date_str}T00:00:00"
-        end_time = f"{date_str}T23:59:59"
+        # Parse the date
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        next_date = date_obj + timedelta(days=1)
+        next_date_str = next_date.strftime('%Y-%m-%d')
+        
+        # Use lottery date rule: fetch from date_str 12:00:00 to date_str+1 11:59:59
+        start_time = f"{date_str}T12:00:00"
+        end_time = f"{next_date_str}T11:59:59"
         url = f"{SUPABASE_URL}/rest/v1/matches?select=*,predictions(*)&match_time=gte.{start_time}&match_time=lte.{end_time}&order=match_time.asc"
         req = urllib.request.Request(url, headers={
             'apikey': SUPABASE_KEY,

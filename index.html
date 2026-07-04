@@ -362,7 +362,7 @@
                     <div class="top">
                         <span class="icon">🔮</span>
                         <span class="title">7月6日 周日 预测</span>
-                        <span class="count">2场</span>
+                        <span class="count">4场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -370,15 +370,15 @@
                     <div class="top">
                         <span class="icon">🔮</span>
                         <span class="title">7月5日 周六 预测</span>
-                        <span class="count">5场</span>
+                        <span class="count">8场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
                 <a href="/brief-2026-07-04.html" class="brief-item">
                     <div class="top">
-                        <span class="icon">📊</span>
-                        <span class="title">7月4日 周五 复盘</span>
-                        <span class="count">20场</span>
+                        <span class="icon">🔮</span>
+                        <span class="title">7月4日 周五 预测</span>
+                        <span class="count">8场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -386,7 +386,7 @@
                     <div class="top">
                         <span class="icon">📊</span>
                         <span class="title">7月3日 周四 复盘</span>
-                        <span class="count">19场</span>
+                        <span class="count">22场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -394,7 +394,7 @@
                     <div class="top">
                         <span class="icon">📊</span>
                         <span class="title">7月2日 周三 复盘</span>
-                        <span class="count">5场</span>
+                        <span class="count">16场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -450,7 +450,15 @@ function fmtTime(dt) {
 
 function fmtDate(dt) {
     if (!dt) return '';
-    try { return dt.slice(0, 10); } catch (e) { return ''; }
+    try {
+        // Apply lottery date rule: if hour < 12, use previous day
+        const date = new Date(dt.replace(' ', 'T'));
+        const hour = date.getHours();
+        if (hour < 12) {
+            date.setDate(date.getDate() - 1);
+        }
+        return date.toISOString().split('T')[0];
+    } catch (e) { return ''; }
 }
 
 function fmtDateLabel(dateStr) {
