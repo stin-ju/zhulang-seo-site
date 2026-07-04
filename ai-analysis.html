@@ -73,6 +73,13 @@
     .commentary-body { font-family: 'Noto Serif SC', serif; }
     .commentary-body p { margin-bottom: 1em; line-height: 1.9; }
     .commentary-body h3 { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
+    /* Line clamp for analysis text */
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
     /* AI Logo Capsule Style */
     .ai-logo {
         display: inline-flex; align-items: center; gap: 6px;
@@ -318,7 +325,12 @@
                 ${getAiLogoHtml(pred.ai_name)}
                 <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">${formatPrediction(pred)}</span>
               </div>
-              ${pred.analysis ? `<div class="commentary-body text-gray-300 text-sm leading-relaxed"><p>${pred.analysis.substring(0, 200)}...</p></div>` : ''}
+              ${pred.analysis ? `
+                <div class="commentary-body text-gray-300 text-sm leading-relaxed">
+                  <p class="analysis-text line-clamp-2">${pred.analysis}</p>
+                  ${pred.analysis.length > 100 ? `<button class="text-xs text-turf mt-1 hover:underline" onclick="this.previousElementSibling.classList.toggle('line-clamp-2'); this.textContent = this.textContent === '展开全部' ? '收起' : '展开全部'">展开全部</button>` : ''}
+                </div>
+              ` : ''}
             </div>
           `;
         });
