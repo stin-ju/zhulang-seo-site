@@ -398,9 +398,11 @@
   // Format match date for display (e.g., "周四001 6/29")
   function formatMatchLabel(matchId, matchTime) {
     if (!matchTime) return matchId;
-    const date = new Date(matchTime);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
+    // 直接截取日期部分，不转UTC（避免时区导致日期错误）
+    const dateStr = matchTime.replace(' ', 'T').substring(0, 10);
+    const parts = dateStr.split('-');
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
     return `${matchId} ${month}/${day}`;
   }
 

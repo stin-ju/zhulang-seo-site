@@ -455,9 +455,8 @@ function fmtTime(dt) {
 function fmtDate(dt) {
     if (!dt) return '';
     try {
-        // Simple date extraction from datetime string
-        const date = new Date(dt.replace(' ', 'T'));
-        return date.toISOString().split('T')[0];
+        // 直接截取日期部分，不转UTC（避免时区导致日期错误）
+        return dt.replace(' ', 'T').substring(0, 10);
     } catch (e) { return ''; }
 }
 
@@ -471,9 +470,10 @@ function getLotteryDateFromMatch(match) {
 }
 
 function fmtDateLabel(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00');
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
+    // 直接截取日期部分，不转UTC（避免时区导致日期错误）
+    const parts = dateStr.replace(' ', 'T').substring(0, 10).split('-');
+    const m = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
     return m + '月' + day + '日';
 }
 

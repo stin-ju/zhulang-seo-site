@@ -241,9 +241,10 @@
 
   function formatDate(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
+    // 直接截取日期部分，不转UTC（避免时区导致日期错误）
+    const parts = dateStr.replace(' ', 'T').substring(0, 10).split('-');
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
     return `${month}月${day}日`;
   }
 
