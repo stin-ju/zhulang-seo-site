@@ -278,8 +278,9 @@
     function getLotteryDate(matchId) {
       const match = matchMap[matchId];
       if (!match || !match.match_time) return 'unknown';
-      const d = new Date(match.match_time.replace(' ', 'T'));
-      return d.toISOString().split('T')[0];
+      // 直接取日期部分，不转UTC（避免时区导致日期错误）
+      const timeStr = match.match_time.replace(' ', 'T');
+      return timeStr.split('T')[0];
     }
 
     // Group predictions by lottery date

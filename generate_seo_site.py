@@ -16,18 +16,12 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJ
 def get_lottery_date(match_id=None, match_time_str=None, all_dates=None):
     """
     根据match_time的真实日期分组。
-    直接使用match_time的日期部分（YYYY-MM-DD）。
+    直接使用match_time的日期部分（YYYY-MM-DD），不进行时区转换。
     """
     if not match_time_str:
         return None
-    try:
-        if 'T' in match_time_str:
-            dt = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
-        else:
-            dt = datetime.strptime(match_time_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
-        return dt.strftime('%Y-%m-%d')
-    except Exception:
-        return match_time_str.split('T')[0].split(' ')[0]
+    # 直接取日期部分，不转UTC（避免时区导致日期错误）
+    return match_time_str.replace(' ', 'T').split('T')[0]
 
 
 def fetch_today_matches():

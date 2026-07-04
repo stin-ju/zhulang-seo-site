@@ -245,8 +245,9 @@
     function getLotteryDate(matchId) {
       const matchTime = matchTimes[matchId];
       if (!matchTime) return '未知日期';
-      const d = new Date(matchTime.replace(' ', 'T'));
-      return d.toISOString().split('T')[0];
+      // 直接取日期部分，不转UTC（避免时区导致日期错误）
+      const timeStr = matchTime.replace(' ', 'T');
+      return timeStr.split('T')[0];
     }
 
     // Filter for basketball matches
