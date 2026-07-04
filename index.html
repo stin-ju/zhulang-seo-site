@@ -436,6 +436,10 @@ const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
 // ============================================================
 // 工具函数
 // ============================================================
+// 比赛状态容错：已确认/已完成/已结束都视为比赛已结束
+const DONE_STATUSES = ['已确认', '已完成', '已结束'];
+function isMatchDone(m) { return DONE_STATUSES.includes(m.status); }
+
 function esc(s) {
     if (!s) return '';
     const d = document.createElement('div');
@@ -572,7 +576,7 @@ async function loadAll() {
 
     // 更新全局统计
     document.getElementById('match-count').textContent = ALL_MATCHES.length;
-    document.getElementById('done-count').textContent = ALL_MATCHES.filter(m => m.status === '已确认').length;
+    document.getElementById('done-count').textContent = ALL_MATCHES.filter(m => isMatchDone(m)).length;
 
     // 渲染
     renderDateBar();
@@ -942,7 +946,7 @@ function renderSportView(containerId, matches, countLabelId) {
         const stats = computeVotes(m.id);
         const topVote = Object.entries(stats.votes).sort((a, b) => b[1] - a[1])[0];
         const voteCls = topVote ? (topVote[0] === '胜' ? 'win' : topVote[0] === '负' ? 'lose' : 'draw') : '';
-        const isDone = m.status === '已确认';
+        const isDone = isMatchDone(m);
         const result = isDone ? getMatchResult(m) : null;
         const isHidden = idx >= SHOW_COUNT;
 
@@ -1031,7 +1035,7 @@ function toggleDetail(matchId) {
 }
 
 function getMatchResult(match) {
-    if (match.status !== '已确认') return null;
+    if (!isMatchDone(match)) return null;
     const h = parseInt(match.home_score);
     const a = parseInt(match.away_score);
     if (isNaN(h) || isNaN(a)) return null;

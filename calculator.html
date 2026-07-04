@@ -440,9 +440,9 @@
             try {
                 const resp = await fetch('/api/matches');
                 const data = await resp.json();
-                // 过滤：只保留在售且待比赛的赛事
+                // 过滤：只保留在售且未结束的比赛（反向排除"已确认"状态）
                 const availableMatches = data.filter(m => 
-                    m.status === '未开赛' && 
+                    m.status !== '已确认' && 
                     m.selling_status === 'on_sale'
                 );
                 // 处理队伍名称和sport字段
