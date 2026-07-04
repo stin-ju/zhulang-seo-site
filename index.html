@@ -358,11 +358,19 @@
             </div>
             <div id="brief-list">
                 <!-- BRIEF_LIST_START -->
+                <a href="/brief-2026-07-07.html" class="brief-item">
+                    <div class="top">
+                        <span class="icon">📊</span>
+                        <span class="title">7月7日 周一 复盘</span>
+                        <span class="count">12场</span>
+                        <span class="arrow">→</span>
+                    </div>
+                </a>
                 <a href="/brief-2026-07-06.html" class="brief-item">
                     <div class="top">
                         <span class="icon">🔮</span>
                         <span class="title">7月6日 周日 预测</span>
-                        <span class="count">4场</span>
+                        <span class="count">17场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -370,7 +378,7 @@
                     <div class="top">
                         <span class="icon">🔮</span>
                         <span class="title">7月5日 周六 预测</span>
-                        <span class="count">8场</span>
+                        <span class="count">21场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -378,7 +386,7 @@
                     <div class="top">
                         <span class="icon">🔮</span>
                         <span class="title">7月4日 周五 预测</span>
-                        <span class="count">8场</span>
+                        <span class="count">22场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -386,15 +394,7 @@
                     <div class="top">
                         <span class="icon">📊</span>
                         <span class="title">7月3日 周四 复盘</span>
-                        <span class="count">22场</span>
-                        <span class="arrow">→</span>
-                    </div>
-                </a>
-                <a href="/brief-2026-07-02.html" class="brief-item">
-                    <div class="top">
-                        <span class="icon">📊</span>
-                        <span class="title">7月2日 周三 复盘</span>
-                        <span class="count">16场</span>
+                        <span class="count">34场</span>
                         <span class="arrow">→</span>
                     </div>
                 </a>
@@ -451,14 +451,44 @@ function fmtTime(dt) {
 function fmtDate(dt) {
     if (!dt) return '';
     try {
-        // Apply lottery date rule: if hour < 12, use previous day
+        // Simple date extraction from datetime string
         const date = new Date(dt.replace(' ', 'T'));
-        const hour = date.getHours();
-        if (hour < 12) {
-            date.setDate(date.getDate() - 1);
-        }
         return date.toISOString().split('T')[0];
     } catch (e) { return ''; }
+}
+
+// Get lottery date based on match_id prefix (周X)
+// e.g., "周六001" -> Saturday's date, "周日091" -> Sunday's date
+function getLotteryDateFromMatch(match, allMatches) {
+    const matchId = match.id || '';
+    // Extract weekday prefix from match_id (e.g., "周六001" -> "周六")
+    const prefixMatch = matchId.match(/^(周[一二三四五六日])/);
+    if (!prefixMatch) return fmtDate(match.match_time);
+    const prefix = prefixMatch[1];
+    
+    // Map Chinese weekday to JS weekday number (0=Sunday, 1=Monday, ..., 6=Saturday)
+    const weekdayMap = {
+        '周日': 0, '周一': 1, '周二': 2, '周三': 3,
+        '周四': 4, '周五': 5, '周六': 6
+    };
+    const targetWeekday = weekdayMap[prefix];
+    if (targetWeekday === undefined) return fmtDate(match.match_time);
+    
+    // Get all unique dates from allMatches
+    const allDates = [...new Set(allMatches.map(m => {
+        const d = new Date(m.match_time.replace(' ', 'T'));
+        return d.toISOString().split('T')[0];
+    }))].sort().reverse();
+    
+    // Find the most recent date that matches the target weekday
+    for (const dateStr of allDates) {
+        const d = new Date(dateStr + 'T00:00:00');
+        if (d.getDay() === targetWeekday) {
+            return dateStr;
+        }
+    }
+    
+    return fmtDate(match.match_time);
 }
 
 function fmtDateLabel(dateStr) {
@@ -512,10 +542,10 @@ async function loadAll() {
     ALL_MATCHES = matches || [];
     ALL_RANK = rank || [];
 
-    // 提取所有比赛日期
+    // 提取所有比赛日期（使用match_id前缀确定体彩日期）
     const dateSet = new Set();
     ALL_MATCHES.forEach(m => {
-        const d = fmtDate(m.match_time);
+        const d = getLotteryDateFromMatch(m, ALL_MATCHES);
         if (d) dateSet.add(d);
     });
     DATES = Array.from(dateSet).sort();
@@ -552,7 +582,7 @@ async function loadAll() {
 
 async function loadPredictions() {
     const matchIds = ALL_MATCHES
-        .filter(m => fmtDate(m.match_time) === CURRENT_DATE)
+        .filter(m => getLotteryDateFromMatch(m, ALL_MATCHES) === CURRENT_DATE)
         .map(m => m.id);
 
     if (matchIds.length === 0) {
@@ -567,7 +597,7 @@ async function loadPredictions() {
         const batch = matchIds.slice(i, i + batchSize);
         const orFilter = 'or=(' + batch.map(function (id) { return 'match_id.eq.' + id; }).join(',') + ')';
         const data = await sbQuery('predictions',
-            'match_id,ai_name,spf,handicap_spf,score,goals,half_full,total_points,score_diff_range,hit_handicap,hit_score,hit_goals,hit_half,total_hits',
+            'match_id,ai_name,spf,handicap_spf,score,goals,half_full,total_points,score_diff_range,hit_handicap,hit_score,hit_goals,hit_half,total_hits,win_loss,handicap_win_loss,half_win_loss',
             orFilter
         );
         all.push(...(data || []));
@@ -651,12 +681,13 @@ function renderDateBar() {
 function renderPredictionTable(details, match, isDone) {
     const isBasketball = match.sport_type === 'basketball';
     
-    // 足球5维度，篮球4维度
+    // 足球5维度，篮球5维度
     const dims = isBasketball ? [
         { key: 'spf', label: '胜负' },
         { key: 'handicap', label: `让分(${match.handicap || '?'})` },
-        { key: 'total_points', label: '大小分' },
-        { key: 'score_diff_range', label: '胜分差' }
+        { key: 'total_points', label: '总分' },
+        { key: 'score_diff_range', label: '分差' },
+        { key: 'half_win_loss', label: '半场胜负' }
     ] : [
         { key: 'spf', label: '胜平负' },
         { key: 'handicap', label: `让球(${match.handicap || '?'})` },
@@ -880,7 +911,7 @@ function renderPredCell(value, isHit, isDone) {
 // 渲染：焦点卡片 + 赛程列表
 // ============================================================
 function renderCurrentDate() {
-    const dayMatches = ALL_MATCHES.filter(m => fmtDate(m.match_time) === CURRENT_DATE);
+    const dayMatches = ALL_MATCHES.filter(m => getLotteryDateFromMatch(m, ALL_MATCHES) === CURRENT_DATE);
 
     // 按运动类型分组
     const football = dayMatches.filter(m => m.sport_type === 'football');
@@ -1004,6 +1035,10 @@ function getMatchResult(match) {
     const h = parseInt(match.home_score);
     const a = parseInt(match.away_score);
     if (isNaN(h) || isNaN(a)) return null;
+    // 篮球没有平局
+    if (match.sport_type === 'basketball') {
+        return h > a ? '胜' : '负';
+    }
     if (h > a) return '胜';
     if (h < a) return '负';
     return '平';

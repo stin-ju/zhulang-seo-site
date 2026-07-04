@@ -19,29 +19,74 @@ SUPABASE_URL = "https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.v
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM"
 
 
-def get_lottery_date(match_time_str):
+def get_lottery_date(match_id=None, match_time_str=None, all_dates=None):
     """
-    根据体彩规则计算比赛所属的彩票日期。
-    如果比赛时间的小时 < 12，则归属前一天（凌晨比赛归前一天）。
-    例如：2026-07-06 01:00:00 -> 2026-07-05
+    根据match_id的周X前缀确定体彩日期。
+    例如：周六001 -> 最近的周六日期，周日091 -> 最近的周日日期
+    同一周X编号跨多周时，只显示最近一周的比赛。
     """
-    if not match_time_str:
+    if not match_id:
+        # Fallback to match_time
+        if not match_time_str:
+            return None
+        try:
+            if 'T' in match_time_str:
+                dt = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
+            else:
+                dt = datetime.strptime(match_time_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
+            return dt.strftime('%Y-%m-%d')
+        except Exception:
+            return match_time_str.split('T')[0].split(' ')[0]
+    
+    # Extract weekday prefix from match_id (e.g., "周六001" -> "周六")
+    import re
+    prefix_match = re.match(r'^(周[一二三四五六日])', match_id)
+    if not prefix_match:
+        # Fallback to match_time
+        if match_time_str:
+            try:
+                if 'T' in match_time_str:
+                    dt = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
+                else:
+                    dt = datetime.strptime(match_time_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                return dt.strftime('%Y-%m-%d')
+            except Exception:
+                return match_time_str.split('T')[0].split(' ')[0]
         return None
-    try:
-        # 解析日期时间字符串
-        if 'T' in match_time_str:
-            dt = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
-        else:
-            dt = datetime.strptime(match_time_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
-        
-        # 如果小时 < 12，归属前一天
-        if dt.hour < 12:
-            dt = dt - timedelta(days=1)
-        
-        return dt.strftime('%Y-%m-%d')
-    except Exception:
-        # 如果解析失败，返回原始日期部分
-        return match_time_str.split('T')[0].split(' ')[0]
+    
+    prefix = prefix_match.group(1)
+    
+    # Map Chinese weekday to Python weekday number (0=Monday, 1=Tuesday, ..., 6=Sunday)
+    weekday_map = {
+        '周一': 0, '周二': 1, '周三': 2, '周四': 3,
+        '周五': 4, '周六': 5, '周日': 6
+    }
+    target_weekday = weekday_map.get(prefix)
+    if target_weekday is None:
+        return None
+    
+    # If all_dates is provided, find the most recent date matching the target weekday
+    if all_dates:
+        for date_str in sorted(all_dates, reverse=True):
+            try:
+                d = datetime.strptime(date_str, '%Y-%m-%d')
+                if d.weekday() == target_weekday:
+                    return date_str
+            except Exception:
+                continue
+    
+    # Fallback: use match_time to find the date
+    if match_time_str:
+        try:
+            if 'T' in match_time_str:
+                dt = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
+            else:
+                dt = datetime.strptime(match_time_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
+            return dt.strftime('%Y-%m-%d')
+        except Exception:
+            return match_time_str.split('T')[0].split(' ')[0]
+    
+    return None
 
 
 def fetch_today_matches():
@@ -60,7 +105,7 @@ def fetch_today_matches():
         # 字段说明：
         # - matches: id, teams, match_time, handicap, status, 各种赔率
         # - predictions(*): 关联的预测数据
-        select_fields = 'id,teams,match_time,handicap,status,win_odds,draw_odds,lose_odds,handicap_win_odds,handicap_draw_odds,handicap_lose_odds,home_score,away_score,predictions(id,ai_name,spf,handicap_spf,score,goals,half_full,hit_handicap,hit_score,hit_goals,hit_half)'
+        select_fields = 'id,teams,match_time,handicap,status,win_odds,draw_odds,lose_odds,handicap_win_odds,handicap_draw_odds,handicap_lose_odds,home_score,away_score,predictions(id,ai_name,spf,handicap_spf,score,goals,half_full,hit_handicap,hit_score,hit_goals,hit_half,win_loss,handicap_win_loss,half_win_loss,total_points,score_diff_range)'
         
         url = f"{SUPABASE_URL}/rest/v1/matches?select={urllib.parse.quote(select_fields)}&match_time=gte.{today}&match_time=lt.{tomorrow}&order=match_time.asc"
         
@@ -259,23 +304,38 @@ def fetch_match_dates():
     """
     Fetch all unique match dates from the matches table.
     Returns a list of date strings in YYYY-MM-DD format, sorted descending.
-    Uses the lottery date rule: if hour < 12, the match belongs to the previous day.
+    Uses the match_id prefix (周X) to determine the lottery date.
     """
     try:
-        url = f"{SUPABASE_URL}/rest/v1/matches?select=match_time&order=match_time.desc"
+        url = f"{SUPABASE_URL}/rest/v1/matches?select=id,match_time&order=match_time.desc"
         req = urllib.request.Request(url, headers={
             'apikey': SUPABASE_KEY,
             'Authorization': f'Bearer {SUPABASE_KEY}'
         })
         with urllib.request.urlopen(req, timeout=10) as response:
             data = json.loads(response.read().decode('utf-8'))
-            # Extract unique dates using lottery date rule
+            # Extract unique dates using match_id prefix
             dates = set()
+            # First, collect all possible dates from match_time
+            all_dates = set()
             for item in data:
                 match_time = item.get('match_time', '')
                 if match_time:
-                    # Use lottery date rule (hour < 12 -> previous day)
-                    lottery_date = get_lottery_date(match_time)
+                    try:
+                        if 'T' in match_time:
+                            dt = datetime.fromisoformat(match_time.replace('Z', '+00:00'))
+                        else:
+                            dt = datetime.strptime(match_time.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                        all_dates.add(dt.strftime('%Y-%m-%d'))
+                    except Exception:
+                        pass
+            
+            # Now determine lottery date for each match using match_id prefix
+            for item in data:
+                match_id = item.get('id', '')
+                match_time = item.get('match_time', '')
+                if match_id:
+                    lottery_date = get_lottery_date(match_id, match_time, all_dates)
                     if lottery_date:
                         dates.add(lottery_date)
             # Sort descending
@@ -290,27 +350,41 @@ def fetch_match_dates():
 def fetch_matches_for_date(date_str):
     """
     Fetch all matches for a specific lottery date with predictions.
-    Uses the lottery date rule: matches with hour < 12 belong to the previous day.
-    So for date_str, we fetch matches from date_str 12:00:00 to date_str+1 11:59:59.
+    Uses the match_id prefix (周X) to determine the lottery date.
     Returns a list of match objects with predictions nested.
     """
     try:
-        # Parse the date
+        # Parse the date to get the weekday
         date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-        next_date = date_obj + timedelta(days=1)
-        next_date_str = next_date.strftime('%Y-%m-%d')
+        target_weekday = date_obj.weekday()  # 0=Monday, 1=Tuesday, ..., 6=Sunday
         
-        # Use lottery date rule: fetch from date_str 12:00:00 to date_str+1 11:59:59
-        start_time = f"{date_str}T12:00:00"
-        end_time = f"{next_date_str}T11:59:59"
-        url = f"{SUPABASE_URL}/rest/v1/matches?select=*,predictions(*)&match_time=gte.{start_time}&match_time=lte.{end_time}&order=match_time.asc"
+        # Map Python weekday to Chinese weekday prefix
+        weekday_to_prefix = {
+            0: '周一', 1: '周二', 2: '周三', 3: '周四',
+            4: '周五', 5: '周六', 6: '周日'
+        }
+        target_prefix = weekday_to_prefix[target_weekday]
+        
+        # Fetch all matches and filter by match_id prefix
+        url = f"{SUPABASE_URL}/rest/v1/matches?select=*,predictions(*)&order=match_time.asc"
         req = urllib.request.Request(url, headers={
             'apikey': SUPABASE_KEY,
             'Authorization': f'Bearer {SUPABASE_KEY}'
         })
         with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            return data
+            all_data = json.loads(response.read().decode('utf-8'))
+            
+            # Filter matches by match_id prefix matching the target weekday
+            import re
+            filtered_data = []
+            for match in all_data:
+                match_id = match.get('id', '')
+                prefix_match = re.match(r'^(周[一二三四五六日])', match_id)
+                if prefix_match and prefix_match.group(1) == target_prefix:
+                    filtered_data.append(match)
+            
+            print(f"✓ 获取 {date_str} ({target_prefix}) 比赛数据: {len(filtered_data)} 场")
+            return filtered_data
     except Exception as e:
         print(f"✗ 获取 {date_str} 比赛数据失败: {e}")
         return []
@@ -822,6 +896,8 @@ def generate_prediction_content(matches, commentary, display_date):
         match_time = m.get('match_time', '')
         handicap = m.get('handicap', 0)
         predictions = m.get('predictions', [])
+        sport_type = m.get('sport_type', 'football')
+        is_basketball = sport_type == 'basketball'
         
         # 解析队伍
         if 'VS' in teams:
@@ -840,15 +916,17 @@ def generate_prediction_content(matches, commentary, display_date):
         content += f'<div class="match-preview">'
         content += f'<h3>{home} VS {away} <span class="match-time">{time_str}</span></h3>'
         
-        # 让球分析
+        # 让球/让分分析
         if handicap:
             handicap_val = float(handicap) if handicap else 0
             if handicap_val < 0:
                 favorite, underdog = home, away
-                handicap_text = f"{home}让{-handicap_val}球"
+                handicap_unit = '分' if is_basketball else '球'
+                handicap_text = f"{home}让{-handicap_val}{handicap_unit}"
             else:
                 favorite, underdog = away, home
-                handicap_text = f"{away}让{handicap_val}球"
+                handicap_unit = '分' if is_basketball else '球'
+                handicap_text = f"{away}让{handicap_val}{handicap_unit}"
             content += f'<p>盘口：<strong>{handicap_text}</strong>，{favorite}被看好。</p>'
         
         # AI预测汇总
@@ -860,7 +938,8 @@ def generate_prediction_content(matches, commentary, display_date):
             
             for p in predictions:
                 ai_name = p.get('ai_name', '')
-                spf = p.get('spf', '')
+                # 篮球用win_loss字段，足球用spf字段
+                spf = p.get('win_loss' if is_basketball else 'spf', '') or p.get('spf', '')
                 if spf:
                     ai_predictions.append(f"{ai_name}预测{spf}")
                     if '胜' in spf:
@@ -873,7 +952,7 @@ def generate_prediction_content(matches, commentary, display_date):
             total = len(predictions)
             if win_count > 0:
                 content += f'<p>AI观点：{total}个AI中有<strong>{win_count}个看好{home}胜</strong>'
-                if draw_count > 0:
+                if not is_basketball and draw_count > 0:
                     content += f'，{draw_count}个预测平局'
                 if lose_count > 0:
                     content += f'，{lose_count}个看好{away}胜'
@@ -882,7 +961,7 @@ def generate_prediction_content(matches, commentary, display_date):
             # 分歧点
             if win_count > 0 and lose_count > 0:
                 content += f'<p class="highlight">⚠️ <strong>分歧明显</strong>：AI们对这场比赛看法不一，可能存在冷门机会。</p>'
-            elif draw_count >= 2:
+            elif not is_basketball and draw_count >= 2:
                 content += f'<p class="highlight">⚠️ 多个AI预测平局，这场可能比较胶着。</p>'
         
         content += '</div>'
@@ -1003,6 +1082,8 @@ def generate_review_content(matches, commentary, display_date):
             teams = m.get('teams', '')
             home_score = m.get('home_score')
             away_score = m.get('away_score')
+            sport_type = m.get('sport_type', 'football')
+            is_basketball = sport_type == 'basketball'
             
             # 确保分数不为None
             if home_score is None or away_score is None:
@@ -1014,7 +1095,7 @@ def generate_review_content(matches, commentary, display_date):
             else:
                 home, away = teams, ''
             
-            # 判断结果
+            # 判断结果（篮球没有平局）
             if home_score > away_score:
                 result = '主胜'
                 result_class = 'win'
@@ -1022,8 +1103,8 @@ def generate_review_content(matches, commentary, display_date):
                 result = '客胜'
                 result_class = 'lose'
             else:
-                result = '平局'
-                result_class = 'draw'
+                result = '平局' if not is_basketball else '客胜'  # 篮球不会平
+                result_class = 'draw' if not is_basketball else 'lose'
             
             content += f'''
             <div class="result-card">
@@ -1048,18 +1129,21 @@ def generate_review_content(matches, commentary, display_date):
             predictions = m.get('predictions', [])
             home_score = m.get('home_score') or 0
             away_score = m.get('away_score') or 0
+            sport_type = m.get('sport_type', 'football')
+            is_basketball = sport_type == 'basketball'
             
-            # 实际结果
+            # 实际结果（篮球没有平局）
             if home_score > away_score:
                 actual_result = '胜'
             elif home_score < away_score:
                 actual_result = '负'
             else:
-                actual_result = '平'
+                actual_result = '平' if not is_basketball else '负'  # 篮球不会平
             
             for p in predictions:
                 ai_name = p.get('ai_name', '')
-                spf = p.get('spf', '')
+                # 篮球用win_loss字段，足球用spf字段
+                spf = p.get('win_loss' if is_basketball else 'spf', '') or p.get('spf', '')
                 
                 if ai_name not in ai_stats:
                     ai_stats[ai_name] = {'correct': 0, 'total': 0}
