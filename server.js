@@ -110,7 +110,8 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/matches' && req.method === 'GET') {
       const data = await querySupabase('matches', {
         select: '*',
-        order: 'match_time.asc'
+        order: 'match_time.asc',
+        limit: '5000'  // 增大限制，避免被默认1000条截断
       });
       res.writeHead(200, { 
         'Content-Type': 'application/json',
@@ -124,11 +125,25 @@ const server = http.createServer(async (req, res) => {
     }
 
     // GET /api/predictions
+    // 只返回在售比赛的预测，避免数据量过大被截断
     if (pathname === '/api/predictions' && req.method === 'GET') {
-      const data = await querySupabase('predictions', {
-        select: '*',
-        order: 'id.asc'
+      // 1. 先获取在售比赛的ID列表
+      const onSaleMatches = await querySupabase('matches', {
+        select: 'id',
+        filter: { 'selling_status': 'eq.on_sale' }
       });
+      const onSaleMatchIds = new Set(onSaleMatches.map(m => m.id));
+      
+      // 2. 获取所有预测数据（增大限制）
+      const allPredictions = await querySupabase('predictions', {
+        select: '*',
+        order: 'id.desc',  // 最新的在前
+        limit: '5000'
+      });
+      
+      // 3. 过滤：只保留在售比赛的预测
+      const data = allPredictions.filter(p => onSaleMatchIds.has(p.match_id));
+      
       res.writeHead(200, { 
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
@@ -209,7 +224,7 @@ const server = http.createServer(async (req, res) => {
       const matches = await querySupabase('matches', {
         select: '*',
         order: 'match_time.desc',
-        limit: '100'
+        limit: '500'
       });
       if (matches.length === 0) {
         res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
@@ -223,14 +238,15 @@ const server = http.createServer(async (req, res) => {
       };
       const latestDate = getDateFromMatchTime(matches[0].match_time);
       const recentMatches = matches.filter(m => getDateFromMatchTime(m.match_time) === latestDate);
-      const matchIds = recentMatches.map(m => m.id);
+      const matchIds = new Set(recentMatches.map(m => m.id));
       
       // Get predictions for these matches
       const allPredictions = await querySupabase('predictions', {
         select: '*',
-        order: 'id.asc'
+        order: 'id.desc',
+        limit: '5000'
       });
-      const recentPredictions = allPredictions.filter(p => matchIds.includes(p.match_id));
+      const recentPredictions = allPredictions.filter(p => matchIds.has(p.match_id));
       
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
       res.end(JSON.stringify({ date: latestDate, matches: recentMatches, predictions: recentPredictions }));
@@ -241,11 +257,13 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/football-history' && req.method === 'GET') {
       const matches = await querySupabase('matches', {
         select: '*',
-        order: 'match_time.desc'
+        order: 'match_time.desc',
+        limit: '5000'
       });
       const allPredictions = await querySupabase('predictions', {
         select: '*',
-        order: 'id.asc'
+        order: 'id.desc',
+        limit: '5000'
       });
       
       // Extract date from match_time
