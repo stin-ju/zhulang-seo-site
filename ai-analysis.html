@@ -319,16 +319,42 @@
         `;
         
         preds.forEach(pred => {
+          // Parse analysis - show full content
+          let analysisText = '';
+          let analysisObj = pred.analysis;
+          if (analysisObj) {
+            try {
+              if (typeof analysisObj === 'string') {
+                analysisObj = JSON.parse(analysisObj.replace(/'/g, '"'));
+              }
+              if (typeof analysisObj === 'object' && analysisObj !== null) {
+                const parts = [];
+                if (analysisObj.core_logic) parts.push(`【核心逻辑】${analysisObj.core_logic}`);
+                if (analysisObj.risk) parts.push(`【风险提示】${analysisObj.risk}`);
+                for (const [key, value] of Object.entries(analysisObj)) {
+                  if (key !== 'core_logic' && key !== 'risk' && value) {
+                    parts.push(`【${key}】${value}`);
+                  }
+                }
+                analysisText = parts.join('\n');
+              } else if (typeof analysisObj === 'string') {
+                analysisText = analysisObj;
+              }
+            } catch (e) {
+              analysisText = typeof pred.analysis === 'string' ? pred.analysis : '';
+            }
+          }
+          
           html += `
             <div class="rounded-lg bg-elevated/30 border border-border/40 p-3">
               <div class="flex items-center gap-2 mb-2">
                 ${getAiLogoHtml(pred.ai_name)}
                 <span class="text-xs font-semibold text-turf bg-turf/10 px-2 py-0.5 rounded">${formatPrediction(pred)}</span>
               </div>
-              ${pred.analysis ? `
+              ${analysisText ? `
                 <div class="commentary-body text-gray-300 text-sm leading-relaxed">
-                  <p class="analysis-text line-clamp-2">${pred.analysis}</p>
-                  ${pred.analysis.length > 100 ? `<button class="text-xs text-turf mt-1 hover:underline" onclick="this.previousElementSibling.classList.toggle('line-clamp-2'); this.textContent = this.textContent === '展开全部' ? '收起' : '展开全部'">展开全部</button>` : ''}
+                  <p class="analysis-text line-clamp-2" style="white-space: pre-line;">${analysisText}</p>
+                  ${analysisText.length > 100 ? `<button class="text-xs text-turf mt-1 hover:underline" onclick="this.previousElementSibling.classList.toggle('line-clamp-2'); this.textContent = this.textContent === '展开全部' ? '收起' : '展开全部'">展开全部</button>` : ''}
                 </div>
               ` : ''}
             </div>

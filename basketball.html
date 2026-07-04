@@ -289,14 +289,29 @@
         // Build prediction summary
         const predSummary = `胜:${winLoss} 让:${handicap} ${totalPoints} ${scoreDiff}`;
 
-        // Parse analysis if it's a string
+        // Parse analysis - show full content
         let analysisText = '';
         if (analysis) {
           try {
             const analysisObj = typeof analysis === 'string' ? JSON.parse(analysis.replace(/'/g, '"')) : analysis;
-            analysisText = analysisObj.core_logic || analysisObj.risk || '';
+            // If it's an object, combine all fields
+            if (typeof analysisObj === 'object' && analysisObj !== null) {
+              const parts = [];
+              if (analysisObj.core_logic) parts.push(`【核心逻辑】${analysisObj.core_logic}`);
+              if (analysisObj.risk) parts.push(`【风险提示】${analysisObj.risk}`);
+              // Include any other fields
+              for (const [key, value] of Object.entries(analysisObj)) {
+                if (key !== 'core_logic' && key !== 'risk' && value) {
+                  parts.push(`【${key}】${value}`);
+                }
+              }
+              analysisText = parts.join('\n');
+            } else if (typeof analysisObj === 'string') {
+              analysisText = analysisObj;
+            }
           } catch (e) {
-            analysisText = typeof analysis === 'string' ? analysis.slice(0, 100) + '...' : '';
+            // If parsing fails, show the raw string
+            analysisText = typeof analysis === 'string' ? analysis : '';
           }
         }
 
