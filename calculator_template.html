@@ -442,7 +442,7 @@
                 const data = await resp.json();
                 // 过滤：只保留在售且待比赛的赛事
                 const availableMatches = data.filter(m => 
-                    m.status === '待比赛' && 
+                    m.status === '未开赛' && 
                     m.selling_status === 'on_sale'
                 );
                 // 处理队伍名称和sport字段
