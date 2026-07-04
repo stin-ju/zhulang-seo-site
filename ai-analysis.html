@@ -274,43 +274,12 @@
       return;
     }
 
-    // Get lottery date based on match_id prefix (周X)
-    // e.g., "周六001" -> Saturday's date, "周日091" -> Sunday's date
+    // Get lottery date based on match_time (real date)
     function getLotteryDate(matchId) {
-      // Extract weekday prefix from match_id (e.g., "周六001" -> "周六")
-      const prefixMatch = matchId.match(/^(周[一二三四五六日])/);
-      if (!prefixMatch) {
-        // Fallback to match_time
-        const match = matchMap[matchId];
-        if (!match || !match.match_time) return 'unknown';
-        return new Date(match.match_time.replace(' ', 'T')).toISOString().split('T')[0];
-      }
-      const prefix = prefixMatch[1];
-      
-      // Map Chinese weekday to JS weekday number (0=Sunday, 1=Monday, ..., 6=Saturday)
-      const weekdayMap = {
-        '周日': 0, '周一': 1, '周二': 2, '周三': 3,
-        '周四': 4, '周五': 5, '周六': 6
-      };
-      const targetWeekday = weekdayMap[prefix];
-      if (targetWeekday === undefined) return 'unknown';
-      
-      // Get all unique dates from matches
-      const allDates = [...new Set(Object.values(matchMap).map(m => {
-        if (!m.match_time) return null;
-        const d = new Date(m.match_time.replace(' ', 'T'));
-        return d.toISOString().split('T')[0];
-      }).filter(Boolean))].sort().reverse();
-      
-      // Find the most recent date that matches the target weekday
-      for (const dateStr of allDates) {
-        const d = new Date(dateStr + 'T00:00:00');
-        if (d.getDay() === targetWeekday) {
-          return dateStr;
-        }
-      }
-      
-      return 'unknown';
+      const match = matchMap[matchId];
+      if (!match || !match.match_time) return 'unknown';
+      const d = new Date(match.match_time.replace(' ', 'T'));
+      return d.toISOString().split('T')[0];
     }
 
     // Group predictions by lottery date
