@@ -1,7 +1,6 @@
 // ============================================================
 // 首页逻辑 - 使用公共API模块
 // ============================================================
-
 import { 
     fetchMatches, 
     fetchPredictions, 
@@ -46,13 +45,14 @@ function fmtDateLabel(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
     const month = d.getMonth() + 1;
     const day = d.getDate();
-    return `${month}月${day}日`;
+    const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const weekDay = weekDays[d.getDay()];
+    return `${month}月${day}日 ${weekDay}`;
 }
 
 // ============================================================
 // 数据加载
 // ============================================================
-
 async function loadAll() {
     try {
         // 获取所有比赛（不过滤状态）
@@ -74,7 +74,19 @@ async function loadAll() {
         
         // 获取可用日期（按真实比赛日期分组）
         state.dates = [...new Set(allMatches.map(m => getMatchDate(m)))].sort().reverse();
-        state.currentDate = state.dates[0];
+        
+        // 默认选中今天
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        // 如果今天有比赛就选今天，否则选最近的有比赛的日期
+        if (state.dates.includes(todayStr)) {
+            state.currentDate = todayStr;
+        } else {
+            // 找最近的日期
+            const futureDates = state.dates.filter(d => d >= todayStr).sort();
+            state.currentDate = futureDates.length > 0 ? futureDates[0] : state.dates[0];
+        }
         
         // 渲染页面
         renderAll();
@@ -88,7 +100,6 @@ async function loadAll() {
 // ============================================================
 // 渲染函数
 // ============================================================
-
 function renderAll() {
     renderDateTabs();
     renderMatches();
@@ -96,45 +107,36 @@ function renderAll() {
     renderBriefList();
 }
 
-// 渲染日期标签
+// 渲染日期标签 - 始终显示7个（前3天 + 今天 + 后3天）
 function renderDateTabs() {
     const container = document.getElementById('date-bar');
     if (!container) return;
-    
-    if (state.dates.length === 0) {
-        container.innerHTML = '<div style="color:#94a3b8;font-size:13px;">暂无赛程</div>';
-        return;
-    }
     
     // 获取今天日期
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     
-    // 生成以今天为中心的7天日期（前3天 + 今天 + 后3天）
-    const centerDates = [];
+    // 生成固定的7天日期（前3天 + 今天 + 后3天）
+    const sevenDays = [];
     for (let i = -3; i <= 3; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
-        centerDates.push(d.toISOString().split('T')[0]);
+        sevenDays.push(d.toISOString().split('T')[0]);
     }
     
-    // 只显示有比赛数据的日期
-    const availableDates = centerDates.filter(date => state.dates.includes(date));
-    
-    // 如果今天没有比赛，使用第一个可用日期
-    const defaultDate = availableDates.includes(todayStr) ? todayStr : (availableDates[0] || state.dates[0]);
-    
-    // 如果当前日期不在可用日期列表中，设置为默认日期
-    if (!availableDates.includes(state.currentDate)) {
-        state.currentDate = defaultDate;
-    }
-    
-    container.innerHTML = availableDates.map(date => `
-        <button class="date-btn ${date === state.currentDate ? 'active' : ''}" 
-                data-date="${date}">
-            ${fmtDateLabel(date)}
-        </button>
-    `).join('');
+    // 始终显示7个日期标签，不管有没有比赛数据
+    container.innerHTML = sevenDays.map(date => {
+        const isToday = date === todayStr;
+        const isActive = date === state.currentDate;
+        const hasMatches = state.dates.includes(date);
+        
+        return `
+            <button class="date-btn ${isActive ? 'active' : ''} ${!hasMatches ? 'no-matches' : ''}" 
+                    data-date="${date}">
+                ${fmtDateLabel(date)}${isToday ? ' 今天' : ''}
+            </button>
+        `;
+    }).join('');
     
     // 绑定点击事件
     container.querySelectorAll('.date-btn').forEach(btn => {
@@ -158,7 +160,7 @@ function renderMatches() {
     if (footballContainer) {
         const footballMatches = dateMatches.filter(m => m.sport_type === 'football');
         if (footballMatches.length === 0) {
-            footballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">暂无足球赛程</div>';
+            footballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">当天没有足球赛程</div>';
         } else {
             footballContainer.innerHTML = footballMatches.map(m => renderMatchCard(m)).join('');
             // 绑定点击事件
@@ -174,7 +176,7 @@ function renderMatches() {
     if (basketballContainer) {
         const basketballMatches = dateMatches.filter(m => m.sport_type === 'basketball');
         if (basketballMatches.length === 0) {
-            basketballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">暂无篮球赛程</div>';
+            basketballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">当天没有篮球赛程</div>';
         } else {
             basketballContainer.innerHTML = basketballMatches.map(m => renderMatchCard(m)).join('');
             // 绑定点击事件
@@ -200,134 +202,164 @@ function renderMatchCard(match) {
     
     // 构建 badges
     let badges = '';
+    
+    // 状态badge
     if (isDone) {
-        badges += '<span class="badge-sm status-done">已确认</span>';
-    } else {
-        badges += '<span class="badge-sm status-pending">待比赛</span>';
-    }
-    if (matchPredictions.length > 0) {
-        badges += `<span class="badge-sm consensus">${matchPredictions.length}AI预测</span>`;
+        badges += `<span class="badge-sm status-done">已确认</span>`;
+    } else if (match.status === '未开赛') {
+        badges += `<span class="badge-sm status-pending">待比赛</span>`;
     }
     
-    // 构建预测摘要
-    let predSummary = '';
+    // 共识度/分歧度（基于预测）
     if (matchPredictions.length > 0) {
-        const avgHits = matchPredictions.reduce((sum, p) => sum + (p.total_hits || 0), 0) / matchPredictions.length;
-        predSummary = `
-            <div class="pred-summary" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;color:#94a3b8;">
-                <span>AI平均命中: <strong style="color:#10b981;">${avgHits.toFixed(1)}</strong></span>
-                <span style="margin-left:12px;">预测数: <strong style="color:#e8eef7;">${matchPredictions.length}</strong></span>
-            </div>
-        `;
+        const spfPredictions = matchPredictions.filter(p => p.spf).map(p => p.spf);
+        if (spfPredictions.length > 0) {
+            const counts = {};
+            spfPredictions.forEach(p => { counts[p] = (counts[p] || 0) + 1; });
+            const maxCount = Math.max(...Object.values(counts));
+            const consensus = maxCount / spfPredictions.length;
+            
+            if (consensus >= 0.7) {
+                const dir = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+                const cls = dir === '胜' ? 'win' : dir === '平' ? 'draw' : 'lose';
+                badges += `<span class="badge-sm consensus">共识${dir} ${Math.round(consensus * 100)}%</span>`;
+            } else if (consensus <= 0.4) {
+                badges += `<span class="badge-sm divergence">分歧大</span>`;
+            }
+        }
     }
     
-    // 构建内联预测详情
-    let inlinePredictions = '';
-    if (matchPredictions.length > 0) {
-        inlinePredictions = buildInlinePredictions(matchPredictions);
-    }
+    // 预测数量
+    const predCount = matchPredictions.length;
     
     return `
-        <div class="view-item match-card-clickable" data-match-id="${match.id}" style="cursor:pointer;">
+        <div class="view-item match-card-clickable" data-match-id="${match.id}">
             <span class="time">${matchTime}</span>
-            <span class="teams">${esc(match.id)} ${esc(homeTeam)} vs ${esc(awayTeam)}</span>
+            <span class="teams">${esc(homeTeam)} vs ${esc(awayTeam)}</span>
             <div class="badge-group">
                 ${badges}
+                ${predCount > 0 ? `<span class="badge-sm" style="background:rgba(139,92,246,0.1);color:#a78bfa;">${predCount}AI预测</span>` : ''}
+                <span class="arrow-sm">▶</span>
             </div>
-            ${predSummary}
-            <div class="inline-predictions" style="display:none;">
-                ${inlinePredictions}
-            </div>
+        </div>
+        <div class="match-detail" id="detail-${match.id}">
+            ${renderPredictionsTable(matchPredictions, match)}
         </div>
     `;
 }
 
-// 构建内联预测内容 - 表格形式
-function buildInlinePredictions(matchPredictions) {
-    const rows = matchPredictions.map(p => {
-        const spfHit = p.spf_hit === true ? 'hit' : p.spf_hit === false ? 'miss' : '';
-        const handicapHit = p.handicap_hit === true ? 'hit' : p.handicap_hit === false ? 'miss' : '';
-        const scoreHit = p.score_hit === true ? 'hit' : p.score_hit === false ? 'miss' : '';
-        const goalsHit = p.goals_hit === true ? 'hit' : p.goals_hit === false ? 'miss' : '';
-        const halfFullHit = p.half_full_hit === true ? 'hit' : p.half_full_hit === false ? 'miss' : '';
-        
-        return `
-            <tr class="border-b border-white/5">
-                <td class="py-2 px-3 text-accent font-medium">${esc(p.ai_name)}</td>
-                <td class="py-2 px-3 text-center ${spfHit}">${p.spf || '-'}</td>
-                <td class="py-2 px-3 text-center ${handicapHit}">${p.handicap || '-'}</td>
-                <td class="py-2 px-3 text-center tabular ${scoreHit}">${p.score || '-'}</td>
-                <td class="py-2 px-3 text-center tabular ${goalsHit}">${p.goals || '-'}</td>
-                <td class="py-2 px-3 text-center ${halfFullHit}">${p.half_full || '-'}</td>
-            </tr>
-        `;
-    }).join('');
+// 渲染AI预测表格（每个AI一行，列是胜平负/让球/比分/进球数/半全场）
+function renderPredictionsTable(predictions, match) {
+    if (!predictions || predictions.length === 0) {
+        return '<div style="padding:12px 0;color:#94a3b8;font-size:13px;">暂无AI预测</div>';
+    }
+    
+    // 按总命中数降序排列
+    const sorted = [...predictions].sort((a, b) => (b.total_hits || 0) - (a.total_hits || 0));
+    
+    // 判断命中状态
+    function cellClass(pred, field) {
+        const hitFieldMap = {
+            'spf': 'hit_handicap',
+            'handicap_spf': 'hit_handicap',
+            'score': 'hit_score',
+            'goals': 'hit_goals',
+            'half_full': 'hit_half'
+        };
+        const hitKey = hitFieldMap[field];
+        if (!hitKey || pred[hitKey] === undefined || pred[hitKey] === null) return '';
+        return pred[hitKey] === true ? 'hit' : 'miss';
+    }
     
     return `
-        <details class="inline-predictions-details">
-            <summary class="inline-predictions-summary">
-                <span class="chevron">▶</span>
-                <span>${matchPredictions.length} AI预测</span>
-            </summary>
-            <div class="inline-predictions-table-wrap">
-                <table class="inline-predictions-table">
-                    <thead>
+        <div class="inline-predictions-table-wrap">
+            <table class="inline-predictions-table">
+                <thead>
+                    <tr>
+                        <th>AI</th>
+                        <th>胜平负</th>
+                        <th>让球</th>
+                        <th>比分</th>
+                        <th>进球数</th>
+                        <th>半全场</th>
+                        <th>命中</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sorted.map(p => `
                         <tr>
-                            <th>AI</th>
-                            <th>胜平负</th>
-                            <th>让球</th>
-                            <th>比分</th>
-                            <th>进球数</th>
-                            <th>半全场</th>
+                            <td>${esc(p.ai_name)}</td>
+                            <td class="${cellClass(p, 'spf')}">${p.spf || '-'}</td>
+                            <td class="${cellClass(p, 'handicap_spf')}">${p.handicap_spf || '-'}</td>
+                            <td class="${cellClass(p, 'score')}">${p.score || '-'}</td>
+                            <td class="${cellClass(p, 'goals')}">${p.goals || '-'}</td>
+                            <td class="${cellClass(p, 'half_full')}">${p.half_full || '-'}</td>
+                            <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                </table>
-            </div>
-        </details>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
     `;
 }
 
-// 切换比赛预测详情显示
+// 展开/折叠预测
 function toggleMatchPredictions(matchId) {
-    const card = document.querySelector(`.match-card-clickable[data-match-id="${matchId}"]`);
-    if (!card) return;
+    const detail = document.getElementById(`detail-${matchId}`);
+    if (!detail) return;
     
-    const inlinePred = card.querySelector('.inline-predictions');
-    if (!inlinePred) return;
+    const isOpen = detail.classList.contains('open');
     
-    const isHidden = inlinePred.style.display === 'none';
-    inlinePred.style.display = isHidden ? 'block' : 'none';
+    if (isOpen) {
+        detail.classList.remove('open');
+    } else {
+        detail.classList.add('open');
+    }
 }
 
 // 渲染统计数据
 function renderStats() {
-    const totalMatches = state.allMatches.length;
-    const doneMatches = state.allMatches.filter(m => isMatchDone(m)).length;
+    const total = state.allMatches.length;
+    const done = state.allMatches.filter(m => isMatchDone(m)).length;
     
-    const matchCountEl = document.getElementById('match-count');
-    const doneCountEl = document.getElementById('done-count');
-    
-    if (matchCountEl) matchCountEl.textContent = totalMatches;
-    if (doneCountEl) doneCountEl.textContent = doneMatches;
+    document.getElementById('match-count').textContent = total;
+    document.getElementById('done-count').textContent = done;
 }
 
 // 渲染简报列表
 function renderBriefList() {
-    const container = document.getElementById('brief-list');
+    // 简报列表已经在HTML中静态生成，这里不需要动态渲染
+}
+
+// ============================================================
+// AI Logo 渲染
+// ============================================================
+function renderAILogos() {
+    const container = document.getElementById('ai-logos');
     if (!container) return;
     
-    // 简报列表已经在HTML中静态生成，这里不需要动态渲染
-    // 如果需要动态渲染，可以在这里实现
+    const aiList = [
+        { name: 'DeepSeek', color: '#6366f1' },
+        { name: 'MiniMax', color: '#ec4899' },
+        { name: '通义千问', color: '#8b5cf6' },
+        { name: '腾讯混元', color: '#06b6d4' },
+        { name: 'Kimi', color: '#10b981' },
+        { name: '讯飞星火', color: '#f59e0b' },
+        { name: '商汤', color: '#ef4444' },
+    ];
+    
+    container.innerHTML = aiList.map(ai => `
+        <div class="ai-logo">
+            <div class="dot" style="background:${ai.color};">${ai.name[0]}</div>
+            ${ai.name}
+        </div>
+    `).join('');
 }
 
 // ============================================================
 // 初始化
 // ============================================================
-
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 加载首页...');
+    renderAILogos();
     loadAll();
 });
