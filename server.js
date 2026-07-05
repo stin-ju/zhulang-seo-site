@@ -144,6 +144,36 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // GET /api/date-tabs - 获取日期标签（7个，当天在中间）
+    if (pathname === '/api/date-tabs' && req.method === 'GET') {
+      const today = new Date();
+      const tabs = [];
+      
+      for (let i = -3; i <= 3; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const displayStr = `${date.getMonth() + 1}月${date.getDate()}日`;
+        
+        tabs.push({
+          date: dateStr,
+          display: displayStr,
+          isToday: i === 0
+        });
+      }
+      
+      const todayTab = tabs.find(t => t.isToday);
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        ...CORS_HEADERS 
+      });
+      res.end(JSON.stringify({
+        tabs: tabs,
+        defaultDate: todayTab ? todayTab.date : tabs[3].date
+      }));
+      return;
+    }
+
     // GET /api/predictions
     // 只返回在售比赛的预测，避免数据量过大被截断
     if (pathname === '/api/predictions' && req.method === 'GET') {
