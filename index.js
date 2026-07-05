@@ -325,19 +325,43 @@ function renderBriefList() {
 // AI排行渲染（动态从数据库获取）
 // ============================================================
 function renderRanking() {
-    const container = document.getElementById('ranking-list');
+    const container = document.getElementById("ranking-list");
     if (!container) return;
-    const activeAIs = (state.aiStats || []).filter(ai => ai.is_active === true).sort((a, b) => (a.rank || 99) - (b.rank || 99));
+    const activeAIs = (state.aiStats || []).filter(ai => ai.is_active === true);
     if (activeAIs.length === 0) {
-        container.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">暂无排行数据</div>';
+        container.innerHTML = "<div style=\"padding:20px;text-align:center;color:#94a3b8;\">暂无排行数据</div>";
         return;
     }
-    container.innerHTML = '<table style="width:100%;font-size:13px;"><thead><tr style="color:#94a3b8;"><th style="text-align:left;padding:6px 4px;">排名</th><th style="text-align:left;padding:6px 4px;">AI</th><th style="text-align:right;padding:6px 4px;">盈亏</th></tr></thead><tbody>' + activeAIs.map(ai => {
-        const pnl = ai.total_pnl || 0;
-        const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
-        const medal = ai.rank === 1 ? '🥇' : ai.rank === 2 ? '🥈' : ai.rank === 3 ? '🥉' : ai.rank;
-        return '<tr><td style="padding:6px 4px;">' + medal + '</td><td style="padding:6px 4px;">' + (ai.ai_name || '') + '</td><td style="padding:6px 4px;text-align:right;color:' + pnlColor + ';font-weight:600;">' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '</td></tr>';
-    }).join('') + '</tbody></table>';
+
+    const medal = (rank) => rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
+    const rowStyle = "padding:5px 4px;font-size:12px;";
+    const headStyle = "padding:5px 4px;font-size:11px;color:#94a3b8;";
+
+    // 1. 盈亏排行（越高越好）
+    const pnlRank = [...activeAIs].sort((a, b) => (b.total_pnl || 0) - (a.total_pnl || 0));
+    // 2. 命中率排行（越高越好）
+    const hitRank = [...activeAIs].sort((a, b) => parseFloat(b.hit_rate || "0%") - parseFloat(a.hit_rate || "0%"));
+    // 3. 让球命中排行（越高越好）
+    const letRank = [...activeAIs].sort((a, b) => parseInt(b.let_hit || 0) - parseInt(a.let_hit || 0));
+    // 4. 比分命中排行（越高越好）
+    const scoreRank = [...activeAIs].sort((a, b) => parseInt(b.score_hit || 0) - parseInt(a.score_hit || 0));
+
+    const buildTable = (title, emoji, data, getValue, isNegative) => {
+        return "<div style=\"margin-bottom:12px;\"><div style=\"font-size:13px;font-weight:600;margin-bottom:6px;color:#e2e8f0;\">" + emoji + " " + title + "</div><table style=\"width:100%;\"><tbody>" +
+            data.map((ai, i) => {
+                const val = getValue(ai);
+                const color = isNegative ? (val >= 0 ? "#10b981" : "#ef4444") : "#f0f0f0";
+                const display = isNegative ? ((val >= 0 ? "+" : "") + val.toFixed(2)) : val;
+                return "<tr><td style=\"" + rowStyle + "width:30px;\">" + medal(i + 1) + "</td><td style=\"" + rowStyle + "flex:1;\">" + (ai.ai_name || "") + "</td><td style=\"" + rowStyle + "text-align:right;color:" + color + ";font-weight:600;\">" + display + "</td></tr>";
+            }).join("") +
+            "</tbody></table></div>";
+    };
+
+    container.innerHTML =
+        buildTable("盈亏排行", "💰", pnlRank, ai => ai.total_pnl || 0, true) +
+        buildTable("命中率排行", "🎯", hitRank, ai => ai.hit_rate || "0%", false) +
+        buildTable("让球命中排行", "⚽", letRank, ai => parseInt(ai.let_hit || 0), false) +
+        buildTable("比分命中排行", "🎲", scoreRank, ai => parseInt(ai.score_hit || 0), false);
 }
 
 // ============================================================
