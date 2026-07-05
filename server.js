@@ -57,18 +57,23 @@ async function querySupabase(table, params = {}) {
     console.error('Supabase anon key is not set');
     return [];
   }
-  console.error('Querying Supabase:', url, 'key:', key.substring(0, 20) + '...');
   const queryStr = new URLSearchParams();
   if (params.select) queryStr.set('select', params.select);
   if (params.order) queryStr.set('order', params.order);
   if (params.limit) queryStr.set('limit', params.limit);
   if (params.filter) {
     for (const [k, v] of Object.entries(params.filter)) {
-      queryStr.set(k, v);
+      if (Array.isArray(v)) {
+        // 支持同一字段多个筛选条件（如日期范围 gte + lt）
+        v.forEach(cond => queryStr.append(k, cond));
+      } else {
+        queryStr.set(k, v);
+      }
     }
   }
 
-  const resp = await fetch(`${url}/rest/v1/${table}?${queryStr}`, {
+  const fullUrl = `${url}/rest/v1/${table}?${queryStr}`;
+  const resp = await fetch(fullUrl, {
     headers: {
       'apikey': key,
       'Authorization': `Bearer ${key}`
@@ -108,10 +113,25 @@ const server = http.createServer(async (req, res) => {
   try {
     // GET /api/matches
     if (pathname === '/api/matches' && req.method === 'GET') {
+      const filter = {};
+
+      // 日期筛选：格式 YYYY-MM-DD，按 match_time 的日期部分筛选
+      const date = parsedUrl.searchParams.get('date');
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        // 计算下一天（避免时区问题，直接操作日期字符串）
+        const [year, month, day] = date.split('-').map(Number);
+        const d = new Date(year, month - 1, day);
+        d.setDate(d.getDate() + 1);
+        const nextDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        // match_time >= dateT00:00:00 AND match_time < nextDateT00:00:00
+        filter.match_time = [`gte.${date}T00:00:00`, `lt.${nextDate}T00:00:00`];
+      }
+
       const data = await querySupabase('matches', {
         select: '*',
         order: 'match_time.asc',
-        limit: '5000'  // 增大限制，避免被默认1000条截断
+        limit: '5000',
+        filter
       });
       res.writeHead(200, { 
         'Content-Type': 'application/json',
