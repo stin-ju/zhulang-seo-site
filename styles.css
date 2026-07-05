@@ -1,0 +1,79 @@
+/* ============================================================
+   骨架屏样式
+   ============================================================ */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 8px;
+}
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-text { height: 14px; margin: 4px 0; }
+.skeleton-title { height: 20px; width: 60%; margin: 6px 0; }
+.skeleton-card { height: 80px; border-radius: 12px; }
+.skeleton-match { height: 40px; margin: 4px 0; border-radius: 6px; }
+
+/* ============================================================
+   面包屑导航
+   ============================================================ */
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #6b7280;
+    padding: 8px 0 12px;
+    flex-wrap: wrap;
+}
+.breadcrumb a {
+    color: #8b5cf6;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.breadcrumb a:hover {
+    color: #a78bfa;
+    text-decoration: underline;
+}
+.breadcrumb .sep {
+    color: #3d3d5c;
+    font-size: 12px;
+}
+.breadcrumb .current {
+    color: #e5e7eb;
+    font-weight: 500;
+}
+
+/* ============================================================
+   Toast/错误提示
+   ============================================================ */
+.error-toast {
+    position: sticky;
+    top: 80px;
+    z-index: 40;
+    padding: 8px 16px;
+    max-width: 600px;
+    margin: 0 auto 12px;
+}
+
+/* ============================================================
+   计算器 - 选中状态增强
+   ============================================================ */
+.match-row .odds.selected {
+    background: rgba(139, 92, 246, 0.3) !important;
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+    transform: scale(1.05);
+}
+
+.match-row .odds .check-mark {
+    display: none;
+    margin-left: 2px;
+    font-size: 10px;
+}
+.match-row .odds.selected .check-mark {
+    display: inline;
+}
