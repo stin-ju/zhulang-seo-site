@@ -17,6 +17,16 @@ import {
 } from './api.js';
 
 // ============================================================
+// 日期工具函数（修复时区Bug：用本地时间而非UTC）
+// ============================================================
+function getLocalDateStr(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+}
+
+// ============================================================
 // 全局状态
 // ============================================================
 const state = {
@@ -68,7 +78,7 @@ async function loadAll() {
         state.dates = [...new Set(allMatches.map(m => getMatchDate(m)))].sort().reverse();
         
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = getLocalDateStr(today);
         
         if (state.dates.includes(todayStr)) {
             state.currentDate = todayStr;
@@ -101,14 +111,14 @@ function renderDateTabs() {
     if (!container) return;
     
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateStr(today);
     
     // 生成7天：后3天+今天+前3天，最新日期在最左边
     const sevenDays = [];
     for (let i = 3; i >= -3; i--) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
-        sevenDays.push(d.toISOString().split('T')[0]);
+        sevenDays.push(getLocalDateStr(d));
     }
     
     container.innerHTML = sevenDays.map(date => {
@@ -183,7 +193,9 @@ function renderMatchCard(match) {
     
     // 状态badge
     if (isDone) {
-        badges += `<span class="badge-sm status-done">已确认</span>`;
+        const hs = match.home_score != null ? match.home_score : '?';
+        const as_ = match.away_score != null ? match.away_score : '?';
+        badges += `<span class="badge-sm status-done" style="color:#fbbf24;font-weight:700;">${hs}:${as_}</span>`;
     } else if (match.status === '未开赛') {
         badges += `<span class="badge-sm status-pending">待比赛</span>`;
     }
@@ -315,34 +327,17 @@ function renderBriefList() {
 function renderRanking() {
     const container = document.getElementById('ranking-list');
     if (!container) return;
-    
-    // 从aiStats中获取is_active=true的AI，按rank排序
-    const activeAIs = state.aiStats
-        .filter(ai => ai.is_active === true)
-        .sort((a, b) => (a.rank || 999) - (b.rank || 999));
-    
+    const activeAIs = (state.aiStats || []).filter(ai => ai.is_active === true).sort((a, b) => (a.rank || 99) - (b.rank || 99));
     if (activeAIs.length === 0) {
-        container.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">暂无排行数据</div>';
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">暂无排行数据</div>';
         return;
     }
-    
-    container.innerHTML = activeAIs.map((ai, index) => {
-        const pnl = ai.total_pnl || 0;
-        const pnlClass = pnl >= 0 ? 'win' : 'lose';
-        const pnlStr = pnl >= 0 ? `+${pnl.toFixed(0)}` : `${pnl.toFixed(0)}`;
-        const hitRate = ai.hit_rate ? `${(ai.hit_rate * 100).toFixed(1)}%` : '-';
-        const color = aiColors[ai.ai_name] || '#6b7280';
-        
-        return `
-            <div class="rank-row">
-                <span class="rk">${index + 1}</span>
-                <span class="name" style="color:${color};">${esc(ai.ai_name)}</span>
-                <span class="matches">${ai.matches || 0}场</span>
-                <span class="pnl ${pnlClass}">${pnlStr}</span>
-                <span class="rate">${hitRate}</span>
-            </div>
-        `;
-    }).join('');
+    container.innerHTML = '<table style="width:100%;font-size:13px;"><thead><tr style="color:#94a3b8;"><th style="text-align:left;padding:6px 4px;">排名</th><th style="text-align:left;padding:6px 4px;">AI</th><th style="text-align:right;padding:6px 4px;">盈亏</th></tr></thead><tbody>' + activeAIs.map(ai => {
+        const pnl = ai.pnl || 0;
+        const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
+        const medal = ai.rank === 1 ? '🥇' : ai.rank === 2 ? '🥈' : ai.rank === 3 ? '🥉' : ai.rank;
+        return '<tr><td style="padding:6px 4px;">' + medal + '</td><td style="padding:6px 4px;">' + (ai.ai_name || '') + '</td><td style="padding:6px 4px;text-align:right;color:' + pnlColor + ';font-weight:600;">' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '</td></tr>';
+    }).join('') + '</tbody></table>';
 }
 
 // ============================================================
@@ -351,40 +346,20 @@ function renderRanking() {
 function renderAILogos() {
     const container = document.getElementById('ai-logos');
     if (!container) return;
-    
-    // 从aiStats中获取is_active=true的AI
-    const activeAIs = state.aiStats
-        .filter(ai => ai.is_active === true)
-        .sort((a, b) => (a.rank || 999) - (b.rank || 999));
-    
-    if (activeAIs.length === 0) {
-        // 兜底：如果数据库没数据，用默认列表
-        const fallback = [
-            { name: 'DeepSeek', color: '#6366f1' },
-            { name: 'MiniMax', color: '#ec4899' },
-            { name: '扣子（皮皮）', color: '#8b5cf6' },
-            { name: '混元', color: '#06b6d4' },
-            { name: '豆包', color: '#10b981' },
-            { name: '文心', color: '#f59e0b' },
-            { name: '智谱清言', color: '#ef4444' },
-        ];
-        container.innerHTML = fallback.map(ai => `
-            <div class="ai-logo">
-                <div class="dot" style="background:${ai.color};">${ai.name[0]}</div>
-                ${ai.name}
-            </div>
-        `).join('');
-        return;
-    }
-    
+    const aiColors = {
+        'DeepSeek': '#6366f1',
+        'MiniMax': '#ec4899',
+        '扣子（皮皮）': '#8b5cf6',
+        '混元': '#06b6d4',
+        '豆包': '#10b981',
+        '文心': '#f59e0b',
+        '智谱清言': '#ef4444'
+    };
+    const activeAIs = (state.aiStats || []).filter(ai => ai.is_active === true).sort((a, b) => (a.rank || 99) - (b.rank || 99));
+    if (activeAIs.length === 0) return;
     container.innerHTML = activeAIs.map(ai => {
         const color = aiColors[ai.ai_name] || '#6b7280';
-        return `
-            <div class="ai-logo">
-                <div class="dot" style="background:${color};">${ai.ai_name[0]}</div>
-                ${ai.ai_name}
-            </div>
-        `;
+        return '<div class="ai-logo"><div class="dot" style="background:' + color + ';">' + (ai.ai_name || '?')[0] + '</div>' + (ai.ai_name || '未知') + '</div>';
     }).join('');
 }
 
