@@ -346,34 +346,58 @@ function renderRanking() {
 }
 
 // ============================================================
-// AI Logo 渲染
+// AI Logo 渲染（动态从数据库获取，不再硬编码）
 // ============================================================
 function renderAILogos() {
     const container = document.getElementById('ai-logos');
     if (!container) return;
     
-    const aiList = [
-        { name: 'DeepSeek', color: '#6366f1' },
-        { name: 'MiniMax', color: '#ec4899' },
-        { name: '通义千问', color: '#8b5cf6' },
-        { name: '腾讯混元', color: '#06b6d4' },
-        { name: 'Kimi', color: '#10b981' },
-        { name: '讯飞星火', color: '#f59e0b' },
-        { name: '商汤', color: '#ef4444' },
-    ];
+    // 从aiStats中获取is_active=true的AI
+    const activeAIs = state.aiStats
+        .filter(ai => ai.is_active === true)
+        .sort((a, b) => (a.rank || 999) - (b.rank || 999));
     
-    container.innerHTML = aiList.map(ai => `
-        <div class="ai-logo">
-            <div class="dot" style="background:${ai.color};">${ai.name[0]}</div>
-            ${ai.name}
-        </div>
-    `).join('');
+    if (activeAIs.length === 0) {
+        // 兜底：如果数据库没数据，用默认列表
+        const fallback = [
+            { name: 'DeepSeek', color: '#6366f1' },
+            { name: 'MiniMax', color: '#ec4899' },
+            { name: '扣子（皮皮）', color: '#8b5cf6' },
+            { name: '混元', color: '#06b6d4' },
+            { name: '豆包', color: '#10b981' },
+            { name: '文心', color: '#f59e0b' },
+            { name: '智谱清言', color: '#ef4444' },
+        ];
+        container.innerHTML = fallback.map(ai => `
+            <div class="ai-logo">
+                <div class="dot" style="background:${ai.color};">${ai.name[0]}</div>
+                ${ai.name}
+            </div>
+        `).join('');
+        return;
+    }
+    
+    container.innerHTML = activeAIs.map(ai => {
+        const color = aiColors[ai.ai_name] || '#6b7280';
+        return `
+            <div class="ai-logo">
+                <div class="dot" style="background:${color};">${ai.ai_name[0]}</div>
+                ${ai.ai_name}
+            </div>
+        `;
+    }).join('');
 }
 
 // ============================================================
 // 初始化
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 先加载AI数据，再渲染Logo
+    try {
+        state.aiStats = await fetchAIStats();
+    } catch (e) {
+        console.error('获取AI统计失败:', e);
+    }
     renderAILogos();
     loadAll();
 });
