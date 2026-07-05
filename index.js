@@ -333,7 +333,7 @@ function renderRanking() {
         return;
     }
     container.innerHTML = '<table style="width:100%;font-size:13px;"><thead><tr style="color:#94a3b8;"><th style="text-align:left;padding:6px 4px;">排名</th><th style="text-align:left;padding:6px 4px;">AI</th><th style="text-align:right;padding:6px 4px;">盈亏</th></tr></thead><tbody>' + activeAIs.map(ai => {
-        const pnl = ai.pnl || 0;
+        const pnl = ai.total_pnl || 0;
         const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
         const medal = ai.rank === 1 ? '🥇' : ai.rank === 2 ? '🥈' : ai.rank === 3 ? '🥉' : ai.rank;
         return '<tr><td style="padding:6px 4px;">' + medal + '</td><td style="padding:6px 4px;">' + (ai.ai_name || '') + '</td><td style="padding:6px 4px;text-align:right;color:' + pnlColor + ';font-weight:600;">' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '</td></tr>';
