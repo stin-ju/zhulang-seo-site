@@ -32,7 +32,6 @@ const state = {
 // ============================================================
 // 日期工具函数
 // ============================================================
-
 function getMatchDate(match) {
     const timeStr = (match.match_time || '').replace(' ', 'T');
     return timeStr.substring(0, 10);
@@ -104,6 +103,7 @@ function renderDateTabs() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     
+    // 生成7天：后3天+今天+前3天，最新日期在最左边
     const sevenDays = [];
     for (let i = 3; i >= -3; i--) {
         const d = new Date(today);
@@ -178,14 +178,17 @@ function renderMatchCard(match) {
     const matchTime = fmtTime(match.match_time);
     const isDone = isMatchDone(match);
     
+    // 构建 badges
     let badges = '';
     
+    // 状态badge
     if (isDone) {
         badges += `<span class="badge-sm status-done">已确认</span>`;
     } else if (match.status === '未开赛') {
         badges += `<span class="badge-sm status-pending">待比赛</span>`;
     }
     
+    // 共识度/分歧度（基于预测）
     if (matchPredictions.length > 0) {
         const spfPredictions = matchPredictions.filter(p => p.spf).map(p => p.spf);
         if (spfPredictions.length > 0) {
@@ -196,6 +199,7 @@ function renderMatchCard(match) {
             
             if (consensus >= 0.7) {
                 const dir = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+                const cls = dir === '胜' ? 'win' : dir === '平' ? 'draw' : 'lose';
                 badges += `<span class="badge-sm consensus">共识${dir} ${Math.round(consensus * 100)}%</span>`;
             } else if (consensus <= 0.4) {
                 badges += `<span class="badge-sm divergence">分歧大</span>`;
@@ -203,6 +207,7 @@ function renderMatchCard(match) {
         }
     }
     
+    // 预测数量
     const predCount = matchPredictions.length;
     
     return `
@@ -221,14 +226,16 @@ function renderMatchCard(match) {
     `;
 }
 
-// 渲染AI预测表格
+// 渲染AI预测表格（每个AI一行，列是胜平负/让球/比分/进球数/半全场）
 function renderPredictionsTable(predictions, match) {
     if (!predictions || predictions.length === 0) {
         return '<div style="padding:12px 0;color:#94a3b8;font-size:13px;">暂无AI预测</div>';
     }
     
+    // 按总命中数降序排列
     const sorted = [...predictions].sort((a, b) => (b.total_hits || 0) - (a.total_hits || 0));
     
+    // 判断命中状态
     function cellClass(pred, field) {
         const hitFieldMap = {
             'spf': 'hit_handicap',
@@ -274,6 +281,7 @@ function renderPredictionsTable(predictions, match) {
     `;
 }
 
+// 展开/折叠预测
 function toggleMatchPredictions(matchId) {
     const detail = document.getElementById(`detail-${matchId}`);
     if (!detail) return;
@@ -287,6 +295,7 @@ function toggleMatchPredictions(matchId) {
     }
 }
 
+// 渲染统计数据
 function renderStats() {
     const total = state.allMatches.length;
     const done = state.allMatches.filter(m => isMatchDone(m)).length;
@@ -295,10 +304,14 @@ function renderStats() {
     document.getElementById('done-count').textContent = done;
 }
 
+// 渲染简报列表
 function renderBriefList() {
-    // 简报列表已经在HTML中静态生成
+    // 简报列表已经在HTML中静态生成，这里不需要动态渲染
 }
 
+// ============================================================
+// AI Logo 渲染
+// ============================================================
 function renderAILogos() {
     const container = document.getElementById('ai-logos');
     if (!container) return;
@@ -321,6 +334,9 @@ function renderAILogos() {
     `).join('');
 }
 
+// ============================================================
+// 初始化
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     renderAILogos();
     loadAll();
