@@ -196,27 +196,23 @@ function renderMatchCard(match) {
     const matchTime = fmtTime(match.match_time);
     const isDone = isMatchDone(match);
     
+    // 构建 badges
+    let badges = '';
+    if (isDone) {
+        badges += '<span class="badge-sm status-done">已确认</span>';
+    } else {
+        badges += '<span class="badge-sm status-pending">待比赛</span>';
+    }
+    if (matchPredictions.length > 0) {
+        badges += `<span class="badge-sm consensus">${matchPredictions.length}AI预测</span>`;
+    }
+    
     return `
-        <div class="match-item ${isDone ? 'done' : ''}">
-            <div class="match-header">
-                <span class="match-id">${esc(match.id)}</span>
-                <span class="match-time">${matchTime}</span>
-                ${isDone ? '<span class="match-status">已完赛</span>' : ''}
-            </div>
-            <div class="match-teams">
-                <span class="team home">${esc(homeTeam)}</span>
-                <span class="vs">VS</span>
-                <span class="team away">${esc(awayTeam)}</span>
-            </div>
-            ${isDone && match.home_score !== undefined ? `
-                <div class="match-score">
-                    ${match.home_score} - ${match.away_score}
-                </div>
-            ` : ''}
-            <div class="match-predictions">
-                ${matchPredictions.length > 0 ? `
-                    <span class="pred-count">${matchPredictions.length}AI预测</span>
-                ` : '<span class="pred-count" style="color:#64748b;">暂无预测</span>'}
+        <div class="view-item">
+            <span class="time">${matchTime}</span>
+            <span class="teams">${esc(match.id)} ${esc(homeTeam)} vs ${esc(awayTeam)}</span>
+            <div class="badge-group">
+                ${badges}
             </div>
         </div>
     `;
