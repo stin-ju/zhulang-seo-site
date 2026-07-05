@@ -333,29 +333,122 @@ function renderRanking() {
         container.innerHTML = "<div style=\"padding:20px;text-align:center;color:#94a3b8;\">暂无排行数据</div>";
         return;
     }
-    const sorted = [...activeAIs].sort((a, b) => (a.rank || 99) - (b.rank || 99));
-    const medal = (rank) => rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
-    const th = "padding:5px 4px;font-size:11px;color:#94a3b8;text-align:center;";
-    const td = "padding:5px 4px;font-size:12px;text-align:center;";
+
+    // 建立比赛结果映射
+    const matchMap = {};
+    (state.allMatches || []).forEach(m => {
+        if (m.home_score != null && m.away_score != null && ["已确认","已完成","已结束"].includes(m.status)) {
+            matchMap[m.id] = m;
+        }
+    });
+
+    // 从predictions计算5维度
+    const dimStats = {};
+    activeAIs.forEach(ai => {
+        dimStats[ai.ai_name] = { matches:0, spf_t:0,spf_h:0, let_t:0,let_h:0, score_t:0,score_h:0, goals_t:0,goals_h:0, half_t:0,half_h:0 };
+    });
+
+    (state.predictions || []).forEach(p => {
+        const ai = p.ai_name;
+        if (!dimStats[ai]) return;
+        const m = matchMap[p.match_id];
+        if (!m) return;
+        dimStats[ai].matches++;
+        const home = m.home_score, away = m.away_score;
+        const sport = p.sport_type || "football";
+
+        // 1. 胜平负/胜负
+        if (sport === "football" && p.spf) {
+            dimStats[ai].spf_t++;
+            if ((home>away && p.spf==="主胜") || (home===away && p.spf==="平局") || (home<away && p.spf==="客胜")) dimStats[ai].spf_h++;
+        } else if (sport === "basketball" && p.win_loss) {
+            dimStats[ai].spf_t++;
+            if ((home>away && p.win_loss==="胜") || (home<away && p.win_loss==="负")) dimStats[ai].spf_h++;
+        }
+
+        // 2. 让球/让分
+        if (sport === "football" && p.handicap_spf) {
+            dimStats[ai].let_t++;
+            const hc = parseFloat(m.handicap || 0);
+            const adj = home + hc;
+            const actual = adj>away ? "胜" : (adj===away ? "平" : "负");
+            const pred = p.handicap_spf.includes("胜") && !p.handicap_spf.includes("负") ? "胜" : (p.handicap_spf.includes("平") ? "平" : "负");
+            if (actual === pred) dimStats[ai].let_h++;
+        } else if (sport === "basketball" && p.handicap_win_loss) {
+            dimStats[ai].let_t++;
+            const sl = parseFloat(m.spread_line || 0);
+            const adj = home + sl;
+            if ((adj>away && p.handicap_win_loss==="让胜") || (adj<away && p.handicap_win_loss==="让负")) dimStats[ai].let_h++;
+        }
+
+        // 3. 比分
+        if (p.score) {
+            dimStats[ai].score_t++;
+            if (p.score === home + "-" + away) dimStats[ai].score_h++;
+        }
+
+        // 4. 进球数/总分
+        if (sport === "football" && p.goals != null) {
+            dimStats[ai].goals_t++;
+            if (parseInt(p.goals) === home + away) dimStats[ai].goals_h++;
+        } else if (sport === "basketball" && p.total_points) {
+            dimStats[ai].goals_t++;
+            const tl = parseFloat(m.total_line || 0);
+            if (tl && ((home+away>tl && p.total_points==="大") || (home+away<tl && p.total_points==="小"))) dimStats[ai].goals_h++;
+        }
+
+        // 5. 半全场
+        if (sport === "football" && p.half_full) {
+            dimStats[ai].half_t++;
+            const hh = m.half_home_score, ha = m.half_away_score;
+            if (hh != null && ha != null) {
+                const hr = hh>ha ? "胜" : (hh===ha ? "平" : "负");
+                const fr = home>away ? "胜" : (home===away ? "平" : "负");
+                if (p.half_full === hr+fr) dimStats[ai].half_h++;
+            }
+        } else if (sport === "basketball" && p.half_win_loss) {
+            dimStats[ai].half_t++;
+            const hh = m.half_home_score, ha = m.half_away_score;
+            if (hh != null && ha != null) {
+                if ((hh>ha && p.half_win_loss==="胜") || (hh<ha && p.half_win_loss==="负")) dimStats[ai].half_h++;
+            }
+        }
+    });
+
+    // 按命中率排序
+    const sorted = [...activeAIs].sort((a, b) => {
+        const sa = dimStats[a.ai_name], sb = dimStats[b.ai_name];
+        const ra = sa.spf_t ? sa.spf_h/sa.spf_t : 0;
+        const rb = sb.spf_t ? sb.spf_h/sb.spf_t : 0;
+        return rb - ra;
+    });
+
+    const medal = (r) => r===1?"🥇":r===2?"🥈":r===3?"🥉":r;
+    const th = "padding:5px 3px;font-size:10px;color:#94a3b8;text-align:center;";
+    const td = "padding:5px 3px;font-size:12px;text-align:center;";
+    const fmtPct = (h,t) => t>0 ? (h*100/t).toFixed(0)+"%" : "—";
 
     let html = "<table style=\"width:100%;border-collapse:collapse;\">";
     html += "<thead><tr>";
-    html += "<th style=\"" + th + "text-align:left;\">排名</th>";
-    html += "<th style=\"" + th + "text-align:left;\">AI</th>";
-    html += "<th style=\"" + th + "\">命中率</th>";
-    html += "<th style=\"" + th + "\">让球</th>";
-    html += "<th style=\"" + th + "\">比分</th>";
-    html += "<th style=\"" + th + "\">场次</th>";
+    html += "<th style=\""+th+"text-align:left;\">排名</th>";
+    html += "<th style=\""+th+"text-align:left;\">AI</th>";
+    html += "<th style=\""+th+"\">命中率</th>";
+    html += "<th style=\""+th+"\">让球</th>";
+    html += "<th style=\""+th+"\">比分</th>";
+    html += "<th style=\""+th+"\">进球</th>";
+    html += "<th style=\""+th+"\">半全场</th>";
     html += "</tr></thead><tbody>";
 
     sorted.forEach((ai, i) => {
+        const d = dimStats[ai.ai_name];
         html += "<tr>";
-        html += "<td style=\"" + td + "text-align:left;\">" + medal(i + 1) + "</td>";
-        html += "<td style=\"" + td + "text-align:left;font-weight:600;\">" + (ai.ai_name || "") + "</td>";
-        html += "<td style=\"" + td + "color:#fbbf24;\">" + (ai.hit_rate || "0%") + "</td>";
-        html += "<td style=\"" + td + "\">" + (ai.let_hit || 0) + "</td>";
-        html += "<td style=\"" + td + "\">" + (ai.score_hit || 0) + "</td>";
-        html += "<td style=\"" + td + "color:#94a3b8;\">" + (ai.matches || 0) + "</td>";
+        html += "<td style=\""+td+"text-align:left;\">"+medal(i+1)+"</td>";
+        html += "<td style=\""+td+"text-align:left;font-weight:600;\">"+(ai.ai_name||"")+"</td>";
+        html += "<td style=\""+td+"color:#fbbf24;\">"+fmtPct(d.spf_h,d.spf_t)+"</td>";
+        html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
+        html += "<td style=\""+td+"\">"+fmtPct(d.score_h,d.score_t)+"</td>";
+        html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
+        html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
         html += "</tr>";
     });
 
