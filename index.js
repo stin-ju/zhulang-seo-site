@@ -33,13 +33,11 @@ const state = {
 // 日期工具函数
 // ============================================================
 
-// 获取比赛的真实日期（基于match_time）
 function getMatchDate(match) {
     const timeStr = (match.match_time || '').replace(' ', 'T');
     return timeStr.substring(0, 10);
 }
 
-// 格式化日期标签
 function fmtDateLabel(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr + 'T00:00:00');
@@ -98,7 +96,7 @@ function renderAll() {
     renderBriefList();
 }
 
-// 渲染日期标签 - 始终显示7个（后3天 + 今天 + 前3天），最新在左
+// 日期标签：7个固定，最新在左
 function renderDateTabs() {
     const container = document.getElementById('date-bar');
     if (!container) return;
