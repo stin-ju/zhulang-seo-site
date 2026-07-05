@@ -332,36 +332,34 @@ function renderRanking() {
         container.innerHTML = "<div style=\"padding:20px;text-align:center;color:#94a3b8;\">暂无排行数据</div>";
         return;
     }
-
+    const sorted = [...activeAIs].sort((a, b) => (a.rank || 99) - (b.rank || 99));
     const medal = (rank) => rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
-    const rowStyle = "padding:5px 4px;font-size:12px;";
-    const headStyle = "padding:5px 4px;font-size:11px;color:#94a3b8;";
+    const th = "padding:5px 4px;font-size:11px;color:#94a3b8;text-align:center;";
+    const td = "padding:5px 4px;font-size:12px;text-align:center;";
 
-    // 1. 盈亏排行（越高越好）
-    const pnlRank = [...activeAIs].sort((a, b) => (b.total_pnl || 0) - (a.total_pnl || 0));
-    // 2. 命中率排行（越高越好）
-    const hitRank = [...activeAIs].sort((a, b) => parseFloat(b.hit_rate || "0%") - parseFloat(a.hit_rate || "0%"));
-    // 3. 让球命中排行（越高越好）
-    const letRank = [...activeAIs].sort((a, b) => parseInt(b.let_hit || 0) - parseInt(a.let_hit || 0));
-    // 4. 比分命中排行（越高越好）
-    const scoreRank = [...activeAIs].sort((a, b) => parseInt(b.score_hit || 0) - parseInt(a.score_hit || 0));
+    let html = "<table style=\"width:100%;border-collapse:collapse;\">";
+    html += "<thead><tr>";
+    html += "<th style=\"" + th + "text-align:left;\">排名</th>";
+    html += "<th style=\"" + th + "text-align:left;\">AI</th>";
+    html += "<th style=\"" + th + "\">命中率</th>";
+    html += "<th style=\"" + th + "\">让球</th>";
+    html += "<th style=\"" + th + "\">比分</th>";
+    html += "<th style=\"" + th + "\">场次</th>";
+    html += "</tr></thead><tbody>";
 
-    const buildTable = (title, emoji, data, getValue, isNegative) => {
-        return "<div style=\"margin-bottom:12px;\"><div style=\"font-size:13px;font-weight:600;margin-bottom:6px;color:#e2e8f0;\">" + emoji + " " + title + "</div><table style=\"width:100%;\"><tbody>" +
-            data.map((ai, i) => {
-                const val = getValue(ai);
-                const color = isNegative ? (val >= 0 ? "#10b981" : "#ef4444") : "#f0f0f0";
-                const display = isNegative ? ((val >= 0 ? "+" : "") + val.toFixed(2)) : val;
-                return "<tr><td style=\"" + rowStyle + "width:30px;\">" + medal(i + 1) + "</td><td style=\"" + rowStyle + "flex:1;\">" + (ai.ai_name || "") + "</td><td style=\"" + rowStyle + "text-align:right;color:" + color + ";font-weight:600;\">" + display + "</td></tr>";
-            }).join("") +
-            "</tbody></table></div>";
-    };
+    sorted.forEach((ai, i) => {
+        html += "<tr>";
+        html += "<td style=\"" + td + "text-align:left;\">" + medal(i + 1) + "</td>";
+        html += "<td style=\"" + td + "text-align:left;font-weight:600;\">" + (ai.ai_name || "") + "</td>";
+        html += "<td style=\"" + td + "color:#fbbf24;\">" + (ai.hit_rate || "0%") + "</td>";
+        html += "<td style=\"" + td + "\">" + (ai.let_hit || 0) + "</td>";
+        html += "<td style=\"" + td + "\">" + (ai.score_hit || 0) + "</td>";
+        html += "<td style=\"" + td + "color:#94a3b8;\">" + (ai.matches || 0) + "</td>";
+        html += "</tr>";
+    });
 
-    container.innerHTML =
-        buildTable("盈亏排行", "💰", pnlRank, ai => ai.total_pnl || 0, true) +
-        buildTable("命中率排行", "🎯", hitRank, ai => ai.hit_rate || "0%", false) +
-        buildTable("让球命中排行", "⚽", letRank, ai => parseInt(ai.let_hit || 0), false) +
-        buildTable("比分命中排行", "🎲", scoreRank, ai => parseInt(ai.score_hit || 0), false);
+    html += "</tbody></table>";
+    container.innerHTML = html;
 }
 
 // ============================================================
