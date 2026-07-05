@@ -202,12 +202,13 @@ function renderMatchCard(match) {
     
     // 共识度/分歧度（基于预测）
     if (matchPredictions.length > 0) {
-        const spfPredictions = matchPredictions.filter(p => p.spf).map(p => p.spf);
-        if (spfPredictions.length > 0) {
+        const rawPredictions = matchPredictions.map(p => p.spf || p.win_loss).filter(Boolean);
+        const predictions = rawPredictions.map(v => v.includes('胜') ? '胜' : v.includes('负') ? '负' : v.includes('平') ? '平' : v).filter(Boolean);
+        if (predictions.length > 0) {
             const counts = {};
-            spfPredictions.forEach(p => { counts[p] = (counts[p] || 0) + 1; });
+            predictions.forEach(p => { counts[p] = (counts[p] || 0) + 1; });
             const maxCount = Math.max(...Object.values(counts));
-            const consensus = maxCount / spfPredictions.length;
+            const consensus = maxCount / predictions.length;
             
             if (consensus >= 0.7) {
                 const dir = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
