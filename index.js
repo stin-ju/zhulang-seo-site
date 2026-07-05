@@ -242,37 +242,51 @@ function renderMatchCard(match) {
     `;
 }
 
-// 构建内联预测内容 - 按行显示每个维度
+// 构建内联预测内容 - 表格形式
 function buildInlinePredictions(matchPredictions) {
-    const dimensions = [
-        { key: 'spf', label: '胜平负' },
-        { key: 'handicap', label: '让球' },
-        { key: 'score', label: '比分' },
-        { key: 'goals', label: '进球数' },
-        { key: 'half_full', label: '半全场' }
-    ];
-    
-    // 按维度生成行
-    const dimensionRows = dimensions.map(dim => {
-        const aiItems = matchPredictions.map(p => {
-            const val = p[dim.key];
-            const hit = p[`${dim.key}_hit`];
-            const hitClass = hit === true ? 'hit' : hit === false ? 'miss' : '';
-            return `<span class="pred-ai-item ${hitClass}" title="${esc(p.ai_name)}: ${val || '-'}">${esc(p.ai_name)}: ${val || '-'}</span>`;
-        }).join('');
+    const rows = matchPredictions.map(p => {
+        const spfHit = p.spf_hit === true ? 'hit' : p.spf_hit === false ? 'miss' : '';
+        const handicapHit = p.handicap_hit === true ? 'hit' : p.handicap_hit === false ? 'miss' : '';
+        const scoreHit = p.score_hit === true ? 'hit' : p.score_hit === false ? 'miss' : '';
+        const goalsHit = p.goals_hit === true ? 'hit' : p.goals_hit === false ? 'miss' : '';
+        const halfFullHit = p.half_full_hit === true ? 'hit' : p.half_full_hit === false ? 'miss' : '';
         
         return `
-            <div class="pred-dimension-row">
-                <span class="pred-dim-label">${dim.label}</span>
-                <div class="pred-ai-list">${aiItems}</div>
-            </div>
+            <tr class="border-b border-white/5">
+                <td class="py-2 px-3 text-accent font-medium">${esc(p.ai_name)}</td>
+                <td class="py-2 px-3 text-center ${spfHit}">${p.spf || '-'}</td>
+                <td class="py-2 px-3 text-center ${handicapHit}">${p.handicap || '-'}</td>
+                <td class="py-2 px-3 text-center tabular ${scoreHit}">${p.score || '-'}</td>
+                <td class="py-2 px-3 text-center tabular ${goalsHit}">${p.goals || '-'}</td>
+                <td class="py-2 px-3 text-center ${halfFullHit}">${p.half_full || '-'}</td>
+            </tr>
         `;
     }).join('');
     
     return `
-        <div class="inline-predictions-content">
-            ${dimensionRows}
-        </div>
+        <details class="inline-predictions-details">
+            <summary class="inline-predictions-summary">
+                <span class="chevron">▶</span>
+                <span>${matchPredictions.length} AI预测</span>
+            </summary>
+            <div class="inline-predictions-table-wrap">
+                <table class="inline-predictions-table">
+                    <thead>
+                        <tr>
+                            <th>AI</th>
+                            <th>胜平负</th>
+                            <th>让球</th>
+                            <th>比分</th>
+                            <th>进球数</th>
+                            <th>半全场</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        </details>
     `;
 }
 

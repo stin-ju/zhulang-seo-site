@@ -241,15 +241,20 @@
         .miss-mark { color: #6b7280; font-weight: 400; margin-left: 2px; }
         .hits-num { font-weight: 600; color: #a78bfa; font-size: 12px; }
 
-        /* 内联预测 - 按维度行显示 */
-        .inline-predictions-content { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
-        .pred-dimension-row { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-        .pred-dimension-row:last-child { border-bottom: none; }
-        .pred-dim-label { flex-shrink: 0; width: 60px; font-size: 12px; font-weight: 500; color: #a78bfa; padding-top: 2px; }
-        .pred-ai-list { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
-        .pred-ai-item { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.04); color: #94a3b8; white-space: nowrap; }
-        .pred-ai-item.hit { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-        .pred-ai-item.miss { background: rgba(239, 68, 68, 0.1); color: #94a3b8; }
+        /* 内联预测 - 表格形式 */
+        .inline-predictions-details { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .inline-predictions-summary { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #a78bfa; cursor: pointer; padding: 4px 0; }
+        .inline-predictions-summary .chevron { font-size: 10px; transition: transform 0.2s; }
+        .inline-predictions-details[open] .chevron { transform: rotate(90deg); }
+        .inline-predictions-table-wrap { margin-top: 8px; overflow-x: auto; }
+        .inline-predictions-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+        .inline-predictions-table th { padding: 8px 6px; text-align: center; color: #94a3b8; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .inline-predictions-table th:first-child { text-align: left; }
+        .inline-predictions-table td { padding: 8px 6px; text-align: center; color: #e2e8f0; }
+        .inline-predictions-table td:first-child { text-align: left; color: #a78bfa; font-weight: 500; }
+        .inline-predictions-table td.hit { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .inline-predictions-table td.miss { color: #94a3b8; }
+        .inline-predictions-table .tabular { font-variant-numeric: tabular-nums; }
 
         /* 响应式 */
         @media (max-width: 480px) {
