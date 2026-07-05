@@ -92,7 +92,7 @@ function renderAll() {
     renderDateTabs();
     renderMatches();
     renderStats();
-    renderBriefList();
+    renderRanking();
 }
 
 // 日期标签：7个固定，最新在左
@@ -307,6 +307,42 @@ function renderStats() {
 // 渲染简报列表
 function renderBriefList() {
     // 简报列表已经在HTML中静态生成，这里不需要动态渲染
+}
+
+// ============================================================
+// AI排行渲染（动态从数据库获取）
+// ============================================================
+function renderRanking() {
+    const container = document.getElementById('ranking-list');
+    if (!container) return;
+    
+    // 从aiStats中获取is_active=true的AI，按rank排序
+    const activeAIs = state.aiStats
+        .filter(ai => ai.is_active === true)
+        .sort((a, b) => (a.rank || 999) - (b.rank || 999));
+    
+    if (activeAIs.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">暂无排行数据</div>';
+        return;
+    }
+    
+    container.innerHTML = activeAIs.map((ai, index) => {
+        const pnl = ai.total_pnl || 0;
+        const pnlClass = pnl >= 0 ? 'win' : 'lose';
+        const pnlStr = pnl >= 0 ? `+${pnl.toFixed(0)}` : `${pnl.toFixed(0)}`;
+        const hitRate = ai.hit_rate ? `${(ai.hit_rate * 100).toFixed(1)}%` : '-';
+        const color = aiColors[ai.ai_name] || '#6b7280';
+        
+        return `
+            <div class="rank-row">
+                <span class="rk">${index + 1}</span>
+                <span class="name" style="color:${color};">${esc(ai.ai_name)}</span>
+                <span class="matches">${ai.matches || 0}场</span>
+                <span class="pnl ${pnlClass}">${pnlStr}</span>
+                <span class="rate">${hitRate}</span>
+            </div>
+        `;
+    }).join('');
 }
 
 // ============================================================
