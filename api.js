@@ -107,18 +107,19 @@ export async function fetchMatches(sport = 'football', status = '未开赛') {
 }
 
 // 获取所有赛事（不过滤状态，用于简报等页面）
-export async function fetchAllMatches(sport = 'football') {
-    const cacheKey = `all_matches_${sport}`;
+export async function fetchAllMatches(sport = null) {
+    const cacheKey = `all_matches_${sport || 'all'}`;
     const cached = getCachedData(cacheKey);
     if (cached) {
         console.log('📦 使用缓存数据:', cacheKey);
         return cached;
     }
 
+    const filters = sport ? { sport_type: sport } : null;
     const data = await querySupabase(
         'matches',
         'id,teams,match_time,handicap,status,selling_status,win_odds,draw_odds,lose_odds,sport_type',
-        { sport_type: sport },
+        filters,
         { order: 'match_time.desc', limit: '5000' }
     );
     

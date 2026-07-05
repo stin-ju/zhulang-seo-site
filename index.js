@@ -14,8 +14,7 @@ import {
     getCachedData,
     setCachedData,
     querySupabase,
-    isMatchDone,
-    DONE_STATUSES
+    isMatchDone
 } from './api.js';
 
 // ============================================================
@@ -191,7 +190,7 @@ function renderMatches() {
 // 渲染比赛卡片
 function renderMatchCard(match) {
     const matchPredictions = state.predictions.filter(p => p.match_id === match.id);
-    const teams = (match.teams || '').split(' VS ');
+    const teams = (match.teams || '').split(/\s*VS\s*/);
     const homeTeam = teams[0] || '主队';
     const awayTeam = teams[1] || '客队';
     const matchTime = fmtTime(match.match_time);
