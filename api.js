@@ -4,7 +4,7 @@
 
 // Supabase 配置
 const SUPABASE_URL = 'https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sawnT6QYhW2_ilgdPxAuPXwtM';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMzNjI0MDA4NjgsInJvbGUiOiJhbm9uIn0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM';
 
 // 已结束状态集合（容错判断）
 export const DONE_STATUSES = ['已确认', '已完成', '已结束'];
