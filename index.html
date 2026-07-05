@@ -241,6 +241,16 @@
         .miss-mark { color: #6b7280; font-weight: 400; margin-left: 2px; }
         .hits-num { font-weight: 600; color: #a78bfa; font-size: 12px; }
 
+        /* 内联预测 - 按维度行显示 */
+        .inline-predictions-content { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .pred-dimension-row { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .pred-dimension-row:last-child { border-bottom: none; }
+        .pred-dim-label { flex-shrink: 0; width: 60px; font-size: 12px; font-weight: 500; color: #a78bfa; padding-top: 2px; }
+        .pred-ai-list { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+        .pred-ai-item { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.04); color: #94a3b8; white-space: nowrap; }
+        .pred-ai-item.hit { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .pred-ai-item.miss { background: rgba(239, 68, 68, 0.1); color: #94a3b8; }
+
         /* 响应式 */
         @media (max-width: 480px) {
             .hero h1 { font-size: 22px; }

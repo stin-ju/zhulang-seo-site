@@ -110,20 +110,26 @@ function renderDateTabs() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     
-    // 过滤：只显示今天及未来的日期，最多7个
-    const futureDates = state.dates
-        .filter(date => date >= todayStr)
-        .slice(0, 7);
+    // 生成以今天为中心的7天日期（前3天 + 今天 + 后3天）
+    const centerDates = [];
+    for (let i = -3; i <= 3; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        centerDates.push(d.toISOString().split('T')[0]);
+    }
+    
+    // 只显示有比赛数据的日期
+    const availableDates = centerDates.filter(date => state.dates.includes(date));
     
     // 如果今天没有比赛，使用第一个可用日期
-    const defaultDate = futureDates.includes(todayStr) ? todayStr : (futureDates[0] || state.dates[0]);
+    const defaultDate = availableDates.includes(todayStr) ? todayStr : (availableDates[0] || state.dates[0]);
     
     // 如果当前日期不在可用日期列表中，设置为默认日期
-    if (!futureDates.includes(state.currentDate)) {
+    if (!availableDates.includes(state.currentDate)) {
         state.currentDate = defaultDate;
     }
     
-    container.innerHTML = futureDates.map(date => `
+    container.innerHTML = availableDates.map(date => `
         <button class="date-btn ${date === state.currentDate ? 'active' : ''}" 
                 data-date="${date}">
             ${fmtDateLabel(date)}
@@ -236,7 +242,7 @@ function renderMatchCard(match) {
     `;
 }
 
-// 构建内联预测内容
+// 构建内联预测内容 - 按行显示每个维度
 function buildInlinePredictions(matchPredictions) {
     const dimensions = [
         { key: 'spf', label: '胜平负' },
@@ -246,33 +252,26 @@ function buildInlinePredictions(matchPredictions) {
         { key: 'half_full', label: '半全场' }
     ];
     
-    return `
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">
-            <div style="overflow-x:auto;">
-                <table style="width:100%;font-size:11px;border-collapse:collapse;">
-                    <thead>
-                        <tr style="background:rgba(255,255,255,0.05);">
-                            <th style="padding:6px;text-align:left;color:#94a3b8;">AI</th>
-                            ${dimensions.map(d => `<th style="padding:6px;text-align:center;color:#94a3b8;">${d.label}</th>`).join('')}
-                            <th style="padding:6px;text-align:center;color:#94a3b8;">命中</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${matchPredictions.map(p => `
-                            <tr style="border-top:1px solid rgba(255,255,255,0.08);">
-                                <td style="padding:6px;color:#e8eef7;font-weight:500;">${esc(p.ai_name)}</td>
-                                ${dimensions.map(d => {
-                                    const val = p[d.key];
-                                    const hit = p[`${d.key}_hit`];
-                                    const hitClass = hit === true ? 'color:#10b981;' : hit === false ? 'color:#ef4444;' : '';
-                                    return `<td style="padding:6px;text-align:center;${hitClass}">${val || '-'}</td>`;
-                                }).join('')}
-                                <td style="padding:6px;text-align:center;color:#10b981;font-weight:600;">${p.total_hits || 0}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+    // 按维度生成行
+    const dimensionRows = dimensions.map(dim => {
+        const aiItems = matchPredictions.map(p => {
+            const val = p[dim.key];
+            const hit = p[`${dim.key}_hit`];
+            const hitClass = hit === true ? 'hit' : hit === false ? 'miss' : '';
+            return `<span class="pred-ai-item ${hitClass}" title="${esc(p.ai_name)}: ${val || '-'}">${esc(p.ai_name)}: ${val || '-'}</span>`;
+        }).join('');
+        
+        return `
+            <div class="pred-dimension-row">
+                <span class="pred-dim-label">${dim.label}</span>
+                <div class="pred-ai-list">${aiItems}</div>
             </div>
+        `;
+    }).join('');
+    
+    return `
+        <div class="inline-predictions-content">
+            ${dimensionRows}
         </div>
     `;
 }
