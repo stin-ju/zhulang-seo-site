@@ -2,192 +2,253 @@
 // 首页逻辑 - 使用公共API模块
 // ============================================================
 
-import { fetchMatches, fetchPredictions, fetchAIStats, esc, fmtDate, fmtTime, showError, getCachedData, setCachedData, isMatchDone, DONE_STATUSES } from './api.js';
+import { 
+    fetchMatches, 
+    fetchPredictions, 
+    fetchAIStats,
+    fetchAllMatches,
+    esc, 
+    fmtDate, 
+    fmtTime,
+    showError,
+    getCachedData,
+    setCachedData,
+    querySupabase,
+    isMatchDone,
+    DONE_STATUSES
+} from './api.js';
 
 // ============================================================
-// 页面特定工具函数
+// 全局状态
+// ============================================================
+const state = {
+    allMatches: [],
+    footballMatches: [],
+    basketballMatches: [],
+    predictions: [],
+    aiStats: [],
+    currentDate: null,
+    dates: []
+};
+
+// ============================================================
+// 日期工具函数
 // ============================================================
 
-// Get lottery date based on match_time
+// 获取比赛的体彩日期（基于match_id前缀）
 function getLotteryDateFromMatch(match) {
-    // match_time格式: "2026-07-06T04:00:00" 或 "2026-07-06 04:00:00"
-    // 直接取日期部分，不转UTC（避免时区导致日期错误）
-    const timeStr = match.match_time.replace(' ', 'T');
-    return timeStr.split('T')[0];
+    const matchId = match.id || '';
+    const prefix = matchId.match(/^(周[一二三四五六日])/);
+    if (!prefix) {
+        // 如果没有周X前缀，使用match_time的日期
+        const timeStr = (match.match_time || '').replace(' ', 'T');
+        return timeStr.substring(0, 10);
+    }
+    
+    const weekdayMap = {
+        '周一': 1, '周二': 2, '周三': 3, '周四': 4,
+        '周五': 5, '周六': 6, '周日': 0
+    };
+    
+    const targetWeekday = weekdayMap[prefix[1]];
+    if (targetWeekday === undefined) {
+        const timeStr = (match.match_time || '').replace(' ', 'T');
+        return timeStr.substring(0, 10);
+    }
+    
+    // 获取当前日期
+    const now = new Date();
+    const currentWeekday = now.getDay();
+    
+    // 计算目标日期
+    let daysDiff = targetWeekday - currentWeekday;
+    if (daysDiff > 0) daysDiff -= 7; // 如果目标日期在未来，改为上周
+    
+    const targetDate = new Date(now);
+    targetDate.setDate(now.getDate() + daysDiff);
+    
+    return targetDate.toISOString().split('T')[0];
 }
 
+// 格式化日期标签
 function fmtDateLabel(dateStr) {
-    // 直接截取日期部分，不转UTC（避免时区导致日期错误）
-    const parts = dateStr.replace(' ', 'T').substring(0, 10).split('-');
-    const m = parseInt(parts[1], 10);
-    const day = parseInt(parts[2], 10);
-    return m + '月' + day + '日';
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    return `${month}月${day}日`;
 }
 
 // ============================================================
-// 数据获取
+// 数据加载
 // ============================================================
-let ALL_MATCHES = [];
-let ALL_PREDICTIONS = [];
-let ALL_RANK = [];
-let DATES = [];
-let CURRENT_DATE = '';
 
 async function loadAll() {
     try {
-        // 并行加载
-        const [matches, rank] = await Promise.all([
-            fetchMatches('football', '待比赛'),
-            fetchAIStats()
-        ]);
-
-        ALL_MATCHES = matches || [];
-        ALL_RANK = rank || [];
-
-        // 提取唯一日期（按真实比赛时间分组）
-        const dateSet = new Set();
-        ALL_MATCHES.forEach(m => {
-            const d = getLotteryDateFromMatch(m);
-            dateSet.add(d);
-        });
-        DATES = Array.from(dateSet).sort((a, b) => b.localeCompare(a));
-        CURRENT_DATE = DATES[0] || '';
-
-        // 获取所有预测
-        const matchIds = ALL_MATCHES.map(m => m.id);
-        ALL_PREDICTIONS = matchIds.length > 0 ? await fetchPredictions(matchIds, 'football') : [];
-
-        // 渲染
+        // 获取所有比赛（不过滤状态）
+        const allMatches = await fetchAllMatches();
+        state.allMatches = allMatches;
+        
+        // 分离足球和篮球
+        state.footballMatches = allMatches.filter(m => m.sport_type === 'football');
+        state.basketballMatches = allMatches.filter(m => m.sport_type === 'basketball');
+        
+        // 获取所有比赛的预测
+        const matchIds = allMatches.map(m => m.id);
+        if (matchIds.length > 0) {
+            state.predictions = await fetchPredictions(matchIds);
+        }
+        
+        // 获取AI排行
+        state.aiStats = await fetchAIStats();
+        
+        // 获取可用日期
+        state.dates = [...new Set(allMatches.map(m => getLotteryDateFromMatch(m)))].sort().reverse();
+        state.currentDate = state.dates[0];
+        
+        // 渲染页面
         renderAll();
-
+        
     } catch (error) {
-        console.error('加载失败:', error);
+        console.error('加载数据失败:', error);
         showError('数据加载失败，请刷新页面重试');
     }
 }
 
 // ============================================================
-// 渲染
+// 渲染函数
 // ============================================================
 
 function renderAll() {
     renderDateTabs();
     renderMatches();
-    renderRank();
     renderStats();
+    renderBriefList();
 }
 
+// 渲染日期标签
 function renderDateTabs() {
-    const tabs = document.getElementById('dateTabs');
-    if (!tabs) return;
-    tabs.innerHTML = DATES.map(d => {
-        const label = fmtDateLabel(d);
-        const active = d === CURRENT_DATE ? 'active' : '';
-        return `<button class="date-tab ${active}" data-date="${d}">${label}</button>`;
-    }).join('');
+    const container = document.getElementById('date-bar');
+    if (!container) return;
     
-    tabs.querySelectorAll('.date-tab').forEach(btn => {
+    if (state.dates.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8;font-size:13px;">暂无赛程</div>';
+        return;
+    }
+    
+    container.innerHTML = state.dates.map(date => `
+        <button class="date-btn ${date === state.currentDate ? 'active' : ''}" 
+                data-date="${date}">
+            ${fmtDateLabel(date)}
+        </button>
+    `).join('');
+    
+    // 绑定点击事件
+    container.querySelectorAll('.date-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            CURRENT_DATE = btn.dataset.date;
-            tabs.querySelectorAll('.date-tab').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            state.currentDate = btn.dataset.date;
+            renderDateTabs();
             renderMatches();
         });
     });
 }
 
+// 渲染比赛列表
 function renderMatches() {
-    const container = document.getElementById('matchesContainer');
-    if (!container) return;
-
     // 过滤当前日期的比赛
-    const dateMatches = ALL_MATCHES.filter(m => getLotteryDateFromMatch(m) === CURRENT_DATE);
+    const dateMatches = state.allMatches.filter(m => 
+        getLotteryDateFromMatch(m) === state.currentDate
+    );
     
-    if (dateMatches.length === 0) {
-        container.innerHTML = '<div class="empty">暂无比赛</div>';
-        return;
+    // 足球比赛
+    const footballContainer = document.getElementById('view-football');
+    if (footballContainer) {
+        const footballMatches = dateMatches.filter(m => m.sport_type === 'football');
+        if (footballMatches.length === 0) {
+            footballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">暂无足球赛程</div>';
+        } else {
+            footballContainer.innerHTML = footballMatches.map(m => renderMatchCard(m)).join('');
+        }
+        document.getElementById('football-count-label').textContent = `${footballMatches.length}场`;
     }
-
-    container.innerHTML = dateMatches.map(m => {
-        const preds = ALL_PREDICTIONS.filter(p => p.match_id === m.id);
-        const isDone = isMatchDone(m);
-        const time = fmtTime(m.match_time);
-        const teams = esc(m.teams || '');
-        
-        return `
-            <div class="match-card" data-id="${m.id}">
-                <div class="match-header">
-                    <span class="match-time">${time}</span>
-                    <span class="match-teams">${teams}</span>
-                    ${isDone ? '<span class="match-status done">已确认</span>' : '<span class="match-status pending">待比赛</span>'}
-                </div>
-                <div class="match-body">
-                    <div class="match-odds">
-                        <span class="odds-label">胜平负</span>
-                        <span class="odds-value">${m.win_odds || '-'} / ${m.draw_odds || '-'} / ${m.lose_odds || '-'}</span>
-                    </div>
-                    <div class="match-odds">
-                        <span class="odds-label">让球</span>
-                        <span class="odds-value">${m.handicap || '0'}</span>
-                    </div>
-                    ${isDone ? `
-                    <div class="match-result">
-                        <span class="result-label">比分</span>
-                        <span class="result-value">${m.home_score || 0} - ${m.away_score || 0}</span>
-                    </div>
-                    ` : ''}
-                </div>
-                <div class="match-predictions">
-                    <span class="pred-count">${preds.length}AI</span>
-                </div>
-            </div>
-        `;
-    }).join('');
+    
+    // 篮球比赛
+    const basketballContainer = document.getElementById('view-basketball');
+    if (basketballContainer) {
+        const basketballMatches = dateMatches.filter(m => m.sport_type === 'basketball');
+        if (basketballMatches.length === 0) {
+            basketballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">暂无篮球赛程</div>';
+        } else {
+            basketballContainer.innerHTML = basketballMatches.map(m => renderMatchCard(m)).join('');
+        }
+        document.getElementById('basketball-count-label').textContent = `${basketballMatches.length}场`;
+    }
+    
+    // 更新总数
+    document.getElementById('match-count-label').textContent = `${dateMatches.length}场`;
 }
 
-function renderRank() {
-    const container = document.getElementById('rankContainer');
-    if (!container) return;
-
-    const activeRank = ALL_RANK.filter(r => r.is_active);
+// 渲染比赛卡片
+function renderMatchCard(match) {
+    const matchPredictions = state.predictions.filter(p => p.match_id === match.id);
+    const teams = (match.teams || '').split(' VS ');
+    const homeTeam = teams[0] || '主队';
+    const awayTeam = teams[1] || '客队';
+    const matchTime = fmtTime(match.match_time);
+    const isDone = isMatchDone(match);
     
-    if (activeRank.length === 0) {
-        container.innerHTML = '<div class="empty">暂无排行</div>';
-        return;
-    }
-
-    container.innerHTML = activeRank.map((r, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
-        const pnlClass = r.total_pnl > 0 ? 'positive' : r.total_pnl < 0 ? 'negative' : '';
-        
-        return `
-            <div class="rank-item">
-                <span class="rank-position">${medal || (i + 1)}</span>
-                <span class="rank-name">${esc(r.ai_name)}</span>
-                <span class="rank-pnl ${pnlClass}">${r.total_pnl > 0 ? '+' : ''}${r.total_pnl || 0}</span>
-                <span class="rank-rate">${r.hit_rate || 0}%</span>
+    return `
+        <div class="match-item ${isDone ? 'done' : ''}">
+            <div class="match-header">
+                <span class="match-id">${esc(match.id)}</span>
+                <span class="match-time">${matchTime}</span>
+                ${isDone ? '<span class="match-status">已完赛</span>' : ''}
             </div>
-        `;
-    }).join('');
+            <div class="match-teams">
+                <span class="team home">${esc(homeTeam)}</span>
+                <span class="vs">VS</span>
+                <span class="team away">${esc(awayTeam)}</span>
+            </div>
+            ${isDone && match.home_score !== undefined ? `
+                <div class="match-score">
+                    ${match.home_score} - ${match.away_score}
+                </div>
+            ` : ''}
+            <div class="match-predictions">
+                ${matchPredictions.length > 0 ? `
+                    <span class="pred-count">${matchPredictions.length}AI预测</span>
+                ` : '<span class="pred-count" style="color:#64748b;">暂无预测</span>'}
+            </div>
+        </div>
+    `;
 }
 
+// 渲染统计数据
 function renderStats() {
-    const totalMatches = ALL_MATCHES.length;
-    const doneMatches = ALL_MATCHES.filter(m => isMatchDone(m)).length;
+    const totalMatches = state.allMatches.length;
+    const doneMatches = state.allMatches.filter(m => isMatchDone(m)).length;
     
-    const totalEl = document.getElementById('totalMatches');
-    const doneEl = document.getElementById('doneMatches');
+    const matchCountEl = document.getElementById('match-count');
+    const doneCountEl = document.getElementById('done-count');
     
-    if (totalEl) totalEl.textContent = totalMatches;
-    if (doneEl) doneEl.textContent = doneMatches;
+    if (matchCountEl) matchCountEl.textContent = totalMatches;
+    if (doneCountEl) doneCountEl.textContent = doneMatches;
+}
+
+// 渲染简报列表
+function renderBriefList() {
+    const container = document.getElementById('brief-list');
+    if (!container) return;
+    
+    // 简报列表已经在HTML中静态生成，这里不需要动态渲染
+    // 如果需要动态渲染，可以在这里实现
 }
 
 // ============================================================
 // 初始化
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 加载首页...');
-    await loadAll();
-    console.log('✅ 首页加载完成', { matches: ALL_MATCHES.length, predictions: ALL_PREDICTIONS.length });
+    loadAll();
 });
