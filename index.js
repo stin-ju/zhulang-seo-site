@@ -1,8 +1,8 @@
 // ============================================================
-// 首页 JavaScript - 使用 api.js 模块
+// 首页逻辑 - 使用公共API模块
 // ============================================================
 
-import { fetchMatches, fetchPredictions, fetchAIStats, esc, fmtDate, fmtTime, showError, getCachedData, setCachedData, querySupabase, isMatchDone, DONE_STATUSES } from './api.js';
+import { fetchMatches, fetchPredictions, fetchAIStats, esc, fmtDate, fmtTime, showError, getCachedData, setCachedData, isMatchDone, DONE_STATUSES } from './api.js';
 
 // ============================================================
 // 页面特定工具函数
@@ -37,8 +37,8 @@ async function loadAll() {
     try {
         // 并行加载
         const [matches, rank] = await Promise.all([
-            querySupabase('matches', 'id,teams,match_time,status,handicap,win_odds,draw_odds,lose_odds,home_score,away_score,sport_type', null, { order: 'match_time.asc', limit: '5000' }),
-            querySupabase('ai_stats', 'ai_name,rank,total_pnl,hit_rate,matches,is_active', null, { order: 'rank.asc' })
+            fetchMatches('football', '待比赛'),
+            fetchAIStats()
         ]);
 
         ALL_MATCHES = matches || [];
@@ -48,293 +48,146 @@ async function loadAll() {
         const dateSet = new Set();
         ALL_MATCHES.forEach(m => {
             const d = getLotteryDateFromMatch(m);
-            if (d) dateSet.add(d);
+            dateSet.add(d);
         });
         DATES = Array.from(dateSet).sort((a, b) => b.localeCompare(a));
+        CURRENT_DATE = DATES[0] || '';
 
-        // 加载预测
+        // 获取所有预测
         const matchIds = ALL_MATCHES.map(m => m.id);
-        ALL_PREDICTIONS = await fetchPredictions(matchIds);
+        ALL_PREDICTIONS = matchIds.length > 0 ? await fetchPredictions(matchIds, 'football') : [];
 
-        // 设置默认日期
-        if (DATES.length > 0) {
-            const today = new Date();
-            const todayStr = today.toISOString().slice(0, 10);
-            CURRENT_DATE = DATES.includes(todayStr) ? todayStr : DATES[0];
-        }
-
+        // 渲染
         renderAll();
+
     } catch (error) {
-        console.error('加载数据失败:', error);
-        showError('数据加载失败，请刷新重试');
+        console.error('加载失败:', error);
+        showError('数据加载失败，请刷新页面重试');
     }
 }
 
 // ============================================================
 // 渲染
 // ============================================================
+
 function renderAll() {
     renderDateTabs();
     renderMatches();
     renderRank();
+    renderStats();
 }
 
 function renderDateTabs() {
-    const container = document.getElementById('date-tabs');
-    if (!container) return;
-
-    let html = '';
-    DATES.forEach(d => {
-        const active = d === CURRENT_DATE ? ' active' : '';
-        html += `<button class="date-tab${active}" data-date="${d}">${fmtDateLabel(d)}</button>`;
-    });
-    container.innerHTML = html;
-
-    // 绑定事件
-    container.querySelectorAll('.date-tab').forEach(btn => {
+    const tabs = document.getElementById('dateTabs');
+    if (!tabs) return;
+    tabs.innerHTML = DATES.map(d => {
+        const label = fmtDateLabel(d);
+        const active = d === CURRENT_DATE ? 'active' : '';
+        return `<button class="date-tab ${active}" data-date="${d}">${label}</button>`;
+    }).join('');
+    
+    tabs.querySelectorAll('.date-tab').forEach(btn => {
         btn.addEventListener('click', () => {
             CURRENT_DATE = btn.dataset.date;
-            renderDateTabs();
+            tabs.querySelectorAll('.date-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
             renderMatches();
         });
     });
 }
 
 function renderMatches() {
-    const container = document.getElementById('match-list');
+    const container = document.getElementById('matchesContainer');
     if (!container) return;
 
-    const filtered = ALL_MATCHES.filter(m => getLotteryDateFromMatch(m) === CURRENT_DATE);
-
-    if (filtered.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:40px;">暂无比赛</div>';
+    // 过滤当前日期的比赛
+    const dateMatches = ALL_MATCHES.filter(m => getLotteryDateFromMatch(m) === CURRENT_DATE);
+    
+    if (dateMatches.length === 0) {
+        container.innerHTML = '<div class="empty">暂无比赛</div>';
         return;
     }
 
-    let html = '';
-    filtered.forEach(match => {
-        const preds = ALL_PREDICTIONS.filter(p => p.match_id === match.id);
-        const { votes, details } = computeVotes(preds, match);
-        const totalVotes = votes['胜'] + votes['平'] + votes['负'];
-        const isDone = isMatchDone(match);
-        const result = getMatchResult(match);
-
-        html += `<div class="match-card" data-match-id="${match.id}">`;
-        html += `<div class="match-header">`;
-        html += `<span class="match-time">${fmtTime(match.match_time)}</span>`;
-        html += `<span class="match-teams">${esc(match.home_team || '')} vs ${esc(match.away_team || '')}</span>`;
-        if (isDone && result) {
-            html += `<span class="match-result result-${result}">${result}</span>`;
-        }
-        html += `</div>`;
-
-        // 投票条
-        if (totalVotes > 0) {
-            const winPct = Math.round((votes['胜'] / totalVotes) * 100);
-            const drawPct = Math.round((votes['平'] / totalVotes) * 100);
-            const losePct = 100 - winPct - drawPct;
-            html += `<div class="vote-bar">`;
-            html += `<div class="vote-segment win" style="width:${winPct}%">${winPct > 10 ? winPct + '%' : ''}</div>`;
-            html += `<div class="vote-segment draw" style="width:${drawPct}%">${drawPct > 10 ? drawPct + '%' : ''}</div>`;
-            html += `<div class="vote-segment lose" style="width:${losePct}%">${losePct > 10 ? losePct + '%' : ''}</div>`;
-            html += `</div>`;
-        }
-
-        // 赔率
-        html += `<div class="odds-row">`;
-        html += `<span class="odds-label">胜 ${match.win_odds || '-'}</span>`;
-        html += `<span class="odds-label">平 ${match.draw_odds || '-'}</span>`;
-        html += `<span class="odds-label">负 ${match.lose_odds || '-'}</span>`;
-        html += `</div>`;
-
-        // 详情
-        html += `<div class="match-detail" id="detail-${match.id}">`;
-        html += renderPredictionTable(match, details);
-        html += `</div>`;
-
-        html += `</div>`;
-    });
-
-    container.innerHTML = html;
-
-    // 绑定展开事件
-    container.querySelectorAll('.match-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            if (e.target.closest('.match-detail')) return;
-            const matchId = card.dataset.matchId;
-            toggleDetail(matchId);
-        });
-    });
+    container.innerHTML = dateMatches.map(m => {
+        const preds = ALL_PREDICTIONS.filter(p => p.match_id === m.id);
+        const isDone = isMatchDone(m);
+        const time = fmtTime(m.match_time);
+        const teams = esc(m.teams || '');
+        
+        return `
+            <div class="match-card" data-id="${m.id}">
+                <div class="match-header">
+                    <span class="match-time">${time}</span>
+                    <span class="match-teams">${teams}</span>
+                    ${isDone ? '<span class="match-status done">已确认</span>' : '<span class="match-status pending">待比赛</span>'}
+                </div>
+                <div class="match-body">
+                    <div class="match-odds">
+                        <span class="odds-label">胜平负</span>
+                        <span class="odds-value">${m.win_odds || '-'} / ${m.draw_odds || '-'} / ${m.lose_odds || '-'}</span>
+                    </div>
+                    <div class="match-odds">
+                        <span class="odds-label">让球</span>
+                        <span class="odds-value">${m.handicap || '0'}</span>
+                    </div>
+                    ${isDone ? `
+                    <div class="match-result">
+                        <span class="result-label">比分</span>
+                        <span class="result-value">${m.home_score || 0} - ${m.away_score || 0}</span>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="match-predictions">
+                    <span class="pred-count">${preds.length}AI</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
-function computeVotes(preds, match) {
-    const votes = { '胜': 0, '平': 0, '负': 0 };
-    const details = [];
-
-    preds.forEach(p => {
-        // 篮球用win_loss，足球用spf
-        let choice = (p.spf || '').trim();
-        if (!choice && p.win_loss) {
-            choice = p.win_loss.trim();
-        }
-
-        if (choice === '胜') votes['胜']++;
-        else if (choice === '平') votes['平']++;
-        else if (choice === '负') votes['负']++;
-        else if (choice.includes('胜') && !choice.includes('负')) votes['胜']++;
-        else if (choice.includes('负') && !choice.includes('胜')) votes['负']++;
-        else if (choice.includes('平')) votes['平']++;
-
-        details.push({
-            ai: p.ai_name,
-            spf: p.spf || '',
-            win_loss: p.win_loss || '',
-            handicap: p.handicap_spf || '',
-            score: p.score || '',
-            total_points: p.total_points || '',
-            score_diff_range: p.score_diff_range || '',
-            goals: p.goals || '',
-            half_full: p.half_full || '',
-            half_win_loss: p.half_win_loss || '',
-            hit_handicap: p.hit_handicap,
-            hit_score: p.hit_score,
-            hit_goals: p.hit_goals,
-            hit_half: p.hit_half,
-            total_hits: p.total_hits
-        });
-    });
-
-    return { votes, details };
-}
-
-function renderPredictionTable(match, details) {
-    const isBasketball = match.sport_type === 'basketball';
-    const dims = isBasketball ? [
-        { key: 'win_loss', label: '胜负' },
-        { key: 'handicap', label: `让分(${match.handicap || '?'})` },
-        { key: 'total_points', label: '总分' },
-        { key: 'score_diff_range', label: '分差' },
-        { key: 'half_win_loss', label: '半场胜负' }
-    ] : [
-        { key: 'spf', label: '胜平负' },
-        { key: 'handicap', label: `让球(${match.handicap || '?'})` },
-        { key: 'score', label: '比分' },
-        { key: 'goals', label: '总进球' },
-        { key: 'half_full', label: '半全场' }
-    ];
-
-    let html = '<table class="prediction-table"><thead><tr><th>AI</th>';
-    dims.forEach(d => {
-        html += `<th>${d.label}</th>`;
-    });
-    html += '<th>命中</th></tr></thead><tbody>';
-
-    details.forEach(d => {
-        html += `<tr><td class="ai-name">${esc(d.ai)}</td>`;
-        dims.forEach(dim => {
-            const val = isBasketball ? (d[dim.key] || d.spf || '-') : (d[dim.key] || '-');
-            html += `<td>${esc(val)}</td>`;
-        });
-        html += `<td class="hits">${d.total_hits || 0}</td></tr>`;
-    });
-
-    html += '</tbody></table>';
-    return html;
-}
-
-function toggleDetail(matchId) {
-    const el = document.getElementById('detail-' + matchId);
-    if (!el) return;
-    const isOpen = el.classList.contains('open');
-
-    // 先关闭所有
-    document.querySelectorAll('.match-detail.open').forEach(d => d.classList.remove('open'));
-
-    // 切换
-    if (!isOpen) el.classList.add('open');
-}
-
-function getMatchResult(match) {
-    if (!isMatchDone(match)) return null;
-    const h = parseInt(match.home_score);
-    const a = parseInt(match.away_score);
-    if (isNaN(h) || isNaN(a)) return null;
-    // 篮球没有平局
-    if (match.sport_type === 'basketball') {
-        return h > a ? '胜' : '负';
-    }
-    if (h > a) return '胜';
-    if (h < a) return '负';
-    return '平';
-}
-
-// ============================================================
-// 渲染：AI排行
-// ============================================================
 function renderRank() {
-    const container = document.getElementById('rank-list');
-    if (!ALL_RANK || ALL_RANK.length === 0) {
-        container.innerHTML = '<div style="color:#6b7280;font-size:13px;">暂无数据</div>';
+    const container = document.getElementById('rankContainer');
+    if (!container) return;
+
+    const activeRank = ALL_RANK.filter(r => r.is_active);
+    
+    if (activeRank.length === 0) {
+        container.innerHTML = '<div class="empty">暂无排行</div>';
         return;
     }
 
-    let html = '';
-    ALL_RANK.slice(0, 7).forEach((item, i) => {
-        const pos = i + 1;
-        const gold = pos <= 3 ? ' gold' : '';
-        const pnl = parseFloat(item.total_pnl) || 0;
-        const pnlCls = pnl > 0 ? 'win' : pnl < 0 ? 'lose' : '';
-        const rate = parseFloat(item.hit_rate) || 0;
-        const rateStr = Math.round(rate * 100) + '%';
-        const activeTag = item.is_active ? '' : ' <span style="font-size:10px;color:#6b7280;">退赛</span>';
-
-        html += '<div class="rank-row">';
-        html += '<span class="pos' + gold + '">' + pos + '</span>';
-        html += '<span class="name">' + esc(item.ai_name) + activeTag + '</span>';
-        html += '<span class="pnl ' + pnlCls + '">' + (pnl > 0 ? '+' : '') + pnl.toFixed(1) + '</span>';
-        html += '<span class="rate">' + rateStr + '</span>';
-        html += '</div>';
-    });
-
-    container.innerHTML = html;
+    container.innerHTML = activeRank.map((r, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+        const pnlClass = r.total_pnl > 0 ? 'positive' : r.total_pnl < 0 ? 'negative' : '';
+        
+        return `
+            <div class="rank-item">
+                <span class="rank-position">${medal || (i + 1)}</span>
+                <span class="rank-name">${esc(r.ai_name)}</span>
+                <span class="rank-pnl ${pnlClass}">${r.total_pnl > 0 ? '+' : ''}${r.total_pnl || 0}</span>
+                <span class="rank-rate">${r.hit_rate || 0}%</span>
+            </div>
+        `;
+    }).join('');
 }
 
-// ============================================================
-// AI Logo 渲染
-// ============================================================
-const AI_COLORS = ['#6366f1','#f59e0b','#3b82f6','#10b981','#8b5cf6','#ef4444','#06b6d4','#ec4899','#14b8a6','#f97316'];
-
-function getInitial(name) {
-    if (/^[a-zA-Z]/.test(name)) return name.slice(0, 2).toUpperCase();
-    return name.charAt(0);
-}
-
-// 活跃AI名单（按AGENTS.md定义）
-const ACTIVE_AIS = ['混元', '豆包', 'DeepSeek', 'MiniMax', '扣子（皮皮）', 'BetAgent', 'Grok'];
-
-async function renderAiLogos() {
-    const container = document.getElementById('ai-logos');
-    if (!container) return;
-    const names = ACTIVE_AIS;
-    container.innerHTML = names.map((name, i) => `
-        <a href="#/ai/${encodeURIComponent(name)}" class="ai-logo">
-            <span class="dot" style="background:${AI_COLORS[i % AI_COLORS.length]}">${getInitial(name)}</span>
-            <span>${name}</span>
-        </a>
-    `).join('');
+function renderStats() {
+    const totalMatches = ALL_MATCHES.length;
+    const doneMatches = ALL_MATCHES.filter(m => isMatchDone(m)).length;
+    
+    const totalEl = document.getElementById('totalMatches');
+    const doneEl = document.getElementById('doneMatches');
+    
+    if (totalEl) totalEl.textContent = totalMatches;
+    if (doneEl) doneEl.textContent = doneMatches;
 }
 
 // ============================================================
 // 初始化
 // ============================================================
-async function init() {
-    try {
-        await Promise.all([renderAiLogos(), loadAll()]);
-        console.log('✅ 首页加载完成');
-    } catch (error) {
-        console.error('❌ 加载失败:', error);
-        showError('加载失败，请刷新重试');
-    }
-}
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 加载首页...');
+    await loadAll();
+    console.log('✅ 首页加载完成', { matches: ALL_MATCHES.length, predictions: ALL_PREDICTIONS.length });
+});
