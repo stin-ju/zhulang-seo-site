@@ -34,39 +34,10 @@ const state = {
 // 日期工具函数
 // ============================================================
 
-// 获取比赛的体彩日期（基于match_id前缀）
-function getLotteryDateFromMatch(match) {
-    const matchId = match.id || '';
-    const prefix = matchId.match(/^(周[一二三四五六日])/);
-    if (!prefix) {
-        // 如果没有周X前缀，使用match_time的日期
-        const timeStr = (match.match_time || '').replace(' ', 'T');
-        return timeStr.substring(0, 10);
-    }
-    
-    const weekdayMap = {
-        '周一': 1, '周二': 2, '周三': 3, '周四': 4,
-        '周五': 5, '周六': 6, '周日': 0
-    };
-    
-    const targetWeekday = weekdayMap[prefix[1]];
-    if (targetWeekday === undefined) {
-        const timeStr = (match.match_time || '').replace(' ', 'T');
-        return timeStr.substring(0, 10);
-    }
-    
-    // 获取当前日期
-    const now = new Date();
-    const currentWeekday = now.getDay();
-    
-    // 计算目标日期
-    let daysDiff = targetWeekday - currentWeekday;
-    if (daysDiff > 0) daysDiff -= 7; // 如果目标日期在未来，改为上周
-    
-    const targetDate = new Date(now);
-    targetDate.setDate(now.getDate() + daysDiff);
-    
-    return targetDate.toISOString().split('T')[0];
+// 获取比赛的真实日期（基于match_time）
+function getMatchDate(match) {
+    const timeStr = (match.match_time || '').replace(' ', 'T');
+    return timeStr.substring(0, 10);
 }
 
 // 格式化日期标签
@@ -101,8 +72,8 @@ async function loadAll() {
         // 获取AI排行
         state.aiStats = await fetchAIStats();
         
-        // 获取可用日期
-        state.dates = [...new Set(allMatches.map(m => getLotteryDateFromMatch(m)))].sort().reverse();
+        // 获取可用日期（按真实比赛日期分组）
+        state.dates = [...new Set(allMatches.map(m => getMatchDate(m)))].sort().reverse();
         state.currentDate = state.dates[0];
         
         // 渲染页面
@@ -156,7 +127,7 @@ function renderDateTabs() {
 function renderMatches() {
     // 过滤当前日期的比赛
     const dateMatches = state.allMatches.filter(m => 
-        getLotteryDateFromMatch(m) === state.currentDate
+        getMatchDate(m) === state.currentDate
     );
     
     // 足球比赛
@@ -195,6 +166,7 @@ function renderMatchCard(match) {
     const awayTeam = teams[1] || '客队';
     const matchTime = fmtTime(match.match_time);
     const isDone = isMatchDone(match);
+    const matchDate = getMatchDate(match);
     
     // 构建 badges
     let badges = '';
@@ -207,14 +179,27 @@ function renderMatchCard(match) {
         badges += `<span class="badge-sm consensus">${matchPredictions.length}AI预测</span>`;
     }
     
+    // 构建预测摘要
+    let predSummary = '';
+    if (matchPredictions.length > 0) {
+        const avgHits = matchPredictions.reduce((sum, p) => sum + (p.total_hits || 0), 0) / matchPredictions.length;
+        predSummary = `
+            <div class="pred-summary" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;color:#94a3b8;">
+                <span>AI平均命中: <strong style="color:#10b981;">${avgHits.toFixed(1)}</strong></span>
+                <span style="margin-left:12px;">预测数: <strong style="color:#e8eef7;">${matchPredictions.length}</strong></span>
+            </div>
+        `;
+    }
+    
     return `
-        <div class="view-item">
+        <a href="/ai-analysis.html#match-${match.id}" class="view-item" style="text-decoration:none;color:inherit;cursor:pointer;">
             <span class="time">${matchTime}</span>
             <span class="teams">${esc(match.id)} ${esc(homeTeam)} vs ${esc(awayTeam)}</span>
             <div class="badge-group">
                 ${badges}
             </div>
-        </div>
+            ${predSummary}
+        </a>
     `;
 }
 
