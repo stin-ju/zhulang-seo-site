@@ -106,6 +106,26 @@ export async function fetchMatches(sport = 'football', status = '未开赛') {
     return filtered;
 }
 
+// 获取所有赛事（不过滤状态，用于简报等页面）
+export async function fetchAllMatches(sport = 'football') {
+    const cacheKey = `all_matches_${sport}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+        console.log('📦 使用缓存数据:', cacheKey);
+        return cached;
+    }
+
+    const data = await querySupabase(
+        'matches',
+        'id,teams,match_time,handicap,status,selling_status,win_odds,draw_odds,lose_odds,sport_type',
+        { sport_type: sport },
+        { order: 'match_time.desc', limit: '5000' }
+    );
+    
+    setCachedData(cacheKey, data);
+    return data;
+}
+
 // 获取AI预测（支持足球和篮球字段）
 export async function fetchPredictions(matchIds, sport = 'football') {
     if (!matchIds || matchIds.length === 0) return [];

@@ -79,12 +79,12 @@
     </footer>
 
     <script type="module">
-        import { fetchMatches, fetchPredictions, esc, fmtDate, fmtTime, showError } from './api.js';
+        import { fetchAllMatches, fetchPredictions, esc, fmtDate, fmtTime, showError } from './api.js';
 
         async function loadBriefList() {
             const container = document.getElementById('briefList');
             try {
-                const matches = await fetchMatches('football', '待比赛');
+                const matches = await fetchAllMatches('football');
                 const matchIds = matches.map(m => m.id);
                 const predictions = matchIds.length > 0 ? await fetchPredictions(matchIds, 'football') : [];
 
