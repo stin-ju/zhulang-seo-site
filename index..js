@@ -283,19 +283,32 @@ function renderPredictionsTable(predictions, match) {
         return '<div style="padding:12px 0;color:#94a3b8;font-size:13px;">暂无AI预测</div>';
     }
     
+    // 判断运动类型
+    const sport = (match && match.sport_type) || (predictions[0] && predictions[0].sport_type) || 'football';
+    const isBasketball = sport === 'basketball';
+    
     // 按总命中数降序排列
     const sorted = [...predictions].sort((a, b) => (b.total_hits || 0) - (a.total_hits || 0));
     
+    // 根据运动类型定义字段映射
+    const fieldConfig = isBasketball ? {
+        // 篮球字段
+        col1: { key: 'win_loss', hit: 'hit_spf', label: '胜负' },
+        col2: { key: 'handicap_win_loss', hit: 'hit_handicap', label: '让分' },
+        col3: { key: 'score_diff_range', hit: 'hit_score', label: '胜分差' },
+        col4: { key: 'total_points', hit: 'hit_goals', label: '总分' },
+        col5: { key: 'half_win_loss', hit: 'hit_half', label: '半场' }
+    } : {
+        // 足球字段
+        col1: { key: 'spf', hit: 'hit_spf', label: '胜平负' },
+        col2: { key: 'handicap_spf', hit: 'hit_handicap', label: '让球' },
+        col3: { key: 'score', hit: 'hit_score', label: '比分' },
+        col4: { key: 'goals', hit: 'hit_goals', label: '进球数' },
+        col5: { key: 'half_full', hit: 'hit_half', label: '半全场' }
+    };
+    
     // 判断命中状态
-    function cellClass(pred, field) {
-        const hitFieldMap = {
-            'spf': 'hit_spf',
-            'handicap_spf': 'hit_handicap',
-            'score': 'hit_score',
-            'goals': 'hit_goals',
-            'half_full': 'hit_half'
-        };
-        const hitKey = hitFieldMap[field];
+    function cellClass(pred, hitKey) {
         if (!hitKey || pred[hitKey] === undefined || pred[hitKey] === null) return '';
         return pred[hitKey] === true ? 'hit' : 'miss';
     }
@@ -306,11 +319,11 @@ function renderPredictionsTable(predictions, match) {
                 <thead>
                     <tr>
                         <th>AI</th>
-                        <th>胜平负</th>
-                        <th>让球</th>
-                        <th>比分</th>
-                        <th>进球数</th>
-                        <th>半全场</th>
+                        <th>${fieldConfig.col1.label}</th>
+                        <th>${fieldConfig.col2.label}</th>
+                        <th>${fieldConfig.col3.label}</th>
+                        <th>${fieldConfig.col4.label}</th>
+                        <th>${fieldConfig.col5.label}</th>
                         <th>命中</th>
                     </tr>
                 </thead>
@@ -318,11 +331,11 @@ function renderPredictionsTable(predictions, match) {
                     ${sorted.map(p => `
                         <tr>
                             <td>${esc(p.ai_name)}</td>
-                            <td class="${cellClass(p, 'spf')}">${p.spf || '-'}</td>
-                            <td class="${cellClass(p, 'handicap_spf')}">${p.handicap_spf || '-'}</td>
-                            <td class="${cellClass(p, 'score')}">${p.score || '-'}</td>
-                            <td class="${cellClass(p, 'goals')}">${p.goals || '-'}</td>
-                            <td class="${cellClass(p, 'half_full')}">${p.half_full || '-'}</td>
+                            <td class="${cellClass(p, fieldConfig.col1.hit)}">${p[fieldConfig.col1.key] || '-'}</td>
+                            <td class="${cellClass(p, fieldConfig.col2.hit)}">${p[fieldConfig.col2.key] || '-'}</td>
+                            <td class="${cellClass(p, fieldConfig.col3.hit)}">${p[fieldConfig.col3.key] || '-'}</td>
+                            <td class="${cellClass(p, fieldConfig.col4.hit)}">${p[fieldConfig.col4.key] || '-'}</td>
+                            <td class="${cellClass(p, fieldConfig.col5.hit)}">${p[fieldConfig.col5.key] || '-'}</td>
                             <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
                         </tr>
                     `).join('')}
