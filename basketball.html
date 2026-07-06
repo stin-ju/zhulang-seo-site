@@ -72,6 +72,8 @@
     .sport-switch:not(.active):hover { color: #e5e7eb; border-color: #6b7280; }
     .nav-link.nav-active { background: rgba(249,115,22,0.15); color: #f97316 !important; }
     .commentary-body { font-family: 'Noto Serif SC', serif; }
+    .date-tab{padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;white-space:nowrap;background:rgba(139,92,246,0.08);color:#94a3b8;border:1px solid rgba(139,92,246,0.15)}
+    .date-tab.active{background:rgba(139,92,246,0.2);color:#a78bfa;border-color:rgba(139,92,246,0.4);font-weight:600}
     .commentary-body p { margin-bottom: 1em; line-height: 1.9; }
     .commentary-body h3 { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
     </style>
@@ -142,6 +144,7 @@
 <!-- 今日篮球比赛详情（动态加载） -->
 <section id="matches" class="mb-8" aria-label="赛程">
   <h2 class="text-lg font-bold mb-4">📋 今日预测</h2>
+  <div class='date-bar' id='date-bar' style='display:flex;gap:6px;overflow-x:auto;padding:8px 0;margin-bottom:12px;'></div>
   <div id="dynamic-predictions">
     <div class="text-center text-gray-500 py-8">加载中...</div>
   </div>
@@ -334,8 +337,14 @@
                         analysisText = String(parsed);
                     }
                 } catch (e) {
-                    // 纯文本，直接显示
-                    analysisText = analysis;
+                    // 纯文本，markdown转HTML
+                    let text = analysis;
+                    text = text.replace(/^#{1,4}\s+(.+)$/gm, '<strong>$1</strong>');
+                    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                    text = text.replace(/^\s*[-*]\s+/gm, '• ');
+                    text = text.replace(/\n/g, '<br>');
+                    text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+                    analysisText = text;
                 }
             }
         }
@@ -361,28 +370,79 @@
         </div>`;
     }
 
-    // Render latest date section
-    const latestMatches = byDate[latestDate] || {};
-    const matchesHtml = Object.entries(latestMatches).map(([teams, preds]) => 
-      renderMatchPredictions(teams, preds)
-    ).join('');
+    // 渲染指定日期的predictions
+    function renderPredictionsForDate(date) {
+      const dateMatches = byDate[date] || {};
+      const matchesHtml = Object.entries(dateMatches).map(([teams, preds]) => 
+        renderMatchPredictions(teams, preds)
+      ).join('');
 
-    const matchCount = Object.keys(latestMatches).length;
-    const dateDisplay = formatDate(latestDate);
+      const matchCount = Object.keys(dateMatches).length;
+      const dateDisplay = formatDate(date);
 
-    const html = `
-      <details open>
-        <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
-          <span class="chevron text-accent text-sm">▶</span>
-          <h3 class="font-semibold">${dateDisplay}</h3>
-          <span class="text-xs text-muted">${matchCount}场</span>
-        </summary>
-        <div class="p-4 pt-0 space-y-4">
-          ${matchesHtml}
-        </div>
-      </details>`;
+      const html = `
+        <details open>
+          <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+            <span class="chevron text-accent text-sm">▶</span>
+            <h3 class="font-semibold">${dateDisplay}</h3>
+            <span class="text-xs text-muted">${matchCount}场</span>
+          </summary>
+          <div class="p-4 pt-0 space-y-4">
+            ${matchesHtml}
+          </div>
+        </details>`;
 
-    document.getElementById('dynamic-predictions').innerHTML = html;
+      document.getElementById('dynamic-predictions').innerHTML = html;
+    }
+
+    // 渲染日期标签
+    const dates = Object.keys(byDate).sort().reverse();
+    const today = new Date();
+    const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    let tabsHtml = '';
+    let shownCount = 0;
+    const MAX_VISIBLE = 7;
+    let moreDates = [];
+
+    dates.forEach((date, idx) => {
+      const [y, m, d] = date.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const label = `${dt.getMonth() + 1}月${dt.getDate()}日 ${weekDays[dt.getDay()]}`;
+      const isActive = date === latestDate;
+
+      if (shownCount < MAX_VISIBLE) {
+        tabsHtml += `<button class="date-tab${isActive ? ' active' : ''}" onclick="window.switchBasketballDate('${date}')">${label}</button>`;
+        shownCount++;
+      } else {
+        moreDates.push({ date, label });
+      }
+    });
+
+    if (moreDates.length > 0) {
+      tabsHtml += `<button class="date-tab" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'inline-flex':'none';this.textContent=this.textContent.includes('更多')?'收起 ▲':'更多 ▼'">更多 ▼</button>`;
+      tabsHtml += `<span style="display:none;gap:6px;flex-wrap:nowrap;">`;
+      moreDates.forEach(({ date, label }) => {
+        tabsHtml += `<button class="date-tab" onclick="window.switchBasketballDate('${date}')">${label}</button>`;
+      });
+      tabsHtml += `</span>`;
+    }
+
+    document.getElementById('date-bar').innerHTML = tabsHtml;
+
+    // 默认渲染最新日期
+    renderPredictionsForDate(latestDate);
+
+    // 挂载切换函数到window
+    window.switchBasketballDate = function(date) {
+      // 更新tab样式
+      document.querySelectorAll('#date-bar .date-tab').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('onclick')?.includes(`'${date}'`)) {
+          btn.classList.add('active');
+        }
+      });
+      renderPredictionsForDate(date);
+    };
   } catch (err) {
     console.error('Failed to load basketball predictions:', err);
     document.getElementById('dynamic-predictions').innerHTML = 
