@@ -15,7 +15,7 @@ import {
     setCachedData,
     querySupabase,
     isMatchDone
-} from './api.2026070738.js';
+} from './api.js?v=2026070738';
 
 // ============================================================
 // 日期工具函数（修复时区Bug：用本地时间而非UTC）
@@ -375,8 +375,8 @@ const DIM_CONFIGS = {
     basketball: {
         'spf': { key: 'spf', label: '胜负' },
         'let': { key: 'let', label: '让分' },
-        'goals': { key: 'goals', label: '总分' },
-        'half': { key: 'half', label: '半全场' }
+        'sdr': { key: 'sdr', label: '胜分差' },
+        'goals': { key: 'goals', label: '总分' }
     }
 };
 
@@ -400,7 +400,7 @@ function renderDimTabs(sport) {
 function computeDimStats(predictions, matchMap, activeAIs) {
     const dimStats = {};
     activeAIs.forEach(function(ai) {
-        dimStats[ai.ai_name] = { matches:0, spf_t:0,spf_h:0, let_t:0,let_h:0, score_t:0,score_h:0, goals_t:0,goals_h:0, half_t:0,half_h:0 };
+        dimStats[ai.ai_name] = { matches:0, spf_t:0,spf_h:0, let_t:0,let_h:0, score_t:0,score_h:0, goals_t:0,goals_h:0, half_t:0,half_h:0, sdr_t:0,sdr_h:0 };
     });
 
     predictions.forEach(function(p) {
@@ -466,12 +466,21 @@ function computeDimStats(predictions, matchMap, activeAIs) {
                 const fr = home>away ? "胜" : (home===away ? "平" : "负");
                 if (p.half_full === hr+fr) dimStats[ai].half_h++;
             }
-        } else if (sport === "basketball" && p.half_win_loss) {
-            dimStats[ai].half_t++;
-            const hh = m.half_home_score, ha = m.half_away_score;
-            if (hh != null && ha != null) {
-                if ((hh>ha && p.half_win_loss==="胜") || (hh<ha && p.half_win_loss==="负")) dimStats[ai].half_h++;
-            }
+        } else if (sport === "basketball" && p.score_diff_range) {
+            dimStats[ai].sdr_t++;
+            const diff = Math.abs(home - away);
+            let actualRange;
+            if (diff >= 1 && diff <= 5) actualRange = "1-5";
+            else if (diff >= 6 && diff <= 10) actualRange = "6-10";
+            else if (diff >= 11 && diff <= 15) actualRange = "11-15";
+            else if (diff >= 16 && diff <= 20) actualRange = "16-20";
+            else if (diff >= 21 && diff <= 25) actualRange = "21-25";
+            else if (diff >= 26) actualRange = "26+";
+            
+            let predRange = (p.score_diff_range || "").replace("21-25", "21+").replace("21+", "21+");
+            if (actualRange === "21-25") actualRange = "21+";
+            
+            if (actualRange === predRange) dimStats[ai].sdr_h++;
         }
     });
     return dimStats;
@@ -578,8 +587,8 @@ function renderRankingContent(dim) {
             html += "<th style=\""+th+"\">半全场</th>";
         } else {
             html += "<th style=\""+th+"\">让分</th>";
+            html += "<th style=\""+th+"\">胜分差</th>";
             html += "<th style=\""+th+"\">总分</th>";
-            html += "<th style=\""+th+"\">半全场</th>";
         }
         html += "</tr></thead><tbody>";
 
@@ -596,8 +605,8 @@ function renderRankingContent(dim) {
                 html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
             } else {
                 html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
+                html += "<td style=\""+td+"\">"+fmtPct(d.sdr_h,d.sdr_t)+"</td>";
                 html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
-                html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
             }
             html += "</tr>";
         });
