@@ -162,7 +162,11 @@
         .rank-card .head span { font-size: 14px; font-weight: 600; }
         .rank-card .head a { font-size: 12px; color: #6b7280; }
         .rank-card .head a:hover { color: #8b5cf6; }
-        .rank-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+        .sport-tabs { display: flex; gap: 4px; }
+        .sport-tab { padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid transparent; transition: all 0.2s; font-weight: 500; }
+        .sport-tab:hover { background: rgba(245,194,66,0.1); color: #fbbf24; }
+        .sport-tab.active { background: rgba(245,194,66,0.15); color: #fbbf24; border-color: rgba(245,194,66,0.3); }
+        .rank-tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 0 12px 8px; }
         .rank-tab { padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid transparent; transition: all 0.2s; }
         .rank-tab:hover { background: rgba(139,92,246,0.1); color: #c4b5fd; }
         .rank-tab.active { background: rgba(139,92,246,0.15); color: #a78bfa; border-color: rgba(139,92,246,0.3); }
@@ -367,15 +371,13 @@
         <div class="rank-card">
             <div class="head">
                 <span>🏆 AI 排行</span>
-                <div class="rank-tabs" id="rank-tabs">
-                    <span class="rank-tab active" data-dim="all" onclick="switchRankTab('all')">总榜</span>
-                    <span class="rank-tab" data-dim="spf" onclick="switchRankTab('spf')">胜平负</span>
-                    <span class="rank-tab" data-dim="let" onclick="switchRankTab('let')">让球</span>
-                    <span class="rank-tab" data-dim="score" onclick="switchRankTab('score')">比分</span>
-                    <span class="rank-tab" data-dim="goals" onclick="switchRankTab('goals')">进球</span>
-                    <span class="rank-tab" data-dim="half" onclick="switchRankTab('half')">半全场</span>
+                <div class="sport-tabs" id="sport-tabs">
+                    <span class="sport-tab active" data-sport="all" onclick="switchSport('all')">总榜</span>
+                    <span class="sport-tab" data-sport="football" onclick="switchSport('football')">足球</span>
+                    <span class="sport-tab" data-sport="basketball" onclick="switchSport('basketball')">篮球</span>
                 </div>
             </div>
+            <div class="rank-tabs" id="rank-tabs"></div>
             <div id="ranking-list" style="padding:12px 0;"></div>
         </div>
         <div class="rank-card" id="brief-card">

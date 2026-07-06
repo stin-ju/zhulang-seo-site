@@ -363,30 +363,47 @@ function renderBriefList() {
 // ============================================================
 // AI排行渲染（动态从数据库获取）
 // ============================================================
-function renderRanking() {
-    const container = document.getElementById("ranking-list");
-    if (!container) return;
-    const activeAIs = (state.aiStats || []).filter(ai => ai.is_active === true);
-    if (activeAIs.length === 0) {
-        container.innerHTML = "<div style=\"padding:20px;text-align:center;color:#94a3b8;\">暂无排行数据</div>";
-        return;
+// 维度配置（按运动类型）
+const DIM_CONFIGS = {
+    football: {
+        'spf': { key: 'spf', label: '胜平负' },
+        'let': { key: 'let', label: '让球' },
+        'score': { key: 'score', label: '比分' },
+        'goals': { key: 'goals', label: '进球' },
+        'half': { key: 'half', label: '半全场' }
+    },
+    basketball: {
+        'spf': { key: 'spf', label: '胜负' },
+        'let': { key: 'let', label: '让分' },
+        'goals': { key: 'goals', label: '总分' },
+        'half': { key: 'half', label: '半全场' }
     }
+};
 
-    // 建立比赛结果映射
-    const matchMap = {};
-    (state.allMatches || []).forEach(m => {
-        if (m.home_score != null && m.away_score != null && ["已确认","已完成","已结束"].includes(m.status)) {
-            matchMap[m.id] = m;
-        }
+// 初始化运动类型
+if (!state.currentSport) state.currentSport = 'all';
+
+// 渲染维度tab
+function renderDimTabs(sport) {
+    const container = document.getElementById('rank-tabs');
+    if (!container) return;
+    const isFootball = sport !== 'basketball';
+    const config = isFootball ? DIM_CONFIGS.football : DIM_CONFIGS.basketball;
+    let html = '<span class="rank-tab active" data-dim="all" onclick="switchRankTab(\'all\')">总榜</span>';
+    Object.entries(config).forEach(function(entry) {
+        html += '<span class="rank-tab" data-dim="' + entry[0] + '" onclick="switchRankTab(\'' + entry[0] + '\')">' + entry[1].label + '</span>';
     });
+    container.innerHTML = html;
+}
 
-    // 从predictions计算5维度
+// 计算维度命中统计
+function computeDimStats(predictions, matchMap, activeAIs) {
     const dimStats = {};
-    activeAIs.forEach(ai => {
+    activeAIs.forEach(function(ai) {
         dimStats[ai.ai_name] = { matches:0, spf_t:0,spf_h:0, let_t:0,let_h:0, score_t:0,score_h:0, goals_t:0,goals_h:0, half_t:0,half_h:0 };
     });
 
-    (state.predictions || []).forEach(p => {
+    predictions.forEach(function(p) {
         const ai = p.ai_name;
         if (!dimStats[ai]) return;
         const m = matchMap[p.match_id];
@@ -457,22 +474,60 @@ function renderRanking() {
             }
         }
     });
+    return dimStats;
+}
 
-    // 存储到全局供tab切换使用
-    window._dimStats = dimStats;
+function renderRanking() {
+    const container = document.getElementById("ranking-list");
+    if (!container) return;
+    const activeAIs = (state.aiStats || []).filter(ai => ai.is_active === true);
+    if (activeAIs.length === 0) {
+        container.innerHTML = "<div style=\"padding:20px;text-align:center;color:#94a3b8;\">暂无排行数据</div>";
+        return;
+    }
+
+    // 建立比赛结果映射
+    const matchMap = {};
+    (state.allMatches || []).forEach(m => {
+        if (m.home_score != null && m.away_score != null && ["已确认","已完成","已结束"].includes(m.status)) {
+            matchMap[m.id] = m;
+        }
+    });
+
+    // 按运动类型分组计算
+    const allPreds = state.predictions || [];
+    const footballPreds = allPreds.filter(p => (p.sport_type || 'football') === 'football');
+    const basketballPreds = allPreds.filter(p => (p.sport_type || 'football') === 'basketball');
+
+    window._dimStatsMap = {
+        all: computeDimStats(allPreds, matchMap, activeAIs),
+        football: computeDimStats(footballPreds, matchMap, activeAIs),
+        basketball: computeDimStats(basketballPreds, matchMap, activeAIs)
+    };
     window._activeAIs = activeAIs;
 
-    // 渲染默认总榜
+    // 渲染维度tab
+    renderDimTabs(state.currentSport);
+
+    // 渲染内容
     renderRankingContent('all');
 }
 
-// 切换排行tab
+// 切换运动类型
+window.switchSport = function(sport) {
+    state.currentSport = sport;
+    document.querySelectorAll('.sport-tab').forEach(function(tab) {
+        tab.classList.toggle('active', tab.dataset.sport === sport);
+    });
+    renderDimTabs(sport);
+    renderRankingContent('all');
+};
+
+// 切换维度tab
 window.switchRankTab = function(dim) {
-    // 更新tab样式
-    document.querySelectorAll('.rank-tab').forEach(tab => {
+    document.querySelectorAll('.rank-tab').forEach(function(tab) {
         tab.classList.toggle('active', tab.dataset.dim === dim);
     });
-    // 渲染对应维度内容
     renderRankingContent(dim);
 };
 
@@ -480,27 +535,22 @@ window.switchRankTab = function(dim) {
 function renderRankingContent(dim) {
     const container = document.getElementById("ranking-list");
     if (!container) return;
-    const dimStats = window._dimStats;
+    const sport = state.currentSport || 'all';
+    const dimStats = (window._dimStatsMap || {})[sport] || (window._dimStatsMap || {}).all;
     const activeAIs = window._activeAIs;
     if (!dimStats || !activeAIs) return;
 
-    const medal = (r) => r===1?"🥇":r===2?"🥈":r===3?"🥉":r;
+    const medal = function(r) { return r===1?"🥇":r===2?"🥈":r===3?"🥉":r; };
     const th = "padding:5px 3px;font-size:10px;color:#94a3b8;text-align:center;";
     const td = "padding:5px 3px;font-size:12px;text-align:center;";
-    const fmtPct = (h,t) => t>0 ? (h*100/t).toFixed(0)+"%" : "—";
+    const fmtPct = function(h,t) { return t>0 ? (h*100/t).toFixed(0)+"%" : "—"; };
 
-    // 维度配置
-    const dimConfig = {
-        'spf': { key: 'spf', label: '胜平负' },
-        'let': { key: 'let', label: '让球' },
-        'score': { key: 'score', label: '比分' },
-        'goals': { key: 'goals', label: '进球' },
-        'half': { key: 'half', label: '半全场' }
-    };
+    const isFootball = sport !== 'basketball';
+    const dimConfig = isFootball ? DIM_CONFIGS.football : DIM_CONFIGS.basketball;
 
     if (dim === 'all') {
-        // 总榜：按命中率排序，显示5列
-        const sorted = [...activeAIs].sort((a, b) => {
+        // 总榜：按主维度命中率排序
+        const sorted = [...activeAIs].sort(function(a, b) {
             const sa = dimStats[a.ai_name], sb = dimStats[b.ai_name];
             const ra = sa.spf_t ? sa.spf_h/sa.spf_t : 0;
             const rb = sb.spf_t ? sb.spf_h/sb.spf_t : 0;
@@ -511,23 +561,37 @@ function renderRankingContent(dim) {
         html += "<thead><tr>";
         html += "<th style=\""+th+"text-align:left;\">排名</th>";
         html += "<th style=\""+th+"text-align:left;\">AI</th>";
-        html += "<th style=\""+th+"\">命中率</th>";
-        html += "<th style=\""+th+"\">让球</th>";
-        html += "<th style=\""+th+"\">比分</th>";
-        html += "<th style=\""+th+"\">进球</th>";
-        html += "<th style=\""+th+"\">半全场</th>";
+        // 总榜列头：根据运动类型显示不同标签
+        const mainLabel = isFootball ? '命中率' : '命中率';
+        html += "<th style=\""+th+"\">"+mainLabel+"</th>";
+        if (isFootball) {
+            html += "<th style=\""+th+"\">让球</th>";
+            html += "<th style=\""+th+"\">比分</th>";
+            html += "<th style=\""+th+"\">进球</th>";
+            html += "<th style=\""+th+"\">半全场</th>";
+        } else {
+            html += "<th style=\""+th+"\">让分</th>";
+            html += "<th style=\""+th+"\">总分</th>";
+            html += "<th style=\""+th+"\">半全场</th>";
+        }
         html += "</tr></thead><tbody>";
 
-        sorted.forEach((ai, i) => {
+        sorted.forEach(function(ai, i) {
             const d = dimStats[ai.ai_name];
             html += "<tr>";
             html += "<td style=\""+td+"text-align:left;\">"+medal(i+1)+"</td>";
             html += "<td style=\""+td+"text-align:left;font-weight:600;\">"+(ai.ai_name||"")+"</td>";
             html += "<td style=\""+td+"color:#fbbf24;\">"+fmtPct(d.spf_h,d.spf_t)+"</td>";
-            html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
-            html += "<td style=\""+td+"\">"+fmtPct(d.score_h,d.score_t)+"</td>";
-            html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
-            html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
+            if (isFootball) {
+                html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
+                html += "<td style=\""+td+"\">"+fmtPct(d.score_h,d.score_t)+"</td>";
+                html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
+                html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
+            } else {
+                html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
+                html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
+                html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
+            }
             html += "</tr>";
         });
 
@@ -538,7 +602,7 @@ function renderRankingContent(dim) {
         const cfg = dimConfig[dim];
         if (!cfg) return;
 
-        const sorted = [...activeAIs].sort((a, b) => {
+        const sorted = [...activeAIs].sort(function(a, b) {
             const sa = dimStats[a.ai_name], sb = dimStats[b.ai_name];
             const ra = sa[cfg.key+'_t'] ? sa[cfg.key+'_h']/sa[cfg.key+'_t'] : 0;
             const rb = sb[cfg.key+'_t'] ? sb[cfg.key+'_h']/sb[cfg.key+'_t'] : 0;
@@ -553,7 +617,7 @@ function renderRankingContent(dim) {
         html += "<th style=\""+th+"\">命中率</th>";
         html += "</tr></thead><tbody>";
 
-        sorted.forEach((ai, i) => {
+        sorted.forEach(function(ai, i) {
             const d = dimStats[ai.ai_name];
             const hits = d[cfg.key+'_h'] || 0;
             const total = d[cfg.key+'_t'] || 0;
