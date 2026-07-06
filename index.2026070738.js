@@ -480,7 +480,13 @@ function computeDimStats(predictions, matchMap, activeAIs) {
 function renderRanking() {
     const container = document.getElementById("ranking-list");
     if (!container) return;
-    const activeAIs = (state.aiStats || []).filter(ai => ai.is_active === true);
+    const seen = new Set();
+    const activeAIs = (state.aiStats || []).filter(ai => {
+        if (!ai.is_active) return false;
+        if (seen.has(ai.ai_name)) return false;
+        seen.add(ai.ai_name);
+        return true;
+    });
     if (activeAIs.length === 0) {
         container.innerHTML = "<div style=\"padding:20px;text-align:center;color:#94a3b8;\">暂无排行数据</div>";
         return;
