@@ -14,7 +14,7 @@ import {
     setCachedData,
     querySupabase,
     isMatchDone
-} from './api.js?v=2026070708';
+} from './api.js?v=2026070709';
 
 // ============================================================
 // 日期工具函数（修复时区Bug：用本地时间而非UTC）
@@ -420,45 +420,119 @@ function renderRanking() {
         }
     });
 
-    // 按命中率排序
-    const sorted = [...activeAIs].sort((a, b) => {
-        const sa = dimStats[a.ai_name], sb = dimStats[b.ai_name];
-        const ra = sa.spf_t ? sa.spf_h/sa.spf_t : 0;
-        const rb = sb.spf_t ? sb.spf_h/sb.spf_t : 0;
-        return rb - ra;
+    // 存储到全局供tab切换使用
+    window._dimStats = dimStats;
+    window._activeAIs = activeAIs;
+
+    // 渲染默认总榜
+    renderRankingContent('all');
+}
+
+// 切换排行tab
+window.switchRankTab = function(dim) {
+    // 更新tab样式
+    document.querySelectorAll('.rank-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.dim === dim);
     });
+    // 渲染对应维度内容
+    renderRankingContent(dim);
+};
+
+// 渲染排行内容
+function renderRankingContent(dim) {
+    const container = document.getElementById("ranking-list");
+    if (!container) return;
+    const dimStats = window._dimStats;
+    const activeAIs = window._activeAIs;
+    if (!dimStats || !activeAIs) return;
 
     const medal = (r) => r===1?"🥇":r===2?"🥈":r===3?"🥉":r;
     const th = "padding:5px 3px;font-size:10px;color:#94a3b8;text-align:center;";
     const td = "padding:5px 3px;font-size:12px;text-align:center;";
     const fmtPct = (h,t) => t>0 ? (h*100/t).toFixed(0)+"%" : "—";
 
-    let html = "<table style=\"width:100%;border-collapse:collapse;\">";
-    html += "<thead><tr>";
-    html += "<th style=\""+th+"text-align:left;\">排名</th>";
-    html += "<th style=\""+th+"text-align:left;\">AI</th>";
-    html += "<th style=\""+th+"\">命中率</th>";
-    html += "<th style=\""+th+"\">让球</th>";
-    html += "<th style=\""+th+"\">比分</th>";
-    html += "<th style=\""+th+"\">进球</th>";
-    html += "<th style=\""+th+"\">半全场</th>";
-    html += "</tr></thead><tbody>";
+    // 维度配置
+    const dimConfig = {
+        'spf': { key: 'spf', label: '胜平负' },
+        'let': { key: 'let', label: '让球' },
+        'score': { key: 'score', label: '比分' },
+        'goals': { key: 'goals', label: '进球' },
+        'half': { key: 'half', label: '半全场' }
+    };
 
-    sorted.forEach((ai, i) => {
-        const d = dimStats[ai.ai_name];
-        html += "<tr>";
-        html += "<td style=\""+td+"text-align:left;\">"+medal(i+1)+"</td>";
-        html += "<td style=\""+td+"text-align:left;font-weight:600;\">"+(ai.ai_name||"")+"</td>";
-        html += "<td style=\""+td+"color:#fbbf24;\">"+fmtPct(d.spf_h,d.spf_t)+"</td>";
-        html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
-        html += "<td style=\""+td+"\">"+fmtPct(d.score_h,d.score_t)+"</td>";
-        html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
-        html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
-        html += "</tr>";
-    });
+    if (dim === 'all') {
+        // 总榜：按命中率排序，显示5列
+        const sorted = [...activeAIs].sort((a, b) => {
+            const sa = dimStats[a.ai_name], sb = dimStats[b.ai_name];
+            const ra = sa.spf_t ? sa.spf_h/sa.spf_t : 0;
+            const rb = sb.spf_t ? sb.spf_h/sb.spf_t : 0;
+            return rb - ra;
+        });
 
-    html += "</tbody></table>";
-    container.innerHTML = html;
+        let html = "<table style=\"width:100%;border-collapse:collapse;\">";
+        html += "<thead><tr>";
+        html += "<th style=\""+th+"text-align:left;\">排名</th>";
+        html += "<th style=\""+th+"text-align:left;\">AI</th>";
+        html += "<th style=\""+th+"\">命中率</th>";
+        html += "<th style=\""+th+"\">让球</th>";
+        html += "<th style=\""+th+"\">比分</th>";
+        html += "<th style=\""+th+"\">进球</th>";
+        html += "<th style=\""+th+"\">半全场</th>";
+        html += "</tr></thead><tbody>";
+
+        sorted.forEach((ai, i) => {
+            const d = dimStats[ai.ai_name];
+            html += "<tr>";
+            html += "<td style=\""+td+"text-align:left;\">"+medal(i+1)+"</td>";
+            html += "<td style=\""+td+"text-align:left;font-weight:600;\">"+(ai.ai_name||"")+"</td>";
+            html += "<td style=\""+td+"color:#fbbf24;\">"+fmtPct(d.spf_h,d.spf_t)+"</td>";
+            html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
+            html += "<td style=\""+td+"\">"+fmtPct(d.score_h,d.score_t)+"</td>";
+            html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
+            html += "<td style=\""+td+"\">"+fmtPct(d.half_h,d.half_t)+"</td>";
+            html += "</tr>";
+        });
+
+        html += "</tbody></table>";
+        container.innerHTML = html;
+    } else {
+        // 单维度榜
+        const cfg = dimConfig[dim];
+        if (!cfg) return;
+
+        const sorted = [...activeAIs].sort((a, b) => {
+            const sa = dimStats[a.ai_name], sb = dimStats[b.ai_name];
+            const ra = sa[cfg.key+'_t'] ? sa[cfg.key+'_h']/sa[cfg.key+'_t'] : 0;
+            const rb = sb[cfg.key+'_t'] ? sb[cfg.key+'_h']/sb[cfg.key+'_t'] : 0;
+            return rb - ra;
+        });
+
+        let html = "<table style=\"width:100%;border-collapse:collapse;\">";
+        html += "<thead><tr>";
+        html += "<th style=\""+th+"text-align:left;\">排名</th>";
+        html += "<th style=\""+th+"text-align:left;\">AI</th>";
+        html += "<th style=\""+th+"\">命中场次</th>";
+        html += "<th style=\""+th+"\">命中率</th>";
+        html += "</tr></thead><tbody>";
+
+        sorted.forEach((ai, i) => {
+            const d = dimStats[ai.ai_name];
+            const hits = d[cfg.key+'_h'] || 0;
+            const total = d[cfg.key+'_t'] || 0;
+            const isFirst = i === 0;
+            const highlightStyle = isFirst ? "color:#fbbf24;font-weight:700;" : "";
+
+            html += "<tr>";
+            html += "<td style=\""+td+"text-align:left;\">"+medal(i+1)+"</td>";
+            html += "<td style=\""+td+"text-align:left;font-weight:600;\">"+(ai.ai_name||"")+"</td>";
+            html += "<td style=\""+td+highlightStyle+"\">"+hits+"/"+total+"</td>";
+            html += "<td style=\""+td+highlightStyle+"\">"+fmtPct(hits,total)+"</td>";
+            html += "</tr>";
+        });
+
+        html += "</tbody></table>";
+        container.innerHTML = html;
+    }
 }
 
 // ============================================================

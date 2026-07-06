@@ -156,10 +156,14 @@
             border-radius: 14px;
             padding: 16px 18px;
         }
-        .rank-card .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .rank-card .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
         .rank-card .head span { font-size: 14px; font-weight: 600; }
         .rank-card .head a { font-size: 12px; color: #6b7280; }
         .rank-card .head a:hover { color: #8b5cf6; }
+        .rank-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+        .rank-tab { padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid transparent; transition: all 0.2s; }
+        .rank-tab:hover { background: rgba(139,92,246,0.1); color: #c4b5fd; }
+        .rank-tab.active { background: rgba(139,92,246,0.15); color: #a78bfa; border-color: rgba(139,92,246,0.3); }
         .rank-row {
             display: flex;
             align-items: center;
@@ -361,6 +365,14 @@
         <div class="rank-card">
             <div class="head">
                 <span>🏆 AI 排行</span>
+                <div class="rank-tabs" id="rank-tabs">
+                    <span class="rank-tab active" data-dim="all" onclick="switchRankTab('all')">总榜</span>
+                    <span class="rank-tab" data-dim="spf" onclick="switchRankTab('spf')">胜平负</span>
+                    <span class="rank-tab" data-dim="let" onclick="switchRankTab('let')">让球</span>
+                    <span class="rank-tab" data-dim="score" onclick="switchRankTab('score')">比分</span>
+                    <span class="rank-tab" data-dim="goals" onclick="switchRankTab('goals')">进球</span>
+                    <span class="rank-tab" data-dim="half" onclick="switchRankTab('half')">半全场</span>
+                </div>
             </div>
             <div id="ranking-list" style="padding:12px 0;"></div>
         </div>
@@ -425,7 +437,7 @@
     <p>AI实验室 · 体彩好伙伴 · 数据仅供研究参考 · 不构成任何投注建议</p>
 </footer>
 
-<script type="module" src="./index.js?v=2026070708"></script>
+<script type="module" src="./index.js?v=2026070709"></script>
 
 </body>
 </html>
