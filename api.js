@@ -137,7 +137,7 @@ export async function fetchPredictions(matchIds, sport = 'football') {
         return cached;
     }
 
-    const select = 'match_id,ai_name,sport_type,spf,handicap_spf,score,goals,half_full,win_loss,total_points,score_diff_range,half_win_loss,hit_spf,hit_handicap,hit_score,hit_goals,hit_half,total_hits,analysis';
+    const select = 'match_id,ai_name,sport_type,spf,handicap_spf,handicap_win_loss,score,goals,half_full,win_loss,total_points,score_diff_range,half_win_loss,hit_spf,hit_handicap,hit_score,hit_goals,hit_half,total_hits,analysis';
     
     // 分页获取全部预测（Supabase限制每次1000条）
     const pageSize = 1000;
