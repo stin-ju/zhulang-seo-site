@@ -261,10 +261,22 @@ function renderMatchCard(match) {
     // 预测数量
     const predCount = matchPredictions.length;
     
+    // 构建赔率显示
+    let oddsHtml = '';
+    const isBasketball = (match.sport_type || 'football') === 'basketball';
+    const oddsParts = [];
+    if (match.win_odds) oddsParts.push('<span>胜' + match.win_odds + '</span>');
+    if (!isBasketball && match.draw_odds) oddsParts.push('<span>平' + match.draw_odds + '</span>');
+    if (match.lose_odds) oddsParts.push('<span>负' + match.lose_odds + '</span>');
+    if (oddsParts.length > 0) {
+        oddsHtml = '<div class="odds-row">' + oddsParts.join('') + '</div>';
+    }
+    
     return `
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
             <span class="time">${matchTime}</span>
             <span class="teams">${esc(homeTeam)} ${match.status === '已确认' ? '<span class="score-inline">' + match.home_score + ':' + match.away_score + '</span>' : 'vs'} ${esc(awayTeam)}${match.handicap ? ' <span class="handicap-tag">' + match.handicap + '</span>' : ''}</span>
+            ${oddsHtml}
             <div class="badge-group">
                 ${badges}
                 ${predCount > 0 ? `<span class="badge-sm" style="background:rgba(139,92,246,0.1);color:#a78bfa;">${predCount}AI预测</span>` : ''}
