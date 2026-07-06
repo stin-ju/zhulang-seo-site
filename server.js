@@ -175,24 +175,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     // GET /api/predictions
-    // 只返回在售比赛的预测，避免数据量过大被截断
+    // 返回所有预测数据，不再按selling_status过滤
     if (pathname === '/api/predictions' && req.method === 'GET') {
-      // 1. 先获取在售比赛的ID列表
-      const onSaleMatches = await querySupabase('matches', {
-        select: 'id',
-        filter: { 'selling_status': 'eq.on_sale' }
-      });
-      const onSaleMatchIds = new Set(onSaleMatches.map(m => m.id));
-      
-      // 2. 获取所有预测数据（增大限制）
-      const allPredictions = await querySupabase('predictions', {
+      const data = await querySupabase('predictions', {
         select: '*',
-        order: 'id.desc',  // 最新的在前
+        order: 'id.desc',
         limit: '5000'
       });
-      
-      // 3. 过滤：只保留在售比赛的预测
-      const data = allPredictions.filter(p => onSaleMatchIds.has(p.match_id));
       
       res.writeHead(200, { 
         'Content-Type': 'application/json',
