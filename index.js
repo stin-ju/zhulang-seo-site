@@ -14,7 +14,7 @@ import {
     setCachedData,
     querySupabase,
     isMatchDone
-} from './api.js?v=2026070706';
+} from './api.js?v=2026070707';
 
 // ============================================================
 // 日期工具函数（修复时区Bug：用本地时间而非UTC）
