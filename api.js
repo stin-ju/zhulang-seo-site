@@ -129,20 +129,40 @@ export async function fetchPredictions(matchIds, sport = 'football') {
     
     const cacheKey = `predictions_${sport}_${matchIds.sort().join('_')}`;
     const cached = getCachedData(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+        console.log('📦 使用缓存的预测数据:', cacheKey);
+        return cached;
+    }
 
-    // 足球和篮球字段都查询
     const select = 'match_id,ai_name,spf,handicap_spf,score,goals,half_full,win_loss,total_points,score_diff_range,half_win_loss,hit_handicap,hit_score,hit_goals,hit_half,total_hits,analysis';
-    const data = await querySupabase(
-        'predictions',
-        select,
-        null,
-        { order: 'match_id.asc', limit: '5000' }
-    );
+    
+    // 分页查询绕过Supabase 1000行限制
+    let allData = [];
+    let offset = 0;
+    const pageSize = 1000;
+    while (true) {
+        const url = `${SUPABASE_URL}/rest/v1/predictions?select=${encodeURIComponent(select)}&order=match_id.asc&limit=${pageSize}&offset=${offset}`;
+        const resp = await fetch(url, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+            }
+        });
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            throw new Error(`HTTP ${resp.status}: ${errorText}`);
+        }
+        const batch = await resp.json();
+        allData = allData.concat(batch);
+        if (batch.length < pageSize) break;
+        offset += pageSize;
+    }
+    
+    console.log(`📦 预测数据分页加载完成，共${allData.length}条`);
     
     // 类型安全匹配：统一转为字符串比较
     const idSet = new Set(matchIds.map(id => String(id)));
-    const filtered = data.filter(p => idSet.has(String(p.match_id)));
+    const filtered = allData.filter(p => idSet.has(String(p.match_id)));
     setCachedData(cacheKey, filtered);
     return filtered;
 }
