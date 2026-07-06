@@ -174,14 +174,22 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // GET /api/predictions
-    // 返回所有预测数据，不再按selling_status过滤
+    // GET /api/predictions - 分页获取全部预测（绕过Supabase 1000条限制）
     if (pathname === '/api/predictions' && req.method === 'GET') {
-      const data = await querySupabase('predictions', {
-        select: '*',
-        order: 'id.desc',
-        limit: '5000'
-      });
+      let allData = [];
+      let offset = 0;
+      const limit = 1000;
+      while (true) {
+        const { url, key } = getSupabaseConfig();
+        const resp = await fetch(
+          `${url}/rest/v1/predictions?select=*&order=id.desc&limit=${limit}&offset=${offset}`,
+          { headers: { apikey: key, Authorization: 'Bearer ' + key } }
+        );
+        const batch = await resp.json();
+        allData = allData.concat(batch);
+        if (batch.length < limit) break;
+        offset += limit;
+      }
       
       res.writeHead(200, { 
         'Content-Type': 'application/json',
@@ -190,7 +198,7 @@ const server = http.createServer(async (req, res) => {
         'Expires': '0',
         ...CORS_HEADERS 
       });
-      res.end(JSON.stringify(data));
+      res.end(JSON.stringify(allData));
       return;
     }
 
