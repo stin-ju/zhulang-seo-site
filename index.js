@@ -293,7 +293,7 @@ function renderPredictionsTable(predictions, match) {
     // 判断命中状态
     function cellClass(pred, field) {
         const hitFieldMap = {
-            'spf': 'hit_handicap',
+            'spf': 'hit_spf',
             'handicap_spf': 'hit_handicap',
             'score': 'hit_score',
             'goals': 'hit_goals',
