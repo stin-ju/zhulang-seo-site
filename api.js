@@ -114,7 +114,7 @@ export async function fetchAllMatches(sport = null) {
     const filters = sport ? { sport_type: sport } : null;
     const data = await querySupabase(
         'matches',
-        'id,teams,match_time,handicap,status,selling_status,win_odds,draw_odds,lose_odds,sport_type,home_score,away_score',
+        'id,teams,match_time,handicap,status,selling_status,win_odds,draw_odds,lose_odds,sport_type,home_score,away_score,half_home_score,half_away_score,spread_line,total_line',
         filters,
         { order: 'match_time.desc', limit: '5000' }
     );
