@@ -296,7 +296,7 @@
       const predsHtml = preds.map(p => {
         const aiName = p.ai_name || 'Unknown';
         const winLoss = p.win_loss || p.spf || '--';
-        const handicap = p.handicap_result || p.handicap_spf || '--';
+        const handicap = p.handicap_win_loss || p.handicap_spf || '--';
         const totalPoints = formatTotalPoints(p.total_points);
         const scoreDiff = formatScoreDiff(p.score_diff_range);
         const analysis = p.metadata?.analysis || p.analysis || '';
