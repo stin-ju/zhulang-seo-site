@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>竞彩奖金计算器 - 足球篮球串关奖金计算 | AI实验室</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 14px; line-height: 1.5; }
+        .topbar { background: #1a3c6e; color: #fff; padding: 0 20px; height: 50px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .topbar .logo { font-size:18px; font-weight:700; }
+        .topbar .logo span { color:#facc15; }
+        .topbar .sub { font-size:12px; opacity:0.8; }
+        .app { max-width: 1280px; margin: 0 auto; padding: 12px 16px; padding-bottom: 280px; }
+        .left-col { width: 100%; }
+        /* 底部浮动选单 - 深色单行布局 */
+        .bottom-bet-slip {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border-top: 2px solid #2d2d44;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+            padding: 10px 16px;
+            z-index: 999;
+        }
+        .slip-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        /* 左侧：选单按钮 */
+        .slip-left-btn { flex-shrink: 0; }
+        .dan-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #facc15;
+            color: #1a1a2e;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+        }
+        .dan-btn:hover { background: #fbbf24; }
+        .dan-btn .count { font-size: 18px; font-weight: 700; }
+        .dan-btn .arrow { font-size: 10px; }
+        /* 中间：过关方式 + 倍数 */
+        .slip-middle {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+        }
+        .pass-type-section { display: flex; align-items: center; gap: 8px; }
+        .pass-type-section .label { font-size: 13px; color: #9ca3af; }
+        .pass-type-options { display: flex; gap: 4px; }
+        .pass-type-options button {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .pass-type-options button.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .multiplier-section { display: flex; align-items: center; gap: 8px; }
+        .multiplier-section .label { font-size: 13px; color: #9ca3af; }
+        .multiplier-control { display: flex; align-items: center; gap: 4px; }
+        .multiplier-control button {
+            width: 28px; height: 28px;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .multiplier-control button:hover { background: #374151; }
+        .multiplier-control input {
+            width: 50px; height: 28px;
+            text-align: center;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            background: #2d2d44;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .multiplier-control input:focus { outline: none; border-color: #3b82f6; }
+        .multiplier-hint { font-size: 11px; color: #6b7280; }
+        /* 右侧：金额 + 奖金 */
+        .slip-right-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+        .amount-display { text-align: right; }
+        .amount-display .bet-amount { font-size: 13px; color: #9ca3af; }
+        .amount-display .bet-amount strong { color: #fff; font-size: 15px; }
+        .amount-display .bonus-amount { font-size: 13px; color: #9ca3af; }
+        .amount-display .bonus-amount strong { color: #10b981; font-size: 16px; font-weight: 700; }
+        .detail-btn {
+            padding: 10px 16px;
+            background: #f97316;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .detail-btn:hover { background: #ea580c; }
+        /* 选单展开面板 */
+        .slip-panel {
+            position: fixed;
+            bottom: 58px;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border-top: 1px solid #2d2d44;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            z-index: 998;
+        }
+        .slip-panel.open { max-height: 300px; overflow-y: auto; }
+        .slip-panel-content { padding: 12px 16px; max-width: 1400px; margin: 0 auto; }
+        .slip-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2d2d44;
+        }
+        .slip-panel-header h4 { font-size: 14px; color: #e5e7eb; }
+        .slip-panel-header button { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 12px; }
+        .slip-panel-header button:hover { color: #ef4444; }
+        .panel-bet-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .panel-bet-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #2d2d44;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .panel-bet-item .dan-star { color: #6b7280; cursor: pointer; font-size: 14px; }
+        .panel-bet-item .dan-star.active { color: #facc15; }
+        .panel-bet-item .match-name { color: #e5e7eb; font-weight: 500; }
+        .panel-bet-item .bet-info { color: #9ca3af; }
+        .panel-bet-item .del-btn { color: #6b7280; cursor: pointer; margin-left: 4px; }
+        .panel-bet-item .del-btn:hover { color: #ef4444; }
+        .panel-pass-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #2d2d44; }
+        .panel-pass-section .label { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
+        .panel-pass-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .panel-pass-grid button {
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .panel-pass-grid button.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .panel-empty { text-align: center; color: #6b7280; padding: 20px; font-size: 13px; }
+        .panel-hint { text-align: center; color: #6b7280; padding: 8px; font-size: 11px; border-top: 1px solid #e5e7eb; margin-top: 8px; }
+        @media (max-width: 768px) {
+            .slip-container { flex-wrap: wrap; gap: 8px; }
+            .slip-middle { order: 3; width: 100%; justify-content: space-between; }
+            .slip-right-info { margin-left: auto; }
+        }
+        .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; padding: 14px 16px; margin-bottom: 12px; }
+        .card-title { font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card-title .badge { background: #eef2ff; color: #1a3c6e; font-size: 12px; padding: 0 12px; border-radius: 12px; line-height: 22px; }
+        .sport-tabs { display: flex; background: #f0f2f5; border-radius: 8px; padding: 3px; }
+        .sport-tabs .tab { flex: 1; text-align: center; padding: 6px 0; font-size: 14px; font-weight: 600; color: #6b7280; border-radius: 6px; cursor: pointer; border: none; background: transparent; }
+        .sport-tabs .tab.active { background: #fff; color: #1a3c6e; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .play-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+        .play-tabs .play-tab { padding: 4px 12px; font-size: 13px; font-weight: 500; color: #6b7280; border-radius: 16px; cursor: pointer; border: 2px solid transparent; background: transparent; }
+        .play-tabs .play-tab.active { border-color: #1a3c6e; background: #eef2ff; color: #1a3c6e; }
+        .play-tabs .play-tab .max-tag { font-size:10px; color:#9ca3af; }
+        .play-tabs .play-tab .check { color:#16a34a; font-weight:700; margin-left:4px; }
+        .match-item { border-bottom: 1px solid #f0f2f5; padding: 0; }
+        .match-item:last-child { border-bottom: none; }
+        .match-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 8px 0 4px 0; cursor: pointer;
+        }
+        .match-header .match-meta {
+            display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280;
+        }
+        .match-header .match-id {
+            font-weight: 600; color: #1a3c6e; background: #eef2ff; padding: 1px 6px; border-radius: 3px;
+        }
+        .match-header .match-time { color: #6b7280; }
+        .match-header .match-league { color: #9ca3af; font-size: 11px; }
+        .match-header .collapse-btn {
+            background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 12px; padding: 2px 6px;
+            transition: transform 0.2s;
+        }
+        .match-header .collapse-btn.collapsed { transform: rotate(-90deg); }
+        .match-body { padding: 0 0 8px 0; }
+        .match-body.hidden { display: none; }
+        .match-item .teams-row { 
+            display: flex; align-items: center; gap: 6px; 
+            font-weight: 600; color: #1a1a2e; font-size: 14px; 
+            margin-bottom: 6px;
+        }
+        .match-item .teams-row .vs { color:#9ca3af; font-weight:400; }
+        .match-item .teams-row .star-btn { background: none; border: none; font-size: 14px; cursor: pointer; color: #d1d5db; padding: 0 2px; }
+        .match-item .teams-row .star-btn.active { color: #facc15; }
+        .match-item .tags-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+        .match-item .handicap-label { font-size: 11px; background: #f3f4f6; padding: 0 8px; border-radius: 10px; line-height: 18px; color: #6b7280; }
+        .match-item .selected-play-label { font-size: 11px; background: #dbeafe; color: #1a3c6e; padding: 0 6px; border-radius: 4px; line-height: 18px; }
+        .match-item .play-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+        .match-item .play-row .play-label { font-size: 11px; font-weight: 500; color: #6b7280; min-width: 44px; flex-shrink: 0; }
+        .match-item .play-row .odds-group { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; }
+        .match-item .play-row .odds-group .odds-btn { padding: 2px 8px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 11px; font-weight: 500; color: #1a1a2e; text-align: center; flex: 1 0 auto; min-width: 38px; }
+        .match-item .play-row .odds-group .odds-btn .label { color:#9ca3af; font-weight:400; }
+        .match-item .play-row .odds-group .odds-btn .value { color:#dc2626; font-weight:700; margin-left:2px; }
+        .match-item .play-row .odds-group .odds-btn:hover { border-color:#1a3c6e; background:#f8faff; }
+        .match-item .play-row .odds-group .odds-btn.selected { border-color: #1a3c6e; background: #e8edf5; box-shadow: 0 0 0 2px rgba(26,60,110,0.15); }
+        .match-item .play-row .odds-group .odds-btn.selected .value { color:#1a3c6e; }
+        .match-item .play-row .odds-group .odds-btn.disabled { opacity:0.35; cursor:not-allowed; }
+        .match-item .play-row .odds-group.score-diff { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
+        .match-item .play-row .odds-group.score-diff .odds-btn { font-size:10px; padding:1px 3px; min-width:0; }
+        /* 比分三排布局 */
+        .score-rows { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        .score-row { display: flex; align-items: center; gap: 4px; }
+        .score-row .row-label { 
+            font-size: 11px; font-weight: 600; min-width: 24px; 
+            padding: 2px 6px; border-radius: 4px; text-align: center;
+        }
+        .score-row.win-row .row-label { background: #fef2f2; color: #dc2626; }
+        .score-row.draw-row .row-label { background: #f0fdf4; color: #16a34a; }
+        .score-row.lose-row .row-label { background: #eff6ff; color: #2563eb; }
+        .score-row .row-options { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; }
+        .score-row .odds-btn { padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 10px; font-weight: 500; color: #1a1a2e; text-align: center; min-width: 42px; }
+        .score-row .odds-btn .label { color:#6b7280; font-weight:500; }
+        .score-row .odds-btn .value { color:#dc2626; font-weight:700; font-size: 10px; display: block; }
+        .score-row .odds-btn:hover { border-color:#1a3c6e; background:#f8faff; }
+        .score-row .odds-btn.selected { border-color: #1a3c6e; background: #e8edf5; box-shadow: 0 0 0 2px rgba(26,60,110,0.15); }
+        .score-row .odds-btn.selected .value { color:#1a3c6e; }
+        .score-row .odds-btn.disabled { opacity:0.35; cursor:not-allowed; }
+        .bet-slip { background: #fff; }
+        .bet-slip .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .bet-slip .header h3 { font-size:15px; font-weight:600; }
+        .bet-slip .header button { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 13px; }
+        .bet-slip .header button:hover { color:#dc2626; }
+        .bet-slip .slip-info { font-size: 13px; color: #6b7280; margin-bottom: 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .bet-slip .slip-info .highlight { color:#1a3c6e; font-weight:600; }
+        .bet-slip .slip-info .gold { color:#facc15; font-weight:600; }
+        .bet-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed #f0f2f5; font-size: 13px; }
+        .bet-item:last-child { border-bottom: none; }
+        .bet-item .info { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .bet-item .info .tag { background: #eef2ff; color: #1a3c6e; font-size: 11px; padding: 0 8px; border-radius: 4px; }
+        .bet-item .info .star { color:#facc15; }
+        .bet-item .del { color: #9ca3af; cursor: pointer; border: none; background: none; font-size: 16px; padding: 0 4px; }
+        .bet-item .del:hover { color:#dc2626; }
+        .bet-slip .empty { color: #9ca3af; text-align: center; padding: 16px 0; font-size: 13px; }
+        .mix-tag { display: inline-block; font-size: 11px; background: #fef3c7; color: #b45309; padding: 0 8px; border-radius: 4px; font-weight: 600; margin-left: 6px; }
+        .pass-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f2f5; }
+        .pass-section label { font-size:13px; font-weight:500; display:block; margin-bottom:4px; }
+        .pass-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .pass-grid .pass-btn { padding: 3px 12px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; font-size: 12px; cursor: pointer; color: #374151; }
+        .pass-grid .pass-btn.active { border-color: #1a3c6e; background: #e8edf5; color: #1a3c6e; font-weight: 600; }
+        .pass-hint { font-size:11px; color:#6b7280; margin-top:3px; }
+        .result-area { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f2f5; }
+        .result-area .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px; }
+        .result-area .row .label { color:#6b7280; }
+        .result-area .row .value { font-weight:600; }
+        .bet-multiplier { display: flex; align-items: center; gap: 6px; padding: 4px 0; flex-wrap: wrap; }
+        .bet-multiplier label { font-size:13px; color:#6b7280; font-weight:500; }
+        .bet-multiplier input[type="number"] { width: 50px; padding: 3px 4px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; font-weight: 600; text-align: center; }
+        .bet-multiplier input[type="number"]:focus { outline:none; border-color:#1a3c6e; }
+        .bet-multiplier .unit { font-size:13px; color:#6b7280; }
+        .bet-multiplier .quick-btns { display: flex; gap: 3px; }
+        .bet-multiplier .quick-btns button { padding: 1px 8px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; font-size: 11px; cursor: pointer; color: #374151; }
+        .bet-multiplier .quick-btns button.active { border-color: #1a3c6e; background: #e8edf5; color: #1a3c6e; font-weight: 600; }
+        .bet-amount-breakdown { font-size: 11px; color: #9ca3af; padding: 2px 0 4px 0; border-bottom: 1px dashed #f0f2f5; }
+        .result-area .bonus { background: #f0fdf4; border-radius: 8px; padding: 8px 14px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .result-area .bonus .label { color:#166534; font-size:14px; font-weight:500; }
+        .result-area .bonus .amount { font-size:22px; font-weight:700; color:#16a34a; }
+        .result-area .bonus .amount .unit { font-size:14px; font-weight:400; color:#4ade80; }
+        .result-area .hint { margin-top:4px; text-align:right; font-size:11px; color:#9ca3af; }
+        .detail-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; color: #1a3c6e; font-size: 13px; font-weight: 500; padding: 4px 0; border: none; background: none; margin-top: 4px; }
+        .detail-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .detail-content.open { max-height: 200px; overflow-y: auto; }
+        .detail-content .detail-item { padding: 3px 6px; font-size: 11px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; background: #fafbfc; }
+        .detail-content .detail-item:nth-child(even) { background: #f5f6f8; }
+        .detail-content .detail-item .prize { color:#16a34a; font-weight:600; }
+        .action-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f2f5; }
+        .action-row .btn { padding: 6px 14px; border-radius: 6px; font-weight: 600; font-size: 13px; border: none; cursor: pointer; }
+        .action-row .btn-primary { background:#1a3c6e; color:#fff; }
+        .action-row .btn-primary:hover { background:#2a5f8a; }
+        .action-row .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+        .action-row .btn-secondary:hover { background:#e5e7eb; }
+        .action-row .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .action-row .btn-secondary:disabled:hover { background: #f3f4f6; }
+        .footer-tip { max-width: 1280px; margin: 0 auto; padding: 0 16px 16px; font-size: 11px; color: #9ca3af; line-height: 1.8; }
+        .footer-tip strong { color:#6b7280; }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="logo">⚽ 竞彩<span>计算器</span></div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span class="sub">AI实验室 · 体彩好伙伴</span>
+            <a href="/" style="text-decoration:none;color:#fff;background:rgba(255,255,255,0.1);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:all 0.2s;">🏠 首页</a>
+        </div>
+    </header>
+    <div class="app">
+        <div class="left-col">
+            <div class="card" style="padding:6px 10px;">
+                <div class="sport-tabs" id="sportTabs">
+                    <button class="tab active" data-sport="football">⚽ 足球</button>
+                    <button class="tab" data-sport="basketball">🏀 篮球</button>
+                </div>
+            </div>
+            <div class="card" style="padding:8px 12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:13px;font-weight:500;color:#374151;">选择玩法</span>
+                    <span style="font-size:11px;color:#9ca3af;">点击切换，同一场只可选一种</span>
+                </div>
+                <div class="play-tabs" id="playTabs"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">
+                    <span>🏆 在售赛事</span>
+                    <span class="badge" id="matchCount">0 场</span>
+                </div>
+                <div id="matchList">
+                    <div style="text-align:center;color:#9ca3af;padding:20px 0;">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-tip">
+        <strong>提示：</strong> 同一场比赛只能选择一种玩法 · 混合过关支持不同场次不同玩法 · 胜分差/比分/半全场最高4关
+    </div>
+    <!-- 选单展开面板 -->
+    <div class="slip-panel" id="slipPanel">
+        <div class="slip-panel-content">
+            <div class="slip-panel-header">
+                <h4>🧾 我的选单 (<span id="panelSelCount">0</span>场)</h4>
+                <button id="clearAllBtn">清空</button>
+            </div>
+            <div id="betList"><div class="panel-empty">点击赔率添加</div></div>
+            <div class="panel-pass-section" id="passSection" style="display:none;">
+                <div class="label">过关方式</div>
+                <div class="panel-pass-grid" id="passGrid"></div>
+                <div class="pass-hint" id="passHint" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
+            </div>
+        </div>
+    </div>
+    <!-- 底部浮动选单栏 -->
+    <div class="bottom-bet-slip">
+        <div class="slip-container">
+            <!-- 左侧：选单按钮 -->
+            <div class="slip-left-btn">
+                <button class="dan-btn" id="danBtn">
+                    <span>已选</span>
+                    <span class="count" id="selCount">0</span>
+                    <span>场</span>
+                    <span class="arrow">▲</span>
+                </button>
+            </div>
+            <!-- 中间：过关方式 + 倍数 -->
+            <div class="slip-middle">
+                <div class="pass-type-section">
+                    <span class="label">过关方式：</span>
+                    <div class="pass-type-options">
+                        <button class="active" data-type="mn">M串N</button>
+                        <button data-type="free">自由过关</button>
+                    </div>
+                </div>
+                <div class="multiplier-section">
+                    <span class="label">倍数：</span>
+                    <div class="multiplier-control">
+                        <button id="multMinus">−</button>
+                        <input type="number" id="multiplierInput" value="1" min="1" max="50" />
+                        <button id="multPlus">+</button>
+                    </div>
+                    <span class="multiplier-hint">[最高50倍]</span>
+                </div>
+            </div>
+            <!-- 右侧：金额 + 奖金 -->
+            <div class="slip-right-info">
+                <div class="amount-display">
+                    <div class="bet-amount">投注金额：<strong id="betAmount">0</strong>元</div>
+                    <div class="bonus-amount">理论最高奖金：<strong id="bonusAmount">0.00</strong>元</div>
+                </div>
+                <button class="detail-btn" id="detailBtn">奖金详情</button>
+            </div>
+        </div>
+    </div>
+    <!-- 奖金详情弹窗 -->
+    <div id="detailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center;">
+        <div style="background:#1a1a2e;border-radius:12px;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #2d2d44;">
+                <h4 style="color:#e5e7eb;font-size:16px;">奖金详情</h4>
+                <button id="closeDetail" style="background:none;border:none;color:#9ca3af;font-size:20px;cursor:pointer;">×</button>
+            </div>
+            <div id="detailContent"></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #2d2d44;">
+                <div style="display:flex;justify-content:space-between;color:#9ca3af;font-size:13px;">
+                    <span>注数：<span id="betCount" style="color:#fff;">0</span></span>
+                    <span id="amountBreakdown">每注 2 元 × 0 注 × 1 倍</span>
+                </div>
+                <div style="text-align:right;margin-top:8px;">
+                    <span style="color:#9ca3af;font-size:12px;">提示：</span>
+                    <span id="calcHint" style="color:#6b7280;font-size:12px;">请选择至少 2 场比赛</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="./calculator.2026070704.js"></script>
+</html>
