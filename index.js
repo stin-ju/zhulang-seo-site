@@ -360,7 +360,12 @@ function renderRanking() {
         // 1. 胜平负/胜负
         if (sport === "football" && p.spf) {
             dimStats[ai].spf_t++;
-            if ((home>away && p.spf==="主胜") || (home===away && p.spf==="平局") || (home<away && p.spf==="客胜")) dimStats[ai].spf_h++;
+            var spfActual = home>away ? "主胜" : (home===away ? "平局" : "客胜");
+            var spfPred = p.spf;
+            if (spfPred === "胜") spfPred = "主胜";
+            else if (spfPred === "平") spfPred = "平局";
+            else if (spfPred === "负") spfPred = "客胜";
+            if (spfActual === spfPred) dimStats[ai].spf_h++;
         } else if (sport === "basketball" && p.win_loss) {
             dimStats[ai].spf_t++;
             if ((home>away && p.win_loss==="胜") || (home<away && p.win_loss==="负")) dimStats[ai].spf_h++;
