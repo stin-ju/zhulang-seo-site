@@ -14,7 +14,7 @@ import {
     setCachedData,
     querySupabase,
     isMatchDone
-} from './api.js?v=2026070711';
+} from './api.js?v=2026070712';
 
 // ============================================================
 // 日期工具函数（修复时区Bug：用本地时间而非UTC）
@@ -154,7 +154,18 @@ function renderMatches() {
         if (footballMatches.length === 0) {
             footballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">当天没有足球赛程</div>';
         } else {
-            footballContainer.innerHTML = footballMatches.map(m => renderMatchCard(m)).join('');
+            const visibleCount = Math.min(5, footballMatches.length);
+            const visibleMatches = footballMatches.slice(0, visibleCount);
+            const hiddenMatches = footballMatches.slice(visibleCount);
+            
+            let html = visibleMatches.map(m => renderMatchCard(m)).join('');
+            if (hiddenMatches.length > 0) {
+                html += `<div id="football-more-matches" style="display:none;">${hiddenMatches.map(m => renderMatchCard(m)).join('')}</div>`;
+                html += `<div id="football-more-btn" style="text-align:center;padding:12px 0;border-top:1px solid rgba(255,255,255,0.08);cursor:pointer;color:#a78bfa;font-size:13px;" onclick="expandMoreMatches('football')">展开更多 (${hiddenMatches.length}场) ▼</div>`;
+            }
+            footballContainer.innerHTML = html;
+            
+            // 绑定所有比赛卡片的点击事件
             footballContainer.querySelectorAll('.match-card-clickable').forEach(card => {
                 card.addEventListener('click', () => toggleMatchPredictions(card.dataset.matchId));
             });
@@ -168,7 +179,18 @@ function renderMatches() {
         if (basketballMatches.length === 0) {
             basketballContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">当天没有篮球赛程</div>';
         } else {
-            basketballContainer.innerHTML = basketballMatches.map(m => renderMatchCard(m)).join('');
+            const visibleCount = Math.min(5, basketballMatches.length);
+            const visibleMatches = basketballMatches.slice(0, visibleCount);
+            const hiddenMatches = basketballMatches.slice(visibleCount);
+            
+            let html = visibleMatches.map(m => renderMatchCard(m)).join('');
+            if (hiddenMatches.length > 0) {
+                html += `<div id="basketball-more-matches" style="display:none;">${hiddenMatches.map(m => renderMatchCard(m)).join('')}</div>`;
+                html += `<div id="basketball-more-btn" style="text-align:center;padding:12px 0;border-top:1px solid rgba(255,255,255,0.08);cursor:pointer;color:#a78bfa;font-size:13px;" onclick="expandMoreMatches('basketball')">展开更多 (${hiddenMatches.length}场) ▼</div>`;
+            }
+            basketballContainer.innerHTML = html;
+            
+            // 绑定所有比赛卡片的点击事件
             basketballContainer.querySelectorAll('.match-card-clickable').forEach(card => {
                 card.addEventListener('click', () => toggleMatchPredictions(card.dataset.matchId));
             });
@@ -177,6 +199,25 @@ function renderMatches() {
     }
     
     document.getElementById('match-count-label').textContent = `${dateMatches.length}场`;
+}
+
+// 展开更多比赛
+window.expandMoreMatches = function(sport) {
+    const moreMatches = document.getElementById(`${sport}-more-matches`);
+    const moreBtn = document.getElementById(`${sport}-more-btn`);
+    if (moreMatches) {
+        moreMatches.style.display = 'block';
+    }
+    if (moreBtn) {
+        moreBtn.style.display = 'none';
+    }
+    // 重新绑定展开后卡片的点击事件
+    const container = document.getElementById(sport === 'football' ? 'view-football' : 'view-basketball');
+    if (container) {
+        container.querySelectorAll('.match-card-clickable').forEach(card => {
+            card.addEventListener('click', () => toggleMatchPredictions(card.dataset.matchId));
+        });
+    }
 }
 
 // 渲染比赛卡片
