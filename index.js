@@ -234,11 +234,7 @@ function renderMatchCard(match) {
     let badges = '';
     
     // 状态badge
-    if (isDone) {
-        const hs = match.home_score != null ? match.home_score : '?';
-        const as_ = match.away_score != null ? match.away_score : '?';
-        badges += `<span class="badge-sm status-done" style="color:#fbbf24;font-weight:700;">${hs}:${as_}</span>`;
-    } else if (match.status === '未开赛') {
+    if (!isDone && match.status === '未开赛') {
         badges += `<span class="badge-sm status-pending">待比赛</span>`;
     }
     
@@ -268,7 +264,7 @@ function renderMatchCard(match) {
     return `
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
             <span class="time">${matchTime}</span>
-            <span class="teams">${esc(homeTeam)} vs ${esc(awayTeam)}</span>
+            <span class="teams">${esc(homeTeam)} ${match.status === 'completed' ? '<span class="score-inline">' + match.home_score + ':' + match.away_score + '</span>' : 'vs'} ${esc(awayTeam)}${match.handicap ? ' <span class="handicap-tag">让' + (match.handicap > 0 ? '+' : '') + match.handicap + '</span>' : ''}</span>
             <div class="badge-group">
                 ${badges}
                 ${predCount > 0 ? `<span class="badge-sm" style="background:rgba(139,92,246,0.1);color:#a78bfa;">${predCount}AI预测</span>` : ''}
