@@ -50,6 +50,9 @@ export async function querySupabase(table, select, filters, options = {}) {
     if (options.limit) {
         params.append('limit', options.limit);
     }
+    if (options.offset) {
+        params.append('offset', options.offset);
+    }
     const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}`;
     
     const headers = {
@@ -136,29 +139,21 @@ export async function fetchPredictions(matchIds, sport = 'football') {
 
     const select = 'match_id,ai_name,spf,handicap_spf,score,goals,half_full,win_loss,total_points,score_diff_range,half_win_loss,hit_handicap,hit_score,hit_goals,hit_half,total_hits,analysis';
     
-    // 分页查询绕过Supabase 1000行限制
-    let allData = [];
-    let offset = 0;
+    // 分页获取全部预测（Supabase限制每次1000条）
     const pageSize = 1000;
+    let offset = 0;
+    let allData = [];
     while (true) {
-        const url = `${SUPABASE_URL}/rest/v1/predictions?select=${encodeURIComponent(select)}&order=match_id.asc&limit=${pageSize}&offset=${offset}`;
-        const resp = await fetch(url, {
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-            }
+        const batch = await querySupabase('predictions', select, null, { 
+            order: 'id.asc', 
+            limit: String(pageSize),
+            offset: String(offset)
         });
-        if (!resp.ok) {
-            const errorText = await resp.text();
-            throw new Error(`HTTP ${resp.status}: ${errorText}`);
-        }
-        const batch = await resp.json();
         allData = allData.concat(batch);
         if (batch.length < pageSize) break;
         offset += pageSize;
     }
-    
-    console.log(`📦 预测数据分页加载完成，共${allData.length}条`);
+    console.log(`🐾 fetchPredictions: 分页获取${allData.length}条预测`);
     
     // 类型安全匹配：统一转为字符串比较
     const idSet = new Set(matchIds.map(id => String(id)));
