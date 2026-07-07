@@ -127,6 +127,12 @@ const server = http.createServer(async (req, res) => {
         filter.match_time = [`gte.${date}T00:00:00`, `lt.${nextDate}T00:00:00`];
       }
 
+      // 运动类型筛选：?sport=football 或 ?sport=basketball
+      const sport = parsedUrl.searchParams.get('sport');
+      if (sport && (sport === 'football' || sport === 'basketball')) {
+        filter.sport_type = `eq.${sport}`;
+      }
+
       const data = await querySupabase('matches', {
         select: '*',
         order: 'match_time.asc',
@@ -179,10 +185,14 @@ const server = http.createServer(async (req, res) => {
       let allData = [];
       let offset = 0;
       const limit = 1000;
+      // 运动类型筛选
+      const sport = parsedUrl.searchParams.get('sport');
+      const sportFilter = (sport && (sport === 'football' || sport === 'basketball'))
+        ? `&sport_type=eq.${sport}` : '';
       while (true) {
         const { url, key } = getSupabaseConfig();
         const resp = await fetch(
-          `${url}/rest/v1/predictions?select=*&order=id.desc&limit=${limit}&offset=${offset}`,
+          `${url}/rest/v1/predictions?select=*&order=id.desc&limit=${limit}&offset=${offset}${sportFilter}`,
           { headers: { apikey: key, Authorization: 'Bearer ' + key } }
         );
         const batch = await resp.json();
@@ -221,9 +231,21 @@ const server = http.createServer(async (req, res) => {
 
     // GET /api/ai_stats
     if (pathname === '/api/ai_stats' && req.method === 'GET') {
+      const filter = {};
+      // 运动类型筛选：?sport=football 或 ?sport=basketball
+      const sport = parsedUrl.searchParams.get('sport');
+      if (sport && (sport === 'football' || sport === 'basketball')) {
+        filter.sport_type = `eq.${sport}`;
+      }
+      // 默认只返回活跃AI
+      const active = parsedUrl.searchParams.get('active');
+      if (active !== 'false') {
+        filter.is_active = 'eq.true';
+      }
       const data = await querySupabase('ai_stats', {
         select: '*',
-        order: 'total_hits.desc'
+        order: 'rank.asc',
+        filter
       });
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
       res.end(JSON.stringify(data));
@@ -232,9 +254,16 @@ const server = http.createServer(async (req, res) => {
 
     // GET /api/betting_daily
     if (pathname === '/api/betting_daily' && req.method === 'GET') {
+      const filter = {};
+      // 运动类型筛选：?sport=football 或 ?sport=basketball
+      const sport = parsedUrl.searchParams.get('sport');
+      if (sport && (sport === 'football' || sport === 'basketball')) {
+        filter.sport_type = `eq.${sport}`;
+      }
       const data = await querySupabase('betting_daily', {
         select: '*',
-        order: 'date.desc'
+        order: 'date.desc',
+        filter
       });
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
       res.end(JSON.stringify(data));
@@ -243,9 +272,16 @@ const server = http.createServer(async (req, res) => {
 
     // GET /api/betting_summary
     if (pathname === '/api/betting_summary' && req.method === 'GET') {
+      const filter = {};
+      // 运动类型筛选：?sport=football 或 ?sport=basketball
+      const sport = parsedUrl.searchParams.get('sport');
+      if (sport && (sport === 'football' || sport === 'basketball')) {
+        filter.sport_type = `eq.${sport}`;
+      }
       const data = await querySupabase('betting_summary', {
         select: '*',
-        order: 'id.asc'
+        order: 'rank.asc',
+        filter
       });
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
       res.end(JSON.stringify(data));
