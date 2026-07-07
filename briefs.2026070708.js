@@ -1,5 +1,5 @@
     <script type="module">
-        import { fetchAllMatches, fetchPredictions, esc, fmtDate, fmtTime, showError } from './api.js';
+        import { fetchAllMatches, fetchPredictions, esc, fmtDate, fmtTime, showError } from './api.2026070708.js';
 
         async function loadBriefList() {
             const container = document.getElementById('briefList');

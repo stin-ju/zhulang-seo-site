@@ -304,12 +304,11 @@ function renderPredictionsTable(predictions, match) {
     
     // 根据运动类型定义字段映射
     const fieldConfig = isBasketball ? {
-        // 篮球字段
+        // 篮球字段（4维度，无半场）
         col1: { key: 'win_loss', hit: 'hit_spf', label: '胜负' },
         col2: { key: 'handicap_win_loss', fallbackKey: 'handicap_spf', hit: 'hit_handicap', label: '让分' },
         col3: { key: 'score_diff_range', hit: 'hit_score', label: '胜分差' },
-        col4: { key: 'total_points', hit: 'hit_goals', label: '总分' },
-        col5: { key: 'half_win_loss', hit: 'hit_half', label: '半场' }
+        col4: { key: 'total_points', hit: 'hit_goals', label: '总分' }
     } : {
         // 足球字段
         col1: { key: 'spf', hit: 'hit_spf', label: '胜平负' },
@@ -335,7 +334,7 @@ function renderPredictionsTable(predictions, match) {
                         <th>${fieldConfig.col2.label}</th>
                         <th>${fieldConfig.col3.label}</th>
                         <th>${fieldConfig.col4.label}</th>
-                        <th>${fieldConfig.col5.label}</th>
+                        ${!isBasketball ? '<th>' + fieldConfig.col5.label + '</th>' : ''}
                         <th>命中</th>
                     </tr>
                 </thead>
@@ -347,7 +346,7 @@ function renderPredictionsTable(predictions, match) {
                             <td class="${cellClass(p, fieldConfig.col2.hit)}">${p[fieldConfig.col2.key] || p[fieldConfig.col2.fallbackKey] || '-'}</td>
                             <td class="${cellClass(p, fieldConfig.col3.hit)}">${p[fieldConfig.col3.key] || '-'}</td>
                             <td class="${cellClass(p, fieldConfig.col4.hit)}">${p[fieldConfig.col4.key] || '-'}</td>
-                            <td class="${cellClass(p, fieldConfig.col5.hit)}">${p[fieldConfig.col5.key] || '-'}</td>
+                            ${!isBasketball ? '<td class="' + cellClass(p, fieldConfig.col5.hit) + '">' + (p[fieldConfig.col5.key] || '-') + '</td>' : ''}
                             <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
                         </tr>
                     `).join('')}
