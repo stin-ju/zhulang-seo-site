@@ -311,8 +311,8 @@ function renderPredictionsTable(predictions, match) {
         col4: { key: 'total_points', hit: 'hit_goals', label: '总分' }
     } : {
         // 足球字段
-        col1: { key: 'spf', hit: 'hit_spf', label: '胜平负' },
-        col2: { key: 'handicap_spf', hit: 'hit_handicap', label: '让球' },
+        col1: { key: 'win_loss', fallbackKey: 'spf', hit: 'hit_spf', label: '胜平负' },
+        col2: { key: 'handicap_win_loss', fallbackKey: 'handicap_spf', hit: 'hit_handicap', label: '让球' },
         col3: { key: 'score', hit: 'hit_score', label: '比分' },
         col4: { key: 'goals', hit: 'hit_goals', label: '进球数' },
         col5: { key: 'half_full', hit: 'hit_half', label: '半全场' }
@@ -342,7 +342,7 @@ function renderPredictionsTable(predictions, match) {
                     ${sorted.map(p => `
                         <tr>
                             <td>${esc(p.ai_name)}</td>
-                            <td class="${cellClass(p, fieldConfig.col1.hit)}">${p[fieldConfig.col1.key] || '-'}</td>
+                            <td class="${cellClass(p, fieldConfig.col1.hit)}">${p[fieldConfig.col1.key] || p[fieldConfig.col1.fallbackKey] || '-'}</td>
                             <td class="${cellClass(p, fieldConfig.col2.hit)}">${p[fieldConfig.col2.key] || p[fieldConfig.col2.fallbackKey] || '-'}</td>
                             <td class="${cellClass(p, fieldConfig.col3.hit)}">${p[fieldConfig.col3.key] || '-'}</td>
                             <td class="${cellClass(p, fieldConfig.col4.hit)}">${p[fieldConfig.col4.key] || '-'}</td>
