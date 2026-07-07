@@ -212,11 +212,12 @@ window.expandMoreMatches = function(sport) {
     if (moreBtn) {
         moreBtn.style.display = 'none';
     }
-    // 重新绑定展开后卡片的点击事件
-    const container = document.getElementById(sport === 'football' ? 'view-football' : 'view-basketball');
-    if (container) {
-        container.querySelectorAll('.match-card-clickable').forEach(card => {
-            card.addEventListener('click', () => toggleMatchPredictions(card.dataset.matchId));
+    // 只给新展开的隐藏容器内的卡片绑定事件，不重复绑定已有的
+    if (moreMatches) {
+        moreMatches.querySelectorAll('.match-card-clickable').forEach(function(card) {
+            card.addEventListener('click', function() {
+                toggleMatchPredictions(card.dataset.matchId);
+            });
         });
     }
 }
