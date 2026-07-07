@@ -130,8 +130,8 @@ async function checkHtmlVersions(globalLatest) {
       continue;
     }
 
-    // 提取引用的 JS 文件名
-    const jsRefs = text.match(/src="\.\/[^"]*\.js"/g) || [];
+    // 提取引用的 JS 文件名（支持 ?v= query param）
+    const jsRefs = text.match(/src="\.\/[^"]*\.js(\?[^"]*)?"/g) || [];
     if (jsRefs.length === 0 && page !== 'index2.html') {
       // index2.html 是重定向页，无 JS 引用
       warn(`${page}: 未发现 JS 引用`);
@@ -140,8 +140,8 @@ async function checkHtmlVersions(globalLatest) {
 
     let allLatest = true;
     for (const ref of jsRefs) {
-      const fileName = ref.match(/\.\/([^"]+)/)[1];
-      const verMatch = fileName.match(/\.(\d{8,})\.js$/);
+      const fileName = ref.match(/\.\/([^"?]+)/)[1];
+      const verMatch = fileName.match(/\.(\d{8,})\.js/);
       if (verMatch) {
         const fileVer = verMatch[1];
         if (fileVer !== globalLatest) {

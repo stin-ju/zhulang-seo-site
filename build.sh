@@ -26,6 +26,12 @@ for html in *.html; do
   sed -i "s|briefs\.[0-9]*\.js|briefs.${VER}.js|g" $html
 done
 
+# 给JS引用加版本号，绕过CDN Swift缓存
+VER_PARAM="${VER}"
+for html in *.html; do
+  sed -i "s|\.js\"|.js?v=${VER_PARAM}\"|g" "$html"
+done
+
 echo "Done: $VER"
 
 # ─── 健康巡检 ───────────────────────────────────────
