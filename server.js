@@ -232,10 +232,13 @@ const server = http.createServer(async (req, res) => {
     // GET /api/ai_stats
     if (pathname === '/api/ai_stats' && req.method === 'GET') {
       const filter = {};
-      // 运动类型筛选：?sport=football 或 ?sport=basketball
+      // 运动类型筛选：?sport=football 或 ?sport=basketball，默认football（向后兼容）
       const sport = parsedUrl.searchParams.get('sport');
       if (sport && (sport === 'football' || sport === 'basketball')) {
         filter.sport_type = `eq.${sport}`;
+      } else {
+        // 默认只返回football，避免重复
+        filter.sport_type = 'eq.football';
       }
       // 默认只返回活跃AI
       const active = parsedUrl.searchParams.get('active');
@@ -262,7 +265,7 @@ const server = http.createServer(async (req, res) => {
       }
       const data = await querySupabase('betting_daily', {
         select: '*',
-        order: 'date.desc',
+        order: 'match_date.desc',
         filter
       });
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
