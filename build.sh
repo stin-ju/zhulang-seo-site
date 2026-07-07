@@ -6,6 +6,13 @@ echo "Build version: $VER"
 cp index.js index.${VER}.js
 cp api.js api.${VER}.js
 
+# 更新index.${VER}.js中的api.js引用版本号
+sed -i "s|api\.js?v=[0-9]*|api.js?v=${VER}|g" "index.${VER}.js"
+sed -i "s|api\.js'|api.js?v=${VER}'|g" "index.${VER}.js"
+sed -i "s|api\.js\"|api.js?v=${VER}\"|g" "index.${VER}.js"
+# 更新注释中的版本号
+sed -i "s|v=[0-9]\{8,\}|v=${VER}|g" "index.${VER}.js"
+
 # 版本化页面JS文件（从HTML中抽取的独立JS）
 for js in basketball.js ai-analysis.js calculator.js briefs.js; do
   if [ -f "$js" ]; then
