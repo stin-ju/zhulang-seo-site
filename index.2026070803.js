@@ -293,7 +293,7 @@ function renderMatchCard(match) {
             <div class="badge-group">
                 ${badges}
                 ${predCount > 0 ? `<span class="badge-sm" style="background:rgba(139,92,246,0.1);color:#a78bfa;">${predCount}AI预测</span>` : ''}
-                <a href="/ia.html?match=${encodeURIComponent(match.id || '')}" class="badge-sm analysis-link" onclick="event.stopPropagation()" style="background:rgba(139,92,246,0.15);color:#a78bfa;text-decoration:none;">AI分析</a>
+                <a href="/ia2.html?match=${encodeURIComponent(match.id || '')}" class="badge-sm analysis-link" onclick="event.stopPropagation()" style="background:rgba(139,92,246,0.15);color:#a78bfa;text-decoration:none;">AI分析</a>
                 <span class="arrow-sm">▶</span>
             </div>
         </div>
