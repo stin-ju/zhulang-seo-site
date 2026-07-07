@@ -32,11 +32,9 @@ for html in *.html; do
   sed -i "s|briefs\.[0-9]*\.js|briefs.${VER}.js|g" $html
 done
 
-# 给JS引用加版本号，绕过CDN Swift缓存
-# 先去掉已有的?v=参数，再加新的
+# 去掉JS引用中多余的?v=参数（文件名已带版本号，不需要query参数）
 for html in *.html; do
   sed -i "s|\.js?v=[0-9]*\"|.js\"|g" "$html"
-  sed -i "s|\.js\"|.js?v=${VER}\"|g" "$html"
 done
 
 echo "Done: $VER"
