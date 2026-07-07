@@ -6,12 +6,11 @@ echo "Build version: $VER"
 cp index.js index.${VER}.js
 cp api.js api.${VER}.js
 
-# 更新index.${VER}.js中的api.js引用版本号
-sed -i "s|api\.js?v=[0-9]*|api.js?v=${VER}|g" "index.${VER}.js"
-sed -i "s|api\.js'|api.js?v=${VER}'|g" "index.${VER}.js"
-sed -i "s|api\.js\"|api.js?v=${VER}\"|g" "index.${VER}.js"
+# 更新index.${VER}.js中的api.js引用为版本化文件名
+sed -i "s|'./api\.js'|'./api.${VER}.js'|g" "index.${VER}.js"
+sed -i "s|\"./api\.js\"|\"./api.${VER}.js\"|g" "index.${VER}.js"
 # 更新注释中的版本号
-sed -i "s|v=[0-9]\{8,\}|v=${VER}|g" "index.${VER}.js"
+sed -i "s|// cache bust.*|// v=${VER} cache bust|g" "index.${VER}.js"
 
 # 版本化页面JS文件（从HTML中抽取的独立JS）
 for js in basketball.js ai-analysis.js calculator.js briefs.js; do
@@ -34,9 +33,10 @@ for html in *.html; do
 done
 
 # 给JS引用加版本号，绕过CDN Swift缓存
-VER_PARAM="${VER}"
+# 先去掉已有的?v=参数，再加新的
 for html in *.html; do
-  sed -i "s|\.js\"|.js?v=${VER_PARAM}\"|g" "$html"
+  sed -i "s|\.js?v=[0-9]*\"|.js\"|g" "$html"
+  sed -i "s|\.js\"|.js?v=${VER}\"|g" "$html"
 done
 
 echo "Done: $VER"
