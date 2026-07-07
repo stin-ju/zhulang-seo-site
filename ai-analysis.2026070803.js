@@ -149,6 +149,15 @@
         const match = matchMap[matchId];
         const teams = match ? match.teams : matchId;
         
+        // 按 ai_name 去重，每个AI只保留第一条预测
+        const seen = new Set();
+        preds = preds.filter(p => {
+          const key = p.ai_name;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        
         html += `
           <div id="analysis-${matchId}" class="rounded-lg bg-elevated/50 border border-border/50 p-4">
             <div class="flex items-center justify-between mb-3">
