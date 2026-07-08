@@ -108,6 +108,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 清洗analysis字段的JSON泄露
+  function cleanAnalysis(text) {
+    if (!text) return '';
+    const jsonPats = [/"spf"\s*:/, /"handicap_spf"\s*:/, /"score"\s*:/,
+                      /"win_loss"\s*:/, /"handicap_win_loss"\s*:/,
+                      /"half_full"\s*:/, /"confidence"\s*:/,
+                      /"market_deviation"\s*:/, /"score_diff_range"\s*:/,
+                      /"total_points"\s*:/, /"cold_warning"\s*:/];
+    const leakCount = jsonPats.filter(p => p.test(text)).length;
+    if (leakCount >= 3) return '';
+    text = text.replace(/```(?:json)?\s*[\s\S]*?```/g, '');
+    return text.trim();
+  }
+
   // ============ API Routes (before static files) ============
 
   try {
@@ -200,6 +214,9 @@ const server = http.createServer(async (req, res) => {
         if (batch.length < limit) break;
         offset += limit;
       }
+      
+      // 清洗analysis字段的JSON泄露
+      allData = allData.map(p => ({ ...p, analysis: cleanAnalysis(p.analysis) }));
       
       res.writeHead(200, { 
         'Content-Type': 'application/json',
@@ -332,7 +349,8 @@ const server = http.createServer(async (req, res) => {
         order: 'id.desc',
         limit: '5000'
       });
-      const recentPredictions = allPredictions.filter(p => matchIds.has(p.match_id));
+      const recentPredictions = allPredictions.filter(p => matchIds.has(p.match_id))
+        .map(p => ({ ...p, analysis: cleanAnalysis(p.analysis) }));
       
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
       res.end(JSON.stringify({ date: latestDate, matches: recentMatches, predictions: recentPredictions }));
@@ -376,6 +394,7 @@ const server = http.createServer(async (req, res) => {
         date,
         matches: byDate[date],
         predictions: allPredictions.filter(p => byDate[date].some(m => m.id === p.match_id))
+          .map(p => ({ ...p, analysis: cleanAnalysis(p.analysis) }))
       }));
       
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
