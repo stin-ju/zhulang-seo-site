@@ -321,7 +321,14 @@ function renderPredictionsTable(predictions, match) {
         // 篮球字段（4维度，无半场）
         col1: { key: 'win_loss', hit: 'hit_spf', label: '胜负' },
         col2: { key: 'handicap_win_loss', fallbackKey: 'handicap_spf', hit: 'hit_handicap', label: '让分' },
-        col3: { key: 'score_diff_range', hit: 'hit_score', label: '胜分差' },
+        col3: { key: 'score_diff_range', hit: 'hit_score', label: '胜分差',
+            format: (p) => {
+                const range = p.score_diff_range || '-';
+                const wl = p.win_loss || '';
+                if (range === '-') return '-';
+                return (wl === '主胜' || wl === '胜') ? '主' + range : (wl === '客胜' || wl === '负') ? '客' + range : range;
+            }
+        },
         col4: { key: 'total_points', hit: 'hit_goals', label: '总分' }
     } : {
         // 足球字段
@@ -358,7 +365,7 @@ function renderPredictionsTable(predictions, match) {
                             <td>${esc(p.ai_name)}</td>
                             <td class="${cellClass(p, fieldConfig.col1.hit)}">${p[fieldConfig.col1.key] || p[fieldConfig.col1.fallbackKey] || '-'}</td>
                             <td class="${cellClass(p, fieldConfig.col2.hit)}">${p[fieldConfig.col2.key] || p[fieldConfig.col2.fallbackKey] || '-'}</td>
-                            <td class="${cellClass(p, fieldConfig.col3.hit)}">${p[fieldConfig.col3.key] || '-'}</td>
+                            <td class="${cellClass(p, fieldConfig.col3.hit)}">${fieldConfig.col3.format ? fieldConfig.col3.format(p) : (p[fieldConfig.col3.key] || '-')}</td>
                             <td class="${cellClass(p, fieldConfig.col4.hit)}">${p[fieldConfig.col4.key] || '-'}</td>
                             ${!isBasketball ? '<td class="' + cellClass(p, fieldConfig.col5.hit) + '">' + (p[fieldConfig.col5.key] || '-') + '</td>' : ''}
                             <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
