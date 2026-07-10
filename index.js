@@ -296,8 +296,7 @@ function renderMatchCard(match) {
 
     return `
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
-            ${leagueBadge}
-            <span class="time">${matchTime}</span>
+            <span class="time">${leagueBadge}${matchTime}</span>
             ${match.id ? `<span class="match-lottery-id">${match.id}</span>` : ''}
             <span class="teams">${esc(homeTeam)} ${match.status === '已确认' ? '<span class="score-inline">' + match.home_score + ':' + match.away_score + '</span>' : 'vs'} ${esc(awayTeam)}${match.handicap ? ' <span class="handicap-tag">' + match.handicap + '</span>' : ''}</span>
             ${oddsHtml}
