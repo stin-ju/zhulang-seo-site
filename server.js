@@ -153,6 +153,11 @@ const server = http.createServer(async (req, res) => {
         limit: '5000',
         filter
       });
+      // 提取 metadata.league 作为 league_name
+      const enriched = data.map(m => ({
+        ...m,
+        league_name: (m.metadata && m.metadata.league) || ''
+      }));
       res.writeHead(200, { 
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
@@ -160,7 +165,7 @@ const server = http.createServer(async (req, res) => {
         'Expires': '0',
         ...CORS_HEADERS 
       });
-      res.end(JSON.stringify(data));
+      res.end(JSON.stringify(enriched));
       return;
     }
 
