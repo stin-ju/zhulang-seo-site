@@ -1,5 +1,5 @@
 #!/bin/bash
-VER=$(date +%Y%m%d%H)
+VER=$(date +%Y%m%d%H%M)
 echo "Build version: $VER"
 
 # 版本化核心JS文件
