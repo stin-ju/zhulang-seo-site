@@ -164,7 +164,7 @@ def get_pending_matches(conn, sport="football", include_settled=False):
         if include_settled:
             status_filter = "m.status IN ('on_sale','未开赛','已确认','已结算')"
         else:
-            status_filter = "m.status = 'on_sale'"
+            status_filter = "m.status IN ('on_sale','未开赛')"
         query = f"""
             SELECT m.id, m.teams, m.match_time, m.handicap,
                    m.win_odds, m.draw_odds, m.lose_odds,
