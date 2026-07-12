@@ -233,6 +233,13 @@ const server = http.createServer(async (req, res) => {
         ...m,
         league_name: (m.metadata && m.metadata.league) || ''
       }));
+      // 时间已过但未开赛的比赛，自动标记为已开赛
+      const now = new Date();
+      enriched.forEach(m => {
+        if (new Date(m.match_time) < now && m.status === '未开赛') {
+          m.status = '已开赛';
+        }
+      });
       res.writeHead(200, { 
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
