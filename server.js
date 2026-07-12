@@ -751,20 +751,38 @@ cron.schedule('30 21 * * *', async () => {
   await generateReport();
 }, { timezone: 'Asia/Shanghai' });
 
-// 每天 03:00 自动结算
-cron.schedule('0 3 * * *', async () => {
-  console.log('[Cron 03:00] 开始自动结算: settle');
+// ============ 自动结算（每5分钟扫描，开赛3小时后自动结算） ============
+const SETTLE_INTERVAL_MS = 5 * 60 * 1000; // 5分钟
+
+async function autoSettle() {
+  if (taskStatus.settle.running) {
+    console.log('[AutoSettle] 上一次结算仍在运行，跳过');
+    return;
+  }
+  taskStatus.settle.running = true;
+  console.log('[AutoSettle] 开始扫描待结算比赛...');
   try {
     const settleResult = await runPython('auto_settle.py');
-    console.log('[Cron 03:00] settle完成:', JSON.stringify(settleResult));
+    console.log('[AutoSettle] 完成:', JSON.stringify(settleResult));
     taskStatus.settle.lastRun = new Date().toISOString();
     taskStatus.settle.lastResult = settleResult;
+    if (settleResult && settleResult.settled > 0) {
+      await generateReport();
+    }
   } catch (err) {
-    console.error('[Cron 03:00] settle失败:', err.message);
+    console.error('[AutoSettle] 失败:', err.message);
+  } finally {
+    taskStatus.settle.running = false;
   }
-  // 结算完成后生成报告
-  await generateReport();
-}, { timezone: 'Asia/Shanghai' });
+}
 
-console.log('[Cron] 定时任务已注册: 11:00 增量调度 | 21:30 主力调度 | 03:00 自动结算 (Asia/Shanghai)');
+setTimeout(() => {
+  console.log('[AutoSettle] 首次结算检查...');
+  autoSettle();
+  setInterval(autoSettle, SETTLE_INTERVAL_MS);
+  console.log(`[AutoSettle] 定时结算已启动，间隔 ${SETTLE_INTERVAL_MS / 1000} 秒`);
+}, 30000);
+
+console.log('[Cron] 定时任务已注册: 11:00 增量调度 | 21:30 主力调度 (Asia/Shanghai)');
+console.log('[AutoSettle] 自动结算: 每5分钟扫描，开赛3小时后自动结算');
 console.log('[Cron] 每次调度完成后自动生成调度报告 → /tmp/dispatch_report.md');
