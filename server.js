@@ -139,8 +139,35 @@ function runPython(scriptName, args = []) {
 const taskStatus = {
   discover: { running: false, lastRun: null, lastResult: null },
   predict: { running: false, lastRun: null, lastResult: null },
-  settle: { running: false, lastRun: null, lastResult: null }
+  settle: { running: false, lastRun: null, lastResult: null },
+  report: { running: false, lastRun: null, lastResult: null }
 };
+
+// 调度报告生成
+const REPORT_PATH = '/tmp/dispatch_report.md';
+
+async function generateReport() {
+  taskStatus.report.running = true;
+  try {
+    const result = await runPython('dispatch_report.py');
+    taskStatus.report.lastRun = new Date().toISOString();
+    taskStatus.report.lastResult = result;
+    
+    if (result.status === 'ANOMALY') {
+      console.error(`[Report] ⚠️ 发现 ${result.anomaly_count} 项异常:`, result.anomalies);
+    } else if (result.status === 'OK') {
+      console.log(`[Report] ✅ 系统正常 | ${result.total_matches}场比赛 | ${result.on_sale}场在售 | 0异常`);
+    }
+    return result;
+  } catch (err) {
+    console.error('[Report] 报告生成失败:', err.message);
+    taskStatus.report.lastRun = new Date().toISOString();
+    taskStatus.report.lastResult = { status: 'ERROR', error: err.message };
+    return { status: 'ERROR', error: err.message };
+  } finally {
+    taskStatus.report.running = false;
+  }
+}
 
 // ============ Server ============
 
@@ -539,6 +566,27 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // GET /api/admin/report - 读取调度报告 (Markdown)
+    if (pathname === '/api/admin/report' && req.method === 'GET') {
+      try {
+        const report = fs.readFileSync(REPORT_PATH, 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', ...CORS_HEADERS });
+        res.end(report);
+      } catch (err) {
+        res.writeHead(404, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: '报告文件不存在，请先运行调度任务' }));
+      }
+      return;
+    }
+
+    // POST /api/admin/report - 手动触发报告生成
+    if (pathname === '/api/admin/report' && req.method === 'POST') {
+      const result = await generateReport();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
     // GET /api/parlay-latest - Latest date's chain_bets
     if (pathname === '/api/parlay-latest' && req.method === 'GET') {
       const chainBets = await querySupabase('chain_bets', {
@@ -645,7 +693,7 @@ server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}/`);
   console.log(`Supabase URL: ${getSupabaseConfig().url}`); console.log(`Supabase Key: ${getSupabaseConfig().key ? getSupabaseConfig().key.substring(0, 20) + '...' : 'not set'}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
-  console.log(`Admin endpoints: POST /api/admin/discover, POST /api/admin/predict, POST /api/admin/settle, GET /api/admin/status`);
+  console.log(`Admin endpoints: POST /api/admin/discover, POST /api/admin/predict, POST /api/admin/settle, GET /api/admin/status, GET|POST /api/admin/report`);
 });
 
 // ============ Cron Jobs (Asia/Shanghai) ============
@@ -669,6 +717,8 @@ cron.schedule('0 11 * * *', async () => {
   } catch (err) {
     console.error('[Cron 11:00] predict失败:', err.message);
   }
+  // 调度完成后生成报告
+  await generateReport();
 }, { timezone: 'Asia/Shanghai' });
 
 // 每天 21:30 主力调度：发现比赛 + AI预测
@@ -690,6 +740,8 @@ cron.schedule('30 21 * * *', async () => {
   } catch (err) {
     console.error('[Cron 21:30] predict失败:', err.message);
   }
+  // 调度完成后生成报告
+  await generateReport();
 }, { timezone: 'Asia/Shanghai' });
 
 // 每天 03:00 自动结算
@@ -703,6 +755,9 @@ cron.schedule('0 3 * * *', async () => {
   } catch (err) {
     console.error('[Cron 03:00] settle失败:', err.message);
   }
+  // 结算完成后生成报告
+  await generateReport();
 }, { timezone: 'Asia/Shanghai' });
 
 console.log('[Cron] 定时任务已注册: 11:00 增量调度 | 21:30 主力调度 | 03:00 自动结算 (Asia/Shanghai)');
+console.log('[Cron] 每次调度完成后自动生成调度报告 → /tmp/dispatch_report.md');
