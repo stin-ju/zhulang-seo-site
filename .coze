@@ -3,14 +3,14 @@ entrypoint = "index.html"
 requires = [ "nodejs-24" ]
 
 [dev]
-build = ["bash", "-c", "pnpm install && pip3 install -r scripts/requirements.txt -q"]
+build = ["pnpm", "install"]
 run = [
   "node",
   "server.js"
 ]
 
 [deploy]
-build = ["bash", "-c", "pnpm install && pip3 install -r scripts/requirements.txt -q"]
+build = ["pnpm", "install"]
 run = [
   "node",
   "server.js"
