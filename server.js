@@ -239,7 +239,7 @@ function buildMatchCommentaryPrompt(match, preds) {
   // 统计AI预测分布
   const spfCounts = {};
   preds.forEach(p => {
-    const k = p.spf || '未预测';
+    const k = (isFootball ? p.spf : p.win_loss) || '未预测';
     spfCounts[k] = (spfCounts[k] || 0) + 1;
   });
   const total = preds.length;
@@ -248,11 +248,11 @@ function buildMatchCommentaryPrompt(match, preds) {
   const consensusPct = Math.round(consensus[1] / total * 100);
 
   // 找出唱反调的AI
-  const dissenters = preds.filter(p => (p.spf || '未预测') !== consensus[0]);
+  const dissenters = preds.filter(p => ((isFootball ? p.spf : p.win_loss) || '未预测') !== consensus[0]);
   let dissenterInfo = '';
   if (dissenters.length > 0) {
     dissenterInfo = dissenters.map(p => {
-      let s = `${p.ai_name}选了"${p.spf || '?'}"`;
+      let s = `${p.ai_name}选了"${(isFootball ? p.spf : p.win_loss) || '?'}"`;
       if (p.analysis) s += `，理由: ${p.analysis.replace(/\n/g, ' ').slice(0, 80)}`;
       return s;
     }).join('\n');
@@ -260,9 +260,9 @@ function buildMatchCommentaryPrompt(match, preds) {
 
   // 每个AI的预测详情
   const predDetail = preds.map(p => {
-    let s = `${p.ai_name}: ${isFootball ? '胜平负=' : '主客='}${p.spf || '?'}`;
-    if (p.handicap_spf) s += `, 让球=${p.handicap_spf}`;
-    if (p.score) s += `, 比分=${p.score}`;
+    let s = `${p.ai_name}: ${isFootball ? '胜平负=' : '主客='}${(isFootball ? p.spf : p.win_loss) || '?'}`;
+    if (isFootball ? p.handicap_spf : p.handicap_win_loss) s += `, 让球=${isFootball ? p.handicap_spf : p.handicap_win_loss}`;
+    if (isFootball ? p.score : p.score_diff_range) s += `, ${isFootball ? '比分' : '胜分差'}=${isFootball ? p.score : p.score_diff_range}`;
     if (p.analysis) s += ` | ${p.analysis.replace(/\n/g, ' ').slice(0, 100)}`;
     return s;
   }).join('\n');
