@@ -52,9 +52,9 @@ AI_CONFIGS = {
         "format": "openai",
     },
     "AI-混元": {
-        "url": "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",
+        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
-        "model": "hunyuan-lite",
+        "model": "hy3-preview",
         "format": "openai",
     },
     "AI-扣子（皮皮）": {
