@@ -1,6 +1,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
+const cron = require('node-cron');
 
 // Load .env file if it exists (for local development)
 try {
@@ -90,8 +92,54 @@ async function querySupabase(table, params = {}) {
 // CORS headers for API responses
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+// ============ Python Script Runner ============
+
+function runPython(scriptName, args = []) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, 'scripts', scriptName);
+    const env = { ...process.env };
+    
+    // 确保 DATABASE_URL 传递到 Python 进程
+    if (!env.DATABASE_URL) {
+      const envPath = path.join(__dirname, '.env');
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        const match = envContent.match(/^DATABASE_URL=(.*)$/m);
+        if (match) env.DATABASE_URL = match[1].trim().replace(/^["']|["']$/g, '');
+      }
+    }
+    
+    const child = execFile('python3', [scriptPath, ...args], {
+      cwd: path.join(__dirname, 'scripts'),
+      env,
+      timeout: 300000, // 5分钟超时
+      maxBuffer: 10 * 1024 * 1024
+    }, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`[Python ${scriptName}] Error:`, error.message);
+        if (stderr) console.error(`[Python ${scriptName}] Stderr:`, stderr);
+        reject(new Error(stderr || error.message));
+        return;
+      }
+      if (stderr) console.warn(`[Python ${scriptName}] Stderr:`, stderr);
+      try {
+        resolve(JSON.parse(stdout.trim()));
+      } catch {
+        resolve({ output: stdout.trim() });
+      }
+    });
+  });
+}
+
+// 任务执行状态追踪
+const taskStatus = {
+  discover: { running: false, lastRun: null, lastResult: null },
+  predict: { running: false, lastRun: null, lastResult: null },
+  settle: { running: false, lastRun: null, lastResult: null }
 };
 
 // ============ Server ============
@@ -407,6 +455,90 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // ============ Admin API Routes (Python Pipeline Triggers) ============
+
+    // POST /api/admin/discover - 触发比赛发现+赔率抓取
+    if (pathname === '/api/admin/discover' && req.method === 'POST') {
+      if (taskStatus.discover.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'discover任务正在运行中' }));
+        return;
+      }
+      taskStatus.discover.running = true;
+      try {
+        const result = await runPython('discover_matches.py');
+        taskStatus.discover.lastRun = new Date().toISOString();
+        taskStatus.discover.lastResult = result;
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: result }));
+      } catch (err) {
+        taskStatus.discover.lastRun = new Date().toISOString();
+        taskStatus.discover.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.discover.running = false;
+      }
+      return;
+    }
+
+    // POST /api/admin/predict - 触发AI预测
+    if (pathname === '/api/admin/predict' && req.method === 'POST') {
+      if (taskStatus.predict.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'predict任务正在运行中' }));
+        return;
+      }
+      taskStatus.predict.running = true;
+      try {
+        const result = await runPython('auto_predict.py');
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = result;
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: result }));
+      } catch (err) {
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.predict.running = false;
+      }
+      return;
+    }
+
+    // POST /api/admin/settle - 触发自动结算
+    if (pathname === '/api/admin/settle' && req.method === 'POST') {
+      if (taskStatus.settle.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'settle任务正在运行中' }));
+        return;
+      }
+      taskStatus.settle.running = true;
+      try {
+        const result = await runPython('auto_settle.py');
+        taskStatus.settle.lastRun = new Date().toISOString();
+        taskStatus.settle.lastResult = result;
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: result }));
+      } catch (err) {
+        taskStatus.settle.lastRun = new Date().toISOString();
+        taskStatus.settle.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.settle.running = false;
+      }
+      return;
+    }
+
+    // GET /api/admin/status - 查看任务状态
+    if (pathname === '/api/admin/status' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(taskStatus));
+      return;
+    }
+
     // GET /api/parlay-latest - Latest date's chain_bets
     if (pathname === '/api/parlay-latest' && req.method === 'GET') {
       const chainBets = await querySupabase('chain_bets', {
@@ -513,4 +645,64 @@ server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}/`);
   console.log(`Supabase URL: ${getSupabaseConfig().url}`); console.log(`Supabase Key: ${getSupabaseConfig().key ? getSupabaseConfig().key.substring(0, 20) + '...' : 'not set'}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
+  console.log(`Admin endpoints: POST /api/admin/discover, POST /api/admin/predict, POST /api/admin/settle, GET /api/admin/status`);
 });
+
+// ============ Cron Jobs (Asia/Shanghai) ============
+
+// 每天 11:00 增量调度：发现比赛 + 补赔率 + AI预测
+cron.schedule('0 11 * * *', async () => {
+  console.log('[Cron 11:00] 开始增量调度: discover + predict');
+  try {
+    const discoverResult = await runPython('discover_matches.py');
+    console.log('[Cron 11:00] discover完成:', JSON.stringify(discoverResult));
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = discoverResult;
+  } catch (err) {
+    console.error('[Cron 11:00] discover失败:', err.message);
+  }
+  try {
+    const predictResult = await runPython('auto_predict.py');
+    console.log('[Cron 11:00] predict完成:', JSON.stringify(predictResult));
+    taskStatus.predict.lastRun = new Date().toISOString();
+    taskStatus.predict.lastResult = predictResult;
+  } catch (err) {
+    console.error('[Cron 11:00] predict失败:', err.message);
+  }
+}, { timezone: 'Asia/Shanghai' });
+
+// 每天 21:30 主力调度：发现比赛 + AI预测
+cron.schedule('30 21 * * *', async () => {
+  console.log('[Cron 21:30] 开始主力调度: discover + predict');
+  try {
+    const discoverResult = await runPython('discover_matches.py');
+    console.log('[Cron 21:30] discover完成:', JSON.stringify(discoverResult));
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = discoverResult;
+  } catch (err) {
+    console.error('[Cron 21:30] discover失败:', err.message);
+  }
+  try {
+    const predictResult = await runPython('auto_predict.py');
+    console.log('[Cron 21:30] predict完成:', JSON.stringify(predictResult));
+    taskStatus.predict.lastRun = new Date().toISOString();
+    taskStatus.predict.lastResult = predictResult;
+  } catch (err) {
+    console.error('[Cron 21:30] predict失败:', err.message);
+  }
+}, { timezone: 'Asia/Shanghai' });
+
+// 每天 03:00 自动结算
+cron.schedule('0 3 * * *', async () => {
+  console.log('[Cron 03:00] 开始自动结算: settle');
+  try {
+    const settleResult = await runPython('auto_settle.py');
+    console.log('[Cron 03:00] settle完成:', JSON.stringify(settleResult));
+    taskStatus.settle.lastRun = new Date().toISOString();
+    taskStatus.settle.lastResult = settleResult;
+  } catch (err) {
+    console.error('[Cron 03:00] settle失败:', err.message);
+  }
+}, { timezone: 'Asia/Shanghai' });
+
+console.log('[Cron] 定时任务已注册: 11:00 增量调度 | 21:30 主力调度 | 03:00 自动结算 (Asia/Shanghai)');
