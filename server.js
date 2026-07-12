@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const cron = require('node-cron');
+const { Pool } = require('pg');
 
 // Load .env file if it exists (for local development)
 try {
@@ -23,6 +24,19 @@ try {
 } catch (e) {
   // Ignore errors loading .env
 }
+
+// ============ PostgreSQL Pool (for commentary writes) ============
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres';
+const pgPool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: DATABASE_URL ? { rejectUnauthorized: false } : false,
+  max: 3,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+pgPool.on('error', (err) => {
+  console.error('[PG Pool] Unexpected error on idle client', err.message);
+});
 
 const PORT = process.env.DEPLOY_RUN_PORT || 5000;
 const HOST = '0.0.0.0';
@@ -166,6 +180,236 @@ async function generateReport() {
     return { status: 'ERROR', error: err.message };
   } finally {
     taskStatus.report.running = false;
+  }
+}
+
+// ============ Daily Commentary Generator ============
+// 每场比赛单独生成综合评论，基于7个AI的预测数据
+// 风格：犀利、口语化，像懂球老友在微信群聊球
+
+const DOUBAO_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+const DOUBAO_API_KEY = 'ark-e27a1337-a759-46fb-b30c-efe5ce5541bd-2a204';
+const DOUBAO_MODEL = 'ep-20260706041055-2mgpf';
+
+let commentaryRunning = false;
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// 调用豆包API生成评论，带3次重试
+async function callDoubaoCommentary(prompt) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const resp = await fetch(DOUBAO_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DOUBAO_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: DOUBAO_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.85,
+          max_tokens: 600
+        })
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`[Commentary] Doubao API ${resp.status} (attempt ${attempt}): ${errText.slice(0, 200)}`);
+        if (attempt < 3) { await sleep(3000 * attempt); continue; }
+        throw new Error(`Doubao API ${resp.status}: ${errText.slice(0, 200)}`);
+      }
+      const data = await resp.json();
+      return data.choices[0].message.content.trim();
+    } catch (err) {
+      if (attempt < 3) { await sleep(3000 * attempt); continue; }
+      throw err;
+    }
+  }
+}
+
+// 构建每场比赛的评论prompt
+function buildMatchCommentaryPrompt(match, preds) {
+  const isFootball = (match.sport_type || 'football') === 'football';
+  const teams = match.teams || '';
+  const vsIdx = teams.indexOf('VS');
+  const home = vsIdx > 0 ? teams.substring(0, vsIdx) : teams;
+  const away = vsIdx > 0 ? teams.substring(vsIdx + 2) : '';
+  const league = (match.metadata && match.metadata.league) || '';
+
+  // 统计AI预测分布
+  const spfCounts = {};
+  preds.forEach(p => {
+    const k = p.spf || '未预测';
+    spfCounts[k] = (spfCounts[k] || 0) + 1;
+  });
+  const total = preds.length;
+  const sorted = Object.entries(spfCounts).sort((a, b) => b[1] - a[1]);
+  const consensus = sorted[0]; // [pick, count]
+  const consensusPct = Math.round(consensus[1] / total * 100);
+
+  // 找出唱反调的AI
+  const dissenters = preds.filter(p => (p.spf || '未预测') !== consensus[0]);
+  let dissenterInfo = '';
+  if (dissenters.length > 0) {
+    dissenterInfo = dissenters.map(p => {
+      let s = `${p.ai_name}选了"${p.spf || '?'}"`;
+      if (p.analysis) s += `，理由: ${p.analysis.replace(/\n/g, ' ').slice(0, 80)}`;
+      return s;
+    }).join('\n');
+  }
+
+  // 每个AI的预测详情
+  const predDetail = preds.map(p => {
+    let s = `${p.ai_name}: ${isFootball ? '胜平负=' : '主客='}${p.spf || '?'}`;
+    if (p.handicap_spf) s += `, 让球=${p.handicap_spf}`;
+    if (p.score) s += `, 比分=${p.score}`;
+    if (p.analysis) s += ` | ${p.analysis.replace(/\n/g, ' ').slice(0, 100)}`;
+    return s;
+  }).join('\n');
+
+  // 赔率行
+  const oddsLine = isFootball
+    ? `胜${match.win_odds || '?'} / 平${match.draw_odds || '?'} / 负${match.lose_odds || '?'}`
+    : `主胜${match.win_odds || '?'} / 客胜${match.lose_odds || '?'}`;
+
+  const sportLabel = isFootball ? '足球' : '篮球';
+
+  return `你是逐浪AI实验室的${sportLabel}评论员，风格犀利、口语化，像懂球老友在微信群聊球。
+
+## 比赛信息
+- 联赛: ${league} | 对阵: ${home} VS ${away}
+- 让球: ${match.handicap || '无'}
+- 赔率: ${oddsLine}
+
+## ${total}个AI的预测
+${predDetail}
+
+## 预测共识
+${consensusPct}%的AI（${consensus[1]}/${total}）看好"${consensus[0]}"
+${dissenters.length > 0 ? `唱反调的:\n${dissenterInfo}` : '全部一致，没有任何分歧'}
+
+请生成150-250字的综合评论，要求:
+1. 犀利、口语化，像微信群里跟朋友聊这场球
+2. 重点说AI的共识和分歧: 谁看好谁、为什么有分歧、谁在唱反调
+3. 有自己的判断和观点，别只复述数据
+4. 严禁"投注""盘口""押注""竞彩"等词
+5. 用中文双引号""
+6. 纯文字输出，不用markdown格式`;
+}
+
+// 更新比赛metadata，写入daily_commentary
+async function updateMatchCommentary(matchId, commentary) {
+  const date = new Date().toISOString().split('T')[0];
+  const client = await pgPool.connect();
+  try {
+    await client.query(
+      `UPDATE matches SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('daily_commentary', $1::text, 'commentary_date', $2::text, 'commentary_version', 2) WHERE id = $3`,
+      [commentary, date, matchId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+// 主函数：检查并生成缺少评论的比赛评论
+async function checkAndGenerateCommentary() {
+  if (commentaryRunning) {
+    console.log('[Commentary] 上次评论生成仍在运行，跳过');
+    return;
+  }
+  commentaryRunning = true;
+
+  try {
+    // 日期范围：今天00:00 到 后天00:00（覆盖今天+明天的比赛）
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayAfter = new Date(today);
+    dayAfter.setDate(dayAfter.getDate() + 2);
+
+    const from = today.toISOString().split('T')[0] + 'T00:00:00';
+    const to = dayAfter.toISOString().split('T')[0] + 'T00:00:00';
+
+    console.log(`[Commentary] 检查 ${from} ~ ${to} 的比赛评论...`);
+
+    // 查询今天+明天的比赛
+    const matches = await querySupabase('matches', {
+      select: '*',
+      order: 'match_time.asc',
+      limit: '5000',
+      filter: { match_time: [`gte.${from}`, `lt.${to}`] }
+    });
+
+    if (matches.length === 0) {
+      console.log('[Commentary] 没有找到比赛');
+      return;
+    }
+
+    // 筛选出缺少评论的比赛
+    const needCommentary = matches.filter(m => !m.metadata || !m.metadata.daily_commentary || m.metadata.commentary_version !== 2);
+
+    if (needCommentary.length === 0) {
+      console.log(`[Commentary] ${matches.length}场比赛都已有v2评论，无需生成`);
+      return;
+    }
+
+    console.log(`[Commentary] ${matches.length}场比赛中有${needCommentary.length}场缺少评论`);
+
+    // 获取所有预测数据（分页，绕过Supabase 1000条限制）
+    let allPreds = [];
+    let offset = 0;
+    const limit = 1000;
+    while (true) {
+      const { url, key } = getSupabaseConfig();
+      const resp = await fetch(
+        `${url}/rest/v1/predictions?select=*&order=id.desc&limit=${limit}&offset=${offset}`,
+        { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+      );
+      const batch = await resp.json();
+      allPreds = allPreds.concat(batch);
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+
+    // 逐场生成评论
+    let generated = 0, skipped = 0, failed = 0;
+
+    for (const match of needCommentary) {
+      try {
+        const preds = allPreds.filter(p => p.match_id === match.id);
+
+        if (preds.length === 0) {
+          skipped++;
+          console.log(`[Commentary] ⏭ ${match.id} ${match.teams} 无AI预测，跳过`);
+          continue;
+        }
+
+        console.log(`[Commentary] 生成中: ${match.id} ${match.teams} (${preds.length}个AI预测)`);
+
+        const prompt = buildMatchCommentaryPrompt(match, preds);
+        const commentary = await callDoubaoCommentary(prompt);
+
+        await updateMatchCommentary(match.id, commentary);
+
+        generated++;
+        console.log(`[Commentary] ✅ ${match.id} ${match.teams} 评论已生成 (${commentary.length}字)`);
+
+        // 控制API调用频率，避免触发限流
+        await sleep(2000);
+
+      } catch (err) {
+        failed++;
+        console.error(`[Commentary] ❌ ${match.id} ${match.teams} 生成失败: ${err.message}`);
+        // 失败后多等一会儿
+        await sleep(5000);
+      }
+    }
+
+    console.log(`[Commentary] 批次完成: 生成${generated}条, 跳过${skipped}条, 失败${failed}条`);
+
+  } catch (err) {
+    console.error('[Commentary] 检查失败:', err.message);
+  } finally {
+    commentaryRunning = false;
   }
 }
 
@@ -594,6 +838,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // POST /api/admin/commentary - 手动触发评论生成
+    if (pathname === '/api/admin/commentary' && req.method === 'POST') {
+      if (commentaryRunning) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: '评论生成正在运行中' }));
+        return;
+      }
+      // 异步触发，立即返回
+      checkAndGenerateCommentary();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, message: '评论生成已触发' }));
+      return;
+    }
+
     // GET /api/parlay-latest - Latest date's chain_bets
     if (pathname === '/api/parlay-latest' && req.method === 'GET') {
       const chainBets = await querySupabase('chain_bets', {
@@ -700,7 +958,7 @@ server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}/`);
   console.log(`Supabase URL: ${getSupabaseConfig().url}`); console.log(`Supabase Key: ${getSupabaseConfig().key ? getSupabaseConfig().key.substring(0, 20) + '...' : 'not set'}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
-  console.log(`Admin endpoints: POST /api/admin/discover, POST /api/admin/predict, POST /api/admin/settle, GET /api/admin/status, GET|POST /api/admin/report`);
+  console.log(`Admin endpoints: POST /api/admin/discover, POST /api/admin/predict, POST /api/admin/settle, GET /api/admin/status, GET|POST /api/admin/report, POST /api/admin/commentary`);
 });
 
 // ============ Cron Jobs (Asia/Shanghai) ============
@@ -786,3 +1044,15 @@ setTimeout(() => {
 console.log('[Cron] 定时任务已注册: 11:00 增量调度 | 21:30 主力调度 (Asia/Shanghai)');
 console.log('[AutoSettle] 自动结算: 每5分钟扫描，开赛3小时后自动结算');
 console.log('[Cron] 每次调度完成后自动生成调度报告 → /tmp/dispatch_report.md');
+
+// ============ Commentary Auto-Check (每小时检查一次，启动时也检查) ============
+const COMMENTARY_CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1小时
+
+setTimeout(() => {
+  console.log('[Commentary] 首次评论检查（延迟60秒，等待数据就绪）...');
+  checkAndGenerateCommentary();
+  setInterval(checkAndGenerateCommentary, COMMENTARY_CHECK_INTERVAL_MS);
+  console.log(`[Commentary] 评论自动检查已启动，间隔 ${COMMENTARY_CHECK_INTERVAL_MS / 1000} 秒`);
+}, 60000); // 延迟60秒启动，给discover/predict流水线时间先跑
+
+console.log('[Commentary] 评论自动生成: 启动时+每小时检查，覆盖今天+明天比赛');
