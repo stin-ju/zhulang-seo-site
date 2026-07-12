@@ -413,6 +413,16 @@ async function checkAndGenerateCommentary() {
   }
 }
 
+// ============ HTTP Body Reader ============
+function readBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', chunk => body += chunk.toString());
+    req.on('end', () => resolve(body));
+    req.on('error', () => resolve(''));
+  });
+}
+
 // ============ Server ============
 
 const server = http.createServer(async (req, res) => {
@@ -768,8 +778,16 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       taskStatus.predict.running = true;
+      // 读取请求体获取sport参数
+      let predictBody = {};
       try {
-        const result = await runPython('auto_predict.py');
+        const rawBody = await readBody(req);
+        predictBody = rawBody ? JSON.parse(rawBody) : {};
+      } catch(e) { predictBody = {}; }
+      const predictSport = predictBody.sport || 'football';
+      const predictArgs = predictSport !== 'football' ? ['--sport', predictSport] : [];
+      try {
+        const result = await runPython('auto_predict.py', predictArgs);
         taskStatus.predict.lastRun = new Date().toISOString();
         taskStatus.predict.lastResult = result;
         res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
@@ -976,11 +994,17 @@ cron.schedule('0 11 * * *', async () => {
   }
   try {
     const predictResult = await runPython('auto_predict.py');
-    console.log('[Cron 11:00] predict完成:', JSON.stringify(predictResult));
+    console.log('[Cron 11:00] 足球predict完成:', JSON.stringify(predictResult));
     taskStatus.predict.lastRun = new Date().toISOString();
     taskStatus.predict.lastResult = predictResult;
   } catch (err) {
-    console.error('[Cron 11:00] predict失败:', err.message);
+    console.error('[Cron 11:00] 足球predict失败:', err.message);
+  }
+  try {
+    const bkbResult = await runPython('auto_predict.py', ['--sport', 'basketball']);
+    console.log('[Cron 11:00] 篮球predict完成:', JSON.stringify(bkbResult));
+  } catch (err) {
+    console.error('[Cron 11:00] 篮球predict失败:', err.message);
   }
   // 调度完成后生成报告
   await generateReport();
@@ -999,11 +1023,17 @@ cron.schedule('30 21 * * *', async () => {
   }
   try {
     const predictResult = await runPython('auto_predict.py');
-    console.log('[Cron 21:30] predict完成:', JSON.stringify(predictResult));
+    console.log('[Cron 21:30] 足球predict完成:', JSON.stringify(predictResult));
     taskStatus.predict.lastRun = new Date().toISOString();
     taskStatus.predict.lastResult = predictResult;
   } catch (err) {
-    console.error('[Cron 21:30] predict失败:', err.message);
+    console.error('[Cron 21:30] 足球predict失败:', err.message);
+  }
+  try {
+    const bkbResult = await runPython('auto_predict.py', ['--sport', 'basketball']);
+    console.log('[Cron 21:30] 篮球predict完成:', JSON.stringify(bkbResult));
+  } catch (err) {
+    console.error('[Cron 21:30] 篮球predict失败:', err.message);
   }
   // 调度完成后生成报告
   await generateReport();
