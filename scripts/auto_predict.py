@@ -46,10 +46,10 @@ AI_CONFIGS = {
         "format": "openai",
     },
     "AI-文心": {
-        "url": "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat",
+        "url": "https://qianfan.baidubce.com/v2/chat/completions",
         "key_env": "WENXIN_API_KEY",
-        "model": "ernie-speed-128k",
-        "format": "wenxin",
+        "model": "ernie-4.0-8k-latest",
+        "format": "openai",
     },
     "AI-混元": {
         "url": "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",
@@ -141,29 +141,37 @@ def get_db():
     return psycopg2.connect(DATABASE_URL)
 
 
-def get_pending_matches(conn, sport="football"):
-    """获取在售且有赔率的比赛"""
+def get_pending_matches(conn, sport="football", include_settled=False):
+    """获取在售且有赔率的比赛。include_settled=True时包含已确认/已结算的比赛（用于重新预测验证）"""
     if sport == "basketball":
-        query = """
+        if include_settled:
+            status_filter = "m.status IN ('on_sale','未开赛','已确认','已结算')"
+        else:
+            status_filter = "m.status IN ('on_sale','未开赛')"
+        query = f"""
             SELECT m.id, m.teams, m.match_time, m.handicap,
                    m.win_odds, m.lose_odds,
                    m.spread_line, m.total_line,
                    m.spread_odds, m.total_points_odds, m.score_diff_odds,
                    m.metadata->>'league' as league
             FROM matches m
-            WHERE m.status = 'on_sale'
+            WHERE {status_filter}
             AND m.win_odds IS NOT NULL
             AND m.sport_type = 'basketball'
             ORDER BY m.match_time ASC
         """
     else:
-        query = """
+        if include_settled:
+            status_filter = "m.status IN ('on_sale','未开赛','已确认','已结算')"
+        else:
+            status_filter = "m.status = 'on_sale'"
+        query = f"""
             SELECT m.id, m.teams, m.match_time, m.handicap,
                    m.win_odds, m.draw_odds, m.lose_odds,
                    m.handicap_win_odds, m.handicap_draw_odds, m.handicap_lose_odds,
                    m.metadata->>'league' as league
             FROM matches m
-            WHERE m.status = 'on_sale'
+            WHERE {status_filter}
             AND m.win_odds IS NOT NULL
             AND m.sport_type = 'football'
             ORDER BY m.match_time ASC
@@ -254,26 +262,21 @@ def call_minimax(url, key, model, prompt, timeout=60):
 
 
 def call_wenxin(url, key, model, prompt, timeout=60):
-    token_url = f"https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id={key}&client_secret={os.environ.get('WENXIN_SECRET_KEY', '')}"
-    token_resp = requests.post(token_url, timeout=10)
-    token_resp.raise_for_status()
-    access_token = token_resp.json().get("access_token")
-    if not access_token:
-        raise Exception(f"文心token获取失败: {token_resp.text}")
-    
-    full_url = f"{url}/{model}?access_token={access_token}"
-    headers = {"Content-Type": "application/json"}
+    """文心一言 - v2 OpenAI兼容格式"""
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}"
+    }
     payload = {
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_output_tokens": 500,
+        "max_tokens": 500,
     }
-    resp = requests.post(full_url, headers=headers, json=payload, timeout=timeout)
+    resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
-    if "error_code" in data:
-        raise Exception(f"文心API错误: {data.get('error_msg')}")
-    return data.get("result", "")
+    return data["choices"][0]["message"]["content"]
 
 
 def generate_template_prediction(prompt, sport="football"):
