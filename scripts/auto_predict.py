@@ -157,7 +157,7 @@ def get_pending_matches(conn, sport="football", include_settled=False):
                    m.win_odds, m.lose_odds,
                    m.spread_line, m.total_line,
                    m.spread_odds, m.total_points_odds, m.score_diff_odds,
-                   m.metadata->>'league' as league
+                   m.match_uid, m.metadata->>'league' as league
             FROM matches m
             WHERE {status_filter}
             AND m.sport_type = 'basketball'
@@ -172,7 +172,7 @@ def get_pending_matches(conn, sport="football", include_settled=False):
             SELECT m.id, m.teams, m.match_time, m.handicap,
                    m.win_odds, m.draw_odds, m.lose_odds,
                    m.handicap_win_odds, m.handicap_draw_odds, m.handicap_win_odds,
-                   m.metadata->>'league' as league
+                   m.match_uid, m.metadata->>'league' as league
             FROM matches m
             WHERE {status_filter}
             AND m.sport_type = 'football'
@@ -202,11 +202,11 @@ def insert_football_prediction(conn, pred):
     """插入足球预测"""
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO predictions (match_id, ai_name, spf, handicap_spf, score, goals, half_full, analysis, sport_type)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO predictions (match_id, match_uid, ai_name, spf, handicap_spf, score, goals, half_full, analysis, sport_type)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT DO NOTHING
         """, (
-            pred["match_id"], pred["ai_name"], pred["spf"], pred["handicap_spf"],
+            pred["match_id"], pred.get("match_uid", pred["match_id"]), pred["ai_name"], pred["spf"], pred["handicap_spf"],
             pred["score"], pred["goals"], pred["half_full"], pred["analysis"], "football"
         ))
 
@@ -215,13 +215,13 @@ def insert_basketball_prediction(conn, pred):
     """插入篮球预测"""
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO predictions (match_id, ai_name, win_loss, handicap_win_loss, 
+            INSERT INTO predictions (match_id, match_uid, ai_name, win_loss, handicap_win_loss, 
                                      total_points, score_diff_range, half_win_loss, 
                                      analysis, sport_type)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT DO NOTHING
         """, (
-            pred["match_id"], pred["ai_name"], pred["win_loss"], pred["handicap_win_loss"],
+            pred["match_id"], pred.get("match_uid", pred["match_id"]), pred["ai_name"], pred["win_loss"], pred["handicap_win_loss"],
             pred["total_points"], pred["score_diff_range"], pred["half_win_loss"],
             pred["analysis"], "basketball"
         ))
@@ -667,6 +667,7 @@ def run_predict(sport="football"):
                     
                     pred = {
                         "match_id": match_id,
+                        "match_uid": match.get("match_uid", match_id),
                         "ai_name": ai_name,
                         "win_loss": wl,
                         "handicap_win_loss": hwl,
@@ -703,6 +704,7 @@ def run_predict(sport="football"):
                     
                     pred = {
                         "match_id": match_id,
+                        "match_uid": match.get("match_uid", match_id),
                         "ai_name": ai_name,
                         "spf": spf,
                         "handicap_spf": handicap_spf,
