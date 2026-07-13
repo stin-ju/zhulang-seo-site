@@ -498,7 +498,8 @@ const server = http.createServer(async (req, res) => {
       // 如果请求包含predictions，加载预测数据并附加到每场比赛
       const includePredictions = parsedUrl.searchParams.get('include_predictions') === 'true';
       if (includePredictions && enriched.length > 0) {
-        const matchIds = enriched.map(m => m.id);
+        const matchIds = new Set(enriched.map(m => String(m.id)));
+        console.log(`[API] Loading predictions for ${matchIds.size} matches:`, Array.from(matchIds));
         // 分页获取所有预测（绕过Supabase 1000条限制）
         let allPredictions = [];
         let offset = 0;
@@ -514,19 +515,22 @@ const server = http.createServer(async (req, res) => {
           if (batch.length < limit) break;
           offset += limit;
         }
+        console.log(`[API] Fetched ${allPredictions.length} total predictions`);
         // 清洗analysis字段
         allPredictions = allPredictions.map(p => ({ ...p, analysis: cleanAnalysis(p.analysis) }));
-        // 按match_id分组
+        // 按match_id分组（统一转字符串比较）
         const predictionsByMatch = {};
         allPredictions.forEach(p => {
-          if (matchIds.includes(p.match_id)) {
-            if (!predictionsByMatch[p.match_id]) predictionsByMatch[p.match_id] = [];
-            predictionsByMatch[p.match_id].push(p);
+          const matchId = String(p.match_id);
+          if (matchIds.has(matchId)) {
+            if (!predictionsByMatch[matchId]) predictionsByMatch[matchId] = [];
+            predictionsByMatch[matchId].push(p);
           }
         });
+        console.log(`[API] Matched predictions for ${Object.keys(predictionsByMatch).length} matches`);
         // 附加到每场比赛
         enriched.forEach(m => {
-          m.predictions = predictionsByMatch[m.id] || [];
+          m.predictions = predictionsByMatch[String(m.id)] || [];
         });
       }
       
