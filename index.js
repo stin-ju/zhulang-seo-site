@@ -106,7 +106,7 @@ function renderAll() {
     renderRanking();
 }
 
-// 日期标签：7个固定，最新在左
+// 日期标签：14个，最新在左（今天+前6天+后7天）
 function renderDateTabs() {
     const container = document.getElementById('date-bar');
     if (!container) return;
@@ -114,15 +114,15 @@ function renderDateTabs() {
     const today = new Date();
     const todayStr = getLocalDateStr(today);
     
-    // 生成7天：后3天+今天+前3天，最新日期在最左边
-    const sevenDays = [];
-    for (let i = 3; i >= -3; i--) {
+    // 生成14天：后7天+今天+前6天，最新日期在最左边
+    const days = [];
+    for (let i = 7; i >= -6; i--) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
-        sevenDays.push(getLocalDateStr(d));
+        days.push(getLocalDateStr(d));
     }
     
-    container.innerHTML = sevenDays.map(date => {
+    container.innerHTML = days.map(date => {
         const isToday = date === todayStr;
         const isActive = date === state.currentDate;
         const hasMatches = state.dates.includes(date);
@@ -250,6 +250,11 @@ function renderMatchCard(match) {
         badges += `<span class="badge-sm" style="background:rgba(107,114,128,0.2);color:#9ca3af;">已取消</span>`;
     } else if (!isDone && match.status === '未开赛') {
         badges += `<span class="badge-sm status-pending">待比赛</span>`;
+    }
+    
+    // 售卖状态badge（pending显示为"待售"）
+    if (match.selling_status === 'pending' && match.status !== '已取消') {
+        badges += `<span class="badge-sm" style="background:rgba(245,194,66,0.15);color:#F5C242;">待售</span>`;
     }
     
     // 共识度/分歧度（基于预测）

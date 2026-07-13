@@ -89,12 +89,13 @@ export async function fetchMatches(sport = 'football', status = '未开赛') {
         { order: 'match_time.asc', limit: '5000' }
     );
     
-    // 容错过滤：只返回未结束且在售的比赛
+    // 容错过滤：只返回未结束且在售/待售的比赛
     const filtered = data.filter(m => {
         if (DONE_STATUSES.includes(m.status)) return false;
-        if (m.selling_status && m.selling_status !== 'on_sale') return false;
-        // 时间容错：超过开赛前25分钟视为停售
-        if (m.match_time) {
+        // 允许 on_sale 和 pending 状态的比赛
+        if (m.selling_status && m.selling_status !== 'on_sale' && m.selling_status !== 'pending') return false;
+        // 时间容错：超过开赛前25分钟视为停售（仅对on_sale生效）
+        if (m.selling_status === 'on_sale' && m.match_time) {
             const matchStart = new Date(m.match_time.replace(' ', 'T'));
             const cutoff = new Date(matchStart.getTime() - 25 * 60 * 1000);
             if (new Date() >= cutoff) return false;
