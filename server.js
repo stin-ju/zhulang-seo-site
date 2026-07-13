@@ -312,14 +312,35 @@ async function updateMatchCommentary(matchId, commentary) {
 }
 
 // 主函数：检查并生成缺少评论的比赛评论
-async function checkAndGenerateCommentary() {
+// options: { forceMatchIds: string[] } - 强制重新生成指定比赛的评论（先清除再生成）
+async function checkAndGenerateCommentary(options = {}) {
   if (commentaryRunning) {
     console.log('[Commentary] 上次评论生成仍在运行，跳过');
-    return;
+    return { skipped: true, reason: 'already_running' };
   }
   commentaryRunning = true;
 
   try {
+    const forceMatchIds = options.forceMatchIds || [];
+    const isForceMode = forceMatchIds.length > 0;
+
+    if (isForceMode) {
+      console.log(`[Commentary] 🔥 强制模式: 清除并重新生成 ${forceMatchIds.length} 场比赛的评论`);
+      // 先清除指定比赛的评论
+      const client = await pgPool.connect();
+      try {
+        for (const matchId of forceMatchIds) {
+          await client.query(
+            `UPDATE matches SET metadata = COALESCE(metadata, '{}'::jsonb) - 'daily_commentary' - 'commentary_date' - 'commentary_version' WHERE id = $1`,
+            [matchId]
+          );
+          console.log(`[Commentary] 🗑 已清除 ${matchId} 的评论`);
+        }
+      } finally {
+        client.release();
+      }
+    }
+
     // 日期范围：今天00:00 到 后天00:00（覆盖今天+明天的比赛）
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -344,8 +365,11 @@ async function checkAndGenerateCommentary() {
       return;
     }
 
-    // 筛选出缺少评论的比赛
-    const needCommentary = matches.filter(m => !m.metadata || !m.metadata.daily_commentary || m.metadata.commentary_version !== 2);
+    // 筛选出缺少评论的比赛（强制模式下包含指定比赛）
+    const needCommentary = matches.filter(m => {
+      if (isForceMode && forceMatchIds.includes(m.id)) return true;
+      return !m.metadata || !m.metadata.daily_commentary || m.metadata.commentary_version !== 2;
+    });
 
     if (needCommentary.length === 0) {
       console.log(`[Commentary] ${matches.length}场比赛都已有v2评论，无需生成`);
@@ -375,7 +399,7 @@ async function checkAndGenerateCommentary() {
 
     for (const match of needCommentary) {
       try {
-        const preds = allPreds.filter(p => p.match_id === match.id);
+        const preds = allPreds.filter(p => String(p.match_id) === String(match.id));
 
         if (preds.length === 0) {
           skipped++;
@@ -405,9 +429,11 @@ async function checkAndGenerateCommentary() {
     }
 
     console.log(`[Commentary] 批次完成: 生成${generated}条, 跳过${skipped}条, 失败${failed}条`);
+    return { generated, skipped, failed, total: matches.length };
 
   } catch (err) {
     console.error('[Commentary] 检查失败:', err.message);
+    return { error: err.message };
   } finally {
     commentaryRunning = false;
   }
@@ -897,16 +923,35 @@ const server = http.createServer(async (req, res) => {
     }
 
     // POST /api/admin/commentary - 手动触发评论生成
+    // Body: { force?: boolean, match_ids?: string[] }
+    // - 无参数: 常规检查，仅为缺少评论的比赛生成
+    // - force=true + match_ids: 清除指定比赛评论后重新生成
     if (pathname === '/api/admin/commentary' && req.method === 'POST') {
       if (commentaryRunning) {
         res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
         res.end(JSON.stringify({ error: '评论生成正在运行中' }));
         return;
       }
+      const rawBody = await readBody(req);
+      let body = {};
+      try { body = JSON.parse(rawBody); } catch (e) { /* empty body is ok */ }
+      const forceMatchIds = (body && Array.isArray(body.match_ids)) ? body.match_ids : [];
+      const isForceMode = forceMatchIds.length > 0;
+      
       // 异步触发，立即返回
-      checkAndGenerateCommentary();
+      checkAndGenerateCommentary({ forceMatchIds }).then(result => {
+        console.log(`[Commentary] 任务完成:`, result);
+      }).catch(err => {
+        console.error(`[Commentary] 任务失败:`, err);
+      });
+      
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, message: '评论生成已触发' }));
+      res.end(JSON.stringify({ 
+        success: true, 
+        message: isForceMode 
+          ? `强制模式: 已触发 ${forceMatchIds.length} 场比赛评论重新生成: ${forceMatchIds.join(', ')}` 
+          : '评论生成已触发' 
+      }));
       return;
     }
 
