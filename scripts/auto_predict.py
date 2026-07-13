@@ -147,34 +147,34 @@ def get_db():
 
 def get_pending_matches(conn, sport="football", include_settled=False):
     """获取待预测比赛（包含无赔率的pending比赛）。include_settled=True时包含已确认/已结算的比赛"""
+    # 使用selling_status过滤，包含pending状态的比赛
+    if include_settled:
+        selling_status_filter = "m.selling_status IN ('on_sale','pending','stopped','settled')"
+    else:
+        selling_status_filter = "m.selling_status IN ('on_sale','pending')"
+    
     if sport == "basketball":
-        if include_settled:
-            status_filter = "m.status IN ('on_sale','未开赛','已确认','已结算')"
-        else:
-            status_filter = "m.status IN ('on_sale','未开赛')"
         query = f"""
             SELECT m.id, m.teams, m.match_time, m.handicap,
                    m.win_odds, m.lose_odds,
                    m.spread_line, m.total_line,
                    m.spread_odds, m.total_points_odds, m.score_diff_odds,
-                   m.match_uid, m.metadata->>'league' as league
+                   m.match_uid, m.metadata->>'league' as league,
+                   m.selling_status
             FROM matches m
-            WHERE {status_filter}
+            WHERE {selling_status_filter}
             AND m.sport_type = 'basketball'
             ORDER BY m.match_time ASC
         """
     else:
-        if include_settled:
-            status_filter = "m.status IN ('on_sale','未开赛','已确认','已结算')"
-        else:
-            status_filter = "m.status IN ('on_sale','未开赛')"
         query = f"""
             SELECT m.id, m.teams, m.match_time, m.handicap,
                    m.win_odds, m.draw_odds, m.lose_odds,
                    m.handicap_win_odds, m.handicap_draw_odds, m.handicap_win_odds,
-                   m.match_uid, m.metadata->>'league' as league
+                   m.match_uid, m.metadata->>'league' as league,
+                   m.selling_status
             FROM matches m
-            WHERE {status_filter}
+            WHERE {selling_status_filter}
             AND m.sport_type = 'football'
             ORDER BY m.match_time ASC
         """
