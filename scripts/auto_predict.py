@@ -78,6 +78,8 @@ PREDICTION_PROMPT = """你是一个专业的足球比赛预测分析师。请根
 - 胜平负赔率: 胜{win_odds} / 平{draw_odds} / 负{lose_odds}
 - 让球赔率: 让胜{hw_odds} / 让平{hd_odds} / 让负{hl_odds}
 
+注意：如果赔率显示"暂无"，请根据球队实力、历史交锋等因素进行预测，不要受赔率缺失影响。
+
 ## 请严格按以下JSON格式输出预测结果（不要输出其他内容）:
 ```json
 {{
@@ -106,6 +108,8 @@ BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。一次性给
 - 大小分: 大{total_over_odds} / 小{total_under_odds}（盘口{total_line}）
 - 胜分差赔率（不分主客，分差区间统一）:
   1-5分: {sdr_1_5} | 6-10分: {sdr_6_10} | 11-15分: {sdr_11_15} | 16-20分: {sdr_16_20} | 21-25分: {sdr_21_25} | 26+分: {sdr_26}
+
+注意：如果赔率显示"暂无"，请根据球队实力、近期状态等因素进行预测，不要受赔率缺失影响。
 
 ## 请严格按以下JSON格式输出（不要输出其他内容）:
 ```json
@@ -142,7 +146,7 @@ def get_db():
 
 
 def get_pending_matches(conn, sport="football", include_settled=False):
-    """获取在售且有赔率的比赛。include_settled=True时包含已确认/已结算的比赛（用于重新预测验证）"""
+    """获取待预测比赛（包含无赔率的pending比赛）。include_settled=True时包含已确认/已结算的比赛"""
     if sport == "basketball":
         if include_settled:
             status_filter = "m.status IN ('on_sale','未开赛','已确认','已结算')"
@@ -156,7 +160,6 @@ def get_pending_matches(conn, sport="football", include_settled=False):
                    m.metadata->>'league' as league
             FROM matches m
             WHERE {status_filter}
-            AND m.win_odds IS NOT NULL
             AND m.sport_type = 'basketball'
             ORDER BY m.match_time ASC
         """
@@ -168,11 +171,10 @@ def get_pending_matches(conn, sport="football", include_settled=False):
         query = f"""
             SELECT m.id, m.teams, m.match_time, m.handicap,
                    m.win_odds, m.draw_odds, m.lose_odds,
-                   m.handicap_win_odds, m.handicap_draw_odds, m.handicap_lose_odds,
+                   m.handicap_win_odds, m.handicap_draw_odds, m.handicap_win_odds,
                    m.metadata->>'league' as league
             FROM matches m
             WHERE {status_filter}
-            AND m.win_odds IS NOT NULL
             AND m.sport_type = 'football'
             ORDER BY m.match_time ASC
         """
@@ -469,18 +471,24 @@ def build_football_prompt(match):
     home_team = teams[0] if len(teams) > 0 else "主队"
     away_team = teams[1] if len(teams) > 1 else "客队"
     
+    # 处理赔率：无赔率时显示"暂无"
+    def fmt_odds(val):
+        if val is None or val == 0 or val == "":
+            return "暂无"
+        return str(val)
+    
     return PREDICTION_PROMPT.format(
         league=match.get("league") or "未知联赛",
         home_team=home_team,
         away_team=away_team,
         match_time=match.get("match_time") or "",
-        handicap=match.get("handicap") or 0,
-        win_odds=match.get("win_odds") or 0,
-        draw_odds=match.get("draw_odds") or 0,
-        lose_odds=match.get("lose_odds") or 0,
-        hw_odds=match.get("handicap_win_odds") or 0,
-        hd_odds=match.get("handicap_draw_odds") or 0,
-        hl_odds=match.get("handicap_lose_odds") or 0,
+        handicap=match.get("handicap") or "暂无",
+        win_odds=fmt_odds(match.get("win_odds")),
+        draw_odds=fmt_odds(match.get("draw_odds")),
+        lose_odds=fmt_odds(match.get("lose_odds")),
+        hw_odds=fmt_odds(match.get("handicap_win_odds")),
+        hd_odds=fmt_odds(match.get("handicap_draw_odds")),
+        hl_odds=fmt_odds(match.get("handicap_lose_odds")),
     )
 
 
@@ -579,11 +587,11 @@ def build_basketball_prompt(match):
         spread_line=spread_line,
         spread_desc=spread_desc,
         total_line=total_line,
-        win_odds=match.get("win_odds") or "-",
-        lose_odds=match.get("lose_odds") or "-",
-        spread_win_odds=spread_win,
-        spread_lose_odds=spread_lose,
-        total_over_odds=total_over,
+        win_odds=match.get("win_odds") or "暂无",
+        lose_odds=match.get("lose_odds") or "暂无",
+        spread_win_odds=spread_win or "暂无",
+        spread_lose_odds=spread_lose or "暂无",
+        total_over_odds=total_over or "暂无",
         total_under_odds=total_under,
         sdr_1_5=sdr_vals["1-5"],
         sdr_6_10=sdr_vals["6-10"],
