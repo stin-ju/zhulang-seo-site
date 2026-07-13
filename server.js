@@ -955,6 +955,44 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // POST /api/admin/briefing - 手动触发生成简报
+    // Body: { date?: string, type?: 'prediction' | 'review' }
+    // - date: 日期 (YYYY-MM-DD)，默认今天
+    // - type: 简报类型，默认 prediction
+    if (pathname === '/api/admin/briefing' && req.method === 'POST') {
+      const rawBody = await readBody(req);
+      let body = {};
+      try { body = JSON.parse(rawBody); } catch (e) { /* empty body is ok */ }
+      
+      const date = body.date || new Date().toISOString().split('T')[0];
+      const type = body.type || 'prediction';
+      
+      console.log(`[Briefing] 触发简报生成: date=${date}, type=${type}`);
+      
+      // 调用 Python 脚本生成简报
+      const { execFile } = require('child_process');
+      const scriptPath = path.join(process.cwd(), 'scripts', 'generate_brief.py');
+      
+      execFile('python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
+        cwd: path.join(process.cwd(), 'scripts'),
+        env: { ...process.env, PYTHONUNBUFFERED: '1' }
+      }, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`[Briefing] 生成失败:`, error.message);
+          if (stderr) console.error(`[Briefing] stderr:`, stderr);
+          return;
+        }
+        console.log(`[Briefing] 生成成功:`, stdout);
+      });
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ 
+        success: true, 
+        message: `简报生成已触发: ${date} (${type})` 
+      }));
+      return;
+    }
+
     // GET /api/parlay-latest - Latest date's chain_bets
     if (pathname === '/api/parlay-latest' && req.method === 'GET') {
       const chainBets = await querySupabase('chain_bets', {
@@ -1061,7 +1099,7 @@ server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}/`);
   console.log(`Supabase URL: ${getSupabaseConfig().url}`); console.log(`Supabase Key: ${getSupabaseConfig().key ? getSupabaseConfig().key.substring(0, 20) + '...' : 'not set'}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
-  console.log(`Admin endpoints: POST /api/admin/discover, POST /api/admin/predict, POST /api/admin/settle, GET /api/admin/status, GET|POST /api/admin/report, POST /api/admin/commentary`);
+  console.log(`Admin endpoints: POST /api/admin/discover, POST /api/admin/predict, POST /api/admin/settle, GET /api/admin/status, GET|POST /api/admin/report, POST /api/admin/commentary, POST /api/admin/briefing`);
 });
 
 // ============ Cron Jobs (Asia/Shanghai) ============
@@ -1171,3 +1209,50 @@ setTimeout(() => {
 }, 60000); // 延迟60秒启动，给discover/predict流水线时间先跑
 
 console.log('[Commentary] 评论自动生成: 启动时+每小时检查，覆盖今天+明天比赛');
+
+// ============ Briefing Auto-Generate (每天 10:00 和 22:00 生成简报) ============
+function generateBriefing(date, type) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(process.cwd(), 'scripts', 'generate_brief.py');
+    execFile('python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
+      cwd: path.join(process.cwd(), 'scripts'),
+      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+      timeout: 120000
+    }, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`[Briefing] 生成失败 (${date} ${type}):`, error.message);
+        if (stderr) console.error(`[Briefing] stderr:`, stderr);
+        reject(error);
+        return;
+      }
+      console.log(`[Briefing] 生成成功 (${date} ${type}):`, stdout.trim());
+      resolve(stdout);
+    });
+  });
+}
+
+// 每天 10:00 生成今日预测简报
+cron.schedule('0 10 * * *', async () => {
+  console.log('[Cron 10:00] 开始生成今日预测简报...');
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    await generateBriefing(today, 'prediction');
+    console.log('[Cron 10:00] 预测简报生成完成');
+  } catch (err) {
+    console.error('[Cron 10:00] 预测简报生成失败:', err.message);
+  }
+}, { timezone: 'Asia/Shanghai' });
+
+// 每天 22:00 生成今日复盘简报
+cron.schedule('0 22 * * *', async () => {
+  console.log('[Cron 22:00] 开始生成今日复盘简报...');
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    await generateBriefing(today, 'review');
+    console.log('[Cron 22:00] 复盘简报生成完成');
+  } catch (err) {
+    console.error('[Cron 22:00] 复盘简报生成失败:', err.message);
+  }
+}, { timezone: 'Asia/Shanghai' });
+
+console.log('[Briefing] 简报自动生成: 每天 10:00 预测简报 | 22:00 复盘简报');
