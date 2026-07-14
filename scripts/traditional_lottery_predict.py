@@ -64,7 +64,7 @@ AI_CONFIGS = {
         "key_env": "HUNYUAN_API_KEY",
         "model": "hy3-preview",
         "format": "openai",
-        "fallback_models": ["hunyuan-turbo", "hunyuan-standard", "hunyuan-lite"],
+        "fallback_models": ["Hunyuan-T1", "Hunyuan-TurboS", "Hunyuan-a13b", "Hunyuan-Lite"],
     },
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
