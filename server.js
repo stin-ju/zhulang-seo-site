@@ -998,34 +998,47 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       let lotteryType = 'sf'; // 默认胜负彩
       
+      let data = {};
       try {
-        const data = JSON.parse(body || '{}');
+        data = JSON.parse(body || '{}');
         lotteryType = data.type || 'sf';
       } catch (e) {}
       
       console.log(`[TraditionalLottery] 触发预测: type=${lotteryType}`);
       
+      // 映射类型到中文游戏名
+      const gameTypeMap = {
+        'sf': '胜负彩',
+        'r9': '任9',
+        'bqc': '半全场',
+        'jqc': '进球彩'
+      };
+      const gameName = gameTypeMap[lotteryType] || '胜负彩';
+      
       // 调用 Python 脚本生成预测
       const { execFile } = require('child_process');
       const scriptPath = path.join(process.cwd(), 'scripts', 'traditional_lottery_predict.py');
       
-      execFile('python3', [scriptPath, '--type', lotteryType, '--output', 'json'], {
-        cwd: path.join(process.cwd(), 'scripts'),
-        env: { ...process.env, PYTHONUNBUFFERED: '1' },
-        maxBuffer: 10 * 1024 * 1024
-      }, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`[TraditionalLottery] 预测失败:`, error.message);
-          if (stderr) console.error(`[TraditionalLottery] stderr:`, stderr);
-          return;
-        }
-        console.log(`[TraditionalLottery] 预测成功`);
-      });
+      // 先异步触发预测（如果force=true）
+      if (data.force) {
+        execFile('python3', [scriptPath, '--game', gameName, '--force'], {
+          cwd: path.join(process.cwd(), 'scripts'),
+          env: { ...process.env, PYTHONUNBUFFERED: '1' },
+          maxBuffer: 10 * 1024 * 1024
+        }, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`[TraditionalLottery] 预测失败:`, error.message);
+            if (stderr) console.error(`[TraditionalLottery] stderr:`, stderr);
+          } else {
+            console.log(`[TraditionalLottery] 预测成功: ${gameName}`);
+          }
+        });
+      }
       
       // 同步执行获取结果
       const { execSync } = require('child_process');
       try {
-        const result = execSync(`python3 ${scriptPath} --type ${lotteryType} --output json`, {
+        const result = execSync(`python3 ${scriptPath} --game "${gameName}" --get`, {
           cwd: path.join(process.cwd(), 'scripts'),
           env: { ...process.env, PYTHONUNBUFFERED: '1' },
           timeout: 120000,

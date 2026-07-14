@@ -119,20 +119,17 @@ PROMPT_TEMPLATE = """你是一个专业足球比赛预测模型，请严格按�
 # ============ 体彩API数据获取 ============
 
 def fetch_sporttery_data(game_type):
-    """从体彩API获取比赛数据"""
-    game_info = GAME_TYPES.get(game_type)
-    if not game_info:
-        raise ValueError(f"未知玩法: {game_type}")
-    
-    url = f"https://webapi.sporttery.cn/gateway/lottery/getFootBallDrawInfoV2.qry?isVerify=1&param={game_info['param']}"
+    """从体彩API获取比赛数据 - 使用getMatchCalculatorV1接口"""
+    # 使用竞彩足球接口，该接口不会被WAF拦截
+    url = "https://webapi.sporttery.cn/gateway/jc/football/getMatchCalculatorV1.qry?poolCode=HAD,HHAD&channel=c"
     
     try:
         resp = requests.get(url, headers=SPORTTERY_HEADERS, timeout=15)
         resp.raise_for_status()
         data = resp.json()
         
-        if data.get("value"):
-            return data["value"]
+        if data.get("value") and data["value"].get("matchInfoList"):
+            return data["value"]["matchInfoList"]
         return None
     except Exception as e:
         print(f"获取体彩API失败: {e}")
@@ -147,8 +144,8 @@ def parse_match_data(api_data, game_type):
     matches = []
     odds_list = []
     
-    # 解析比赛列表
-    match_list = api_data.get("list", [])
+    # api_data 现在是 matchInfoList 数组
+    match_list = api_data if isinstance(api_data, list) else []
     
     for i, match in enumerate(match_list[:14]):  # 最多14场
         match_num = str(i + 1)
@@ -167,12 +164,39 @@ def parse_match_data(api_data, game_type):
             "time": match_time,
         })
         
-        # 提取赔率
+        # 提取赔率 - 从poolList中获取
+        pool_list = match.get("poolList", [])
+        spf_odds = {}
+        handicap_odds = {}
+        handicap_num = 0
+        
+        for pool in pool_list:
+            pool_code = pool.get("poolCode", "")
+            if pool_code == "HAD":  # 胜平负
+                odds_data = pool.get("oddsList", [])
+                for odds in odds_data:
+                    if odds.get("code") == "H":
+                        spf_odds["win"] = float(odds.get("odds", 0))
+                    elif odds.get("code") == "D":
+                        spf_odds["draw"] = float(odds.get("odds", 0))
+                    elif odds.get("code") == "A":
+                        spf_odds["lose"] = float(odds.get("odds", 0))
+            elif pool_code == "HHAD":  # 让球胜平负
+                handicap_num = int(pool.get("fixedOdds", 0))
+                odds_data = pool.get("oddsList", [])
+                for odds in odds_data:
+                    if odds.get("code") == "H":
+                        handicap_odds["win"] = float(odds.get("odds", 0))
+                    elif odds.get("code") == "D":
+                        handicap_odds["draw"] = float(odds.get("odds", 0))
+                    elif odds.get("code") == "A":
+                        handicap_odds["lose"] = float(odds.get("odds", 0))
+        
         odds = {
             "num": match_num,
-            "spf": match.get("spfOdds", {}),  # 胜平负赔率
-            "handicap": match.get("handicapOdds", {}),  # 让球赔率
-            "handicap_num": match.get("handicap", 0),  # 让球数
+            "spf": spf_odds,
+            "handicap": handicap_odds,
+            "handicap_num": handicap_num,
         }
         odds_list.append(odds)
     
