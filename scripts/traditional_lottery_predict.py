@@ -43,12 +43,15 @@ AI_CONFIGS = {
         "key_env": "WENXIN_API_KEY",
         "model": "ernie-4.0-8k-latest",
         "format": "openai",
+        "max_tokens": 2048,
+        "fallback_models": ["ernie-3.5-8k", "ernie-speed-128k"],
     },
     "混元": {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "model": "hy3-preview",
         "format": "openai",
+        "fallback_models": ["hunyuan-turbo", "hunyuan-standard"],
     },
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
@@ -67,6 +70,7 @@ AI_CONFIGS = {
         "key_env": "MINIMAX_API_KEY",
         "model": "MiniMax-Text-01",
         "format": "minimax",
+        "fallback_models": ["abab6.5s-chat", "abab6.5-chat"],
     },
 }
 
@@ -332,10 +336,11 @@ def call_ai(ai_name, prompt):
     last_error = None
     for i, model in enumerate(models_to_try):
         try:
+            max_tokens = config.get("max_tokens", 4000)
             payload = {
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.7,
-                "max_tokens": 4000,
+                "max_tokens": max_tokens,
             }
 
             if fmt == "openai":
@@ -361,7 +366,13 @@ def call_ai(ai_name, prompt):
             if fmt == "openai":
                 content = result["choices"][0]["message"]["content"]
             elif fmt == "minimax":
-                content = result.get("reply", {}).get("choices", [{}])[0].get("message", {}).get("content", "")
+                # MiniMax v2 API returns choices directly
+                choices = result.get("choices", [])
+                if choices:
+                    content = choices[0].get("message", {}).get("content", "")
+                else:
+                    # Fallback for older API format
+                    content = result.get("reply", {}).get("choices", [{}])[0].get("message", {}).get("content", "")
                 if not content:
                     raise Exception("MiniMax返回空内容")
             else:
