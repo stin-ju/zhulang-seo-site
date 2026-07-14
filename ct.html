@@ -4,109 +4,180 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>传统足彩 - AI实验室</title>
-    <meta name="description" content="AI实验室传统足彩预测，14场胜负彩、任选9场、半全场、进球彩，7个AI独立预测">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg: #0b0b14;
-            --card: #14141f;
-            --border: #2a2a3e;
-            --sub-bg: #1a1a2a;
-            --text: #e5e7eb;
-            --text-muted: #9ca3af;
+            --bg: #0a0e1a;
+            --bg-card: #141824;
+            --bg-hover: #1a1f2e;
+            --border: #2a3040;
+            --text: #e4e8f0;
             --text-dim: #6b7280;
-            --accent: #8b5cf6;
-            --green: #22c55e;
-            --yellow: #fbbf24;
-            --red: #ef4444;
+            --accent: #3b82f6;
+            --win: #22c55e;
+            --draw: #fbbf24;
+            --lose: #ef4444;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 12px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* 导航栏 */
+        .navbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 15px 0;
+            margin-bottom: 30px;
+        }
+        .navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); background: var(--bg-hover); }
+        .nav-links a.active { color: var(--accent); background: rgba(59, 130, 246, 0.1); }
 
-        /* 导航 */
-        .navbar { background: rgba(11,11,20,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.04); padding: 10px 0; position: sticky; top: 0; z-index: 50; }
-        .navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        .logo { font-size: 18px; font-weight: 800; color: var(--accent); text-decoration: none; }
-        .logo span { color: #fff; }
-        .nav-links { display: flex; gap: 2px; flex-wrap: wrap; }
-        .nav-links a { padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
-        .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
-        .nav-links a.active { color: #a78bfa; background: rgba(139,92,246,0.12); }
-        @media (max-width: 768px) { .nav-links { justify-content: center; } }
-
-        /* 卡片 */
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin: 16px 0; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-        .card-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .badge { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; background: rgba(34,197,94,0.1); color: var(--green); }
-
-        /* Tab */
-        .tab-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--sub-bg); border-radius: 10px; padding: 4px; margin-bottom: 16px; }
-        .tab-nav button { padding: 8px 12px; border: none; background: transparent; border-radius: 8px; font-weight: 500; font-size: 13px; color: var(--text-muted); cursor: pointer; text-align: center; }
-        .tab-nav button:hover { color: var(--text); }
-        .tab-nav button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-        .tab-nav button .sub { font-size: 10px; color: var(--text-dim); display: block; font-weight: 400; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        /* 期号信息 */
+        .period-info {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .period-info h2 {
+            font-size: 18px;
+            color: var(--text);
+        }
+        .period-info .deadline {
+            color: var(--text-dim);
+            font-size: 14px;
+        }
 
         /* 表格 */
-        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border); }
-        .table-wrap::-webkit-scrollbar { height: 4px; }
-        .table-wrap::-webkit-scrollbar-track { background: var(--sub-bg); }
-        .table-wrap::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 2px; }
-        table.lottery-table { width: 100%; min-width: 780px; border-collapse: collapse; font-size: 13px; }
-        table.lottery-table th { background: var(--sub-bg); color: var(--text-dim); font-size: 11px; font-weight: 600; padding: 8px 6px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; }
-        table.lottery-table td { padding: 7px 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap; }
-        table.lottery-table tr:hover td { background: rgba(255,255,255,0.02); }
-
-        .col-idx { width: 32px; color: var(--text-dim); font-weight: 600; }
-        .col-league { width: 44px; color: var(--text-muted); font-size: 10px; }
-        .col-date { width: 52px; color: var(--text-muted); font-size: 10px; }
-        .col-team { font-weight: 600; font-size: 12px; white-space: nowrap; }
-        .col-vs { width: 22px; color: var(--text-dim); font-size: 11px; }
-
-        /* AI列头 */
-        th.ai-header { font-size: 11px; padding: 6px 4px; border-bottom: 2px solid var(--border); }
-        th.ai-header.kouzi { color: #818cf8; }
-        th.ai-header.doubao { color: var(--green); }
-        th.ai-header.wenxin { color: #f59e0b; }
-        th.ai-header.hunyuan { color: #06b6d4; }
-        th.ai-header.deepseek { color: #a78bfa; }
-        th.ai-header.zhipu { color: #f472b6; }
-        th.ai-header.minimax { color: #fb923c; }
-
-        /* AI选项单元格 */
-        td.ai-cell { font-weight: 700; font-size: 14px; }
-        td.ai-cell.win { color: var(--green); }
-        td.ai-cell.draw { color: var(--yellow); }
-        td.ai-cell.lose { color: var(--red); }
-        td.ai-cell.pending { color: #4b5563; }
-
-        /* 任9未选中行 */
-        tr.row-excluded { opacity: 0.35; }
-        tr.row-excluded td { background: transparent !important; }
+        .table-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .table-header {
+            background: var(--bg-hover);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-header h3 {
+            font-size: 16px;
+            color: var(--text);
+        }
+        .table-header .badge {
+            background: var(--accent);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background: var(--bg-hover);
+            color: var(--text-dim);
+            font-weight: 500;
+            font-size: 13px;
+        }
+        td { font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: var(--bg-hover); }
+        .col-idx { width: 40px; color: var(--text-dim); }
+        .col-league { width: 80px; color: var(--text-dim); }
+        .col-date { width: 100px; color: var(--text-dim); font-size: 12px; }
+        .col-team { width: 100px; font-weight: 500; }
+        .col-vs { width: 40px; color: var(--text-dim); }
+        .col-pct { width: 60px; color: var(--text-dim); }
+        .ai-cell { font-weight: 600; }
+        .ai-cell.win { color: var(--win); }
+        .ai-cell.draw { color: var(--draw); }
+        .ai-cell.lose { color: var(--lose); }
+        .row-excluded { opacity: 0.4; }
 
         /* AI推荐 */
-        .ai-tips { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-        @media (max-width: 600px) { .ai-tips { grid-template-columns: 1fr; } }
-        .ai-tips .tip-card { background: var(--sub-bg); border-radius: 10px; padding: 12px 16px; border: 1px solid rgba(139,92,246,0.08); }
-        .ai-tips .tip-card .label { font-size: 11px; color: var(--text-dim); }
-        .ai-tips .tip-card .content { font-size: 14px; margin-top: 4px; }
-        .ai-tips .tip-card .content .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; margin: 2px 4px 2px 0; }
-        .ai-tips .tip-card .content .tag.win { background: rgba(34,197,94,0.12); color: var(--green); }
-        .ai-tips .tip-card .content .tag.draw { background: rgba(251,191,36,0.12); color: var(--yellow); }
-        .ai-tips .tip-card .content .tag.lose { background: rgba(239,68,68,0.12); color: var(--red); }
+        .tips-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .tips-section h4 {
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+        .tips-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .tag {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .tag.win { background: rgba(34, 197, 94, 0.15); color: var(--win); }
+        .tag.draw { background: rgba(251, 191, 36, 0.15); color: var(--draw); }
+        .tag.lose { background: rgba(239, 68, 68, 0.15); color: var(--lose); }
 
-        /* 页脚 */
-        .footer { text-align: center; padding: 16px 0; font-size: 11px; color: #4b5563; }
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .nav-links { gap: 10px; }
+            .nav-links a { padding: 6px 10px; font-size: 13px; }
+            th, td { padding: 8px 5px; font-size: 12px; }
+            .col-league, .col-date { display: none; }
+        }
     </style>
 </head>
 <body>
-    <!-- 导航 -->
+    <!-- 导航栏 -->
     <nav class="navbar">
         <div class="container">
-            <a href="/ix.html" class="logo">AI实验室<span> · </span>体彩好伙伴</a>
+            <div class="logo">逐浪AI实验室</div>
             <div class="nav-links">
                 <a href="/ix.html">竞彩</a>
                 <a href="/ct.html" class="active">传统足彩</a>
@@ -116,213 +187,174 @@
         </div>
     </nav>
 
-    <div class="container" style="padding-top:16px;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">
-                    ⚽ 传统足彩
-                    <span id="periodInfo">加载中...</span>
-                    <span class="badge" id="statusBadge">● 在售</span>
-                </div>
-                <div style="font-size:12px;color:var(--text-dim);" id="deadlineInfo"></div>
-            </div>
+    <div class="container">
+        <!-- 期号信息 -->
+        <div class="period-info">
+            <h2 id="periodInfo">加载中...</h2>
+            <span class="deadline" id="deadlineInfo">--</span>
+        </div>
 
-            <!-- Tab导航 -->
-            <div class="tab-nav" id="tabNav">
-                <button class="active" data-tab="sfc">胜负游戏<span class="sub">14场</span></button>
-                <button data-tab="rq9">任选9场<span class="sub">AI选9场</span></button>
-                <button data-tab="bqc">半全场<span class="sub">6场</span></button>
-                <button data-tab="jqc">进球彩<span class="sub">4场</span></button>
+        <!-- 胜负彩 -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>胜负彩 (14场)</h3>
+                <span class="badge">SFC</span>
             </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-idx">#</th>
+                        <th class="col-league">联赛</th>
+                        <th class="col-date">时间</th>
+                        <th class="col-team">主队</th>
+                        <th class="col-vs">vs</th>
+                        <th class="col-team">客队</th>
+                        <th>扣子</th>
+                        <th>豆包</th>
+                        <th>文心</th>
+                        <th>混元</th>
+                        <th>DS</th>
+                        <th>智谱</th>
+                        <th>MM</th>
+                    </tr>
+                </thead>
+                <tbody id="matchBody14"></tbody>
+            </table>
+        </div>
 
-            <!-- 胜负游戏 -->
-            <div class="tab-content active" id="tab-sfc">
-                <div class="table-wrap">
-                    <table class="lottery-table">
-                        <thead>
-                            <tr>
-                                <th class="col-idx">场次</th>
-                                <th class="col-league">联赛</th>
-                                <th class="col-date">开赛</th>
-                                <th class="col-team">主队</th>
-                                <th class="col-vs">比分</th>
-                                <th class="col-team">客队</th>
-                                <th class="ai-header kouzi">扣子</th>
-                                <th class="ai-header doubao">豆包</th>
-                                <th class="ai-header wenxin">文心</th>
-                                <th class="ai-header hunyuan">混元</th>
-                                <th class="ai-header deepseek">DeepSeek</th>
-                                <th class="ai-header zhipu">智谱</th>
-                                <th class="ai-header minimax">MiniMax</th>
-                            </tr>
-                        </thead>
-                        <tbody id="matchBody14"></tbody>
-                    </table>
-                </div>
-                <div class="ai-tips">
-                    <div class="tip-card">
-                        <div class="label">🔥 稳胆推荐（>80%一致）</div>
-                        <div class="content" id="stableTips14">加载中...</div>
-                    </div>
-                    <div class="tip-card">
-                        <div class="label">⚡ 博胆推荐（60%-80%）</div>
-                        <div class="content" id="boldTips14">加载中...</div>
-                    </div>
-                </div>
-            </div>
+        <!-- 胜负彩AI推荐 -->
+        <div class="tips-section">
+            <h4>稳胆推荐 (>80%)</h4>
+            <div class="tips-list" id="stableTips14"></div>
+        </div>
+        <div class="tips-section">
+            <h4>博胆推荐 (60-80%)</h4>
+            <div class="tips-list" id="boldTips14"></div>
+        </div>
 
-            <!-- 任选9场 -->
-            <div class="tab-content" id="tab-rq9">
-                <div style="font-size:12px;color:var(--yellow);margin-bottom:8px;">AI自动选7AI共识度最高的9场，未选中的比赛留空</div>
-                <div class="table-wrap">
-                    <table class="lottery-table">
-                        <thead>
-                            <tr>
-                                <th class="col-idx">场次</th>
-                                <th class="col-league">联赛</th>
-                                <th class="col-date">开赛</th>
-                                <th class="col-team">主队</th>
-                                <th class="col-vs">比分</th>
-                                <th class="col-team">客队</th>
-                                <th class="ai-header kouzi">扣子</th>
-                                <th class="ai-header doubao">豆包</th>
-                                <th class="ai-header wenxin">文心</th>
-                                <th class="ai-header hunyuan">混元</th>
-                                <th class="ai-header deepseek">DeepSeek</th>
-                                <th class="ai-header zhipu">智谱</th>
-                                <th class="ai-header minimax">MiniMax</th>
-                            </tr>
-                        </thead>
-                        <tbody id="matchBody9"></tbody>
-                    </table>
-                </div>
-                <div class="ai-tips" style="margin-top:12px;">
-                    <div class="tip-card">
-                        <div class="label">🔥 稳胆推荐（>80%一致）</div>
-                        <div class="content" id="stableTips9">加载中...</div>
-                    </div>
-                    <div class="tip-card">
-                        <div class="label">⚡ 博胆推荐（60%-80%）</div>
-                        <div class="content" id="boldTips9">加载中...</div>
-                    </div>
-                </div>
+        <!-- 任9 -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>任选9场</h3>
+                <span class="badge">R9</span>
             </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-idx">#</th>
+                        <th class="col-league">联赛</th>
+                        <th class="col-date">时间</th>
+                        <th class="col-team">主队</th>
+                        <th class="col-vs">vs</th>
+                        <th class="col-team">客队</th>
+                        <th>扣子</th>
+                        <th>豆包</th>
+                        <th>文心</th>
+                        <th>混元</th>
+                        <th>DS</th>
+                        <th>智谱</th>
+                        <th>MM</th>
+                    </tr>
+                </thead>
+                <tbody id="matchBody9"></tbody>
+            </table>
+        </div>
 
-            <!-- 半全场 -->
-            <div class="tab-content" id="tab-bqc">
-                <div style="font-size:12px;color:var(--yellow);margin-bottom:8px;">6场比赛，预测半场+全场结果（胜胜/平平/负负等）</div>
-                <div class="table-wrap">
-                    <table class="lottery-table">
-                        <thead>
-                            <tr>
-                                <th class="col-idx">场次</th>
-                                <th class="col-league">联赛</th>
-                                <th class="col-date">开赛</th>
-                                <th class="col-team">主队</th>
-                                <th class="col-vs">比分</th>
-                                <th class="col-team">客队</th>
-                                <th class="ai-header kouzi">扣子</th>
-                                <th class="ai-header doubao">豆包</th>
-                                <th class="ai-header wenxin">文心</th>
-                                <th class="ai-header hunyuan">混元</th>
-                                <th class="ai-header deepseek">DeepSeek</th>
-                                <th class="ai-header zhipu">智谱</th>
-                                <th class="ai-header minimax">MiniMax</th>
-                            </tr>
-                        </thead>
-                        <tbody id="matchBodyBqc"></tbody>
-                    </table>
-                </div>
-                <div class="ai-tips" style="margin-top:12px;">
-                    <div class="tip-card">
-                        <div class="label">🔥 稳胆推荐（>80%一致）</div>
-                        <div class="content" id="stableTipsBqc">加载中...</div>
-                    </div>
-                    <div class="tip-card">
-                        <div class="label">⚡ 博胆推荐（60%-80%）</div>
-                        <div class="content" id="boldTipsBqc">加载中...</div>
-                    </div>
-                </div>
-            </div>
+        <!-- 任9AI推荐 -->
+        <div class="tips-section">
+            <h4>稳胆推荐 (>80%)</h4>
+            <div class="tips-list" id="stableTips9"></div>
+        </div>
+        <div class="tips-section">
+            <h4>博胆推荐 (60-80%)</h4>
+            <div class="tips-list" id="boldTips9"></div>
+        </div>
 
-            <!-- 进球彩 -->
-            <div class="tab-content" id="tab-jqc">
-                <div style="font-size:12px;color:var(--yellow);margin-bottom:8px;">4场比赛，分别预测主队和客队进球数（格式：主X球:客X球）</div>
-                <div class="table-wrap">
-                    <table class="lottery-table">
-                        <thead>
-                            <tr>
-                                <th class="col-idx">场次</th>
-                                <th class="col-league">联赛</th>
-                                <th class="col-date">开赛</th>
-                                <th class="col-team">主队</th>
-                                <th class="col-vs">比分</th>
-                                <th class="col-team">客队</th>
-                                <th class="ai-header kouzi">扣子</th>
-                                <th class="ai-header doubao">豆包</th>
-                                <th class="ai-header wenxin">文心</th>
-                                <th class="ai-header hunyuan">混元</th>
-                                <th class="ai-header deepseek">DeepSeek</th>
-                                <th class="ai-header zhipu">智谱</th>
-                                <th class="ai-header minimax">MiniMax</th>
-                            </tr>
-                        </thead>
-                        <tbody id="matchBodyJqc"></tbody>
-                    </table>
-                </div>
-                <div class="ai-tips" style="margin-top:12px;">
-                    <div class="tip-card">
-                        <div class="label">🔥 稳胆推荐（>80%一致）</div>
-                        <div class="content" id="stableTipsJqc">加载中...</div>
-                    </div>
-                    <div class="tip-card">
-                        <div class="label">⚡ 博胆推荐（60%-80%）</div>
-                        <div class="content" id="boldTipsJqc">加载中...</div>
-                    </div>
-                </div>
+        <!-- 半全场 -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>半全场 (6场)</h3>
+                <span class="badge">HTF</span>
             </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-idx">#</th>
+                        <th class="col-league">联赛</th>
+                        <th class="col-date">时间</th>
+                        <th class="col-team">主队</th>
+                        <th class="col-vs">vs</th>
+                        <th class="col-team">客队</th>
+                        <th>扣子</th>
+                        <th>豆包</th>
+                        <th>文心</th>
+                        <th>混元</th>
+                        <th>DS</th>
+                        <th>智谱</th>
+                        <th>MM</th>
+                    </tr>
+                </thead>
+                <tbody id="matchBodyBqc"></tbody>
+            </table>
+        </div>
 
-            <!-- 玩法提示 -->
-            <div style="margin-top:12px;padding:10px 14px;background:var(--sub-bg);border-radius:10px;">
-                <div style="font-size:12px;color:var(--text-dim);line-height:1.8;" id="gameRules">
-                    📖 玩法提示<br>
-                    1. 14场比赛，每场至少选择一个结果（胜3/平1/负0）<br>
-                    2. 比赛结果以90分钟（含伤停补时，不含加时赛）为准<br>
-                    3. 全部猜中为一等奖，猜中13场为二等奖<br>
-                    4. AI预测仅供参考，请理性投注
-                </div>
+        <!-- 半全场AI推荐 -->
+        <div class="tips-section">
+            <h4>稳胆推荐 (>80%)</h4>
+            <div class="tips-list" id="stableTipsBqc"></div>
+        </div>
+        <div class="tips-section">
+            <h4>博胆推荐 (60-80%)</h4>
+            <div class="tips-list" id="boldTipsBqc"></div>
+        </div>
+
+        <!-- 进球彩 -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>进球彩 (4场)</h3>
+                <span class="badge">JQC</span>
             </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-idx">#</th>
+                        <th class="col-league">联赛</th>
+                        <th class="col-date">时间</th>
+                        <th class="col-team">主队</th>
+                        <th class="col-vs">vs</th>
+                        <th class="col-team">客队</th>
+                        <th>扣子</th>
+                        <th>豆包</th>
+                        <th>文心</th>
+                        <th>混元</th>
+                        <th>DS</th>
+                        <th>智谱</th>
+                        <th>MM</th>
+                    </tr>
+                </thead>
+                <tbody id="matchBodyJqc"></tbody>
+            </table>
+        </div>
+
+        <!-- 进球彩AI推荐 -->
+        <div class="tips-section">
+            <h4>稳胆推荐 (>80%)</h4>
+            <div class="tips-list" id="stableTipsJqc"></div>
+        </div>
+        <div class="tips-section">
+            <h4>博胆推荐 (60-80%)</h4>
+            <div class="tips-list" id="boldTipsJqc"></div>
         </div>
     </div>
 
-    <div class="footer">🧪 AI实验室 · 数据仅供研究参考 · 横向滑动查看完整表格</div>
-
     <script>
-    // ===== 玩法提示 =====
-    const GAME_RULES = {
-        sfc: '📖 玩法提示 · 胜负彩<br>1. 14场比赛，每场选一个结果（胜3/平1/负0）<br>2. 以90分钟（含补时，不含加时）为准<br>3. 全部猜中一等奖，猜中13场二等奖<br>4. AI预测仅供参考，请理性投注',
-        rq9: '📖 玩法提示 · 任选9场<br>1. 从14场中任选9场，每场选一个结果（胜3/平1/负0）<br>2. AI自动选共识度最高的9场<br>3. 全部猜中一等奖<br>4. AI预测仅供参考，请理性投注',
-        bqc: '📖 玩法提示 · 半全场<br>1. 6场比赛，预测半场+全场结果<br>2. 选项：胜胜/胜平/胜负/平胜/平平/平负/负胜/负平/负负<br>3. 全部猜中一等奖，猜中5场二等奖<br>4. AI预测仅供参考，请理性投注',
-        jqc: '📖 玩法提示 · 进球彩<br>1. 4场比赛，分别预测主队和客队的进球数<br>2. 每队选项：0球/1球/2球/3+球<br>3. 全部猜中一等奖，猜中3场二等奖<br>4. AI预测仅供参考，请理性投注'
-    };
-
-    // ===== Tab切换 =====
-    document.querySelectorAll('#tabNav button').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('#tabNav button').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.getElementById('tab-' + this.dataset.tab).classList.add('active');
-            const rules = document.getElementById('gameRules');
-            if (rules && GAME_RULES[this.dataset.tab]) {
-                rules.innerHTML = GAME_RULES[this.dataset.tab];
-            }
-        });
-    });
-
     // ===== 常量 =====
     const resultMap = { '3': { label:'胜', cls:'win' }, '1': { label:'平', cls:'draw' }, '0': { label:'负', cls:'lose' } };
     const AI_KEYS = ['kouzi', 'doubao', 'wenxin', 'hunyuan', 'deepseek', 'zhipu', 'minimax'];
+    const AI_NAME_MAP = {
+        '扣子': 'kouzi', '豆包': 'doubao', '文心': 'wenxin', '混元': 'hunyuan',
+        'DeepSeek': 'deepseek', '智谱清言': 'zhipu', 'MiniMax': 'minimax'
+    };
     const bqcResultMap = {
         '33': { label:'胜胜', cls:'win' }, '31': { label:'胜平', cls:'win' }, '30': { label:'胜负', cls:'lose' },
         '13': { label:'平胜', cls:'win' }, '11': { label:'平平', cls:'draw' }, '10': { label:'平负', cls:'lose' },
@@ -331,72 +363,173 @@
     const jqcGoalMap = { '0': '0球', '1': '1球', '2': '2球', '3': '3+球' };
     const jqcGoalColors = { '0': '#6b7280', '1': '#22c55e', '2': '#fbbf24', '3': '#ef4444' };
 
-    // ===== Mock数据(14场) =====
-    const mockMatches = [
-        { id:1, home:'法国', away:'西班牙', league:'世界杯', date:'07-15 03:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'1', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:2, home:'英格兰', away:'阿根廷', league:'世界杯', date:'07-16 03:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'1', hunyuan:'3', deepseek:'3', zhipu:'1', minimax:'3' }},
-        { id:3, home:'杰尔', away:'雷维京', league:'欧冠', date:'07-15 23:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:4, home:'新圣徒', away:'萨巴赫', league:'欧冠', date:'07-16 01:00', score:'vs',
-          picks: { kouzi:'0', doubao:'0', wenxin:'1', hunyuan:'0', deepseek:'0', zhipu:'0', minimax:'0' }},
-        { id:5, home:'比森特', away:'克拉克斯', league:'欧冠', date:'07-16 23:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'1', minimax:'3' }},
-        { id:6, home:'苏杰斯卡', away:'阿拉木图', league:'欧冠', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:'1', doubao:'3', wenxin:'1', hunyuan:'0', deepseek:'1', zhipu:'3', minimax:'1' }},
-        { id:7, home:'费伦茨', away:'伏伊伏丁', league:'欧罗巴', date:'07-17 02:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:8, home:'瓦勒伦', away:'奥勒松', league:'挪超', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'1', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:9, home:'博塔弗', away:'桑托斯', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'3', doubao:'1', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:10, home:'维多利亚', away:'达伽马', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'1', doubao:'3', wenxin:'1', hunyuan:'1', deepseek:'3', zhipu:'1', minimax:'1' }},
-        { id:11, home:'蒙特利尔', away:'多伦多', league:'美职', date:'07-17 07:30', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'1', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:12, home:'芝加哥', away:'温哥华', league:'美职', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'0', doubao:'0', wenxin:'1', hunyuan:'0', deepseek:'0', zhipu:'0', minimax:'0' }},
-        { id:13, home:'圣路易斯', away:'堪萨斯', league:'美职', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:14, home:'西雅图', away:'波特兰', league:'美职', date:'07-17 10:30', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'1', deepseek:'3', zhipu:'3', minimax:'3' }},
-    ];
+    // ===== 数据变量 =====
+    let sfcMatches = [];
+    let bqcMatches = [];
+    let jqcMatches = [];
+    let currentIssue = '';
+    let currentDeadline = '';
 
-    // ===== Mock数据(半全场6场) =====
-    const mockBqcMatches = [
-        { id:1, home:'法国', away:'西班牙', league:'世界杯', date:'07-15 03:00', score:'vs',
-          picks: { kouzi:'33', doubao:'33', wenxin:'31', hunyuan:'33', deepseek:'33', zhipu:'31', minimax:'33' }},
-        { id:2, home:'英格兰', away:'阿根廷', league:'世界杯', date:'07-16 03:00', score:'vs',
-          picks: { kouzi:'33', doubao:'13', wenxin:'33', hunyuan:'31', deepseek:'33', zhipu:'13', minimax:'33' }},
-        { id:3, home:'杰尔', away:'雷维京', league:'欧冠', date:'07-15 23:00', score:'vs',
-          picks: { kouzi:'33', doubao:'33', wenxin:'33', hunyuan:'33', deepseek:'33', zhipu:'33', minimax:'33' }},
-        { id:4, home:'新圣徒', away:'萨巴赫', league:'欧冠', date:'07-16 01:00', score:'vs',
-          picks: { kouzi:'00', doubao:'01', wenxin:'00', hunyuan:'10', deepseek:'00', zhipu:'01', minimax:'00' }},
-        { id:5, home:'比森特', away:'克拉克斯', league:'欧冠', date:'07-16 23:00', score:'vs',
-          picks: { kouzi:'33', doubao:'33', wenxin:'31', hunyuan:'33', deepseek:'13', zhipu:'33', minimax:'33' }},
-        { id:6, home:'苏杰斯卡', away:'阿拉木图', league:'欧冠', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:'11', doubao:'13', wenxin:'11', hunyuan:'01', deepseek:'13', zhipu:'11', minimax:'13' }},
-    ];
+    // ===== 从API获取预测数据 =====
+    async function loadPredictions() {
+        try {
+            const resp = await fetch('/api/traditional-lottery/predict');
+            const data = await resp.json();
+            
+            if (!data.success || !data.data) {
+                showNoData();
+                return;
+            }
 
-    // ===== Mock数据(进球彩4场) =====
-    const mockJqcMatches = [
-        { id:1, home:'费伦茨', away:'伏伊伏丁', league:'欧罗巴', date:'07-17 02:00', score:'vs',
-          picks: { kouzi:{h:'2',a:'1'}, doubao:{h:'2',a:'0'}, wenxin:{h:'3',a:'1'}, hunyuan:{h:'2',a:'1'}, deepseek:{h:'3',a:'2'}, zhipu:{h:'2',a:'1'}, minimax:{h:'3',a:'1'} }},
-        { id:2, home:'瓦勒伦', away:'奥勒松', league:'挪超', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:{h:'2',a:'1'}, doubao:{h:'1',a:'1'}, wenxin:{h:'2',a:'2'}, hunyuan:{h:'2',a:'1'}, deepseek:{h:'3',a:'1'}, zhipu:{h:'1',a:'1'}, minimax:{h:'2',a:'2'} }},
-        { id:3, home:'博塔弗', away:'桑托斯', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:{h:'1',a:'0'}, doubao:{h:'2',a:'1'}, wenxin:{h:'1',a:'1'}, hunyuan:{h:'1',a:'0'}, deepseek:{h:'2',a:'1'}, zhipu:{h:'1',a:'0'}, minimax:{h:'1',a:'1'} }},
-        { id:4, home:'维多利亚', away:'达伽马', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:{h:'1',a:'0'}, doubao:{h:'0',a:'1'}, wenxin:{h:'1',a:'1'}, hunyuan:{h:'1',a:'0'}, deepseek:{h:'0',a:'0'}, zhipu:{h:'1',a:'1'}, minimax:{h:'1',a:'0'} }},
-    ];
+            currentIssue = data.issue || '';
+            currentDeadline = data.deadline || '';
+
+            // 转换数据
+            sfcMatches = transformSfcData(data.data.sfc || []);
+            bqcMatches = transformBqcData(data.data.htf || []);
+            jqcMatches = transformJqcData(data.data.jqc || []);
+
+            if (sfcMatches.length === 0 && bqcMatches.length === 0 && jqcMatches.length === 0) {
+                showNoData();
+                return;
+            }
+
+            // 更新期号信息
+            if (currentIssue) {
+                document.getElementById('periodInfo').textContent = currentIssue + '期';
+            }
+            if (currentDeadline) {
+                const deadline = new Date(currentDeadline);
+                const timeStr = deadline.toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+                document.getElementById('deadlineInfo').textContent = '截止 ' + timeStr;
+            }
+
+            // 渲染数据
+            renderSfc();
+            renderRq9();
+            renderBqc();
+            renderJqc();
+        } catch (err) {
+            console.error('加载预测数据失败:', err);
+            showNoData();
+        }
+    }
+
+    // ===== 显示无数据提示 =====
+    function showNoData() {
+        document.getElementById('periodInfo').textContent = '暂无预测数据';
+        document.getElementById('deadlineInfo').textContent = '--';
+        const noDataHtml = '<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-dim)">暂无预测数据</td></tr>';
+        ['matchBody14', 'matchBody9', 'matchBodyBqc', 'matchBodyJqc'].forEach(id => {
+            const tbody = document.getElementById(id);
+            if (tbody) tbody.innerHTML = noDataHtml;
+        });
+        ['stableTips14', 'boldTips14', 'stableTips9', 'boldTips9', 'stableTipsBqc', 'boldTipsBqc', 'stableTipsJqc', 'boldTipsJqc'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '暂无';
+        });
+    }
+
+    // ===== 转换胜负彩API数据 =====
+    function transformSfcData(apiData) {
+        if (!apiData || apiData.length === 0) return [];
+        const matchMap = {};
+        apiData.forEach(item => {
+            const matchId = item.match_id;
+            if (!matchMap[matchId]) {
+                matchMap[matchId] = {
+                    id: parseInt(matchId.replace('match_', '')) || Object.keys(matchMap).length + 1,
+                    home: item.home_team,
+                    away: item.away_team,
+                    league: item.league || '未知',
+                    date: formatMatchTime(item.match_time),
+                    score: 'vs',
+                    picks: {}
+                };
+            }
+            const aiKey = AI_NAME_MAP[item.ai_name];
+            if (aiKey) {
+                matchMap[matchId].picks[aiKey] = item.prediction;
+            }
+        });
+        return Object.values(matchMap).sort((a, b) => a.id - b.id);
+    }
+
+    // ===== 转换半全场API数据 =====
+    function transformBqcData(apiData) {
+        if (!apiData || apiData.length === 0) return [];
+        const matchMap = {};
+        apiData.forEach(item => {
+            const matchId = item.match_id;
+            if (!matchMap[matchId]) {
+                matchMap[matchId] = {
+                    id: parseInt(matchId.replace('match_', '')) || Object.keys(matchMap).length + 1,
+                    home: item.home_team,
+                    away: item.away_team,
+                    league: item.league || '未知',
+                    date: formatMatchTime(item.match_time),
+                    score: 'vs',
+                    picks: {}
+                };
+            }
+            const aiKey = AI_NAME_MAP[item.ai_name];
+            if (aiKey) {
+                matchMap[matchId].picks[aiKey] = item.prediction;
+            }
+        });
+        return Object.values(matchMap).sort((a, b) => a.id - b.id);
+    }
+
+    // ===== 转换进球彩API数据 =====
+    function transformJqcData(apiData) {
+        if (!apiData || apiData.length === 0) return [];
+        const matchMap = {};
+        apiData.forEach(item => {
+            const matchId = item.match_id;
+            if (!matchMap[matchId]) {
+                matchMap[matchId] = {
+                    id: parseInt(matchId.replace('match_', '')) || Object.keys(matchMap).length + 1,
+                    home: item.home_team,
+                    away: item.away_team,
+                    league: item.league || '未知',
+                    date: formatMatchTime(item.match_time),
+                    score: 'vs',
+                    picks: {}
+                };
+            }
+            const aiKey = AI_NAME_MAP[item.ai_name];
+            if (aiKey) {
+                const goals = (item.prediction || '1:1').split(':');
+                matchMap[matchId].picks[aiKey] = {
+                    h: goals[0] || '1',
+                    a: goals[1] || '1'
+                };
+            }
+        });
+        return Object.values(matchMap).sort((a, b) => a.id - b.id);
+    }
+
+    // ===== 格式化比赛时间 =====
+    function formatMatchTime(timeStr) {
+        if (!timeStr) return '';
+        const date = new Date(timeStr);
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const mins = String(date.getMinutes()).padStart(2, '0');
+        return month + '-' + day + ' ' + hours + ':' + mins;
+    }
 
     // ===== 渲染胜负彩 =====
     function renderSfc() {
         const tbody = document.getElementById('matchBody14');
         if (!tbody) return;
+        if (sfcMatches.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-dim)">暂无预测数据</td></tr>';
+            return;
+        }
         let html = '';
-        mockMatches.forEach(m => {
+        sfcMatches.forEach(m => {
             const isPending = m.score === 'vs';
             html += '<tr>';
             html += '<td class="col-idx">' + m.id + '</td>';
@@ -406,8 +539,8 @@
             html += '<td class="col-vs" style="color:' + (isPending ? 'var(--text-dim)' : 'var(--text)') + '">' + (isPending ? 'vs' : m.score) + '</td>';
             html += '<td class="col-team">' + m.away + '</td>';
             AI_KEYS.forEach(key => {
-                const pick = m.picks[key];
-                const r = resultMap[pick];
+                const pick = m.picks[key] || '-';
+                const r = resultMap[pick] || { cls: 'draw' };
                 html += '<td class="ai-cell ' + r.cls + '">' + pick + '</td>';
             });
             html += '</tr>';
@@ -419,13 +552,14 @@
     // ===== 胜负彩AI推荐 =====
     function updateSfcTips() {
         const stable = [], bold = [];
-        mockMatches.forEach(m => {
-            const picks = Object.values(m.picks);
+        sfcMatches.forEach(m => {
+            const picks = Object.values(m.picks).filter(p => p && p !== '-');
+            if (picks.length === 0) return;
             const winC = picks.filter(p => p === '3').length;
             const drawC = picks.filter(p => p === '1').length;
             const loseC = picks.filter(p => p === '0').length;
             const maxC = Math.max(winC, drawC, loseC);
-            const pct = Math.round(maxC / 7 * 100);
+            const pct = Math.round(maxC / picks.length * 100);
             const pick = winC >= drawC && winC >= loseC ? '3' : drawC >= loseC ? '1' : '0';
             const r = resultMap[pick];
             const tag = '<span class="tag ' + r.cls + '">' + m.id + '.' + m.home + ' ' + r.label + ' ' + pct + '%</span>';
@@ -438,19 +572,24 @@
 
     // ===== 渲染任9 =====
     function renderRq9() {
-        const scored = mockMatches.map(m => {
-            const picks = Object.values(m.picks);
+        const scored = sfcMatches.map(m => {
+            const picks = Object.values(m.picks).filter(p => p && p !== '-');
+            if (picks.length === 0) return { ...m, consensus: 0 };
             const winC = picks.filter(p => p === '3').length;
             const drawC = picks.filter(p => p === '1').length;
             const loseC = picks.filter(p => p === '0').length;
-            return { ...m, consensus: Math.round(Math.max(winC, drawC, loseC) / 7 * 100) };
+            return { ...m, consensus: Math.round(Math.max(winC, drawC, loseC) / picks.length * 100) };
         }).sort((a, b) => b.consensus - a.consensus);
         const selectedIds = new Set(scored.slice(0, 9).map(m => m.id));
 
         const tbody = document.getElementById('matchBody9');
         if (!tbody) return;
+        if (sfcMatches.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-dim)">暂无预测数据</td></tr>';
+            return;
+        }
         let html = '';
-        mockMatches.forEach(m => {
+        sfcMatches.forEach(m => {
             const selected = selectedIds.has(m.id);
             const isPending = m.score === 'vs';
             html += '<tr' + (selected ? '' : ' class="row-excluded"') + '>';
@@ -462,8 +601,9 @@
             html += '<td class="col-team">' + m.away + '</td>';
             if (selected) {
                 AI_KEYS.forEach(key => {
-                    const r = resultMap[m.picks[key]];
-                    html += '<td class="ai-cell ' + r.cls + '">' + m.picks[key] + '</td>';
+                    const pick = m.picks[key] || '-';
+                    const r = resultMap[pick] || { cls: 'draw' };
+                    html += '<td class="ai-cell ' + r.cls + '">' + pick + '</td>';
                 });
             } else {
                 AI_KEYS.forEach(() => { html += '<td class="ai-cell" style="color:#333;">-</td>'; });
@@ -475,7 +615,8 @@
         // AI推荐(只算选中的9场)
         const stable = [], bold = [];
         scored.slice(0, 9).forEach(m => {
-            const picks = Object.values(m.picks);
+            const picks = Object.values(m.picks).filter(p => p && p !== '-');
+            if (picks.length === 0) return;
             const winC = picks.filter(p => p === '3').length;
             const drawC = picks.filter(p => p === '1').length;
             const loseC = picks.filter(p => p === '0').length;
@@ -495,8 +636,12 @@
     function renderBqc() {
         const tbody = document.getElementById('matchBodyBqc');
         if (!tbody) return;
+        if (bqcMatches.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-dim)">暂无预测数据</td></tr>';
+            return;
+        }
         let html = '';
-        mockBqcMatches.forEach(m => {
+        bqcMatches.forEach(m => {
             const isPending = m.score === 'vs';
             html += '<tr>';
             html += '<td class="col-idx">' + m.id + '</td>';
@@ -506,8 +651,8 @@
             html += '<td class="col-vs" style="color:' + (isPending ? 'var(--text-dim)' : 'var(--text)') + '">' + (isPending ? 'vs' : m.score) + '</td>';
             html += '<td class="col-team">' + m.away + '</td>';
             AI_KEYS.forEach(key => {
-                const pick = m.picks[key];
-                const r = bqcResultMap[pick];
+                const pick = m.picks[key] || '-';
+                const r = bqcResultMap[pick] || { cls: 'draw', label: pick };
                 const half = pick.charAt(0);
                 const color = half === '3' ? '#22c55e' : half === '1' ? '#fbbf24' : '#ef4444';
                 html += '<td class="ai-cell" style="color:' + color + '">' + r.label + '</td>';
@@ -517,13 +662,14 @@
         tbody.innerHTML = html;
 
         const stable = [], bold = [];
-        mockBqcMatches.forEach(m => {
-            const picks = Object.values(m.picks);
+        bqcMatches.forEach(m => {
+            const picks = Object.values(m.picks).filter(p => p && p !== '-');
+            if (picks.length === 0) return;
             const counts = {};
             picks.forEach(p => counts[p] = (counts[p] || 0) + 1);
             const topPick = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-            const pct = Math.round(topPick[1] / 7 * 100);
-            const r = bqcResultMap[topPick[0]];
+            const pct = Math.round(topPick[1] / picks.length * 100);
+            const r = bqcResultMap[topPick[0]] || { label: topPick[0], cls: 'draw' };
             const tag = '<span class="tag ' + r.cls + '">' + m.id + '.' + m.home + ' ' + r.label + ' ' + pct + '%</span>';
             if (pct > 80) stable.push(tag);
             else if (pct >= 60) bold.push(tag);
@@ -536,8 +682,12 @@
     function renderJqc() {
         const tbody = document.getElementById('matchBodyJqc');
         if (!tbody) return;
+        if (jqcMatches.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-dim)">暂无预测数据</td></tr>';
+            return;
+        }
         let html = '';
-        mockJqcMatches.forEach(m => {
+        jqcMatches.forEach(m => {
             const isPending = m.score === 'vs';
             html += '<tr>';
             html += '<td class="col-idx">' + m.id + '</td>';
@@ -547,9 +697,9 @@
             html += '<td class="col-vs" style="color:' + (isPending ? 'var(--text-dim)' : 'var(--text)') + '">' + (isPending ? 'vs' : m.score) + '</td>';
             html += '<td class="col-team">' + m.away + '</td>';
             AI_KEYS.forEach(key => {
-                const pick = m.picks[key];
-                const hColor = jqcGoalColors[pick.h];
-                const aColor = jqcGoalColors[pick.a];
+                const pick = m.picks[key] || { h: '1', a: '1' };
+                const hColor = jqcGoalColors[pick.h] || '#6b7280';
+                const aColor = jqcGoalColors[pick.a] || '#6b7280';
                 html += '<td class="ai-cell" style="font-size:12px;"><span style="color:' + hColor + '">' + jqcGoalMap[pick.h] + '</span><span style="color:#4b5563">:</span><span style="color:' + aColor + '">' + jqcGoalMap[pick.a] + '</span></td>';
             });
             html += '</tr>';
@@ -557,11 +707,17 @@
         tbody.innerHTML = html;
 
         const stable = [], bold = [];
-        mockJqcMatches.forEach(m => {
+        jqcMatches.forEach(m => {
             const hCounts = {};
-            AI_KEYS.forEach(k => { const v = m.picks[k].h; hCounts[v] = (hCounts[v] || 0) + 1; });
-            const topH = Object.entries(hCounts).sort((a, b) => b[1] - a[1])[0];
-            const pct = Math.round(topH[1] / 7 * 100);
+            AI_KEYS.forEach(k => { 
+                const v = m.picks[k]?.h;
+                if (v) hCounts[v] = (hCounts[v] || 0) + 1;
+            });
+            const entries = Object.entries(hCounts);
+            if (entries.length === 0) return;
+            const topH = entries.sort((a, b) => b[1] - a[1])[0];
+            const totalPicks = Object.values(m.picks).filter(p => p && p.h).length;
+            const pct = Math.round(topH[1] / totalPicks * 100);
             const tag = '<span class="tag">' + m.id + '.' + m.home + ' 主' + jqcGoalMap[topH[0]] + ' ' + pct + '%</span>';
             if (pct > 80) stable.push(tag);
             else if (pct >= 60) bold.push(tag);
@@ -572,12 +728,7 @@
 
     // ===== 初始化 =====
     document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('periodInfo').textContent = '26092期';
-        document.getElementById('deadlineInfo').textContent = '截止 07-14 22:00';
-        renderSfc();
-        renderRq9();
-        renderBqc();
-        renderJqc();
+        loadPredictions();
     });
     </script>
 </body>
