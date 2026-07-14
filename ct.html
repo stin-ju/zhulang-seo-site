@@ -619,14 +619,22 @@
 
         // AI推荐(只算选中的9场)
         const stable = [], bold = [];
-        scored.slice(0, 9).forEach(m => {
-            const picks = Object.values(m.picks).filter(p => p && p !== '-');
-            if (picks.length === 0) return;
-            const winC = picks.filter(p => p === '3').length;
-            const drawC = picks.filter(p => p === '1').length;
-            const loseC = picks.filter(p => p === '0').length;
+        sfcMatches.forEach(m => {
+            // 只统计被至少一个AI选中的比赛
+            const selectedPicks = [];
+            AI_KEYS.forEach(key => {
+                const aiRen9 = m.aiRen9 && m.aiRen9[key] ? m.aiRen9[key] : [];
+                if (aiRen9.includes(String(m.id))) {
+                    const pick = m.picks[key];
+                    if (pick && pick !== '-') selectedPicks.push(pick);
+                }
+            });
+            if (selectedPicks.length === 0) return;
+            const winC = selectedPicks.filter(p => p === '3').length;
+            const drawC = selectedPicks.filter(p => p === '1').length;
+            const loseC = selectedPicks.filter(p => p === '0').length;
             const maxC = Math.max(winC, drawC, loseC);
-            const pct = m.consensus;
+            const pct = Math.round(maxC / selectedPicks.length * 100);
             const pick = winC >= drawC && winC >= loseC ? '3' : drawC >= loseC ? '1' : '0';
             const r = resultMap[pick];
             const tag = '<span class="tag ' + r.cls + '">' + m.id + '.' + m.home + ' ' + r.label + ' ' + pct + '%</span>';
