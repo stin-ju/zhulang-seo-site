@@ -434,6 +434,8 @@
     function transformSfcData(apiData) {
         if (!apiData || apiData.length === 0) return [];
         const matchMap = {};
+        // 存储每个AI的任9选择
+        const aiRen9Map = {};
         apiData.forEach(item => {
             const matchId = item.match_id;
             if (!matchMap[matchId]) {
@@ -450,7 +452,15 @@
             const aiKey = AI_NAME_MAP[item.ai_name];
             if (aiKey) {
                 matchMap[matchId].picks[aiKey] = item.prediction;
+                // 存储该AI的任9选择
+                if (item.ren9 && Array.isArray(item.ren9)) {
+                    aiRen9Map[aiKey] = item.ren9.map(String);
+                }
             }
+        });
+        // 将任9信息附加到每个比赛
+        Object.values(matchMap).forEach(match => {
+            match.aiRen9 = aiRen9Map;
         });
         return Object.values(matchMap).sort((a, b) => a.id - b.id);
     }
@@ -572,16 +582,6 @@
 
     // ===== 渲染任9 =====
     function renderRq9() {
-        const scored = sfcMatches.map(m => {
-            const picks = Object.values(m.picks).filter(p => p && p !== '-');
-            if (picks.length === 0) return { ...m, consensus: 0 };
-            const winC = picks.filter(p => p === '3').length;
-            const drawC = picks.filter(p => p === '1').length;
-            const loseC = picks.filter(p => p === '0').length;
-            return { ...m, consensus: Math.round(Math.max(winC, drawC, loseC) / picks.length * 100) };
-        }).sort((a, b) => b.consensus - a.consensus);
-        const selectedIds = new Set(scored.slice(0, 9).map(m => m.id));
-
         const tbody = document.getElementById('matchBody9');
         if (!tbody) return;
         if (sfcMatches.length === 0) {
@@ -590,24 +590,29 @@
         }
         let html = '';
         sfcMatches.forEach(m => {
-            const selected = selectedIds.has(m.id);
             const isPending = m.score === 'vs';
-            html += '<tr' + (selected ? '' : ' class="row-excluded"') + '>';
+            html += '<tr>';
             html += '<td class="col-idx">' + m.id + '</td>';
             html += '<td class="col-league">' + m.league + '</td>';
             html += '<td class="col-date">' + m.date + '</td>';
             html += '<td class="col-team">' + m.home + '</td>';
             html += '<td class="col-vs" style="color:' + (isPending ? 'var(--text-dim)' : 'var(--text)') + '">' + (isPending ? 'vs' : m.score) + '</td>';
             html += '<td class="col-team">' + m.away + '</td>';
-            if (selected) {
-                AI_KEYS.forEach(key => {
+            // 每个AI独立显示它选的9场预测
+            AI_KEYS.forEach(key => {
+                const aiRen9 = m.aiRen9 && m.aiRen9[key] ? m.aiRen9[key] : [];
+                const matchNum = String(m.id);
+                const inRen9 = aiRen9.includes(matchNum);
+                if (inRen9) {
+                    // 该AI选择了这场比赛，显示预测
                     const pick = m.picks[key] || '-';
                     const r = resultMap[pick] || { cls: 'draw' };
                     html += '<td class="ai-cell ' + r.cls + '">' + pick + '</td>';
-                });
-            } else {
-                AI_KEYS.forEach(() => { html += '<td class="ai-cell" style="color:#333;">-</td>'; });
-            }
+                } else {
+                    // 该AI没有选择这场比赛，显示"-"
+                    html += '<td class="ai-cell" style="color:#555;">-</td>';
+                }
+            });
             html += '</tr>';
         });
         tbody.innerHTML = html;

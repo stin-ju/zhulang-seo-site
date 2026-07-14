@@ -115,7 +115,7 @@ PROMPT_TEMPLATE = """你是一位资深足球赛事分析师。请严格按以�
 - 当历史统计与赔率隐含概率一致时，按赔率方向判断
 - 当历史统计明显偏离赔率时（如历史主胜65%但赔率暗示45%），优先参考历史数据
 - 强队客场让球浅（0.5以下）时，警惕冷门
-- 任9选择历史概率最稳定（方差最小）的9场
+- **任9选择**：从所有比赛中，独立选出你认为最有把握、最稳定的9场比赛（不是共识，是你自己的判断）
 
 ## 编码规则
 
@@ -145,7 +145,14 @@ PROMPT_TEMPLATE = """你是一位资深足球赛事分析师。请严格按以�
 }}
 ```
 
-predictions数组必须包含所有{match_count}场比赛。spf/handicap只选一个值(3/1/0)。bf为精确比分。zjq为总进球数(0/1/2/3)。bqc为半全场编码。ren9选择最有把握的9场。confidence为整体信心度(高/中/低)。"""
+**重要说明**：
+- predictions数组必须包含所有{match_count}场比赛的预测
+- spf/handicap只选一个值(3/1/0)
+- bf为精确比分（如2:1）
+- zjq为总进球数(0/1/2/3)
+- bqc为半全场编码（如33=胜胜）
+- **ren9：你必须独立选出你认为最有把握的9场比赛编号**（从1到{match_count}中选9个，代表你最看好的9场）
+- confidence为整体信心度(高/中/低)"""
 
 # ============ 体彩API数据获取 ============
 
@@ -506,7 +513,7 @@ def get_predictions(game_type):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT ai_name, predictions, matches_info
+                SELECT ai_name, predictions, matches_info, ren9
                 FROM traditional_predictions
                 WHERE game_type = %s
                 ORDER BY created_at DESC
@@ -528,12 +535,17 @@ def get_predictions(game_type):
                 for row in rows:
                     ai_name = row[0]
                     predictions = row[1] if isinstance(row[1], list) else json.loads(row[1]) if row[1] else []
+                    ren9 = row[3] if isinstance(row[3], list) else json.loads(row[3]) if row[3] else []
                     pred_obj = predictions[idx] if idx < len(predictions) else {}
 
                     if isinstance(pred_obj, dict):
                         prediction = pred_obj.get(field_key, "")
                     else:
                         prediction = str(pred_obj)
+
+                    # 检查该比赛是否在该AI的任9选择中
+                    match_num = str(idx + 1)
+                    in_ren9 = match_num in [str(x) for x in ren9]
 
                     results.append({
                         "match_id": match.get("id", f"match_{idx+1}"),
@@ -544,6 +556,8 @@ def get_predictions(game_type):
                         "ai_name": ai_name,
                         "prediction": prediction,
                         "issue": match.get("issue", ""),
+                        "in_ren9": in_ren9,  # 是否在该AI的任9选择中
+                        "ren9": ren9,  # 该AI选择的9场编号
                     })
             return results
     except Exception as e:
