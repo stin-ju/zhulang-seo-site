@@ -38,6 +38,16 @@ AI_CONFIGS = {
         "key_env": "DOUBAO_API_KEY",
         "model": "doubao-seed-2-0-lite-260428",
         "format": "openai",
+        "fallback_models": [
+            "doubao-seed-2-0-mini-260414",
+            "doubao-seed-2-0-pro-251215",
+            "doubao-seed-2-0-251215",
+            "doubao-seed-2-0-turbo-251115",
+            "doubao-1-5-pro-256k-250115",
+            "doubao-1-5-pro-32k-250115",
+            "doubao-1-5-lite-32k-250115",
+            "doubao-seed-2-0-code-260325",
+        ],
     },
     "AI-智谱清言": {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
@@ -323,7 +333,7 @@ def parse_ai_response(text, sport="football"):
 
 
 def call_ai(ai_name, prompt, sport="football"):
-    """调用指定AI生成预测"""
+    """调用指定AI生成预测，支持豆包fallback模型切换"""
     config = AI_CONFIGS.get(ai_name)
     if not config:
         raise Exception(f"未知AI: {ai_name}")
@@ -338,14 +348,49 @@ def call_ai(ai_name, prompt, sport="football"):
     if not key:
         raise Exception(f"{ai_name} 的API Key未配置 ({config['key_env']})")
     
-    if fmt == "openai":
-        raw = call_openai_compatible(config["url"], key, config["model"], prompt)
-    elif fmt == "minimax":
-        raw = call_minimax(config["url"], key, config["model"], prompt)
-    elif fmt == "wenxin":
-        raw = call_wenxin(config["url"], key, config["model"], prompt)
-    else:
-        raise Exception(f"未知格式: {fmt}")
+    # 限流相关错误关键词
+    rate_limit_keywords = [
+        "Arrearage", "Overdue", "quota", "QuotaExceeded", "insufficient",
+        "SetLimitExceeded", "LimitExceeded", "ServerOverloaded", 
+        "RequestBurstTooFast", "RateLimitExceeded", "TooManyRequests", "429"
+    ]
+    
+    # 构建模型列表（主模型 + fallback模型）
+    models_to_try = [config["model"]]
+    if config.get("fallback_models"):
+        models_to_try.extend(config["fallback_models"])
+    
+    last_error = None
+    for i, model in enumerate(models_to_try):
+        try:
+            if fmt == "openai":
+                raw = call_openai_compatible(config["url"], key, model, prompt)
+            elif fmt == "minimax":
+                raw = call_minimax(config["url"], key, model, prompt)
+            elif fmt == "wenxin":
+                raw = call_wenxin(config["url"], key, model, prompt)
+            else:
+                raise Exception(f"未知格式: {fmt}")
+            
+            if i > 0:
+                print(f"  [fallback] 豆包切换到模型: {model}")
+            return parse_ai_response(raw, sport)
+            
+        except Exception as e:
+            error_str = str(e)
+            # 检查是否是限流错误
+            is_rate_limit = any(kw in error_str for kw in rate_limit_keywords)
+            
+            if is_rate_limit and i < len(models_to_try) - 1:
+                print(f"  [fallback] 模型 {model} 被限流，尝试下一个...")
+                last_error = e
+                continue
+            else:
+                # 非限流错误或已是最后一个模型，直接抛出
+                raise e
+    
+    if last_error:
+        raise last_error
     
     return parse_ai_response(raw, sport)
 
