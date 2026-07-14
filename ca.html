@@ -15,6 +15,10 @@
         .topbar .logo { font-size:18px; font-weight:700; }
         .topbar .logo span { color:#facc15; }
         .topbar .sub { font-size:12px; opacity:0.8; }
+        .nav-links { display:flex; gap:4px; }
+        .nav-links a { color:#fff; text-decoration:none; padding:6px 12px; border-radius:6px; font-size:13px; font-weight:500; transition:all 0.2s; }
+        .nav-links a:hover { background:rgba(255,255,255,0.15); }
+        .nav-links a.active { background:#facc15; color:#1a3c6e; }
         .app { max-width: 1280px; margin: 0 auto; padding: 12px 16px; padding-bottom: 280px; }
         .left-col { width: 100%; }
         /* 底部浮动选单 - 深色单行布局 */
@@ -319,9 +323,11 @@
 <body>
     <header class="topbar">
         <div class="logo">⚽ 竞彩<span>计算器</span></div>
-        <div style="display:flex;align-items:center;gap:12px;">
-            <span class="sub">AI实验室 · 体彩好伙伴</span>
-            <a href="/" style="text-decoration:none;color:#fff;background:rgba(255,255,255,0.1);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:all 0.2s;">🏠 首页</a>
+        <div class="nav-links">
+            <a href="/ix.html">竞彩</a>
+            <a href="/ct.html">传统足彩</a>
+            <a href="/ai-hub.html">AI分析</a>
+            <a href="/ca.html" class="active">计算器</a>
         </div>
     </header>
     <div class="app">
@@ -429,5 +435,5 @@
             </div>
         </div>
     </div>
-    <script type="module" src="./calculator.202607140925.js"></script>
+    <script type="module" src="./calculator.202607141222.js"></script>
 </html>
