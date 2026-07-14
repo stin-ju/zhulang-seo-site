@@ -1062,8 +1062,12 @@ const server = http.createServer(async (req, res) => {
         }
       }
       
+      // 提取期号和截止时间
+      const firstRecord = responseData.sfc[0] || responseData.htf[0] || responseData.jqc[0];
+      const issue = firstRecord?.issue || '';
+      
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, data: responseData }));
+      res.end(JSON.stringify({ success: true, data: responseData, issue: issue }));
       return;
     }
 
