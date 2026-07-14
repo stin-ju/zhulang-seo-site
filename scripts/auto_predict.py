@@ -38,10 +38,16 @@ AI_CONFIGS = {
         "key_env": "DOUBAO_API_KEY",
         "model": "doubao-seed-2-0-lite-260428",
         "format": "openai",
-        # 注意：豆包API需要使用控制台创建的接入点ID（endpoint ID）
-        # 如主模型被限流，需要在豆包控制台创建其他接入点后添加到此处
-        # 例如: "ep-xxxxxxxx-xxxxx"
-        "fallback_models": [],
+        "fallback_models": [
+            "doubao-seed-2-0-mini-260428",
+            "doubao-seed-2-0-lite-260215",
+            "doubao-seed-2-0-mini-260215",
+            "doubao-seed-2-1-turbo-260628",
+            "doubao-seed-2-1-pro-260628",
+            "doubao-seed-2-0-pro-260215",
+            "doubao-seed-evolving",
+            "doubao-seed-1-8-251228",
+        ],
     },
     "AI-智谱清言": {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
