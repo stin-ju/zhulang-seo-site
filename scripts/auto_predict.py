@@ -36,17 +36,12 @@ AI_CONFIGS = {
     "AI-豆包": {
         "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         "key_env": "DOUBAO_API_KEY",
-        "model": "doubao-seed-2-0-lite-260428",
+        "model": "doubao-seed-2-0-mini-260428",
         "format": "openai",
         "fallback_models": [
-            "doubao-seed-2-0-mini-260428",
-            "doubao-seed-2-0-lite-260215",
-            "doubao-seed-2-0-mini-260215",
             "doubao-seed-2-1-turbo-260628",
-            "doubao-seed-2-1-pro-260628",
+            "doubao-seed-2-0-mini-260215",
             "doubao-seed-2-0-pro-260215",
-            "doubao-seed-evolving",
-            "doubao-seed-1-8-251228",
         ],
     },
     "AI-智谱清言": {
