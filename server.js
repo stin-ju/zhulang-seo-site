@@ -993,6 +993,82 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // POST /api/traditional-lottery/predict - 传统彩AI预测
+    if (pathname === '/api/traditional-lottery/predict' && req.method === 'POST') {
+      const body = await readBody(req);
+      let lotteryType = 'sf'; // 默认胜负彩
+      
+      try {
+        const data = JSON.parse(body || '{}');
+        lotteryType = data.type || 'sf';
+      } catch (e) {}
+      
+      console.log(`[TraditionalLottery] 触发预测: type=${lotteryType}`);
+      
+      // 调用 Python 脚本生成预测
+      const { execFile } = require('child_process');
+      const scriptPath = path.join(process.cwd(), 'scripts', 'traditional_lottery_predict.py');
+      
+      execFile('python3', [scriptPath, '--type', lotteryType, '--output', 'json'], {
+        cwd: path.join(process.cwd(), 'scripts'),
+        env: { ...process.env, PYTHONUNBUFFERED: '1' },
+        maxBuffer: 10 * 1024 * 1024
+      }, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`[TraditionalLottery] 预测失败:`, error.message);
+          if (stderr) console.error(`[TraditionalLottery] stderr:`, stderr);
+          return;
+        }
+        console.log(`[TraditionalLottery] 预测成功`);
+      });
+      
+      // 同步执行获取结果
+      const { execSync } = require('child_process');
+      try {
+        const result = execSync(`python3 ${scriptPath} --type ${lotteryType} --output json`, {
+          cwd: path.join(process.cwd(), 'scripts'),
+          env: { ...process.env, PYTHONUNBUFFERED: '1' },
+          timeout: 120000,
+          maxBuffer: 10 * 1024 * 1024
+        });
+        const predictions = JSON.parse(result.toString());
+        
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ 
+          success: true, 
+          type: lotteryType,
+          predictions: predictions
+        }));
+      } catch (e) {
+        console.error(`[TraditionalLottery] 执行失败:`, e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: false, error: e.message }));
+      }
+      return;
+    }
+
+    // GET /api/traditional-lottery/latest - 获取最新传统彩预测
+    if (pathname === '/api/traditional-lottery/latest' && req.method === 'GET') {
+      const urlObj = new URL(req.url, `http://${req.headers.host}`);
+      const lotteryType = urlObj.searchParams.get('type') || 'sf';
+      
+      // 从 predictions 表查询最新预测
+      const predictions = await querySupabase('predictions', {
+        select: '*',
+        filter: `match_id=like.TL-${lotteryType}-%`,
+        order: 'created_at.desc',
+        limit: 100
+      });
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ 
+        success: true, 
+        type: lotteryType,
+        predictions: predictions || []
+      }));
+      return;
+    }
+
     // GET /api/parlay-latest - Latest date's chain_bets
     if (pathname === '/api/parlay-latest' && req.method === 'GET') {
       const chainBets = await querySupabase('chain_bets', {

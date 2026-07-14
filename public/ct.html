@@ -331,72 +331,169 @@
     const jqcGoalMap = { '0': '0球', '1': '1球', '2': '2球', '3': '3+球' };
     const jqcGoalColors = { '0': '#6b7280', '1': '#22c55e', '2': '#fbbf24', '3': '#ef4444' };
 
-    // ===== Mock数据(14场) =====
-    const mockMatches = [
-        { id:1, home:'法国', away:'西班牙', league:'世界杯', date:'07-15 03:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'1', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:2, home:'英格兰', away:'阿根廷', league:'世界杯', date:'07-16 03:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'1', hunyuan:'3', deepseek:'3', zhipu:'1', minimax:'3' }},
-        { id:3, home:'杰尔', away:'雷维京', league:'欧冠', date:'07-15 23:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:4, home:'新圣徒', away:'萨巴赫', league:'欧冠', date:'07-16 01:00', score:'vs',
-          picks: { kouzi:'0', doubao:'0', wenxin:'1', hunyuan:'0', deepseek:'0', zhipu:'0', minimax:'0' }},
-        { id:5, home:'比森特', away:'克拉克斯', league:'欧冠', date:'07-16 23:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'1', minimax:'3' }},
-        { id:6, home:'苏杰斯卡', away:'阿拉木图', league:'欧冠', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:'1', doubao:'3', wenxin:'1', hunyuan:'0', deepseek:'1', zhipu:'3', minimax:'1' }},
-        { id:7, home:'费伦茨', away:'伏伊伏丁', league:'欧罗巴', date:'07-17 02:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:8, home:'瓦勒伦', away:'奥勒松', league:'挪超', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'1', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:9, home:'博塔弗', away:'桑托斯', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'3', doubao:'1', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:10, home:'维多利亚', away:'达伽马', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'1', doubao:'3', wenxin:'1', hunyuan:'1', deepseek:'3', zhipu:'1', minimax:'1' }},
-        { id:11, home:'蒙特利尔', away:'多伦多', league:'美职', date:'07-17 07:30', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'1', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:12, home:'芝加哥', away:'温哥华', league:'美职', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'0', doubao:'0', wenxin:'1', hunyuan:'0', deepseek:'0', zhipu:'0', minimax:'0' }},
-        { id:13, home:'圣路易斯', away:'堪萨斯', league:'美职', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'3', deepseek:'3', zhipu:'3', minimax:'3' }},
-        { id:14, home:'西雅图', away:'波特兰', league:'美职', date:'07-17 10:30', score:'vs',
-          picks: { kouzi:'3', doubao:'3', wenxin:'3', hunyuan:'1', deepseek:'3', zhipu:'3', minimax:'3' }},
-    ];
+    // ===== 数据存储 =====
+    let sfcMatches = [];
+    let bqcMatches = [];
+    let jqcMatches = [];
+    let isLoading = false;
 
-    // ===== Mock数据(半全场6场) =====
-    const mockBqcMatches = [
-        { id:1, home:'法国', away:'西班牙', league:'世界杯', date:'07-15 03:00', score:'vs',
-          picks: { kouzi:'33', doubao:'33', wenxin:'31', hunyuan:'33', deepseek:'33', zhipu:'31', minimax:'33' }},
-        { id:2, home:'英格兰', away:'阿根廷', league:'世界杯', date:'07-16 03:00', score:'vs',
-          picks: { kouzi:'33', doubao:'13', wenxin:'33', hunyuan:'31', deepseek:'33', zhipu:'13', minimax:'33' }},
-        { id:3, home:'杰尔', away:'雷维京', league:'欧冠', date:'07-15 23:00', score:'vs',
-          picks: { kouzi:'33', doubao:'33', wenxin:'33', hunyuan:'33', deepseek:'33', zhipu:'33', minimax:'33' }},
-        { id:4, home:'新圣徒', away:'萨巴赫', league:'欧冠', date:'07-16 01:00', score:'vs',
-          picks: { kouzi:'00', doubao:'01', wenxin:'00', hunyuan:'10', deepseek:'00', zhipu:'01', minimax:'00' }},
-        { id:5, home:'比森特', away:'克拉克斯', league:'欧冠', date:'07-16 23:00', score:'vs',
-          picks: { kouzi:'33', doubao:'33', wenxin:'31', hunyuan:'33', deepseek:'13', zhipu:'33', minimax:'33' }},
-        { id:6, home:'苏杰斯卡', away:'阿拉木图', league:'欧冠', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:'11', doubao:'13', wenxin:'11', hunyuan:'01', deepseek:'13', zhipu:'11', minimax:'13' }},
-    ];
+    // AI名称映射（API返回中文名，前端使用英文key）
+    const AI_NAME_MAP = {
+        '扣子': 'kouzi', '扣子（皮皮）': 'kouzi',
+        '豆包': 'doubao',
+        '文心': 'wenxin',
+        '混元': 'hunyuan',
+        'DeepSeek': 'deepseek',
+        '智谱清言': 'zhipu',
+        'MiniMax': 'minimax'
+    };
 
-    // ===== Mock数据(进球彩4场) =====
-    const mockJqcMatches = [
-        { id:1, home:'费伦茨', away:'伏伊伏丁', league:'欧罗巴', date:'07-17 02:00', score:'vs',
-          picks: { kouzi:{h:'2',a:'1'}, doubao:{h:'2',a:'0'}, wenxin:{h:'3',a:'1'}, hunyuan:{h:'2',a:'1'}, deepseek:{h:'3',a:'2'}, zhipu:{h:'2',a:'1'}, minimax:{h:'3',a:'1'} }},
-        { id:2, home:'瓦勒伦', away:'奥勒松', league:'挪超', date:'07-17 01:00', score:'vs',
-          picks: { kouzi:{h:'2',a:'1'}, doubao:{h:'1',a:'1'}, wenxin:{h:'2',a:'2'}, hunyuan:{h:'2',a:'1'}, deepseek:{h:'3',a:'1'}, zhipu:{h:'1',a:'1'}, minimax:{h:'2',a:'2'} }},
-        { id:3, home:'博塔弗', away:'桑托斯', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:{h:'1',a:'0'}, doubao:{h:'2',a:'1'}, wenxin:{h:'1',a:'1'}, hunyuan:{h:'1',a:'0'}, deepseek:{h:'2',a:'1'}, zhipu:{h:'1',a:'0'}, minimax:{h:'1',a:'1'} }},
-        { id:4, home:'维多利亚', away:'达伽马', league:'巴甲', date:'07-17 08:30', score:'vs',
-          picks: { kouzi:{h:'1',a:'0'}, doubao:{h:'0',a:'1'}, wenxin:{h:'1',a:'1'}, hunyuan:{h:'1',a:'0'}, deepseek:{h:'0',a:'0'}, zhipu:{h:'1',a:'1'}, minimax:{h:'1',a:'0'} }},
-    ];
+    // ===== 从API加载数据 =====
+    async function loadPredictions() {
+        if (isLoading) return;
+        isLoading = true;
+        
+        try {
+            // 显示加载状态
+            document.getElementById('matchBody14').innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;">正在加载AI预测数据...</td></tr>';
+            
+            const response = await fetch('/api/traditional-lottery/predict');
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || '加载失败');
+            }
+            
+            // 转换胜负彩数据
+            sfcMatches = transformSfcData(data.data.sfc);
+            // 转换半全场数据
+            bqcMatches = transformBqcData(data.data.htf);
+            // 转换进球彩数据
+            jqcMatches = transformJqcData(data.data.gs);
+            
+            // 更新期次信息
+            if (data.data.sfc && data.data.sfc.length > 0) {
+                document.getElementById('periodInfo').textContent = data.data.sfc[0].issue || '26096期';
+            }
+            
+            // 渲染所有tab
+            renderSfc();
+            renderRq9();
+            renderBqc();
+            renderJqc();
+            
+        } catch (error) {
+            console.error('加载预测数据失败:', error);
+            document.getElementById('matchBody14').innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;color:#ef4444;">加载失败: ' + error.message + '</td></tr>';
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // 转换胜负彩数据格式
+    function transformSfcData(apiData) {
+        if (!apiData || apiData.length === 0) return [];
+        
+        // 按match_id分组
+        const matchMap = {};
+        apiData.forEach(item => {
+            const matchId = item.match_id;
+            if (!matchMap[matchId]) {
+                matchMap[matchId] = {
+                    id: parseInt(matchId.replace(/\D/g, '')) || 1,
+                    home: item.home_team || '未知',
+                    away: item.away_team || '未知',
+                    league: item.league || '',
+                    date: formatMatchTime(item.match_time),
+                    score: 'vs',
+                    picks: {}
+                };
+            }
+            // 映射AI名称
+            const aiKey = AI_NAME_MAP[item.ai_name] || item.ai_name.toLowerCase();
+            matchMap[matchId].picks[aiKey] = item.prediction || '1';
+        });
+        
+        return Object.values(matchMap).sort((a, b) => a.id - b.id);
+    }
+
+    // 转换半全场数据格式
+    function transformBqcData(apiData) {
+        if (!apiData || apiData.length === 0) return [];
+        
+        const matchMap = {};
+        apiData.forEach(item => {
+            const matchId = item.match_id;
+            if (!matchMap[matchId]) {
+                matchMap[matchId] = {
+                    id: parseInt(matchId.replace(/\D/g, '')) || 1,
+                    home: item.home_team || '未知',
+                    away: item.away_team || '未知',
+                    league: item.league || '',
+                    date: formatMatchTime(item.match_time),
+                    score: 'vs',
+                    picks: {}
+                };
+            }
+            const aiKey = AI_NAME_MAP[item.ai_name] || item.ai_name.toLowerCase();
+            // 半全场预测格式: "31" 表示胜平
+            matchMap[matchId].picks[aiKey] = item.prediction || '11';
+        });
+        
+        return Object.values(matchMap).sort((a, b) => a.id - b.id);
+    }
+
+    // 转换进球彩数据格式
+    function transformJqcData(apiData) {
+        if (!apiData || apiData.length === 0) return [];
+        
+        const matchMap = {};
+        apiData.forEach(item => {
+            const matchId = item.match_id;
+            if (!matchMap[matchId]) {
+                matchMap[matchId] = {
+                    id: parseInt(matchId.replace(/\D/g, '')) || 1,
+                    home: item.home_team || '未知',
+                    away: item.away_team || '未知',
+                    league: item.league || '',
+                    date: formatMatchTime(item.match_time),
+                    score: 'vs',
+                    picks: {}
+                };
+            }
+            const aiKey = AI_NAME_MAP[item.ai_name] || item.ai_name.toLowerCase();
+            // 进球彩预测格式: "2:1" 表示主队2球:客队1球
+            const goals = (item.prediction || '1:1').split(':');
+            matchMap[matchId].picks[aiKey] = {
+                h: goals[0] || '1',
+                a: goals[1] || '1'
+            };
+        });
+        
+        return Object.values(matchMap).sort((a, b) => a.id - b.id);
+    }
+
+    // 格式化比赛时间
+    function formatMatchTime(timeStr) {
+        if (!timeStr) return '';
+        const date = new Date(timeStr);
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${month}-${day} ${hours}:${minutes}`;
+    }
 
     // ===== 渲染胜负彩 =====
     function renderSfc() {
         const tbody = document.getElementById('matchBody14');
         if (!tbody) return;
+        if (sfcMatches.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;">暂无数据</td></tr>';
+            return;
+        }
         let html = '';
-        mockMatches.forEach(m => {
+        sfcMatches.forEach(m => {
             const isPending = m.score === 'vs';
             html += '<tr>';
             html += '<td class="col-idx">' + m.id + '</td>';
@@ -419,7 +516,7 @@
     // ===== 胜负彩AI推荐 =====
     function updateSfcTips() {
         const stable = [], bold = [];
-        mockMatches.forEach(m => {
+        sfcMatches.forEach(m => {
             const picks = Object.values(m.picks);
             const winC = picks.filter(p => p === '3').length;
             const drawC = picks.filter(p => p === '1').length;
@@ -438,7 +535,12 @@
 
     // ===== 渲染任9 =====
     function renderRq9() {
-        const scored = mockMatches.map(m => {
+        if (sfcMatches.length === 0) {
+            const tbody = document.getElementById('matchBody9');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;">暂无数据</td></tr>';
+            return;
+        }
+        const scored = sfcMatches.map(m => {
             const picks = Object.values(m.picks);
             const winC = picks.filter(p => p === '3').length;
             const drawC = picks.filter(p => p === '1').length;
@@ -450,7 +552,7 @@
         const tbody = document.getElementById('matchBody9');
         if (!tbody) return;
         let html = '';
-        mockMatches.forEach(m => {
+        sfcMatches.forEach(m => {
             const selected = selectedIds.has(m.id);
             const isPending = m.score === 'vs';
             html += '<tr' + (selected ? '' : ' class="row-excluded"') + '>';
@@ -496,7 +598,7 @@
         const tbody = document.getElementById('matchBodyBqc');
         if (!tbody) return;
         let html = '';
-        mockBqcMatches.forEach(m => {
+        bqcMatches.forEach(m => {
             const isPending = m.score === 'vs';
             html += '<tr>';
             html += '<td class="col-idx">' + m.id + '</td>';
@@ -517,7 +619,7 @@
         tbody.innerHTML = html;
 
         const stable = [], bold = [];
-        mockBqcMatches.forEach(m => {
+        bqcMatches.forEach(m => {
             const picks = Object.values(m.picks);
             const counts = {};
             picks.forEach(p => counts[p] = (counts[p] || 0) + 1);
@@ -537,7 +639,7 @@
         const tbody = document.getElementById('matchBodyJqc');
         if (!tbody) return;
         let html = '';
-        mockJqcMatches.forEach(m => {
+        jqcMatches.forEach(m => {
             const isPending = m.score === 'vs';
             html += '<tr>';
             html += '<td class="col-idx">' + m.id + '</td>';
@@ -557,7 +659,7 @@
         tbody.innerHTML = html;
 
         const stable = [], bold = [];
-        mockJqcMatches.forEach(m => {
+        jqcMatches.forEach(m => {
             const hCounts = {};
             AI_KEYS.forEach(k => { const v = m.picks[k].h; hCounts[v] = (hCounts[v] || 0) + 1; });
             const topH = Object.entries(hCounts).sort((a, b) => b[1] - a[1])[0];
