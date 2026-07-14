@@ -1038,19 +1038,65 @@ const server = http.createServer(async (req, res) => {
       // 同步执行获取结果
       const { execSync } = require('child_process');
       try {
-        const result = execSync(`python3 ${scriptPath} --game "${gameName}" --get`, {
-          cwd: path.join(process.cwd(), 'scripts'),
-          env: { ...process.env, PYTHONUNBUFFERED: '1' },
-          timeout: 120000,
-          maxBuffer: 10 * 1024 * 1024
-        });
-        const predictions = JSON.parse(result.toString());
+        const { execSync } = require('child_process');
+        const scriptPath = path.join(process.cwd(), 'scripts', 'traditional_lottery_predict.py');
+        
+        // 确保 DATABASE_URL 传递到 Python 进程
+        const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1' };
+        if (!pythonEnv.DATABASE_URL) {
+          pythonEnv.DATABASE_URL = DATABASE_URL;
+        }
+        
+        // 获取所有游戏类型的预测数据
+        const responseData = {
+          sfc: [],
+          htf: [],
+          gs: []
+        };
+        
+        // 获取胜负彩数据
+        try {
+          const sfcResult = execSync(`python3 ${scriptPath} --game "胜负彩" --get`, {
+            cwd: path.join(process.cwd(), 'scripts'),
+            env: pythonEnv,
+            timeout: 60000,
+            maxBuffer: 10 * 1024 * 1024
+          });
+          responseData.sfc = JSON.parse(sfcResult.toString());
+        } catch (e) {
+          console.error('[TraditionalLottery] 获取胜负彩失败:', e.message);
+        }
+        
+        // 获取半全场数据
+        try {
+          const htfResult = execSync(`python3 ${scriptPath} --game "半全场" --get`, {
+            cwd: path.join(process.cwd(), 'scripts'),
+            env: pythonEnv,
+            timeout: 60000,
+            maxBuffer: 10 * 1024 * 1024
+          });
+          responseData.htf = JSON.parse(htfResult.toString());
+        } catch (e) {
+          console.error('[TraditionalLottery] 获取半全场失败:', e.message);
+        }
+        
+        // 获取进球彩数据
+        try {
+          const gsResult = execSync(`python3 ${scriptPath} --game "进球彩" --get`, {
+            cwd: path.join(process.cwd(), 'scripts'),
+            env: pythonEnv,
+            timeout: 60000,
+            maxBuffer: 10 * 1024 * 1024
+          });
+          responseData.gs = JSON.parse(gsResult.toString());
+        } catch (e) {
+          console.error('[TraditionalLottery] 获取进球彩失败:', e.message);
+        }
         
         res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
         res.end(JSON.stringify({ 
           success: true, 
-          type: lotteryType,
-          predictions: predictions
+          data: responseData
         }));
       } catch (e) {
         console.error(`[TraditionalLottery] 执行失败:`, e.message);

@@ -159,16 +159,22 @@ def parse_match_data(api_data, game_type):
     matches = []
     odds_list = []
     
-    # api_data 现在是 matchInfoList 数组
-    match_list = api_data if isinstance(api_data, list) else []
+    # api_data 是包含 subMatchList 的对象列表
+    all_matches = []
+    if isinstance(api_data, list):
+        for item in api_data:
+            if isinstance(item, dict) and 'subMatchList' in item:
+                all_matches.extend(item['subMatchList'])
+            elif isinstance(item, dict):
+                all_matches.append(item)
     
-    for i, match in enumerate(match_list[:14]):  # 最多14场
+    for i, match in enumerate(all_matches[:14]):  # 最多14场
         match_num = str(i + 1)
         
         # 提取比赛信息
         home_team = match.get("homeTeamAbbName", match.get("homeTeamName", f"主队{i+1}"))
         away_team = match.get("awayTeamAbbName", match.get("awayTeamName", f"客队{i+1}"))
-        league = match.get("leagueName", "未知联赛")
+        league = match.get("leagueName", match.get("groupName", "未知联赛"))
         match_time = match.get("matchDate", "")
         
         matches.append({
@@ -177,17 +183,38 @@ def parse_match_data(api_data, game_type):
             "home": home_team,
             "away": away_team,
             "time": match_time,
+            "id": f"match_{match_num}",
+            "issue": match.get("matchNum", ""),
         })
         
-        # 提取赔率 - 从poolList中获取
-        pool_list = match.get("poolList", [])
+        # 提取赔率 - 从had/hhad字段或poolList中获取
         spf_odds = {}
         handicap_odds = {}
         handicap_num = 0
         
+        # 尝试从had字段获取胜平负赔率
+        had = match.get("had", {})
+        if had:
+            spf_odds["win"] = float(had.get("h", 0))
+            spf_odds["draw"] = float(had.get("d", 0))
+            spf_odds["lose"] = float(had.get("a", 0))
+        
+        # 尝试从hhad字段获取让球赔率
+        hhad = match.get("hhad", {})
+        if hhad:
+            try:
+                handicap_num = int(float(hhad.get("goalLineValue", 0)))
+            except (ValueError, TypeError):
+                handicap_num = 0
+            handicap_odds["win"] = float(hhad.get("h", 0))
+            handicap_odds["draw"] = float(hhad.get("d", 0))
+            handicap_odds["lose"] = float(hhad.get("a", 0))
+        
+        # 如果上面没有获取到，尝试从poolList获取
+        pool_list = match.get("poolList", [])
         for pool in pool_list:
             pool_code = pool.get("poolCode", "")
-            if pool_code == "HAD":  # 胜平负
+            if pool_code == "HAD" and not spf_odds:  # 胜平负
                 odds_data = pool.get("oddsList", [])
                 for odds in odds_data:
                     if odds.get("code") == "H":
@@ -196,7 +223,7 @@ def parse_match_data(api_data, game_type):
                         spf_odds["draw"] = float(odds.get("odds", 0))
                     elif odds.get("code") == "A":
                         spf_odds["lose"] = float(odds.get("odds", 0))
-            elif pool_code == "HHAD":  # 让球胜平负
+            elif pool_code == "HHAD" and not handicap_odds:  # 让球胜平负
                 handicap_num = int(pool.get("fixedOdds", 0))
                 odds_data = pool.get("oddsList", [])
                 for odds in odds_data:
@@ -396,7 +423,7 @@ def parse_ai_response(content):
 
 # ============ 数据库操作 ============
 
-def save_predictions(game_type, ai_name, predictions_data):
+def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
     """保存预测结果到数据库"""
     if not DATABASE_URL:
         print("DATABASE_URL 未配置，跳过数据库保存")
@@ -414,6 +441,7 @@ def save_predictions(game_type, ai_name, predictions_data):
                     predictions JSONB,
                     ren9 JSONB,
                     confidence VARCHAR(10),
+                    matches_info JSONB,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(game_type, ai_name)
                 )
@@ -421,13 +449,14 @@ def save_predictions(game_type, ai_name, predictions_data):
             
             # 插入或更新预测
             cur.execute("""
-                INSERT INTO traditional_predictions (game_type, ai_name, predictions, ren9, confidence)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO traditional_predictions (game_type, ai_name, predictions, ren9, confidence, matches_info)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (game_type, ai_name)
                 DO UPDATE SET
                     predictions = EXCLUDED.predictions,
                     ren9 = EXCLUDED.ren9,
                     confidence = EXCLUDED.confidence,
+                    matches_info = EXCLUDED.matches_info,
                     created_at = CURRENT_TIMESTAMP
             """, (
                 game_type,
@@ -435,6 +464,7 @@ def save_predictions(game_type, ai_name, predictions_data):
                 json.dumps(predictions_data.get("predictions", [])),
                 json.dumps(predictions_data.get("ren9", [])),
                 predictions_data.get("confidence", "低"),
+                json.dumps(matches_info) if matches_info else None,
             ))
             
         conn.commit()
@@ -447,29 +477,74 @@ def save_predictions(game_type, ai_name, predictions_data):
 
 
 def get_predictions(game_type):
-    """获取指定玩法的所有AI预测"""
+    """获取指定玩法的所有AI预测，返回前端期望的格式"""
     if not DATABASE_URL:
         return []
     
     conn = psycopg2.connect(DATABASE_URL)
     try:
         with conn.cursor() as cur:
+            # 获取最新的预测数据
             cur.execute("""
-                SELECT ai_name, predictions, ren9, confidence, created_at
+                SELECT ai_name, predictions, ren9, confidence, created_at, matches_info
                 FROM traditional_predictions
                 WHERE game_type = %s
                 ORDER BY created_at DESC
+                LIMIT 7
             """, (game_type,))
             
+            rows = cur.fetchall()
+            if not rows:
+                return []
+            
+            # 获取比赛信息（从第一条记录的matches_info）
+            matches_info = rows[0][5] if rows[0][5] else []
+            if isinstance(matches_info, str):
+                matches_info = json.loads(matches_info)
+            
+            # 根据游戏类型确定提取哪个字段
+            field_map = {
+                "胜负彩": "spf",
+                "任9": "spf",
+                "半全场": "bqc",
+                "进球彩": "zjq"
+            }
+            field_key = field_map.get(game_type, "spf")
+            
+            # 转换为前端期望的格式：按比赛分组
             results = []
-            for row in cur.fetchall():
-                results.append({
-                    "ai_name": row[0],
-                    "predictions": row[1] if isinstance(row[1], list) else json.loads(row[1]) if row[1] else [],
-                    "ren9": row[2] if isinstance(row[2], list) else json.loads(row[2]) if row[2] else [],
-                    "confidence": row[3],
-                    "created_at": row[4].isoformat() if row[4] else None,
-                })
+            for idx, match in enumerate(matches_info):
+                match_id = match.get("id", f"match_{idx+1}")
+                home_team = match.get("home", "未知")
+                away_team = match.get("away", "未知")
+                league = match.get("league", "")
+                match_time = match.get("time", "")
+                
+                # 为每个AI创建一个预测项
+                for row in rows:
+                    ai_name = row[0]
+                    predictions = row[1] if isinstance(row[1], list) else json.loads(row[1]) if row[1] else []
+                    
+                    # 获取该AI对该比赛的预测
+                    prediction_obj = predictions[idx] if idx < len(predictions) else {}
+                    
+                    # 将预测对象转换为字符串
+                    if isinstance(prediction_obj, dict):
+                        prediction = prediction_obj.get(field_key, "")
+                    else:
+                        prediction = str(prediction_obj)
+                    
+                    results.append({
+                        "match_id": match_id,
+                        "home_team": home_team,
+                        "away_team": away_team,
+                        "league": league,
+                        "match_time": match_time,
+                        "ai_name": ai_name,
+                        "prediction": prediction,
+                        "issue": match.get("issue", "")
+                    })
+            
             return results
     except Exception as e:
         print(f"获取预测失败: {e}")
@@ -513,7 +588,7 @@ def predict(game_type, force=False):
         print(f"调用 {ai_name}...")
         try:
             predictions = call_ai(ai_name, prompt)
-            save_predictions(game_type, ai_name, predictions)
+            save_predictions(game_type, ai_name, predictions, matches)
             results.append({
                 "ai_name": ai_name,
                 "predictions": predictions.get("predictions", []),
