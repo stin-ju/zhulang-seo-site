@@ -64,24 +64,18 @@ const dateDataCache = {}; // 缓存已加载日期的数据 { date: { matches, p
 
 async function loadAll() {
     try {
-        // Step 1: 加载轻量摘要（日期列表 + 统计，~1KB）
-        const summaryResp = await fetch('/api/match-summary');
+        // Step 1: 加载日期标签（轻量摘要，~1KB）
+        const summaryResp = await fetch('/api/date-tabs');
         const summary = await summaryResp.json();
-        state.dates = summary.dates || [];
+        state.dates = (summary.tabs || []).map(t => t.date);
         
-        // 确定默认日期：优先今天，否则最近的有比赛日期
-        const today = new Date();
-        const todayStr = getLocalDateStr(today);
-        if (state.dates.includes(todayStr)) {
-            state.currentDate = todayStr;
-        } else {
-            const futureDates = state.dates.filter(d => d >= todayStr).sort();
-            state.currentDate = futureDates.length > 0 ? futureDates[0] : state.dates[0];
-        }
+        // 确定默认日期：使用服务器返回的 defaultDate
+        state.currentDate = summary.defaultDate || state.dates[0] || getLocalDateStr(new Date());
         
-        // Step 2: 渲染统计数字（来自摘要，无需额外请求）
-        document.getElementById('match-count').textContent = summary.total || 0;
-        document.getElementById('done-count').textContent = summary.done || 0;
+        // Step 2: 统计数字由 loadDateData 后更新
+        const todayMatches = await fetch('/api/matches?date=' + state.currentDate + '&sport=football').then(r => r.json()).catch(() => []);
+        document.getElementById('match-count').textContent = todayMatches.length || 0;
+        document.getElementById('done-count').textContent = todayMatches.filter(m => m.status === '已完赛').length || 0;
         document.getElementById('ai-count').textContent = '7';
         
         // Step 3: 加载AI排行（独立接口，数据量小）
