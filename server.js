@@ -501,11 +501,13 @@ const server = http.createServer(async (req, res) => {
       let query = `SELECT * FROM matches`;
       const params = [];
       let paramIdx = 1;
+      let hasWhere = false;
 
       if (sport) {
         query += ` WHERE sport_type = $${paramIdx}`;
         params.push(sport);
         paramIdx++;
+        hasWhere = true;
       }
 
       if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -513,13 +515,21 @@ const server = http.createServer(async (req, res) => {
         const d = new Date(year, month - 1, day);
         d.setDate(d.getDate() + 1);
         const nextDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (sport) {
+        if (hasWhere) {
           query += ` AND (metadata->>'match_time')::date >= $${paramIdx}::date AND (metadata->>'match_time')::date < $${paramIdx + 1}::date`;
         } else {
           query += ` WHERE (metadata->>'match_time')::date >= $${paramIdx}::date AND (metadata->>'match_time')::date < $${paramIdx + 1}::date`;
+          hasWhere = true;
         }
         params.push(date, nextDate);
         paramIdx += 2;
+      }
+
+      // 排除传统彩票（CT）比赛
+      if (hasWhere) {
+        query += ` AND (metadata->>'match_type' IS NULL OR metadata->>'match_type' != 'ct')`;
+      } else {
+        query += ` WHERE (metadata->>'match_type' IS NULL OR metadata->>'match_type' != 'ct')`;
       }
 
       query += ` ORDER BY (metadata->>'match_time') ASC`;
