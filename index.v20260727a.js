@@ -459,9 +459,9 @@ function renderPredictionsTable(predictions, match) {
             </tr>
             `;
         } else {
-            const hasHandicap = match.handicap != null && match.handicap !== '' && match.handicap !== undefined;
+            const hasHandicap = true; // 始终显示让球列
             const spf = pred.spf || '-';
-            const handicap = hasHandicap ? (pred.handicap_spf || '-') : '';
+            const handicap = pred.handicap_spf || '-';
             
             // 进球数：优先读顶层 p.goals（后端已计算好），其次读 pred.goals，最后从比分计算
             let goals = '-';
@@ -518,7 +518,7 @@ function renderPredictionsTable(predictions, match) {
         </div>
         `;
     } else {
-        const hasHandicap = match.handicap != null && match.handicap !== '' && match.handicap !== undefined;
+        const hasHandicap = true; // 始终显示让球列
         return `
         <div class="inline-predictions-details" style="overflow-x:auto;">
             <table class="inline-predictions-table">
