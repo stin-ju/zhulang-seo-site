@@ -1,4 +1,3 @@
-        // 备用数据（静态嵌入）
         window.MATCH_DATA = []; // 保留作为fallback，实际数据从API动态获取
         window.MATCH_DATA.forEach(m => {
             // 兼容 ' VS ' 和 'VS' 两种格式
@@ -760,5 +759,3 @@
         window.fmtDate = fmtDate;
         window.fmtTime = fmtTime;
         window.showError = showError;
-        window.getCachedData = getCachedData;
-        window.setCachedData = setCachedData;
