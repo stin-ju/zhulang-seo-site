@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026WNBA篮球AI预测 - 胜负/让分/大小分/胜分差</title>
+    <meta name="description" content="AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。">
+    <meta name="keywords" content="WNBA预测,篮球预测,AI篮球,篮球AI预测,让分,大小分,胜分差">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="AI实验室-体彩模拟实验">
+    <link rel="canonical" href="https://zhulang.coze.site/bb.html">
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="2026WNBA篮球AI预测 - 胜负/让分/大小分/胜分差">
+    <meta property="og:description" content="AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。">
+    <meta property="og:url" content="https://zhulang.coze.site/bb.html">
+    <meta property="og:site_name" content="AI实验室-体彩模拟实验">
+    <meta property="og:locale" content="zh_CN">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="2026WNBA篮球AI预测 - 胜负/让分/大小分/胜分差">
+    <meta name="twitter:description" content="AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。">
+    
+    <!-- 结构化数据 -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "AI实验室-体彩模拟实验",
+        "url": "https://zhulang.coze.site",
+        "description": "AI智能分析WNBA篮球赛事，提供胜负、让分胜负、大小分、胜分差四维度预测。多AI模型对比分析，实时更新。",
+        "inLanguage": "zh-CN",
+        "publisher": {
+            "@type": "Organization",
+            "name": "AI实验室-体彩模拟实验"
+        }
+    }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            base: '#0a1628', card: '#0f2035', elevated: '#162a45',
+            border: '#1e3a5c', accent: '#f97316', accent2: '#ea580c',
+            win: '#22c55e', lose: '#ef4444', muted: '#9ca3af', dimmed: '#6b7280',
+          }
+        }
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+    @import url('https://fonts.googleapis.cn/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.2); border-radius: 3px; }
+    details > summary { cursor: pointer; list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] > summary .chevron { transform: rotate(90deg); }
+    .chevron { transition: transform 0.2s; }
+    .sport-switch { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+    .sport-switch.active { background: rgba(249,115,22,0.2); color: #f97316; border: 1px solid rgba(249,115,22,0.4); }
+    .sport-switch:not(.active) { color: #9ca3af; border: 1px solid #1e3a5c; }
+    .sport-switch:not(.active):hover { color: #e5e7eb; border-color: #6b7280; }
+    .nav-link.nav-active { background: rgba(249,115,22,0.15); color: #f97316 !important; }
+    .commentary-body { font-family: 'Noto Serif SC', serif; }
+    .date-tab{padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;white-space:nowrap;background:rgba(139,92,246,0.08);color:#94a3b8;border:1px solid rgba(139,92,246,0.15)}
+    .date-tab.active{background:rgba(139,92,246,0.2);color:#a78bfa;border-color:rgba(139,92,246,0.4);font-weight:600}
+    .commentary-body p { margin-bottom: 1em; line-height: 1.9; }
+    .commentary-body h3 { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
+    .match-lottery-id { font-size: 12px; color: #94a3b8; background: rgba(148,163,184,0.1); padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
+    </style>
+</head>
+<body class="bg-base text-gray-100 min-h-screen flex flex-col">
+
+<nav class="sticky top-0 z-50 bg-base/90 backdrop-blur-xl border-b border-border">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex h-14 items-center justify-between">
+      <a href="/" class="flex items-center gap-2.5 group">
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white font-bold text-sm">AI</span>
+        <span class="text-base font-bold text-gray-100 group-hover:text-accent transition-colors hidden sm:inline">AI实验室</span>
+      </a>
+      <div class="flex items-center gap-1">
+        <a href="/ia2.html" class="sport-switch">⚽ 足球</a>
+        <a href="/bb2.html" class="sport-switch active">🏀 篮球</a>
+        <span class="hidden sm:inline w-px h-5 bg-border mx-1"></span>
+        <a href="#matches" data-nav="matches" class="nav-link rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">赛程</a>
+        <a href="/ia2.html" class="nav-link rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">AI分析预测</a>
+        <span class="hidden sm:inline w-px h-5 bg-border mx-1"></span>
+        <a href="/" class="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-gray-100 hover:bg-white/5 transition-colors">🏠 首页</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+
+<section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent/20 via-card to-accent2/15 border border-accent/20 p-6 sm:p-8 mb-6">
+  <div class="relative">
+    <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent text-[10px] tracking-[0.2em] uppercase mb-3">WNBA 2026</div>
+    <h1 class="text-2xl sm:text-4xl font-bold tracking-tight">🏀 篮球 <span class="text-accent">AI预测</span></h1>
+    <p class="mt-2 text-sm text-muted">多AI模型 · 四维度分析 · 实时更新</p>
+  </div>
+</section>
+
+<!-- 赛程 -->
+<!-- 今日AI总评 -->
+<section class="mb-4">
+  <details open class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">今日AI篮球总评</h2>
+      <span class="text-xs text-muted">6月29日</span>
+    </summary>
+    <div class="p-4">
+      <div class="text-center text-gray-500 py-4">暂无篮球总评数据</div>
+    </div>
+  </details>
+</section>
+
+<!-- 今日篮球串关推荐 -->
+<section class="mb-4">
+  <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">今日篮球串关推荐</h2>
+      <span class="text-xs text-muted">6月29日</span>
+    </summary>
+    <div class="p-4">
+      <div id="today-basketball-parlay">
+        <div class="text-center text-gray-500 py-4">暂无篮球串关数据</div>
+      </div>
+    </div>
+  </details>
+</section>
+
+<!-- 今日篮球比赛详情（动态加载） -->
+<section id="matches" class="mb-8" aria-label="赛程">
+  <h2 class="text-lg font-bold mb-4">📋 今日预测</h2>
+  <div class='date-bar' id='date-bar' style='display:flex;gap:6px;overflow-x:auto;padding:8px 0;margin-bottom:12px;'></div>
+  <div id="dynamic-predictions">
+    <div class="text-center text-gray-500 py-8">加载中...</div>
+  </div>
+</section>
+
+
+<!-- 历史AI总评 -->
+<section class="mb-4">
+  <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">历史AI篮球总评</h2>
+      <span class="text-xs text-muted">共2天</span>
+    </summary>
+    <div class="p-4">
+      <div class="text-center text-gray-500 py-4">暂无历史篮球总评数据</div>
+    </div>
+  </details>
+</section>
+
+<!-- 历史篮球串关推荐 -->
+<section class="mb-4">
+  <details class="rounded-xl bg-card/50 border border-border overflow-hidden">
+    <summary class="flex items-center gap-3 px-4 py-3 hover:bg-elevated/50 transition-colors">
+      <span class="chevron text-accent text-sm">▶</span>
+      <h2 class="font-bold text-lg">历史篮球串关推荐</h2>
+      <span class="text-xs text-muted">共2天</span>
+    </summary>
+    <div class="p-4">
+      <div id="hist-basketball-parlay">
+        <div class="text-center text-gray-500 py-4">暂无历史篮球串关数据</div>
+      </div>
+    </div>
+  </details>
+</section>
+
+<!-- 历史篮球比赛详情 -->
+<section class="mb-8" aria-label="历史赛程">
+  <h2 class="text-lg font-bold mb-4">📋 历史赛程</h2>
+  <div class="text-center text-gray-500 py-4">暂无历史赛程数据</div>
+</section>
+
+
+</main>
+<footer class="border-t border-border py-5 mt-auto">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs text-dimmed">
+    <p>2026 AI 预测平台 · 数据仅供 AI 能力评测</p>
+    <p class="mt-1">AI实验室-体彩模拟实验 · <a href="/" class="text-accent hover:underline">足球预测</a></p>
+  </div>
+</footer>
+
+<script type="module" src="./basketball.js"></script>
+</html>

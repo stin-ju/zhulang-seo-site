@@ -1,0 +1,20 @@
+# auto_predict.py 定时任务 - 直接运行，跳过 agent session
+# 安装命令: crontab /path/to/auto_predict_crontab
+# 或: cat auto_predict_crontab | crontab -
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WORKDIR=/workspace/projects
+LOGFILE=/app/work/logs/bypass/auto_predict_cron.log
+
+# 09:30 - 每日首次预测
+30 9 * * * cd $WORKDIR && /usr/bin/python3 scripts/auto_predict.py >> $LOGFILE 2>&1
+
+# 11:05 - 午间补充预测
+5 11 * * * cd $WORKDIR && /usr/bin/python3 scripts/auto_predict.py >> $LOGFILE 2>&1
+
+# 15:33 - 下午预测
+33 15 * * * cd $WORKDIR && /usr/bin/python3 scripts/auto_predict.py >> $LOGFILE 2>&1
+
+# 22:30 - 晚间预测
+30 22 * * * cd $WORKDIR && /usr/bin/python3 scripts/auto_predict.py >> $LOGFILE 2>&1

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>全部简报 · AI实验室</title>
+    <meta name="description" content="查看所有AI每日复盘与预测简报" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: #0b0b14; color: #e5e7eb; min-height: 100vh; }
+        .container { max-width: 820px; margin: 0 auto; padding: 0 16px; }
+
+        .navbar { background: rgba(11,11,20,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.04); padding: 10px 0; position: sticky; top: 0; z-index: 50; }
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 1200px; }
+        .logo { font-size: 18px; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+        .logo .icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 8px; font-size: 14px; color: #fff; }
+        .logo .name { color: #e5e7eb; }
+        .logo .name .accent { color: #8b5cf6; }
+        .nav-links { display: flex; gap: 2px; flex-wrap: wrap; }
+        .nav-links a { padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #9ca3af; text-decoration: none; transition: all 0.2s; }
+        .nav-links a:hover { color: #e5e7eb; background: rgba(255,255,255,0.04); }
+        .nav-links a.active { color: #a78bfa; background: rgba(139,92,246,0.12); }
+        .nav-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.06); margin: 0 2px; }
+
+        .card { background: #14141f; border: 1px solid #2a2a3e; border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; }
+        .page-title { font-size: 24px; font-weight: 900; padding: 16px 0 8px; }
+        .brief-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; text-decoration: none; color: inherit; transition: background 0.15s; border-radius: 6px; }
+        .brief-item:hover { background: rgba(255,255,255,0.03); }
+        .brief-item .date { font-size: 13px; color: #6b7280; width: 80px; flex-shrink: 0; }
+        .brief-item .title { font-size: 14px; font-weight: 500; flex: 1; }
+        .brief-item .arrow { color: #6b7280; transition: transform 0.2s; }
+        .brief-item:hover .arrow { transform: translateX(4px); color: #8b5cf6; }
+
+        .footer { text-align: center; padding: 20px 0; border-top: 1px solid rgba(255,255,255,0.04); font-size: 12px; color: #6b7280; margin-top: 12px; }
+        .loading { text-align: center; padding: 40px; color: #6b7280; }
+        .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(139,92,246,0.1); border-top-color: #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .brief-item { flex-wrap: wrap; gap: 4px; }
+            .brief-item .date { width: auto; font-size: 12px; }
+            .brief-item .title { font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo"><span class="icon">🧪</span><span class="name">AI实验室 <span class="accent">·</span> <span class="accent">体彩</span>好伙伴</span></a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/football.html">足球</a>
+                <a href="/bb2.html">篮球</a>
+                <a href="/ca2.html">计算器</a>
+                <span class="nav-divider"></span>
+                <a href="/rank.html">排行</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="breadcrumb">
+            <a href="/">首页</a>
+            <span class="sep">/</span>
+            <span class="current">全部简报</span>
+        </div>
+
+        <h1 class="page-title">📋 全部简报</h1>
+
+        <div id="briefList">
+            <div class="loading"><div class="spinner"></div><div style="margin-top:8px;">加载中...</div></div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>🧪 AI实验室 · 体彩好伙伴 · 数据仅供研究参考</p>
+    </footer>
+
+    <script type="module" src="./briefs.js"></script>
+</html>
