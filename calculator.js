@@ -749,10 +749,7 @@
         // 从API加载在售比赛数据
         loadMatches();
         console.log('✅ 竞彩计算器已加载');
-    </script>
 
-    <!-- 引入公共API模块 -->
-    <script type="module">
         import { fetchMatches, fetchPredictions, fetchAIStats, esc, fmtDate, fmtTime, showError, getCachedData, setCachedData } from './api.v20260727a.js';
         
         // 将函数暴露到全局作用域供页面使用
