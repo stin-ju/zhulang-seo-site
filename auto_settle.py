@@ -10,10 +10,10 @@ predictions表关键列：
   汇总: hit_status(jsonb), is_settled(bool)
 """
 
+import os
 import psycopg2
 import json
 import sys
-import os
 import re
 from datetime import datetime, timedelta
 try:
@@ -22,7 +22,7 @@ try:
 except ImportError:
     HAS_TITAN007 = False
 
-DEFAULT_DB_URL = os.environ.get('DATABASE_URL') or "postgresql://postgres:" + os.environ.get('DB_PASSWORD', '') + "@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres"
+DEFAULT_DB_URL = "postgresql://postgres:" + os.environ.get("DB_PASSWORD", "1538PQKpnIj0buIb6Y") + "@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres"
 
 
 def get_db(db_url=None):
