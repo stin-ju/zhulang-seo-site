@@ -1081,8 +1081,11 @@ const server = http.createServer(async (req, res) => {
 
     // ======== GET /api/traditional-lottery/predict ========
     if (pathname === '/api/traditional-lottery/predict' && req.method === 'GET') {
+      console.log('[TraditionalLottery] DEBUG: predict endpoint called');
       const { execSync } = require('child_process');
       const scriptPath = path.join(process.cwd(), 'scripts', 'traditional_lottery_predict.py');
+      console.log('[TraditionalLottery] DEBUG: scriptPath =', scriptPath);
+      console.log('[TraditionalLottery] DEBUG: DATABASE_URL exists =', !!DATABASE_URL);
       const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL };
       const responseData = { sfc: [], r9: [], htf: [], jqc: [] };
       
@@ -1095,6 +1098,7 @@ const server = http.createServer(async (req, res) => {
       
       for (const gt of gameTypes) {
         try {
+          console.log(`[TraditionalLottery] DEBUG: fetching ${gt.name}...`);
           const result = execSync(`python3 "${scriptPath}" --game "${gt.name}" --get`, {
             cwd: path.join(process.cwd(), 'scripts'),
             env: pythonEnv,
@@ -1103,10 +1107,18 @@ const server = http.createServer(async (req, res) => {
           });
           const parsed = JSON.parse(result.toString().trim());
           responseData[gt.key] = Array.isArray(parsed) ? parsed : [];
+          console.log(`[TraditionalLottery] DEBUG: ${gt.name} = ${responseData[gt.key].length} records`);
         } catch (e) {
           console.error(`[TraditionalLottery] Failed to get ${gt.name}:`, e.message);
         }
       }
+
+      console.log('[TraditionalLottery] DEBUG: final counts =', {
+        sfc: responseData.sfc.length,
+        r9: responseData.r9.length,
+        htf: responseData.htf.length,
+        jqc: responseData.jqc.length
+      });
       
       if (responseData.sfc.length === 0 && responseData.r9.length === 0 && responseData.htf.length === 0 && responseData.jqc.length === 0) {
         console.log('[TraditionalLottery] No data, triggering generation...');
