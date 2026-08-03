@@ -10,10 +10,10 @@ predictions表关键列：
   汇总: hit_status(jsonb), is_settled(bool)
 """
 
-import os
 import psycopg2
 import json
 import sys
+import os
 import re
 from datetime import datetime, timedelta
 try:
@@ -22,11 +22,13 @@ try:
 except ImportError:
     HAS_TITAN007 = False
 
-DEFAULT_DB_URL = "postgresql://postgres:" + os.environ.get("DB_PASSWORD", "1538PQKpnIj0buIb6Y") + "@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres"
+DEFAULT_DB_URL = "postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres"
 
 
 def get_db(db_url=None):
-    return psycopg2.connect(db_url or DEFAULT_DB_URL)
+    """获取数据库连接，优先级: 参数 > 环境变量 > 默认值"""
+    url = db_url or os.environ.get('DATABASE_URL') or DEFAULT_DB_URL
+    return psycopg2.connect(url)
 
 
 def _derive_date_from_id(match_id):
@@ -75,7 +77,7 @@ def fill_missing_scores(conn):
     sql = """
     SELECT m.id, m.sport_type, m.home_team, m.away_team, m.status, m.metadata
     FROM matches m
-    WHERE (m.status = '已完赛' OR m.status = 'on_sale')
+    WHERE (m.status = '已完赛' OR m.status = 'on_sale' OR m.status = '未开赛')
       AND m.metadata->>'status' != '已取消'
     """
     with conn.cursor() as cur:
@@ -119,6 +121,26 @@ def fill_missing_scores(conn):
                                                    "metadata": md, "top_status": top_status})
                 except (ValueError, TypeError):
                     pass
+        elif top_status == '未开赛':
+            # 未开赛但比赛时间已过3小时以上，可能已完赛
+            mt = md.get("match_time", "")
+            if mt:
+                try:
+                    if " " in mt:
+                        match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
+                    else:
+                        date_str = _derive_date_from_id(match_id)
+                        if date_str:
+                            match_dt = datetime.strptime(f"{date_str} {mt}", "%Y-%m-%d %H:%M:%S")
+                        else:
+                            continue
+                    now = datetime.now()
+                    if (now - match_dt).total_seconds() > 3 * 3600:
+                        on_sale_candidates.append({"id": match_id, "sport_type": sport_type,
+                                                   "home_team": home_team, "away_team": away_team,
+                                                   "metadata": md, "top_status": top_status})
+                except (ValueError, TypeError):
+                    pass
 
     all_to_fill = missing + on_sale_candidates
     if not all_to_fill:
@@ -149,7 +171,6 @@ def fill_missing_scores(conn):
             try:
                 if " " in mt:
                     date_str = mt.split(" ")[0]
-                # else: 仅有时间，从 ID 推导
             except ValueError:
                 pass
 
@@ -204,7 +225,6 @@ def fill_missing_scores(conn):
         matches = fetch_scores("football", titan_date)
         if matches:
             titan_data[ds] = matches
-            # Debug: 打印 titan007 返回的队伍名
             print(f"  [titan007] {ds} 共{len(matches)}场完场:")
             for tm in matches:
                 print(f"    {tm['home_team']}({tm.get('home_team_official','')}) vs {tm['away_team']}({tm.get('away_team_official','')}) {tm['home_score']}-{tm['away_score']}")
@@ -231,7 +251,6 @@ def fill_missing_scores(conn):
 
         titan_matches = titan_data.get(ds, [])
         if not titan_matches:
-            # 标记为无法补全，避免重复查询
             md = m["metadata"]
             md["score_unavailable"] = True
             md["score_unavailable_reason"] = "no_titan_data"
@@ -252,20 +271,17 @@ def fill_missing_scores(conn):
                 md["half_home_score"] = found["home_half"]
             if found.get("away_half") is not None:
                 md["half_away_score"] = found["away_half"]
-            # 同时更新顶层 status
             with conn.cursor() as cur:
                 cur.execute("UPDATE matches SET metadata = %s::jsonb, status = '已完赛' WHERE id = %s",
                            [json.dumps(md, ensure_ascii=False), m["id"]])
             updated += 1
             print(f"  [补全] {m['id']}: {m['home_team']} {found['home_score']}-{found['away_score']} {m['away_team']}")
         else:
-            # Debug: 打印匹配失败的详情
             print(f"  [DEBUG] 匹配失败 {m['id']}: DB={m['home_team']} vs {m['away_team']}")
             print(f"  [DEBUG] titan007 候选({ds}):")
             for tm in titan_matches:
                 print(f"    {tm['home_team']}/{tm.get('home_team_trad','')}/{tm.get('home_team_official','')} vs {tm['away_team']}/{tm.get('away_team_trad','')}/{tm.get('away_team_official','')}")
 
-            # 标记为无法补全
             md = m["metadata"]
             md["score_unavailable"] = True
             md["score_unavailable_reason"] = "match_not_found"
@@ -320,10 +336,9 @@ def fill_missing_scores(conn):
     return updated
 
 
-def get_unsettled(conn, match_id_filter=None):
+def get_unsettled(conn):
     """获取所有已完赛但未结算的比赛及其预测
     同时从 prediction jsonb 和顶层列读取，优先 jsonb
-    match_id_filter: 可选，只查指定比赛ID
     """
     # Bug1 fix: 查顶层 m.status = '已完赛'，排除已取消的比赛
     # Bug2 fix: COALESCE 从 prediction jsonb 和顶层列取值，优先 jsonb
@@ -348,12 +363,8 @@ def get_unsettled(conn, match_id_filter=None):
       AND m.metadata->>'status' != '已取消'
       AND (p.is_settled = false OR p.is_settled IS NULL)
     """
-    params = []
-    if match_id_filter:
-        sql += " AND m.id = %s"
-        params.append(match_id_filter)
     with conn.cursor() as cur:
-        cur.execute(sql, params)
+        cur.execute(sql)
         return cur.fetchall()
 
 
@@ -372,9 +383,7 @@ def settle_football(row):
     md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
     home_score = md.get("home_score")
     away_score = md.get("away_score")
-    # 适配新schema: handicap 可能在 metadata->odds->handicap_spf->handicap 或 metadata->odds->hdc->line
-    _odds = md.get("odds", {}) or {}
-    handicap = md.get("handicap") or _odds.get("handicap_spf", {}).get("handicap") or _odds.get("hdc", {}).get("line")
+    handicap = md.get("handicap")
 
     if home_score is None or away_score is None:
         return None, None
@@ -469,9 +478,7 @@ def settle_basketball(row):
     md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
     home_score = md.get("home_score")
     away_score = md.get("away_score")
-    # 适配新schema: handicap 可能在 metadata->odds->handicap_spf->handicap 或 metadata->odds->hdc->line
-    _odds = md.get("odds", {}) or {}
-    handicap = md.get("handicap") or _odds.get("handicap_spf", {}).get("handicap") or _odds.get("hdc", {}).get("line")
+    handicap = md.get("handicap")
 
     if home_score is None or away_score is None:
         return None, None
@@ -487,15 +494,13 @@ def settle_basketball(row):
     if win_loss is not None:
         wl = str(win_loss).strip()
         if wl in ("主胜", "客负"):
-            # 主队赢 = away_team(第二队)赢
             predicted_home_wins = False
         elif wl in ("客胜", "主负"):
-            # 客队赢 = home_team(第一队)赢
             predicted_home_wins = True
         elif wl == "胜":
-            predicted_home_wins = True  # home_team 胜
+            predicted_home_wins = True
         elif wl == "负":
-            predicted_home_wins = False  # home_team 负
+            predicted_home_wins = False
         else:
             predicted_home_wins = None
 
@@ -506,7 +511,6 @@ def settle_basketball(row):
             hit_cols["spf_hit"] = is_hit
 
     # 2. handicap_win_loss / handicap_result 让分胜负
-    # 优先用 handicap_win_loss，fallback 到 handicap_result
     hc_val = handicap_win_loss or handicap_result
     if hc_val is not None and handicap is not None:
         try:
@@ -514,9 +518,9 @@ def settle_basketball(row):
             hc_float = float(handicap)
             adjusted = home_score - away_score - hc_float
             if adjusted < 0:
-                actual = "让分主胜"  # 主队(第二队)赢盘
+                actual = "让分主胜"
             else:
-                actual = "让分主负"  # 客队(第一队)赢盘
+                actual = "让分主负"
 
             # 归一化预测值
             hc_norm = hc
@@ -536,12 +540,8 @@ def settle_basketball(row):
         total = home_score + away_score
         tp_str = str(total_points).strip()
         if tp_str in ("大", "小", "大分", "小分"):
-            tp_short = tp_str[0]  # 大/小
+            tp_short = tp_str[0]
             line = md.get("total_points_line")
-            # 适配新schema: total_line 可能在 metadata->odds->hilo->line
-            if line is None:
-                _odds2 = md.get("odds", {}) or {}
-                line = _odds2.get("hilo", {}).get("line")
             if line is not None:
                 line = float(line)
                 actual = "大" if total > line else "小"
@@ -549,9 +549,8 @@ def settle_basketball(row):
                 hit["total_points"] = is_hit
                 hit_cols["goals_hit"] = is_hit
             else:
-                # 没有分界线，尝试从metadata的odds中找
                 odds = md.get("odds", {}) or {}
-                line = odds.get("total_points_line") or odds.get("total_line") or odds.get("hilo", {}).get("line")
+                line = odds.get("total_points_line") or odds.get("total_line")
                 if line is not None:
                     line = float(line)
                     actual = "大" if total > line else "小"
@@ -559,7 +558,6 @@ def settle_basketball(row):
                     hit["total_points"] = is_hit
                     hit_cols["goals_hit"] = is_hit
         else:
-            # 带数字的格式如 "210.5大"
             nums = re.findall(r'[\d.]+', tp_str)
             if nums:
                 line = float(nums[0])
@@ -582,7 +580,6 @@ def settle_basketball(row):
             hit["score_diff_range"] = is_hit
             hit_cols["score_hit"] = is_hit
         else:
-            # 尝试简单格式如 "1-5"
             nums = re.findall(r'\d+', score_diff_range)
             if len(nums) >= 2:
                 low, high = int(nums[0]), int(nums[1])
@@ -606,28 +603,8 @@ def settle_basketball(row):
 
 
 def main():
-    # 支持 --match-id, --result-mode, --db-url 命名参数，兼容旧的位置参数
-    import argparse
-    parser = argparse.ArgumentParser(description="自动结算脚本")
-    parser.add_argument("--match-id", dest="match_id", default=None,
-                        help="只结算指定比赛ID")
-    parser.add_argument("--result-mode", dest="result_mode", default="display_only",
-                        help="结果模式 (display_only / settle)")
-    parser.add_argument("--db-url", dest="db_url", default=None,
-                        help="数据库连接URL")
-    # 兼容旧的位置参数: result_mode db_url
-    parser.add_argument("positional", nargs="*", help="旧版位置参数 (result_mode db_url)")
-    args = parser.parse_args()
-
-    # 位置参数兜底（兼容旧调用方式: python3 auto_settle.py settle postgresql://...）
-    if len(args.positional) > 0:
-        args.result_mode = args.positional[0]
-    if len(args.positional) > 1:
-        args.db_url = args.positional[1]
-
-    result_mode = args.result_mode or "display_only"
-    db_url = args.db_url
-    match_id_filter = args.match_id
+    result_mode = sys.argv[1] if len(sys.argv) > 1 else "display_only"
+    db_url = sys.argv[2] if len(sys.argv) > 2 else None
 
     conn = get_db(db_url)
     
@@ -641,7 +618,7 @@ def main():
         import traceback
         traceback.print_exc()
     
-    rows = get_unsettled(conn, match_id_filter=match_id_filter)
+    rows = get_unsettled(conn)
 
     if not rows:
         print("无待结算记录")
