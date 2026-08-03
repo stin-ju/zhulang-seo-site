@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""
 traditional_lottery_predict.py - 传统足彩7AI预测
 支持玩法：胜负彩、半全场、进球彩
 数据源：从数据库已有比赛数据读取（不依赖体彩API）
