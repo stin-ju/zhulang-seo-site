@@ -336,9 +336,10 @@ def fill_missing_scores(conn):
     return updated
 
 
-def get_unsettled(conn):
+def get_unsettled(conn, match_id_filter=None):
     """获取所有已完赛但未结算的比赛及其预测
     同时从 prediction jsonb 和顶层列读取，优先 jsonb
+    如果指定 match_id_filter，只返回该比赛的预测
     """
     # Bug1 fix: 查顶层 m.status = '已完赛'，排除已取消的比赛
     # Bug2 fix: COALESCE 从 prediction jsonb 和顶层列取值，优先 jsonb
@@ -363,8 +364,13 @@ def get_unsettled(conn):
       AND m.metadata->>'status' != '已取消'
       AND (p.is_settled = false OR p.is_settled IS NULL)
     """
+    params = []
+    if match_id_filter:
+        sql += " AND m.id = %s"
+        params.append(match_id_filter)
+    
     with conn.cursor() as cur:
-        cur.execute(sql)
+        cur.execute(sql, params)
         return cur.fetchall()
 
 
@@ -603,8 +609,25 @@ def settle_basketball(row):
 
 
 def main():
-    result_mode = sys.argv[1] if len(sys.argv) > 1 else "display_only"
-    db_url = sys.argv[2] if len(sys.argv) > 2 else None
+    import argparse
+    parser = argparse.ArgumentParser(description='自动结算脚本')
+    parser.add_argument('--match-id', dest='match_id', help='只结算指定比赛')
+    parser.add_argument('--result-mode', dest='result_mode', default='display_only', help='结果模式')
+    parser.add_argument('--db-url', dest='db_url', help='数据库URL')
+    # 兼容旧的位置参数
+    parser.add_argument('positional', nargs='*', help='位置参数: result_mode [db_url]')
+    
+    args = parser.parse_args()
+    
+    # 处理位置参数（向后兼容）
+    if len(args.positional) > 0:
+        args.result_mode = args.positional[0]
+    if len(args.positional) > 1:
+        args.db_url = args.positional[1]
+    
+    result_mode = args.result_mode
+    db_url = args.db_url
+    match_id_filter = args.match_id
 
     conn = get_db(db_url)
     
@@ -618,7 +641,7 @@ def main():
         import traceback
         traceback.print_exc()
     
-    rows = get_unsettled(conn)
+    rows = get_unsettled(conn, match_id_filter)
 
     if not rows:
         print("无待结算记录")
