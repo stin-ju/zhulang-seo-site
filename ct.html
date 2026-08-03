@@ -287,13 +287,13 @@ async function loadData(){
 
     // 整理 SFC（按期号过滤）
     matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
-    aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+k.split("_")[1], activeIssue.sfc);
+    aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
     aiNames.sfc = uniqueAIs(j.data.sfc);
 
     // 整理 HTF（半全场每场比赛有独立期号，但展示时合并为一个整体）
     const htfItems = j.data.htf;
     matches.htf = buildMatches(htfItems);
-    aiPreds.htf = buildPreds(htfItems, k => "htf_"+k.split("_")[1]);
+    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]));
     aiNames.htf = uniqueAIs(htfItems);
     // HTF/JQC 期号
     issues.htf = [...new Set(htfItems.map(i=>i.issue))].filter(Boolean).sort().reverse();
@@ -304,7 +304,7 @@ async function loadData(){
     // 整理 JQC（进球彩同理，合并展示）
     const jqcItems = j.data.jqc;
     matches.jqc = buildMatches(jqcItems);
-    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+k.split("_")[1]);
+    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]));
     aiNames.jqc = uniqueAIs(jqcItems);
 
     // 更新顶部期号
@@ -569,7 +569,7 @@ function switchIssue(tab, issue){
   // sfc/r9 需要重建赛程和预测数据
   if(tab==="sfc"||tab==="r9"){
     matches.sfc = buildMatches(rawData.sfc, activeIssue.sfc);
-    aiPreds.sfc = buildPreds(rawData.sfc, k => "sfc_"+k.split("_")[1], activeIssue.sfc);
+    aiPreds.sfc = buildPreds(rawData.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
     document.getElementById("issueNum").textContent = issue + "期";
     calcDeadline();
     renderSFC();
@@ -577,12 +577,12 @@ function switchIssue(tab, issue){
   }
   else if(tab==="htf"){
     matches.htf = buildMatches(rawData.htf, activeIssue.htf);
-    aiPreds.htf = buildPreds(rawData.htf, k => "htf_"+k.split("_")[1], activeIssue.htf);
+    aiPreds.htf = buildPreds(rawData.htf, k => "htf_"+parseInt(k.split("_")[1]), activeIssue.htf);
     renderHTF();
   }
   else if(tab==="jqc"){
     matches.jqc = buildMatches(rawData.jqc, activeIssue.jqc);
-    aiPreds.jqc = buildPreds(rawData.jqc, k => "jqc_"+k.split("_")[1], activeIssue.jqc);
+    aiPreds.jqc = buildPreds(rawData.jqc, k => "jqc_"+parseInt(k.split("_")[1]), activeIssue.jqc);
     renderJQC();
   }
   renderSubBtns(tab);
