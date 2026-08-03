@@ -73,11 +73,11 @@ def fill_missing_scores(conn):
         return 0
 
     # Bug1 fix: 查顶层 m.status = '已完赛'，而不是 metadata 里的 status
-    # 同时也查 on_sale 的比赛（可能已完赛但 status 未更新）
+    # 同时也查 on_sale/未开赛/stopped 的比赛（可能已完赛但 status 未更新）
     sql = """
     SELECT m.id, m.sport_type, m.home_team, m.away_team, m.status, m.metadata
     FROM matches m
-    WHERE (m.status = '已完赛' OR m.status = 'on_sale' OR m.status = '未开赛')
+    WHERE (m.status = '已完赛' OR m.status = 'on_sale' OR m.status = '未开赛' OR m.status = '已取消')
       AND m.metadata->>'status' != '已取消'
     """
     with conn.cursor() as cur:
@@ -121,8 +121,8 @@ def fill_missing_scores(conn):
                                                    "metadata": md, "top_status": top_status})
                 except (ValueError, TypeError):
                     pass
-        elif top_status == '未开赛':
-            # 未开赛但比赛时间已过3小时以上，可能已完赛
+        elif top_status == '未开赛' or top_status == '已取消':
+            # 未开赛/已取消但比赛时间已过3小时以上，可能已完赛
             mt = md.get("match_time", "")
             if mt:
                 try:

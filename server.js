@@ -5,7 +5,7 @@ const { execFile } = require('child_process');
 const { Pool } = require('pg');
 
 // ============ Database Connection ============
-const DATABASE_URL = process.env.DATABASE_URL || '';
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres';
 const pgPool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -541,9 +541,22 @@ const server = http.createServer(async (req, res) => {
       const now = new Date();
       enriched.forEach(m => {
         const metaStatus = (m.metadata && m.metadata.status) || '';
-        if (metaStatus === 'stopped' || metaStatus === '已取消') {
+        const hasScore = m.home_score != null && m.away_score != null;
+        
+        // 有比分 → 已完赛（优先级最高）
+        if (hasScore) {
+          m.status = '已完赛';
+        }
+        // metadata明确标记取消 → 已取消
+        else if (metaStatus === '已取消') {
           m.status = '已取消';
-        } else if (new Date(m.match_time) < now && (m.status === '未开赛' || m.status === 'on_sale')) {
+        }
+        // stopped状态只是不再售卖，不代表取消 → 一律标待比赛（等auto_settle结算）
+        else if (metaStatus === 'stopped') {
+          m.status = '待比赛';
+        }
+        // 已过时间但未开赛 → 已开赛
+        else if (new Date(m.match_time) < now && (m.status === '未开赛' || m.status === 'on_sale')) {
           m.status = '已开赛';
         }
       });
@@ -1082,24 +1095,15 @@ const server = http.createServer(async (req, res) => {
     // ======== GET /api/traditional-lottery/predict ========
     if (pathname === '/api/traditional-lottery/predict' && req.method === 'GET') {
       try {
-        const urlObj2 = new URL(req.url, `http://${req.headers.host}`);
-        const issueFilter = urlObj2.searchParams.get('issue');
-
-        let query = `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info 
-                     FROM traditional_predictions`;
-        let params = [];
-        if (issueFilter) {
-          query += ` WHERE issue = $1`;
-          params.push(issueFilter);
-        }
-        query += ` ORDER BY game_type, issue DESC, id`;
-
-        const result = await pgPool.query(query, params);
-        const rows = result.rows;
+        const { rows } = await pgPool.query(
+          `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info
+           FROM traditional_predictions
+           ORDER BY game_type, issue DESC, id`
+        );
 
         const typeMap = { '胜负彩': 'sfc', '任9': 'r9', '半全场': 'htf', '进球彩': 'jqc' };
-        const predFieldMap = { 'sfc': 'spf', 'r9': 'spf', 'htf': 'bqc', 'jqc': 'bf' };
-        const responseData = { sfc: [], r9: [], htf: [], jqc: [] };
+        const predFieldMap = { 'sfc': 'spf', 'r9': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
+        const responseData = { sfc: [], htf: [], jqc: [], r9: [] };
 
         for (const row of rows) {
           const frontendKey = typeMap[row.game_type];
@@ -1119,17 +1123,12 @@ const server = http.createServer(async (req, res) => {
             try { predictionsArr = JSON.parse(predictionsArr); } catch (e) { predictionsArr = null; }
           }
 
-          let ren9Arr = row.ren9;
-          if (typeof ren9Arr === 'string') {
-            try { ren9Arr = JSON.parse(ren9Arr); } catch (e) { ren9Arr = null; }
-          }
-
           const predField = predFieldMap[frontendKey] || 'spf';
 
           for (const m of matchesArr) {
             const matchNum = m.num || m.match_num || 0;
             const issue = row.issue || m.issue || '';
-            const matchId = m.id || `${issue}_${String(matchNum).padStart(2, '0')}`;
+            const matchId = m.id || `${issue}_${matchNum}`;
 
             let prediction = null;
             if (Array.isArray(predictionsArr)) {
@@ -1137,11 +1136,7 @@ const server = http.createServer(async (req, res) => {
               if (pred) prediction = pred[predField] || null;
             }
 
-            const isR9 = ren9Arr && Array.isArray(ren9Arr)
-              ? ren9Arr.some(r => String(r) === String(matchNum) || String(r) === String(matchNum).padStart(2, '0'))
-              : false;
-
-            const record = {
+            responseData[frontendKey].push({
               match_id: matchId,
               match_num: String(matchNum),
               issue: issue,
@@ -1153,25 +1148,18 @@ const server = http.createServer(async (req, res) => {
               prediction: prediction,
               confidence: row.confidence || null,
               lottery_type: frontendKey
-            };
-
-            responseData[frontendKey].push(record);
-
-            if (frontendKey === 'sfc' && ren9Arr) {
-              responseData.r9.push({ ...record, ren9: ren9Arr, is_r9: isR9 });
-            }
+            });
           }
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
         res.end(JSON.stringify({ success: true, data: responseData }));
-        return;
-      } catch (err) {
-        console.error('[TraditionalLottery] /predict error:', err.message);
+      } catch (e) {
+        console.error('[TraditionalLottery] /predict error:', e.message);
         res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: 'Internal server error', message: err.message }));
-        return;
+        res.end(JSON.stringify({ error: 'Internal server error', message: e.message }));
       }
+      return;
     }
 
     // ======== GET /api/traditional-lottery/latest ========
@@ -1283,9 +1271,9 @@ async function scheduleMatchSettle(matchId, matchTime) {
   const delay = settleTime.getTime() - Date.now();
   
   if (delay <= 0) {
-    // 已经到了结算时间，延迟结算（避免阻塞启动）
-    console.log(`[AutoSettle] 比赛 ${matchId} 已到结算时间，将在后台结算`);
-    setImmediate(() => triggerMatchSettle(matchId));
+    // 已经到了结算时间，立即结算
+    console.log(`[AutoSettle] 比赛 ${matchId} 已到结算时间，立即结算`);
+    triggerMatchSettle(matchId);
     return;
   }
   
@@ -1341,10 +1329,7 @@ async function initializeSettleTimers() {
       const matchId = row.id;
       const matchTime = row.match_time;
       if (matchTime) {
-        // 不 await，让结算任务在后台运行，避免阻塞服务器启动
-        scheduleMatchSettle(matchId, matchTime).catch(err => {
-          console.error(`[AutoSettle] ${matchId} 调度失败:`, err.message);
-        });
+        await scheduleMatchSettle(matchId, matchTime);
       }
     }
   } catch (err) {
@@ -1455,12 +1440,10 @@ scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
 scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
 scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
 
-server.listen(PORT, HOST, () => {
+server.listen(PORT, HOST, async () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
   
-  // 初始化比赛级别定时结算（不阻塞服务器启动）
-  initializeSettleTimers().catch(err => {
-    console.error('[AutoSettle] 初始化失败:', err.message);
-  });
+  // 初始化比赛级别定时结算
+  await initializeSettleTimers();
 });

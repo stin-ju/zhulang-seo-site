@@ -66,6 +66,74 @@ window.apmPlus("init",{
 });
 window.apmPlus("start");
 </script>
+<!-- Coze Coding Analytics -->
+<script>
+(function(){
+  function randomUUID(){
+    if(typeof crypto!=="undefined"&&typeof crypto.randomUUID==="function"){
+      return crypto.randomUUID();
+    }
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g,function(c){
+      return(+c^(crypto.getRandomValues(new Uint8Array(1))[0]&(15>>(+c/4)))).toString(16);
+    });
+  }
+
+  function encode(obj){return btoa(JSON.stringify(obj))}
+  function decode(str){try{return JSON.parse(atob(str))}catch(e){return null}}
+
+  function getDeviceId(){
+    var storageKey="__coze_coding_device_info";
+    try{
+      var info=decode(localStorage.getItem(storageKey));
+      if(info&&typeof info.did==="string"){return info.did}
+    }catch(e){}
+    var newInfo={did:randomUUID()};
+    try{localStorage.setItem(storageKey,encode(newInfo))}catch(e){}
+    return newInfo.did;
+  }
+
+  function sendPageViewEvent(){
+    var deviceId=getDeviceId();
+    var projectId="7652750153115320372";
+    var reportURL="https://code.coze.cn/api/coding/deployment/analytics/report?project_id="+encodeURIComponent(projectId)+"&did="+encodeURIComponent(deviceId);
+    try{
+      fetch(reportURL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          events:[{
+            type:"page_view",
+            url:window.location.href,
+            path:window.location.pathname,
+            referrer:document.referrer,
+            timestamp:Date.now()
+          }]
+        })
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  if(document.readyState==="complete"){
+    sendPageViewEvent();
+  }else{
+    document.addEventListener("readystatechange",function(){
+      if(document.readyState==="complete"){sendPageViewEvent()}
+    });
+  }
+})();
+</script>
+<!-- WebPro SDK -->
+<script>
+(function(n,e,r,t,a,o,s,i,c,l,f,m,p,u){o="precollect";s="getAttribute";i="addEventListener";c="PerformanceObserver";l=function(e){f=[].slice.call(arguments);f.push(Date.now(),location.href);(e==o?l.p.a:l.q).push(f)};l.q=[];l.p={a:[]};n[a]=l;m=document.createElement("script");m.src=r+"?aid="+t+"&globalName="+a;m.crossOrigin="anonymous";e.getElementsByTagName("head")[0].appendChild(m);if(i in n){l.pcErr=function(e){e=e||n.event;p=e.target||e.srcElement;if(p instanceof Element||p instanceof HTMLElement){n[a](o,"st",{tagName:p.tagName,url:p[s]("href")||p[s]("src")})}else{n[a](o,"err",e.error||e.message)}};l.pcRej=function(e){e=e||n.event;n[a](o,"reject",e.reason||e.detail&&e.detail.reason)};n[i]("error",l.pcErr,true);n[i]("unhandledrejection",l.pcRej,true)}if("PerformanceLongTaskTiming"in n){u=l.pp={entries:[]};u.observer=new PerformanceObserver(function(e){u.entries=u.entries.concat(e.getEntries())});u.observer.observe({entryTypes:["longtask"]})}})(window,document,"https://apm.volccdn.com/mars-web/apmplus/web/browser.cn.js",1001891,"apmPlus");
+</script>
+<script>
+window.apmPlus("context.set", "project_id", "7652750153115320372");
+window.apmPlus("init",{
+  aid: 1001891,
+  token: '26a8704bd4d34b1698085c787d0c95d0'
+});
+window.apmPlus("start");
+</script>
 
 <script>
 // 清除旧缓存
@@ -105,7 +173,8 @@ caches.keys().then(function(names) {
         flex-shrink: 0;
         order: 1;
     }
-    .view-item .match-teams {
+    .view-item .match-teams,
+    .view-item .teams {
         font-size: 13px;
         word-break: break-all;
         white-space: normal;
@@ -273,8 +342,9 @@ if ("serviceWorker" in navigator) {
         }
         .view-item:last-child { border-bottom: none; }
         .view-item:hover { background: rgba(255, 255, 255, 0.03); }
-        .view-item .time { font-size: 12px; color: #6b7280; width: 48px; flex-shrink: 0; }
-        .view-item .match-teams { font-size: 14px; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .view-item .time { font-size: 12px; color: #6b7280; width: 100px; flex-shrink: 0; }
+        .view-item .match-teams, .view-item .teams { font-size: 14px; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .match-lottery-id { font-size: 11px; color: #94a3b8; background: rgba(148,163,184,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 6px; cursor: pointer; text-decoration: none; white-space: nowrap; flex-shrink: 0; display: none; }
         .view-item .badge-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
         .badge-sm { font-size: 11px; padding: 1px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
         .badge-sm.win { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
