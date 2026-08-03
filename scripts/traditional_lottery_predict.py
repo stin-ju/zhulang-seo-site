@@ -303,7 +303,7 @@ def get_predictions(game_type):
     try:
         with conn.cursor() as cur:
             cur.execute('''
-                SELECT ai_name, predictions, matches_info, issue
+                SELECT ai_name, predictions, matches_info, issue, ren9
                 FROM traditional_predictions
                 WHERE game_type = %s
                 ORDER BY issue DESC, created_at DESC
@@ -323,6 +323,7 @@ def get_predictions(game_type):
                 predictions = row[1] if isinstance(row[1], list) else json.loads(row[1]) if row[1] else []
                 matches_info = row[2] if isinstance(row[2], list) else json.loads(row[2]) if row[2] else []
                 issue = row[3]
+                ren9 = row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else []
                 # Fallback: get issue from matches_info if not in column
                 if not issue and matches_info:
                     issue = matches_info[0].get("issue", "")
@@ -330,19 +331,22 @@ def get_predictions(game_type):
                     continue
                 if issue not in issue_groups:
                     issue_groups[issue] = {"matches_info": matches_info, "rows": []}
-                issue_groups[issue]["rows"].append((ai_name, predictions))
+                issue_groups[issue]["rows"].append((ai_name, predictions, ren9))
 
             results = []
             for issue, group in issue_groups.items():
                 matches_info = group["matches_info"]
                 for idx, match in enumerate(matches_info):
-                    for ai_name, predictions in group["rows"]:
+                    for ai_name, predictions, ren9 in group["rows"]:
                         pred_obj = predictions[idx] if idx < len(predictions) else {}
 
                         if isinstance(pred_obj, dict):
                             prediction = pred_obj.get(field_key, "")
                         else:
                             prediction = str(pred_obj)
+
+                        match_num = match.get("num", str(idx + 1))
+                        is_r9 = str(match_num) in [str(x) for x in ren9] if ren9 else False
 
                         results.append({
                             "match_id": match.get("id", f"match_{idx+1}"),
@@ -353,6 +357,8 @@ def get_predictions(game_type):
                             "ai_name": ai_name,
                             "prediction": prediction,
                             "issue": issue,
+                            "ren9": ren9,
+                            "is_r9": is_r9,
                         })
             return results
     except Exception as e:

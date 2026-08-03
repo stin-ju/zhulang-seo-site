@@ -1,74 +1,8 @@
-<!DOCTYPE html><html lang="zh-CN"><head><!-- Coze Coding Analytics -->
-<script>
-(function(){
-  function randomUUID(){
-    if(typeof crypto!=="undefined"&&typeof crypto.randomUUID==="function"){
-      return crypto.randomUUID();
-    }
-    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g,function(c){
-      return(+c^(crypto.getRandomValues(new Uint8Array(1))[0]&(15>>(+c/4)))).toString(16);
-    });
-  }
-
-  function encode(obj){return btoa(JSON.stringify(obj))}
-  function decode(str){try{return JSON.parse(atob(str))}catch(e){return null}}
-
-  function getDeviceId(){
-    var storageKey="__coze_coding_device_info";
-    try{
-      var info=decode(localStorage.getItem(storageKey));
-      if(info&&typeof info.did==="string"){return info.did}
-    }catch(e){}
-    var newInfo={did:randomUUID()};
-    try{localStorage.setItem(storageKey,encode(newInfo))}catch(e){}
-    return newInfo.did;
-  }
-
-  function sendPageViewEvent(){
-    var deviceId=getDeviceId();
-    var projectId="7652750153115320372";
-    var reportURL="https://code.coze.cn/api/coding/deployment/analytics/report?project_id="+encodeURIComponent(projectId)+"&did="+encodeURIComponent(deviceId);
-    try{
-      fetch(reportURL,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          events:[{
-            type:"page_view",
-            url:window.location.href,
-            path:window.location.pathname,
-            referrer:document.referrer,
-            timestamp:Date.now()
-          }]
-        })
-      }).catch(function(){});
-    }catch(e){}
-  }
-
-  if(document.readyState==="complete"){
-    sendPageViewEvent();
-  }else{
-    document.addEventListener("readystatechange",function(){
-      if(document.readyState==="complete"){sendPageViewEvent()}
-    });
-  }
-})();
-</script>
-<!-- WebPro SDK -->
-<script>
-(function(n,e,r,t,a,o,s,i,c,l,f,m,p,u){o="precollect";s="getAttribute";i="addEventListener";c="PerformanceObserver";l=function(e){f=[].slice.call(arguments);f.push(Date.now(),location.href);(e==o?l.p.a:l.q).push(f)};l.q=[];l.p={a:[]};n[a]=l;m=document.createElement("script");m.src=r+"?aid="+t+"&globalName="+a;m.crossOrigin="anonymous";e.getElementsByTagName("head")[0].appendChild(m);if(i in n){l.pcErr=function(e){e=e||n.event;p=e.target||e.srcElement;if(p instanceof Element||p instanceof HTMLElement){n[a](o,"st",{tagName:p.tagName,url:p[s]("href")||p[s]("src")})}else{n[a](o,"err",e.error||e.message)}};l.pcRej=function(e){e=e||n.event;n[a](o,"reject",e.reason||e.detail&&e.detail.reason)};n[i]("error",l.pcErr,true);n[i]("unhandledrejection",l.pcRej,true)}if("PerformanceLongTaskTiming"in n){u=l.pp={entries:[]};u.observer=new PerformanceObserver(function(e){u.entries=u.entries.concat(e.getEntries())});u.observer.observe({entryTypes:["longtask"]})}})(window,document,"https://apm.volccdn.com/mars-web/apmplus/web/browser.cn.js",1001891,"apmPlus");
-</script>
-<script>
-window.apmPlus("context.set", "project_id", "7652750153115320372");
-window.apmPlus("init",{
-  aid: 1001891,
-  token: '26a8704bd4d34b1698085c787d0c95d0'
-});
-window.apmPlus("start");
-</script>
-
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⚽ 传统足彩 传足计算器</title>
 <style>
 /* ===== 全局重置 ===== */
@@ -268,7 +202,7 @@ a:hover{text-decoration:underline}
 
 <!-- 胜负游戏 -->
 <div class="panel on" id="p-sfc">
-  <div class="tbl-wrap"><table id="t-sfc"><thead></thead><tbody><tr><td class="loading" colspan="13"><div class="spin"></div><br/>加载赛程数据...</td></tr></tbody></table></div>
+  <div class="tbl-wrap"><table id="t-sfc"><thead></thead><tbody><tr><td class="loading" colspan="13"><div class="spin"></div><br>加载赛程数据...</td></tr></tbody></table></div>
   <div class="rec-box" id="rec-sfc"><h3>🤖 AI共识推荐</h3><div class="rec-list"><span class="rec-empty">等待数据加载...</span></div></div>
 </div>
 
@@ -280,12 +214,12 @@ a:hover{text-decoration:underline}
 
 <!-- 半全场 -->
 <div class="panel" id="p-htf">
-  <div class="tbl-wrap"><table id="t-htf"><thead></thead><tbody><tr><td class="loading" colspan="15"><div class="spin"></div><br/>加载赛程数据...</td></tr></tbody></table></div>
+  <div class="tbl-wrap"><table id="t-htf"><thead></thead><tbody><tr><td class="loading" colspan="15"><div class="spin"></div><br>加载赛程数据...</td></tr></tbody></table></div>
 </div>
 
 <!-- 进球彩 -->
 <div class="panel" id="p-jqc">
-  <div class="tbl-wrap"><table id="t-jqc"><thead></thead><tbody><tr><td class="loading" colspan="14"><div class="spin"></div><br/>加载赛程数据...</td></tr></tbody></table></div>
+  <div class="tbl-wrap"><table id="t-jqc"><thead></thead><tbody><tr><td class="loading" colspan="14"><div class="spin"></div><br>加载赛程数据...</td></tr></tbody></table></div>
 </div>
 
 <!-- 玩法说明 -->
@@ -314,7 +248,7 @@ a:hover{text-decoration:underline}
   </div>
   <div class="bet-sep"></div>
   <button class="btn-clear" onclick="clearSel()">清空选项</button>
-  <button class="btn-detail" onclick="alert(&#39;奖金详情功能开发中&#39;)">奖金详情</button>
+  <button class="btn-detail" onclick="alert('奖金详情功能开发中')">奖金详情</button>
 </div>
 
 <script>
@@ -353,25 +287,24 @@ async function loadData(){
 
     // 整理 SFC（按期号过滤）
     matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
-    aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
+    aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+k.split("_")[1], activeIssue.sfc);
     aiNames.sfc = uniqueAIs(j.data.sfc);
 
-    // 整理 HTF（半全场）
+    // 整理 HTF（半全场每场比赛有独立期号，但展示时合并为一个整体）
     const htfItems = j.data.htf;
-    // HTF/JQC 期号（先算期号再过滤数据）
+    matches.htf = buildMatches(htfItems);
+    aiPreds.htf = buildPreds(htfItems, k => "htf_"+k.split("_")[1]);
+    aiNames.htf = uniqueAIs(htfItems);
+    // HTF/JQC 期号
     issues.htf = [...new Set(htfItems.map(i=>i.issue))].filter(Boolean).sort().reverse();
     issues.jqc = [...new Set(j.data.jqc.map(i=>i.issue))].filter(Boolean).sort().reverse();
     if(issues.htf.length) activeIssue.htf = issues.htf[0];
     if(issues.jqc.length) activeIssue.jqc = issues.jqc[0];
 
-    matches.htf = buildMatches(htfItems, activeIssue.htf);
-    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]), activeIssue.htf);
-    aiNames.htf = uniqueAIs(htfItems);
-
-    // 整理 JQC（进球彩同理）
+    // 整理 JQC（进球彩同理，合并展示）
     const jqcItems = j.data.jqc;
-    matches.jqc = buildMatches(jqcItems, activeIssue.jqc);
-    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]), activeIssue.jqc);
+    matches.jqc = buildMatches(jqcItems);
+    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+k.split("_")[1]);
     aiNames.jqc = uniqueAIs(jqcItems);
 
     // 更新顶部期号
@@ -406,7 +339,8 @@ function buildMatches(items, issueFilter){
         home: it.home_team,
         away: it.away_team,
         league: it.league,
-        time: it.match_time
+        time: it.match_time,
+        is_r9: it.is_r9 || false
       });
     }
   });
@@ -420,7 +354,12 @@ function buildPreds(items, keyFn, issueFilter){
     if(it.ai_name === "system") return;
     const key = keyFn(it.match_id);
     if(!preds[key]) preds[key] = {};
-    if(it.prediction) preds[key][it.ai_name] = it.prediction;
+    if(it.prediction) {
+      preds[key][it.ai_name] = it.prediction;
+      // 保存任9推荐信息
+      if(!preds[key]._r9) preds[key]._r9 = {};
+      preds[key]._r9[it.ai_name] = it.is_r9 || false;
+    }
   });
   return preds;
 }
@@ -449,7 +388,8 @@ function calcDeadline(){
    ========================================================== */
 function renderSFC(){
   renderSFCTable("t-sfc", "sfc", matches.sfc, aiPreds.sfc, false);
-  renderSFCTable("t-r9",  "r9",  matches.sfc, aiPreds.sfc, true);
+  // 任9：显示所有比赛，但只有AI推荐的场次才显示预测
+  renderSFCTable("t-r9", "r9", matches.sfc, aiPreds.sfc, true);
 }
 
 function renderSFCTable(tid, tab, ms, preds, isR9){
@@ -482,7 +422,11 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
     html += `</div></td>`;
     // AI列
     ans.forEach(n => {
-      const v = p[n] || "";
+      let v = p[n] || "";
+      // 任9模式：只有AI推荐的场次才显示预测
+      if(isR9 && p._r9 && p._r9[n] === false) {
+        v = "";
+      }
       html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
     });
     html += "</tr>";
@@ -625,7 +569,7 @@ function switchIssue(tab, issue){
   // sfc/r9 需要重建赛程和预测数据
   if(tab==="sfc"||tab==="r9"){
     matches.sfc = buildMatches(rawData.sfc, activeIssue.sfc);
-    aiPreds.sfc = buildPreds(rawData.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
+    aiPreds.sfc = buildPreds(rawData.sfc, k => "sfc_"+k.split("_")[1], activeIssue.sfc);
     document.getElementById("issueNum").textContent = issue + "期";
     calcDeadline();
     renderSFC();
@@ -633,12 +577,12 @@ function switchIssue(tab, issue){
   }
   else if(tab==="htf"){
     matches.htf = buildMatches(rawData.htf, activeIssue.htf);
-    aiPreds.htf = buildPreds(rawData.htf, k => "htf_"+parseInt(k.split("_")[1]), activeIssue.htf);
+    aiPreds.htf = buildPreds(rawData.htf, k => "htf_"+k.split("_")[1], activeIssue.htf);
     renderHTF();
   }
   else if(tab==="jqc"){
     matches.jqc = buildMatches(rawData.jqc, activeIssue.jqc);
-    aiPreds.jqc = buildPreds(rawData.jqc, k => "jqc_"+parseInt(k.split("_")[1]), activeIssue.jqc);
+    aiPreds.jqc = buildPreds(rawData.jqc, k => "jqc_"+k.split("_")[1], activeIssue.jqc);
     renderJQC();
   }
   renderSubBtns(tab);
@@ -899,6 +843,5 @@ function tickCountdown(){
    ========================================================== */
 loadData();
 </script>
-
-
-</body></html>
+</body>
+</html>
