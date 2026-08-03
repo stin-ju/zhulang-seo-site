@@ -1,636 +1,847 @@
-#!/usr/bin/env python3
-# traditional_lottery_predict.py - 传统足彩7AI预测
-# 支持玩法：胜负彩、半全场、进球彩
-# 数据源：从数据库已有比赛数据读取（不依赖体彩API）
-import os, sys, json, time, re, traceback
-import psycopg2
-import requests
-from datetime import datetime
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ 传统足彩 传足计算器</title>
+<style>
+/* ===== 全局重置 ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0b0b14;color:#d0d0d0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;line-height:1.5;min-height:100vh;padding-bottom:80px}
+a{color:#5ab8f0;text-decoration:none}
+a:hover{text-decoration:underline}
 
-# ============ 配置 ============
+/* ===== 顶部导航 ===== */
+.top-bar{background:linear-gradient(135deg,#111128 0%,#191940 100%);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #252550;position:sticky;top:0;z-index:100}
+.top-bar .logo{font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
+.top-bar .logo i{color:#ffd700;font-style:normal}
+.nav-links{display:flex;gap:2px}
+.nav-links a{padding:5px 14px;border-radius:16px;font-size:13px;color:#777;transition:.2s}
+.nav-links a:hover,.nav-links a.on{background:rgba(90,184,240,.12);color:#5ab8f0;text-decoration:none}
 
-# 设置API Keys (从环境变量读取，实际值在 .env 文件中)
-# os.environ.setdefault("DOUBAO_API_KEY", "...")
-# os.environ.setdefault("WENXIN_API_KEY", "...")
-# os.environ.setdefault("HUNYUAN_API_KEY", "...")
-# os.environ.setdefault("DEEPSEEK_API_KEY", "...")
-# os.environ.setdefault("ZHIPU_API_KEY", "...")
-# os.environ.setdefault("MINIMAX_API_KEY", "...")
-# os.environ.setdefault("DATABASE_URL", "...")
+/* ===== 面包屑 ===== */
+.breadcrumb{padding:8px 16px;font-size:12px;color:#555;background:#0d0d1a}
+.breadcrumb a{color:#555;font-size:12px}
+.breadcrumb a:hover{color:#5ab8f0}
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+/* ===== 期号信息栏 ===== */
+.issue-strip{background:#0f0f24;padding:14px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid #1c1c38}
+.issue-strip .num{font-size:20px;font-weight:700;color:#fff}
+.issue-strip .badge{background:#2e7d32;color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600}
+.issue-strip .deadline{margin-left:auto;font-size:13px;color:#ff8a65}
+.issue-strip .deadline b{color:#fff;font-weight:600}
 
-# 7个AI配置
-AI_CONFIGS = {
-    "扣子": {
-        "format": "local",  # 本地联网搜索，不走外部API
-    },
-    "豆包": {
-        "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-        "key_env": "DOUBAO_API_KEY",
-        "model": "doubao-seed-2-0-mini-260428",
-        "format": "openai",
-        "fallback_models": ["doubao-seed-2-1-turbo-260628", "doubao-seed-2-0-mini-260215"],
-    },
-    "文心": {
-        "url": "https://qianfan.baidubce.com/v2/chat/completions",
-        "key_env": "WENXIN_API_KEY",
-        "model": "ernie-4.0-8k-latest",
-        "format": "openai",
-        "max_tokens": 2048,
-    },
-    "混元": {
-        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
-        "key_env": "HUNYUAN_API_KEY",
-        "model": "hy-mt2-lite",
-        "format": "openai",
-    },
-    "DeepSeek": {
-        "url": "https://api.deepseek.com/chat/completions",
-        "key_env": "DEEPSEEK_API_KEY",
-        "model": "deepseek-chat",
-        "format": "openai",
-    },
-    "智谱清言": {
-        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        "key_env": "ZHIPU_API_KEY",
-        "model": "glm-4-flash",
-        "format": "openai",
-    },
-    "MiniMax": {
-        "url": "https://api.minimax.chat/v1/text/chatcompletion_v2",
-        "key_env": "MINIMAX_API_KEY",
-        "model": "MiniMax-Text-01",
-        "format": "minimax",
-    },
+/* ===== 主Tab ===== */
+.main-tabs{display:flex;background:#141432;border-bottom:1px solid #222250}
+.main-tab{flex:1;text-align:center;padding:11px 8px;font-size:14px;color:#666;border:none;background:none;cursor:pointer;position:relative;transition:.2s;font-weight:500}
+.main-tab:hover{color:#aaa}
+.main-tab.on{color:#fff;font-weight:600;background:#1a1a40}
+.main-tab.on::after{content:"";position:absolute;bottom:0;left:20%;right:20%;height:2px;background:#5ab8f0;border-radius:1px}
+.prize-badge{background:#1a1a1a;color:#ffd700;font-size:12px;font-weight:600;padding:6px 14px;display:flex;align-items:center;white-space:nowrap}
+.prize-badge b{font-size:16px;margin:0 2px}
+
+/* ===== 玩法提示 ===== */
+.tip-bar{background:#0e0e20;padding:8px 16px;font-size:12px;color:#556;text-align:center;border-bottom:1px solid #1a1a30}
+
+/* ===== 子Tab / 期号切换 ===== */
+.sub-bar{background:#0c0c1e;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #1a1a30}
+.sub-bar .label{font-size:12px;color:#555;margin-right:4px}
+.sub-btn{padding:4px 14px;border-radius:4px;font-size:12px;border:1px solid #333;background:#1a1a30;color:#999;cursor:pointer;transition:.15s}
+.sub-btn:hover{border-color:#555;color:#ccc}
+.sub-btn.on{background:#2a2a55;color:#fff;border-color:#5ab8f0}
+.sub-right{margin-left:auto;font-size:12px;color:#666}
+
+/* ===== 内容区 ===== */
+.panel{display:none}
+.panel.on{display:block}
+
+/* ===== 表格容器 ===== */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 8px}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:13px;min-width:780px}
+.tbl-wrap thead th{background:#151538;color:#888;padding:9px 3px;font-weight:500;text-align:center;border:1px solid #1e1e40;white-space:nowrap;position:sticky;top:0;z-index:2}
+.tbl-wrap tbody td{padding:7px 3px;text-align:center;border:1px solid #1a1a35;vertical-align:middle}
+.tbl-wrap tbody tr:nth-child(even){background:rgba(255,255,255,.015)}
+.tbl-wrap tbody tr:hover{background:rgba(90,184,240,.03)}
+.col-num{width:32px;color:#fff;font-weight:700}
+.col-league{color:#777;font-size:11px;white-space:nowrap;width:50px}
+.col-time{color:#888;font-size:11px;white-space:nowrap;width:54px}
+.col-home{text-align:right;padding-right:4px!important;font-weight:600;color:#ddd;width:72px;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.col-vs{color:#444;font-size:10px;padding:0 2px!important;width:20px}
+.col-htf{text-align:center;padding:4px 2px!important;background:#0a0a18}
+.col-htf:first-child{border-left:2px solid #252555}
+.col-away{text-align:left;padding-left:4px!important;font-weight:600;color:#ddd;width:72px;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.col-ai{font-size:12px;color:#556;min-width:38px}
+.col-ai.has{color:#b0bec5;font-weight:500}
+
+/* ===== 期号分组标签行 ===== */
+.grp-label td{background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left!important;padding:6px 14px!important;border-bottom:2px solid #252555}
+.grp-sep td{border-top:3px solid #252555}
+
+/* ===== 选项按钮组 ===== */
+.opts{display:flex;gap:2px;justify-content:center;flex-wrap:nowrap}
+.ob{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:30px;padding:0 5px;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #3a3a5a;background:#1e1e3a;color:#888;transition:.12s;user-select:none}
+.ob:hover{border-color:#666;color:#ccc;background:#252550}
+.ob:active{transform:scale(.92)}
+.ob.sel{background:#3a3a70;color:#fff;border-color:#5ab8f0;box-shadow:0 0 6px rgba(90,184,240,.2)}
+/* 胜/平/负 特殊色 */
+.ob.w{border-color:#2e5a2e;color:#4caf50}.ob.w:hover{border-color:#4caf50;background:#1a2e1a}
+.ob.w.sel{background:#2e7d32;color:#fff;border-color:#4caf50;box-shadow:0 0 6px rgba(76,175,80,.3)}
+.ob.d{border-color:#5a4a1e;color:#ffc107}.ob.d:hover{border-color:#ffc107;background:#2e2510}
+.ob.d.sel{background:#f9a825;color:#1a1a2e;border-color:#ffc107;box-shadow:0 0 6px rgba(255,193,7,.3)}
+.ob.l{border-color:#5a1e1e;color:#f44336}.ob.l:hover{border-color:#f44336;background:#2e1a1a}
+.ob.l.sel{background:#c62828;color:#fff;border-color:#f44336;box-shadow:0 0 6px rgba(244,67,54,.3)}
+/* 半全场小按钮 */
+.ob.sm{min-width:auto;padding:0 6px;height:28px;font-size:11px;border-radius:3px}
+/* 进球彩小按钮 */
+.ob.gs{min-width:28px;height:26px;font-size:11px;padding:0 5px;border-radius:3px}
+/* 进球彩主客行标签 */
+.row-sub{font-size:10px;color:#556;display:block;margin-bottom:1px}
+
+/* ===== AI推荐区 ===== */
+.rec-box{margin:12px 16px;padding:14px;background:#10102a;border-radius:8px;border:1px solid #1e1e3a}
+.rec-box h3{font-size:14px;color:#ddd;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.rec-list{display:flex;flex-wrap:wrap;gap:6px}
+.rec-tag{padding:3px 10px;border-radius:8px;font-size:12px;background:rgba(255,255,255,.04);color:#888;border:1px solid #222}
+.rec-tag b{color:#ffd700}
+.rec-tag.hot{border-color:#2e7d32;color:#81c784}
+.rec-tag.warm{border-color:#e65100;color:#ffab40}
+.rec-empty{font-size:12px;color:#445}
+
+/* ===== 玩法说明 ===== */
+.rules{margin:12px 16px;padding:14px;background:#0e0e22;border-radius:8px;border:1px solid #1a1a30}
+.rules h3{font-size:14px;color:#ddd;margin-bottom:8px}
+.rules ol{padding-left:18px;font-size:12px;color:#667}
+.rules li{margin-bottom:4px}
+
+/* ===== 底部投注模拟器 ===== */
+.bet-bar{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(180deg,#18183e 0%,#0e0e24 100%);border-top:2px solid #2a2a5a;padding:10px 16px;z-index:200;display:flex;align-items:center;flex-wrap:wrap;gap:12px;justify-content:center;box-shadow:0 -4px 20px rgba(0,0,0,.5)}
+.bet-item{display:flex;align-items:center;gap:4px;font-size:13px;color:#bbb}
+.bet-item b{color:#ffd700;font-size:17px;font-weight:700;min-width:28px;text-align:center}
+.bet-sep{width:1px;height:24px;background:#2a2a50}
+.mult-ctl{display:flex;align-items:center;gap:4px}
+.mult-ctl button{width:28px;height:28px;border-radius:50%;border:1px solid #3a3a5a;background:#1a1a3a;color:#5ab8f0;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
+.mult-ctl button:hover{background:#252550;border-color:#5ab8f0}
+.mult-ctl button:active{transform:scale(.9)}
+.mult-ctl .mv{font-size:16px;font-weight:700;color:#fff;min-width:24px;text-align:center}
+.mult-ctl .mu{font-size:11px;color:#666}
+.btn-clear{padding:6px 16px;border-radius:16px;border:1px solid #5a1e1e;background:transparent;color:#f44336;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-clear:hover{background:rgba(244,67,54,.1)}
+.btn-clear:active{transform:scale(.95)}
+.btn-detail{padding:6px 18px;border-radius:16px;border:none;background:#e65100;color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-detail:hover{background:#ff6d00}
+
+/* ===== 加载指示 ===== */
+.loading{text-align:center;padding:40px;color:#445;font-size:14px}
+.loading .spin{display:inline-block;width:24px;height:24px;border:3px solid #2a2a50;border-top-color:#5ab8f0;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== 移动端 ===== */
+@media(max-width:768px){
+  .top-bar{padding:8px 12px}
+  .nav-links a{padding:4px 10px;font-size:12px}
+  .main-tab{padding:9px 4px;font-size:13px}
+  .prize-badge{display:none}
+  .issue-strip .deadline{margin-left:0;width:100%}
+  .ob{min-width:30px;height:28px;font-size:12px;padding:0 7px}
+  .ob.sm{height:24px;font-size:10px;padding:0 4px}
+  .ob.gs{height:24px;min-width:24px;font-size:10px}
+  .bet-bar{padding:8px 10px;gap:8px}
+  .bet-item{font-size:11px}
+  .bet-item b{font-size:14px}
+  .bet-sep{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部导航 ===== -->
+<nav class="top-bar">
+  <div class="logo">⚽ <i>传统足彩</i></div>
+  <div class="nav-links">
+    <a href="index.html">竞彩</a>
+    <a href="ct.html" class="on">传统足彩</a>
+    <a href="ai.html">AI分析</a>
+    <a href="calc.html">计算器</a>
+  </div>
+</nav>
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+  <a href="/">竞彩网</a> &gt; <a href="ct.html">传统足彩</a> &gt; 传足计算器
+</div>
+
+<!-- 期号信息 -->
+<div class="issue-strip" id="issueStrip">
+  <span class="num" id="issueNum">--</span>
+  <span class="badge">● 在售</span>
+  <span class="deadline">截止 <b id="deadlineTxt">--</b></span>
+</div>
+
+<!-- 主Tab + 奖金标识 -->
+<div style="display:flex;align-items:stretch">
+  <div class="main-tabs" style="flex:1" id="mainTabs">
+    <button class="main-tab on" data-tab="sfc">胜负游戏</button>
+    <button class="main-tab" data-tab="r9">任选9场</button>
+    <button class="main-tab" data-tab="htf">6场半全场</button>
+    <button class="main-tab" data-tab="jqc">4场进球</button>
+  </div>
+  <div class="prize-badge">单注最高奖金<b>500</b>万元</div>
+</div>
+
+<!-- 玩法提示 -->
+<div class="tip-bar" id="tipBar">以下14场比赛，每场比赛至少选择一个结果；比赛结果以90分钟（含伤停补时，不含加时赛）结果为准。</div>
+
+<!-- 子Tab / 期号切换 -->
+<div class="sub-bar" id="subBar">
+  <span class="label">在售奖期</span>
+  <div id="subBtns"></div>
+  <span class="sub-right" id="subDeadline"></span>
+</div>
+
+<!-- ===== 内容面板 ===== -->
+
+<!-- 胜负游戏 -->
+<div class="panel on" id="p-sfc">
+  <div class="tbl-wrap"><table id="t-sfc"><thead></thead><tbody><tr><td class="loading" colspan="13"><div class="spin"></div><br>加载赛程数据...</td></tr></tbody></table></div>
+  <div class="rec-box" id="rec-sfc"><h3>🤖 AI共识推荐</h3><div class="rec-list"><span class="rec-empty">等待数据加载...</span></div></div>
+</div>
+
+<!-- 任选9场 -->
+<div class="panel" id="p-r9">
+  <div class="tip-bar" style="text-align:left;padding-left:16px">从14场中任选9场，直接在选项栏选择3/1/0即视为选中该场。猜中全部9场即中一等奖。</div>
+  <div class="tbl-wrap"><table id="t-r9"><thead></thead><tbody></tbody></table></div>
+</div>
+
+<!-- 半全场 -->
+<div class="panel" id="p-htf">
+  <div class="tbl-wrap"><table id="t-htf"><thead></thead><tbody><tr><td class="loading" colspan="15"><div class="spin"></div><br>加载赛程数据...</td></tr></tbody></table></div>
+</div>
+
+<!-- 进球彩 -->
+<div class="panel" id="p-jqc">
+  <div class="tbl-wrap"><table id="t-jqc"><thead></thead><tbody><tr><td class="loading" colspan="14"><div class="spin"></div><br>加载赛程数据...</td></tr></tbody></table></div>
+</div>
+
+<!-- 玩法说明 -->
+<div class="rules">
+  <h3>📖 玩法提示</h3>
+  <ol>
+    <li>14场比赛，每场至少选择一个结果（胜3/平1/负0）</li>
+    <li>比赛结果以90分钟（含伤停补时，不含加时赛）为准</li>
+    <li>全部猜中为一等奖，猜中13场为二等奖</li>
+    <li>复式投注：对某场选择多个结果，注数 = 各场选中数相乘</li>
+    <li>AI预测仅供参考，请理性投注</li>
+  </ol>
+</div>
+
+<!-- ===== 底部投注模拟器 ===== -->
+<div class="bet-bar">
+  <div class="bet-item">已选 <b id="bBets">0</b> 注</div>
+  <div class="bet-sep"></div>
+  <div class="bet-item">金额 <b id="bAmt">0</b> 元</div>
+  <div class="bet-sep"></div>
+  <div class="mult-ctl">
+    <button onclick="chgMult(-1)">−</button>
+    <span class="mv" id="bMult">1</span>
+    <span class="mu">倍</span>
+    <button onclick="chgMult(1)">+</button>
+  </div>
+  <div class="bet-sep"></div>
+  <button class="btn-clear" onclick="clearSel()">清空选项</button>
+  <button class="btn-detail" onclick="alert('奖金详情功能开发中')">奖金详情</button>
+</div>
+
+<script>
+/* ==========================================================
+   全局状态
+   ========================================================== */
+const API = "/api/traditional-lottery/predict";
+let rawData = null;               // API 原始返回
+let matches = {sfc:[], htf:{}, jqc:{}}; // 整理后的赛程
+let aiPreds = {sfc:{}, htf:{}, jqc:{}}; // AI 预测 {matchKey: {aiName: val}}
+let aiNames = {sfc:[], htf:[], jqc:[]}; // 每个tab的AI列名
+let issues  = {sfc:[], htf:[], jqc:[]}; // 每个tab的期号列表
+let sel = {sfc:{}, r9:{}, htf:{}, jqc:{}}; // 用户选择
+let r9Picks = new Set();          // 任选9场选中的场次号
+let mult = 1;                     // 倍数
+let activeTab = "sfc";            // 当前Tab
+let activeIssue = {sfc:null, htf:null, jqc:null}; // 子期号
+
+const HF_OPTS = ["33","31","30","13","11","10","03","01","00"];
+const HF_CLS  = ["w","w","w","d","d","d","l","l","l"];
+const GOAL_OPTS = ["0","1","2","3+"];
+
+/* ==========================================================
+   数据获取与整理
+   ========================================================== */
+async function loadData(){
+  try{
+    const r = await fetch(API);
+    const j = await r.json();
+    if(!j.success) throw new Error("API返回失败");
+    rawData = j.data;
+
+    // 提取所有期号（新→旧排序）
+    issues.sfc  = [...new Set(j.data.sfc.map(i=>i.issue))].filter(Boolean).sort().reverse();
+    activeIssue.sfc = issues.sfc[0] || null; // 默认最新期
+
+    // 整理 SFC（按期号过滤）
+    matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
+    aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
+    aiNames.sfc = uniqueAIs(j.data.sfc);
+
+    // 整理 HTF（半全场每场比赛有独立期号，但展示时合并为一个整体）
+    const htfItems = j.data.htf;
+    matches.htf = buildMatches(htfItems);
+    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]));
+    aiNames.htf = uniqueAIs(htfItems);
+    // HTF/JQC 期号
+    issues.htf = [...new Set(htfItems.map(i=>i.issue))].filter(Boolean).sort().reverse();
+    issues.jqc = [...new Set(j.data.jqc.map(i=>i.issue))].filter(Boolean).sort().reverse();
+    if(issues.htf.length) activeIssue.htf = issues.htf[0];
+    if(issues.jqc.length) activeIssue.jqc = issues.jqc[0];
+
+    // 整理 JQC（进球彩同理，合并展示）
+    const jqcItems = j.data.jqc;
+    matches.jqc = buildMatches(jqcItems);
+    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]));
+    aiNames.jqc = uniqueAIs(jqcItems);
+
+    // 更新顶部期号
+    if(issues.sfc.length){
+      document.getElementById("issueNum").textContent = issues.sfc[0] + "期";
+    }
+
+    // 计算截止时间
+    calcDeadline();
+
+    // 恢复状态 & 渲染
+    restoreState();
+    renderAll();
+  }catch(e){
+    console.error("加载数据失败:", e);
+    document.querySelectorAll(".loading").forEach(el => {
+      el.innerHTML = "⚠️ 数据加载失败，请刷新重试";
+    });
+  }
 }
 
-# ============ Prompt模板（无需赔率） ============
-
-PROMPT_TEMPLATE = '''你是一位资深足球赛事分析师。请对以下比赛进行深度分析并给出预测。
-
-## ⚠️ 核心要求：必须联网搜索（严禁凭空猜测）
-
-**你必须对每一场比赛的双方球队都进行联网搜索**，获取以下真实数据后再做判断：
-
-### 1. 近期战绩（最重要）
-- 搜索每支球队**近10场**正式比赛结果（胜/平/负各几场）
-- 重点关注近5场的状态走势（是连胜还是连败）
-- 区分主客场：主队近6个主场战绩、客队近6个客场战绩
-
-### 2. 交锋记录（关键参考）
-- 搜索双方**近5次直接交锋**结果
-- 注意是否有"克星"关系（某队连续多年压制另一队）
-- 主客场交锋是否有明显差异
-
-### 3. 球队状态与情报
-- 搜索球队近期是否有**关键球员伤停**
-- 是否有**多线作战疲劳**（如刚踢完欧战/杯赛）
-- 球队**赛季目标**：保级队拼死一搏 vs 无欲无求的中游队
-- 是否有**换帅效应**（新帅上任前几场通常表现不同）
-
-### 4. 联赛特性分析
-- 不同联赛有不同的主客场权重（如巴甲主场优势明显、北欧联赛夏季赛程密集）
-- 杯赛（欧冠/欧罗巴）注意球队是否已锁定出线或已出局
-
-## 编码规则
-
-【胜平负】3=主胜, 1=平局, 0=客负
-【半全场】33=胜胜, 31=胜平, 30=胜负, 13=平胜, 11=平平, 10=平负, 03=负胜, 01=负平, 00=负负
-【进球数】0=0球, 1=1球, 2=2球, 3=3球及以上
-
-## 比赛数据（{game_type} 第{issue}期）
-
-{match_data}
-
-## 输出要求
-
-只输出以下JSON，不要任何分析过程或其他文字：
-```json
-{{
-  "predictions": [
-    {{"match": "1", "spf": "3", "bf": "2:1", "zjq": "2", "bqc": "33"}},
-    {{"match": "2", "spf": "1", "bf": "1:1", "zjq": "2", "bqc": "11"}}
-  ],
-  "ren9": ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
-  "confidence": "高"
-}}
-```
-
-predictions数组必须包含所有{match_count}场比赛。spf只选一个值(3/1/0)。bf为精确比分。zjq为总进球数(0/1/2/3)。bqc为半全场编码。ren9选择最有把握的9场。confidence为整体信心度(高/中/低)。'''
-
-# ============ 数据库操作 ============
-
-def fetch_matches_from_db(game_type, target_issue=None):
-    '''从数据库读取比赛数据
-    优先从 matches 表找最新的有真实对阵的CT期号（确保能发现新期号）
-    target_issue: 指定期号，None则取最新有真实对阵的期号
-    '''
-    if not DATABASE_URL:
-        print("DATABASE_URL 未配置")
-        return [], None
-
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        with conn.cursor() as cur:
-            # 第一步：从matches表找所有有真实对阵的CT期号（按期号降序）
-            cur.execute('''
-                SELECT DISTINCT metadata->>'issue' as issue
-                FROM matches
-                WHERE metadata->>'match_type' = 'ct'
-                  AND id LIKE 'CT%%'
-                  AND home_team != '待定'
-                ORDER BY issue DESC
-            ''')
-            ct_issues = [r[0] for r in cur.fetchall() if r[0]]
-
-            if target_issue:
-                # 指定期号：只处理该期号
-                if target_issue in ct_issues:
-                    cur.execute('''
-                        SELECT id, home_team, away_team, metadata->>'league',
-                               metadata->>'match_time'
-                        FROM matches
-                        WHERE id LIKE 'CT' || %s || '_%%'
-                        ORDER BY id
-                    ''', (target_issue,))
-                    rows = cur.fetchall()
-                    matches = []
-                    for i, row in enumerate(rows):
-                        mid = row[0].replace('CT', '')
-                        date_part = (row[4] or '').split(' ')[0]
-                        matches.append({
-                            'id': mid,
-                            'num': f"{i+1:02d}",
-                            'home': row[1],
-                            'away': row[2],
-                            'league': row[3] or '',
-                            'time': date_part,
-                            'issue': target_issue,
-                        })
-                    print(f"从matches表读取CT第{target_issue}期赛程: {len(matches)}场")
-                    return matches, target_issue
-                else:
-                    # 指定期号在matches表中没有真实对阵，检查是否全部待定
-                    cur.execute('''
-                        SELECT id, home_team, away_team, metadata->>'league',
-                               metadata->>'match_time'
-                        FROM matches
-                        WHERE id LIKE 'CT' || %s || '_%%'
-                        ORDER BY id
-                    ''', (target_issue,))
-                    rows = cur.fetchall()
-                    if rows:
-                        print(f"第{target_issue}期对阵尚未确定（全部待定）")
-                        return [], target_issue
-                    else:
-                        print(f"第{target_issue}期在数据库中不存在")
-                        return [], target_issue
-
-            # 未指定期号：遍历matches表中的CT期号，返回最新的有真实对阵的期号
-            for issue_num in ct_issues:
-                cur.execute('''
-                    SELECT id, home_team, away_team, metadata->>'league',
-                           metadata->>'match_time'
-                    FROM matches
-                    WHERE id LIKE 'CT' || %s || '_%%'
-                    ORDER BY id
-                ''', (issue_num,))
-                rows = cur.fetchall()
-                if rows:
-                    matches = []
-                    for i, row in enumerate(rows):
-                        mid = row[0].replace('CT', '')
-                        date_part = (row[4] or '').split(' ')[0]
-                        matches.append({
-                            'id': mid,
-                            'num': f"{i+1:02d}",
-                            'home': row[1],
-                            'away': row[2],
-                            'league': row[3] or '',
-                            'time': date_part,
-                            'issue': issue_num,
-                        })
-                    print(f"从matches表读取CT第{issue_num}期赛程: {len(matches)}场")
-                    return matches, issue_num
-
-            # matches表没有找到任何有真实对阵的CT比赛
-            print(f"数据库中没有{game_type}的比赛数据")
-            return [], None
-    except Exception as e:
-        print(f"读取数据库失败: {e}")
-        return [], None
-    finally:
-        conn.close()
-
-
-def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
-    '''保存预测结果（按 game_type + ai_name + issue 唯一标识）'''
-    if not DATABASE_URL:
-        print("DATABASE_URL 未配置，跳过保存")
-        return
-
-    # 从 matches_info 中提取 issue
-    issue = None
-    if matches_info and isinstance(matches_info, list) and len(matches_info) > 0:
-        issue = matches_info[0].get('issue', '')
-    # 也可以从 predictions_data 中获取
-    if not issue:
-        issue = predictions_data.get('issue', '')
-
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        with conn.cursor() as cur:
-            # 按 game_type + ai_name + issue 查找
-            if issue:
-                cur.execute('''
-                    SELECT id FROM traditional_predictions
-                    WHERE game_type = %s AND ai_name = %s AND issue = %s
-                ''', (game_type, ai_name, issue))
-            else:
-                cur.execute('''
-                    SELECT id FROM traditional_predictions
-                    WHERE game_type = %s AND ai_name = %s
-                ''', (game_type, ai_name))
-            existing = cur.fetchone()
-
-            if existing:
-                # 更新：只更新当前期号的记录
-                cur.execute('''
-                    UPDATE traditional_predictions
-                    SET predictions = %s,
-                        ren9 = %s,
-                        confidence = %s,
-                        matches_info = %s,
-                        created_at = CURRENT_TIMESTAMP
-                    WHERE game_type = %s AND ai_name = %s AND issue = %s
-                ''', (
-                    json.dumps(predictions_data.get("predictions", [])),
-                    json.dumps(predictions_data.get("ren9", [])),
-                    predictions_data.get("confidence", "低"),
-                    json.dumps(matches_info) if matches_info else None,
-                    game_type, ai_name, issue,
-                ))
-            else:
-                # 新建记录
-                cur.execute('''
-                    INSERT INTO traditional_predictions (game_type, ai_name, predictions, ren9, confidence, matches_info, issue)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ''', (
-                    game_type, ai_name,
-                    json.dumps(predictions_data.get("predictions", [])),
-                    json.dumps(predictions_data.get("ren9", [])),
-                    predictions_data.get("confidence", "低"),
-                    json.dumps(matches_info) if matches_info else None,
-                    issue,
-                ))
-        conn.commit()
-        print(f"  ✓ {ai_name} 预测已保存 (期号: {issue})")
-    except Exception as e:
-        print(f"  ✗ {ai_name} 保存失败: {e}")
-        traceback.print_exc()
-        conn.rollback()
-    finally:
-        conn.close()
-
-
-def get_predictions(game_type):
-    '''获取预测数据，返回所有期号的数据，返回前端期望的格式'''
-    if not DATABASE_URL:
-        return []
-
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        with conn.cursor() as cur:
-            cur.execute('''
-                SELECT ai_name, predictions, matches_info, issue, ren9
-                FROM traditional_predictions
-                WHERE game_type = %s
-                ORDER BY issue DESC, created_at DESC
-            ''', (game_type,))
-            rows = cur.fetchall()
-            if not rows:
-                return []
-
-            field_map = {"胜负彩": "spf", "任9": "spf", "半全场": "bqc", "进球彩": "bf"}
-            field_key = field_map.get(game_type, "spf")
-
-            # Group rows by issue
-            from collections import OrderedDict
-            issue_groups = OrderedDict()
-            for row in rows:
-                ai_name = row[0]
-                predictions = row[1] if isinstance(row[1], list) else json.loads(row[1]) if row[1] else []
-                matches_info = row[2] if isinstance(row[2], list) else json.loads(row[2]) if row[2] else []
-                issue = row[3]
-                ren9 = row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else []
-                # Fallback: get issue from matches_info if not in column
-                if not issue and matches_info:
-                    issue = matches_info[0].get("issue", "")
-                if not issue:
-                    continue
-                if issue not in issue_groups:
-                    issue_groups[issue] = {"matches_info": matches_info, "rows": []}
-                issue_groups[issue]["rows"].append((ai_name, predictions, ren9))
-
-            results = []
-            for issue, group in issue_groups.items():
-                matches_info = group["matches_info"]
-                for idx, match in enumerate(matches_info):
-                    for ai_name, predictions, ren9 in group["rows"]:
-                        pred_obj = predictions[idx] if idx < len(predictions) else {}
-
-                        if isinstance(pred_obj, dict):
-                            prediction = pred_obj.get(field_key, "")
-                        else:
-                            prediction = str(pred_obj)
-
-                        match_num = match.get("num", str(idx + 1))
-                        is_r9 = str(match_num) in [str(x) for x in ren9] if ren9 else False
-
-                        results.append({
-                            "match_id": match.get("id", f"match_{idx+1}"),
-                            "home_team": match.get("home", "未知"),
-                            "away_team": match.get("away", "未知"),
-                            "league": match.get("league", ""),
-                            "match_time": match.get("time", ""),
-                            "ai_name": ai_name,
-                            "prediction": prediction,
-                            "issue": issue,
-                            "ren9": ren9,
-                            "is_r9": is_r9,
-                        })
-            return results
-    except Exception as e:
-        print(f"获取预测失败: {e}")
-        return []
-    finally:
-        conn.close()
-
-
-# ============ AI调用 ============
-
-def build_prompt(matches, game_type, issue=""):
-    '''构建AI prompt（无需赔率）'''
-    match_lines = []
-    for m in matches:
-        league_tag = f"[{m['league']}]" if m.get('league') else ""
-        match_lines.append(f"{m['num']}. {league_tag} {m['home']} vs {m['away']} ({m['time']})")
-    match_data = "\n".join(match_lines)
-
-    prompt = PROMPT_TEMPLATE.format(
-        match_data=match_data,
-        match_count=len(matches),
-        game_type=game_type,
-        issue=issue,
-    )
-    return prompt
-
-
-def call_kouzi_local(prompt):
-    '''扣子本地联网搜索：从网上抓取比赛数据生成预测，并让AI选择ren9'''
-    import re
-    
-    # 从prompt中提取比赛信息
-    # 格式示例：1. [欧冠] 萨巴赫 vs 库奥皮 (2026-07-22)
-    matches = re.findall(r'^(\d+)\.\s*\[([^\]]*)\]\s*(.*?)\s+vs\s+(.*?)\s*\(', prompt, re.MULTILINE)
-    
-    if not matches:
-        raise Exception(f"扣子：无法从prompt中解析比赛信息，prompt片段: {prompt[:500]}")
-    
-    predictions = []
-    match_confidence = []  # 记录每场比赛的"信心度"用于选ren9
-    
-    for match_num, league, home, away in matches:
-        home = home.strip()
-        away = away.strip()
-        league = league.strip()
-        
-        # 基于球队名和联赛特性的简单规则预测
-        import random
-        random.seed(hash(f"{home}{away}{match_num}") % (2**32))
-        
-        # 主场优势概率
-        home_win_prob = 0.45
-        draw_prob = 0.25
-        away_win_prob = 0.30
-        
-        # 根据联赛调整
-        if "巴甲" in league:
-            home_win_prob += 0.05  # 巴甲主场优势明显
-        elif "欧冠" in league or "欧罗巴" in league:
-            away_win_prob += 0.05  # 欧战客场球队通常更强
-        
-        rand = random.random()
-        if rand < home_win_prob:
-            spf = "3"
-            score_options = ["2:1", "2:0", "1:0", "3:1", "3:2"]
-            confidence = home_win_prob  # 用概率作为信心度
-        elif rand < home_win_prob + draw_prob:
-            spf = "1"
-            score_options = ["1:1", "0:0", "2:2"]
-            confidence = draw_prob
-        else:
-            spf = "0"
-            score_options = ["1:2", "0:1", "1:3", "0:2"]
-            confidence = away_win_prob
-        
-        bf = random.choice(score_options)
-        total_goals = sum(int(x) for x in bf.split(":"))
-        if total_goals >= 3:
-            zjq = "3"
-        else:
-            zjq = str(total_goals)
-        
-        # 半全场
-        if spf == "3":
-            bqc = random.choice(["33", "31", "13"])
-        elif spf == "1":
-            bqc = random.choice(["11", "13", "31"])
-        else:
-            bqc = random.choice(["00", "01", "10"])
-        
-        predictions.append({
-            "match": match_num,
-            "spf": spf,
-            "bf": bf,
-            "zjq": zjq,
-            "bqc": bqc
-        })
-        match_confidence.append((match_num, confidence))
-    
-    # 按信心度排序，选最高的9场作为ren9
-    match_confidence.sort(key=lambda x: x[1], reverse=True)
-    ren9 = [str(m[0]) for m in match_confidence[:9]]
-    
-    result = {
-        "predictions": predictions,
-        "ren9": ren9,
-        "confidence": "中"
+function buildMatches(items, issueFilter){
+  const map = new Map();
+  items.forEach(it => {
+    if(issueFilter && it.issue !== issueFilter) return;
+    const mid = it.match_id;
+    if(!map.has(mid)){
+      const num = parseInt(mid.split("_")[1]) || 0;
+      map.set(mid, {
+        match_id: mid,
+        num: num,
+        home: it.home_team,
+        away: it.away_team,
+        league: it.league,
+        time: it.match_time,
+        is_r9: it.is_r9 || false
+      });
     }
-    
-    return result
+  });
+  return Array.from(map.values()).sort((a,b)=>a.num-b.num);
+}
 
-
-def call_ai(ai_name, prompt):
-    '''调用指定AI生成预测'''
-    config = AI_CONFIGS.get(ai_name)
-    if not config:
-        raise Exception(f"未知AI: {ai_name}")
-
-    fmt = config["format"]
-
-    # 扣子走本地联网搜索
-    if fmt == "local":
-        return call_kouzi_local(prompt)
-
-    key = os.environ.get(config["key_env"], "")
-    if not key:
-        raise Exception(f"{ai_name} API Key未配置 ({config['key_env']})")
-
-    rate_limit_kw = ["Arrearage", "Overdue", "quota", "QuotaExceeded", "insufficient",
-                     "SetLimitExceeded", "LimitExceeded", "ServerOverloaded",
-                     "RequestBurstTooFast", "RateLimitExceeded", "TooManyRequests", "429",
-                     "Payment Required"]
-
-    models_to_try = [config["model"]]
-    if config.get("fallback_models"):
-        models_to_try.extend(config["fallback_models"])
-
-    last_error = None
-    for i, model in enumerate(models_to_try):
-        try:
-            payload = {
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-                "max_tokens": config.get("max_tokens", 4000),
-            }
-
-            if fmt == "openai":
-                payload["model"] = model
-                resp = requests.post(
-                    config["url"],
-                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                    json=payload, timeout=90,
-                )
-            elif fmt == "minimax":
-                payload["model"] = model
-                resp = requests.post(
-                    config["url"],
-                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                    json=payload, timeout=90,
-                )
-            else:
-                raise Exception(f"未知格式: {fmt}")
-
-            resp.raise_for_status()
-            result = resp.json()
-
-            if fmt == "openai" or fmt == "minimax":
-                content = result["choices"][0]["message"]["content"]
-                if not content:
-                    raise Exception(f"{ai_name}返回空内容")
-            else:
-                content = str(result)
-
-            return parse_ai_response(content)
-
-        except Exception as e:
-            last_error = e
-            err_msg = str(e)
-            is_rate_limit = any(kw in err_msg for kw in rate_limit_kw)
-            if is_rate_limit and i < len(models_to_try) - 1:
-                print(f"  {ai_name} 模型 {model} 失败，切换 {models_to_try[i+1]}")
-                continue
-            else:
-                raise Exception(f"{ai_name} 调用失败: {last_error}")
-
-    raise Exception(f"{ai_name} 所有模型都失败: {last_error}")
-
-
-def generate_template_prediction(prompt):
-    '''[已废弃] 扣子模板预测已替换为本地联网搜索'''
-    raise Exception("模板预测已废弃，扣子已替换为本地联网搜索")
-
-
-def parse_ai_response(content):
-    '''解析AI返回的JSON'''
-    json_match = re.search(r'\{[\s\S]*\}', content)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
-    return {"predictions": [], "ren9": [], "confidence": "低"}
-
-
-# ============ 主流程 ============
-
-def predict(game_type, force=False, target_issue=None):
-    '''为指定玩法生成7AI预测'''
-    print(f"\n=== 传统彩预测: {game_type} ===")
-    if target_issue:
-        print(f"指定期号: {target_issue}")
-
-    # 从数据库读取比赛数据
-    print("从数据库读取比赛数据...")
-    matches, issue = fetch_matches_from_db(game_type, target_issue=target_issue)
-    if not matches:
-        return {"status": "error", "message": f"数据库中没有{game_type}的比赛数据，请先抓取赛程"}
-
-    print(f"获取到 {len(matches)} 场比赛 (期号: {issue})")
-    prompt = build_prompt(matches, game_type, issue)
-
-    results = []
-    for ai_name in AI_CONFIGS.keys():
-        print(f"调用 {ai_name}...")
-        try:
-            predictions = call_ai(ai_name, prompt)
-            pred_count = len(predictions.get("predictions", []))
-            if pred_count == 0:
-                print(f"  ⚠ {ai_name} 返回了空预测，跳过")
-                results.append({"ai_name": ai_name, "error": "AI返回空预测"})
-                continue
-            save_predictions(game_type, ai_name, predictions, matches)
-            results.append({
-                "ai_name": ai_name,
-                "predictions": predictions.get("predictions", []),
-                "ren9": predictions.get("ren9", []),
-                "confidence": predictions.get("confidence", "低"),
-            })
-            print(f"  ✓ {ai_name} 成功 ({pred_count}场预测)")
-        except Exception as e:
-            print(f"  ✗ {ai_name} 失败: {e}")
-            results.append({"ai_name": ai_name, "error": str(e)})
-
-    success_count = sum(1 for r in results if "error" not in r)
-    return {
-        "status": "success",
-        "game_type": game_type,
-        "issue": issue,
-        "match_count": len(matches),
-        "ai_success": success_count,
-        "ai_total": len(AI_CONFIGS),
-        "predictions": results,
+function buildPreds(items, keyFn, issueFilter){
+  const preds = {};
+  items.forEach(it => {
+    if(issueFilter && it.issue !== issueFilter) return;
+    if(it.ai_name === "system") return;
+    const key = keyFn(it.match_id);
+    if(!preds[key]) preds[key] = {};
+    if(it.prediction) {
+      preds[key][it.ai_name] = it.prediction;
+      // 保存任9推荐信息
+      if(!preds[key]._r9) preds[key]._r9 = {};
+      preds[key]._r9[it.ai_name] = it.is_r9 || false;
     }
+  });
+  return preds;
+}
 
+function uniqueAIs(items){
+  // 固定显示7个AI，没有数据显示"暂无"
+  return ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
+}
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser(description="传统足彩7AI预测")
-    parser.add_argument("--game", choices=["胜负彩", "任9", "半全场", "进球彩"], default="胜负彩")
-    parser.add_argument("--force", action="store_true", help="强制刷新")
-    parser.add_argument("--get", action="store_true", help="获取已有预测")
-    parser.add_argument("--issue", type=str, help="指定期号")
-    args = parser.parse_args()
+function calcDeadline(){
+  // 取最晚比赛日期前一天 22:00
+  let allDates = [];
+  matches.sfc.forEach(m => { if(m.time) allDates.push(m.time); });
+  if(!allDates.length) return;
+  allDates.sort();
+  const latest = allDates[allDates.length-1];
+  const d = new Date(latest + "T22:00:00+08:00");
+  d.setDate(d.getDate() - 1);
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  document.getElementById("deadlineTxt").textContent = mm+"-"+dd+" 22:00";
+}
 
-    if args.get:
-        results = get_predictions(args.game)
-        print(json.dumps(results, ensure_ascii=False, indent=2))
-    else:
-        result = predict(args.game, force=args.force, target_issue=args.issue)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+/* ==========================================================
+   渲染: 胜负游戏 / 任选9场
+   ========================================================== */
+function renderSFC(){
+  renderSFCTable("t-sfc", "sfc", matches.sfc, aiPreds.sfc, false);
+  // 任9：显示所有比赛，但只有AI推荐的场次才显示预测
+  renderSFCTable("t-r9", "r9", matches.sfc, aiPreds.sfc, true);
+}
 
+function renderSFCTable(tid, tab, ms, preds, isR9){
+  const tbl = document.getElementById(tid);
+  const ans = aiNames.sfc;
+  // thead
+  let thRow = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th><th>选项<br>胜平负</th>";
+  ans.forEach(n => { thRow += "<th>"+shortAI(n)+"</th>"; });
+  thRow += "</tr>";
+  tbl.querySelector("thead").innerHTML = thRow;
 
-if __name__ == "__main__":
-    main()
+  // tbody
+  let html = "";
+  ms.forEach(m => {
+    const key = tab + "_" + m.num;
+    const s = sel[tab][key] || new Set();
+    const p = preds[key] || {};
+    html += `<tr>`;
+    html += `<td class="col-num">${m.num}</td>`;
+    html += `<td class="col-league">${m.league}</td>`;
+    html += `<td class="col-time">${fmtDate(m.time)}</td>`;
+    html += `<td class="col-home">${m.home}</td>`;
+    html += `<td class="col-vs">VS</td>`;
+    html += `<td class="col-away">${m.away}</td>`;
+    // 选项
+    html += `<td><div class="opts">`;
+    html += `<span class="ob w ${s.has("3")?"sel":""}" onclick="togOpt('${tab}','${key}','3',this)">3</span>`;
+    html += `<span class="ob d ${s.has("1")?"sel":""}" onclick="togOpt('${tab}','${key}','1',this)">1</span>`;
+    html += `<span class="ob l ${s.has("0")?"sel":""}" onclick="togOpt('${tab}','${key}','0',this)">0</span>`;
+    html += `</div></td>`;
+    // AI列
+    ans.forEach(n => {
+      let v = p[n] || "";
+      // 任9模式：只有AI推荐的场次才显示预测
+      if(isR9 && p._r9 && p._r9[n] === false) {
+        v = "";
+      }
+      html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
+    });
+    html += "</tr>";
+  });
+  tbl.querySelector("tbody").innerHTML = html;
+}
+
+/* ==========================================================
+   渲染: 半全场
+   ========================================================== */
+function renderHTF(){
+  const ms = matches.htf;
+  if(!ms || !ms.length) return;
+  const preds = aiPreds.htf || {};
+  const ans = aiNames.htf;
+
+  const tbl = document.getElementById("t-htf");
+  // thead
+  let th1 = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th>";
+  th1 += `<th style='font-size:11px;color:#666'>半/全</th>`;
+  th1 += `<th>胜(3)</th><th>平(1)</th><th>负(0)</th>`;
+  ans.forEach(n => { th1 += `<th>${shortAI(n)}</th>`; });
+  th1 += "</tr>";
+  tbl.querySelector("thead").innerHTML = th1;
+
+  let html = "";
+  ms.forEach(m => {
+      const keyH = "htf_" + m.num + "_h";
+      const keyF = "htf_" + m.num + "_f";
+      const sH = sel.htf[keyH] || new Set();
+      const sF = sel.htf[keyF] || new Set();
+      const p = preds["htf_"+m.num] || {};
+      
+      // 第一行：半场
+      html += `<tr>`;
+      html += `<td class="col-num" rowspan="2">${m.num}</td>`;
+      html += `<td class="col-league" rowspan="2">${m.league}</td>`;
+      html += `<td class="col-time" rowspan="2">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-home" rowspan="2">${m.home}</td>`;
+      html += `<td class="col-vs" rowspan="2">VS</td>`;
+      html += `<td class="col-away" rowspan="2">${m.away}</td>`;
+      html += `<td style="font-size:11px;color:#888;text-align:center">半</td>`;
+      ["3","1","0"].forEach((v,i) => {
+        const cls = ["w","d","l"][i];
+        html += `<td class="col-htf"><span class="ob ${cls} ${sH.has(v)?"sel":""}" onclick="togOpt('htf','${keyH}','${v}',this)">${v}</span></td>`;
+      });
+      ans.forEach(n => {
+        const v = p[n] || "";
+        html += `<td class="col-ai${v?" has":""}" rowspan="2">${v||"暂无"}</td>`;
+      });
+      html += "</tr>";
+      
+      // 第二行：全场
+      html += `<tr>`;
+      html += `<td style="font-size:11px;color:#888;text-align:center">全</td>`;
+      ["3","1","0"].forEach((v,i) => {
+        const cls = ["w","d","l"][i];
+        html += `<td class="col-htf"><span class="ob ${cls} ${sF.has(v)?"sel":""}" onclick="togOpt('htf','${keyF}','${v}',this)">${v}</span></td>`;
+      });
+      html += "</tr>";
+  });
+  tbl.querySelector("tbody").innerHTML = html;
+}
+
+/* ==========================================================
+   渲染: 进球彩
+   ========================================================== */
+function renderJQC(){
+  const ms = matches.jqc;
+  if(!ms || !ms.length) return;
+  const preds = aiPreds.jqc || {};
+  const ans = aiNames.jqc;
+
+  const tbl = document.getElementById("t-jqc");
+  // thead
+  let th1 = "<tr><th rowspan='2'>场次</th><th rowspan='2'>联赛</th><th rowspan='2'>开赛</th><th rowspan='2'>主队</th><th rowspan='2'></th><th rowspan='2'>客队</th>";
+  th1 += `<th colspan="4">主队进球</th><th colspan="4">客队进球</th>`;
+  ans.forEach(n => { th1 += `<th rowspan="2">${shortAI(n)}</th>`; });
+  th1 += "</tr><tr>";
+  GOAL_OPTS.forEach(g => { th1 += `<th>${g}</th>`; });
+  GOAL_OPTS.forEach(g => { th1 += `<th>${g}</th>`; });
+  th1 += "</tr>";
+  tbl.querySelector("thead").innerHTML = th1;
+
+  let html = "";
+  ms.forEach(m => {
+      const kH = "jqc_" + m.num + "_h";
+      const kA = "jqc_" + m.num + "_a";
+      const sH = sel.jqc[kH] || new Set();
+      const sA = sel.jqc[kA] || new Set();
+      const p = preds["jqc_"+m.num] || {};
+      html += `<tr>`;
+      html += `<td class="col-num">${m.num}</td>`;
+      html += `<td class="col-league">${m.league}</td>`;
+      html += `<td class="col-time">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-home">${m.home}</td>`;
+      html += `<td class="col-vs">VS</td>`;
+      html += `<td class="col-away">${m.away}</td>`;
+      // 主队进球
+      html += `<td colspan="4"><div class="opts">`;
+      GOAL_OPTS.forEach(g => {
+        html += `<span class="ob gs ${sH.has(g)?"sel":""}" onclick="togOpt('jqc','${kH}','${g}',this)">${g}</span>`;
+      });
+      html += `</div></td>`;
+      // 客队进球
+      html += `<td colspan="4"><div class="opts">`;
+      GOAL_OPTS.forEach(g => {
+        html += `<span class="ob gs ${sA.has(g)?"sel":""}" onclick="togOpt('jqc','${kA}','${g}',this)">${g}</span>`;
+      });
+      html += `</div></td>`;
+      // AI列
+      ans.forEach(n => {
+        const v = p[n] || "";
+        html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
+      });
+      html += "</tr>";
+  });
+  tbl.querySelector("tbody").innerHTML = html;
+}
+
+/* ==========================================================
+   子期号按钮
+   ========================================================== */
+function renderSubBtns(tab){
+  const iss = issues[tab];
+  if(!iss || iss.length <= 1){
+    document.getElementById("subBtns").innerHTML = iss ? `<span class="sub-btn on">${iss[0]}期</span>` : "";
+    return;
+  }
+  let html = "";
+  iss.forEach(i => {
+    const on = activeIssue[tab]===i ? " on" : "";
+    html += `<span class="sub-btn${on}" onclick="switchIssue('${tab}','${i}')">${i}期</span>`;
+  });
+  document.getElementById("subBtns").innerHTML = html;
+}
+
+function switchIssue(tab, issue){
+  activeIssue[tab] = issue;
+  // sfc/r9 需要重建赛程和预测数据
+  if(tab==="sfc"||tab==="r9"){
+    matches.sfc = buildMatches(rawData.sfc, activeIssue.sfc);
+    aiPreds.sfc = buildPreds(rawData.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
+    document.getElementById("issueNum").textContent = issue + "期";
+    calcDeadline();
+    renderSFC();
+    renderRecs();
+  }
+  else if(tab==="htf"){
+    matches.htf = buildMatches(rawData.htf, activeIssue.htf);
+    aiPreds.htf = buildPreds(rawData.htf, k => "htf_"+parseInt(k.split("_")[1]), activeIssue.htf);
+    renderHTF();
+  }
+  else if(tab==="jqc"){
+    matches.jqc = buildMatches(rawData.jqc, activeIssue.jqc);
+    aiPreds.jqc = buildPreds(rawData.jqc, k => "jqc_"+parseInt(k.split("_")[1]), activeIssue.jqc);
+    renderJQC();
+  }
+  renderSubBtns(tab);
+}
+
+/* ==========================================================
+   AI推荐
+   ========================================================== */
+function renderRecs(){
+  const box = document.getElementById("rec-sfc");
+  if(!box) return;
+  const stable = [], bold = [];
+  matches.sfc.forEach(m => {
+    const key = "sfc_" + m.num;
+    const preds = aiPreds.sfc[key];
+    if(!preds) return;
+    const vals = Object.values(preds).filter(v=>v);
+    if(vals.length < 3) return;
+    const cnt = {};
+    vals.forEach(v => cnt[v]=(cnt[v]||0)+1);
+    const mx = Math.max(...Object.values(cnt));
+    const ratio = mx / vals.length;
+    const top = Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0];
+    const lbl = top==="3"?"胜":top==="1"?"平":"负";
+    if(ratio >= .8) stable.push({m, pick:lbl, pct:Math.round(ratio*100)});
+    else if(ratio >= .6) bold.push({m, pick:lbl, pct:Math.round(ratio*100)});
+  });
+  let h = "";
+  if(stable.length){
+    h += '<div style="margin-bottom:8px"><span style="font-size:12px;color:#81c784">🔥 稳胆（≥80%一致）</span><div class="rec-list" style="margin-top:4px">';
+    stable.forEach(r => h += `<span class="rec-tag hot">第${r.m.num}场 ${r.m.home}vs${r.m.away} → <b>${r.pick}</b> ${r.pct}%</span>`);
+    h += '</div></div>';
+  }
+  if(bold.length){
+    h += '<div><span style="font-size:12px;color:#ffab40">⚡ 博胆（60%-80%）</span><div class="rec-list" style="margin-top:4px">';
+    bold.forEach(r => h += `<span class="rec-tag warm">第${r.m.num}场 ${r.m.home}vs${r.m.away} → <b>${r.pick}</b> ${r.pct}%</span>`);
+    h += '</div></div>';
+  }
+  if(!h) h = '<span class="rec-empty">AI预测数据不足，暂无法生成推荐</span>';
+  box.innerHTML = '<h3>🤖 AI共识推荐</h3>' + h;
+}
+
+/* ==========================================================
+   选项交互
+   ========================================================== */
+function togOpt(tab, key, val, el){
+  if(!sel[tab][key]) sel[tab][key] = new Set();
+  const s = sel[tab][key];
+  if(s.has(val)){ s.delete(val); el.classList.remove("sel"); }
+  else {
+    // r9: 超过9场不允许
+    if(tab==="r9"){
+      const num = parseInt(key.split("_")[1]);
+      if(!r9Picks.has(num) && r9Picks.size >= 9){
+        // 检查是不是已经在选了
+        if(s.size === 0){ alert("任选9场最多选择9场比赛！"); return; }
+      }
+    }
+    s.add(val); el.classList.add("sel");
+  }
+  if(s.size===0) delete sel[tab][key];
+  // r9: 自动管理 r9Picks
+  if(tab==="r9"){
+    const num = parseInt(key.split("_")[1]);
+    const cur = sel.r9[key];
+    if(cur && cur.size > 0) r9Picks.add(num);
+    else r9Picks.delete(num);
+    // 重新渲染以更新透明度
+    renderSFCTable("t-r9", "r9", matches.sfc, aiPreds.sfc, true);
+  }
+  persistState();
+  updateBetBar();
+}
+
+/* ==========================================================
+   注数计算
+   ========================================================== */
+function calcBets(tab){
+  if(tab==="sfc"){
+    let p=1, any=false;
+    matches.sfc.forEach(m => {
+      const s = sel.sfc["sfc_"+m.num];
+      const c = s ? s.size : 0;
+      if(c>0){any=true; p*=c;} else p=0;
+    });
+    return any && p>0 ? p : 0;
+  }
+  if(tab==="r9"){
+    if(r9Picks.size < 9) return 0;
+    let p=1;
+    r9Picks.forEach(id => {
+      const s = sel.r9["r9_"+id];
+      const c = s ? s.size : 0;
+      p *= (c>0 ? c : 0);
+    });
+    return p;
+  }
+  if(tab==="htf"){
+    let p=1, any=false;
+    (matches.htf || []).forEach(m => {
+      const sH = sel.htf["htf_"+m.num+"_h"];
+      const sF = sel.htf["htf_"+m.num+"_f"];
+      const cH = sH ? sH.size : 0;
+      const cF = sF ? sF.size : 0;
+      const fc = cH * cF;
+      if(fc>0){any=true; p*=fc;} else p=0;
+    });
+    return any && p>0 ? p : 0;
+  }
+  if(tab==="jqc"){
+    let p=1, any=false;
+    (matches.jqc || []).forEach(m => {
+      const sH = sel.jqc["jqc_"+m.num+"_h"];
+      const sA = sel.jqc["jqc_"+m.num+"_a"];
+      const cH = sH ? sH.size : 0;
+      const cA = sA ? sA.size : 0;
+      const fc = cH * cA;
+      if(fc>0){any=true; p*=fc;} else p=0;
+    });
+    return any && p>0 ? p : 0;
+  }
+  return 0;
+}
+
+/* ==========================================================
+   投注模拟器
+   ========================================================== */
+function updateBetBar(){
+  const bets = calcBets(activeTab);
+  const amt = bets * 2 * mult;
+  document.getElementById("bBets").textContent = bets;
+  document.getElementById("bAmt").textContent = amt.toLocaleString();
+}
+
+function chgMult(d){
+  mult = Math.max(1, Math.min(99, mult+d));
+  document.getElementById("bMult").textContent = mult;
+  persistState();
+  updateBetBar();
+}
+
+function clearSel(){
+  if(!confirm("确定清空当前所有选择吗？")) return;
+  sel[activeTab] = {};
+  if(activeTab==="r9") r9Picks.clear();
+  persistState();
+  renderAll();
+  updateBetBar();
+}
+
+/* ==========================================================
+   Tab切换
+   ========================================================== */
+document.getElementById("mainTabs").addEventListener("click", e => {
+  const btn = e.target.closest(".main-tab");
+  if(!btn) return;
+  document.querySelectorAll(".main-tab").forEach(b=>b.classList.remove("on"));
+  btn.classList.add("on");
+  activeTab = btn.dataset.tab;
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("on"));
+  document.getElementById("p-"+activeTab).classList.add("on");
+  // 更新玩法提示
+  updateTip();
+  // 更新子期号
+  if(activeTab==="sfc"||activeTab==="r9"){
+    renderSubBtns("sfc");
+  } else {
+    renderSubBtns(activeTab);
+  }
+  updateBetBar();
+});
+
+function updateTip(){
+  const tips = {
+    sfc: "以下14场比赛，每场比赛至少选择一个结果；比赛结果以90分钟（含伤停补时，不含加时赛）结果为准。",
+    r9:   "从14场中任意选择9场进行投注，每场至少选择一个结果。猜中全部9场即中一等奖。",
+    htf:  "每场比赛预测半场和全场胜平负结果（共9种组合），全部猜中为一等奖。",
+    jqc:  "每场比赛分别预测主队和客队的进球数（0/1/2/3+），全部猜中为一等奖。"
+  };
+  document.getElementById("tipBar").textContent = tips[activeTab] || tips.sfc;
+}
+
+/* ==========================================================
+   状态持久化 (localStorage)
+   ========================================================== */
+function persistState(){
+  try{
+    const d = {};
+    for(const t in sel){
+      d[t] = {};
+      for(const k in sel[t]) d[t][k] = Array.from(sel[t][k]);
+    }
+    localStorage.setItem("ct_sel_v3", JSON.stringify(d));
+    localStorage.setItem("ct_r9_v3", JSON.stringify([...r9Picks]));
+    localStorage.setItem("ct_mult_v3", String(mult));
+  }catch(e){}
+}
+
+function restoreState(){
+  try{
+    const d = JSON.parse(localStorage.getItem("ct_sel_v3")||"null");
+    if(d){
+      for(const t in d){
+        sel[t] = {};
+        for(const k in d[t]) sel[t][k] = new Set(d[t][k]);
+      }
+    }
+    const r9 = JSON.parse(localStorage.getItem("ct_r9_v3")||"[]");
+    r9Picks = new Set(r9);
+    const m = parseInt(localStorage.getItem("ct_mult_v3"))||1;
+    mult = Math.max(1,Math.min(99,m));
+    document.getElementById("bMult").textContent = mult;
+  }catch(e){}
+}
+
+/* ==========================================================
+   工具函数
+   ========================================================== */
+function shortAI(name){
+  const map = {"智谱清言":"智谱","扣子":"扣子","豆包":"豆包","文心":"文心","混元":"混元","DeepSeek":"DS","MiniMax":"MM"};
+  return map[name] || name;
+}
+function fmtDate(d){
+  if(!d) return "--";
+  // "2026-07-22" → "07-22"
+  const parts = d.split("-");
+  return parts.length>=3 ? parts[1]+"-"+parts[2] : d;
+}
+
+/* ==========================================================
+   渲染总入口
+   ========================================================== */
+function renderAll(){
+  renderSFC();
+  renderHTF();
+  renderJQC();
+  renderRecs();
+  updateTip();
+  if(activeTab==="sfc"||activeTab==="r9"){
+    renderSubBtns("sfc");
+  } else {
+    renderSubBtns(activeTab);
+  }
+}
+
+/* ==========================================================
+   倒计时
+   ========================================================== */
+function tickCountdown(){
+  const el = document.getElementById("deadlineTxt");
+  const txt = el.textContent;
+  if(txt.includes("截止") || txt === "--") return;
+  // 简单的显示，不做动态倒计时（截止时间已在API数据推算后显示）
+}
+
+/* ==========================================================
+   初始化
+   ========================================================== */
+loadData();
+</script>
+</body>
+</html>
