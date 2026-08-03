@@ -123,8 +123,11 @@ predictions数组必须包含所有{match_count}场比赛。spf只选一个值(3
 
 # ============ 数据库操作 ============
 
-def fetch_matches_from_db(game_type):
-    """从数据库读取最新的比赛数据"""
+def fetch_matches_from_db(game_type, target_issue=None):
+    """从数据库读取比赛数据
+    优先从 traditional_predictions 读取，如果没有则从 matches 表读取CT赛程
+    target_issue: 指定期号，None则取最新有真实对阵的期号
+    """
     if not DATABASE_URL:
         print("DATABASE_URL 未配置")
         return [], None
@@ -132,28 +135,99 @@ def fetch_matches_from_db(game_type):
     conn = psycopg2.connect(DATABASE_URL)
     try:
         with conn.cursor() as cur:
+            # 如果指定期号，先尝试从matches表读取CT赛程
+            if target_issue:
+                cur.execute("""
+                    SELECT id, home_team, away_team, metadata->>'league',
+                           metadata->>'match_time', metadata->>'issue'
+                    FROM matches
+                    WHERE id LIKE 'CT' || %s || '_%%'
+                    ORDER BY id
+                """, (target_issue,))
+                rows = cur.fetchall()
+                if rows:
+                    matches = []
+                    for i, row in enumerate(rows):
+                        mid = row[0].replace('CT', '')
+                        date_part = (row[4] or '').split(' ')[0]
+                        matches.append({
+                            'id': mid,
+                            'num': f"{i+1:02d}",
+                            'home': row[1],
+                            'away': row[2],
+                            'league': row[3] or '',
+                            'time': date_part,
+                            'issue': target_issue,
+                        })
+                    # 检查是否有真实对阵（非全部待定）
+                    real_teams = [m for m in matches if m['home'] != '待定']
+                    if real_teams:
+                        print(f"从matches表读取CT第{target_issue}期赛程: {len(matches)}场")
+                        return matches, target_issue
+                    else:
+                        print(f"第{target_issue}期对阵尚未确定（全部待定）")
+                        return [], target_issue
+
+            # 从 traditional_predictions 读取最新的有真实对阵的赛程
             cur.execute("""
-                SELECT matches_info, predictions
+                SELECT matches_info, issue
                 FROM traditional_predictions
-                WHERE game_type = %s
-                ORDER BY created_at DESC
-                LIMIT 1
+                WHERE game_type = %s AND matches_info IS NOT NULL
+                ORDER BY issue DESC, created_at DESC
             """, (game_type,))
-            row = cur.fetchone()
-            if not row or not row[0]:
-                print(f"数据库中没有{game_type}的比赛数据")
-                return [], None
+            rows = cur.fetchall()
+            
+            for row in rows:
+                matches = row[0] if isinstance(row[0], list) else json.loads(row[0]) if row[0] else []
+                issue = row[1]
+                if not issue and matches:
+                    issue = matches[0].get("issue", "")
+                if not matches:
+                    continue
+                # 跳过全部待定的期号
+                real_teams = [m for m in matches if m.get('home') != '待定']
+                if real_teams:
+                    return matches, issue
 
-            matches = row[0]
-            if isinstance(matches, str):
-                matches = json.loads(matches)
+            # 最后兜底：从matches表找最新的有真实对阵的CT期号
+            cur.execute("""
+                SELECT DISTINCT metadata->>'issue' as issue
+                FROM matches
+                WHERE metadata->>'match_type' = 'ct'
+                  AND id LIKE 'CT%%'
+                  AND home_team != '待定'
+                ORDER BY issue DESC
+            """)
+            ct_issues = [r[0] for r in cur.fetchall() if r[0]]
+            
+            for issue_num in ct_issues:
+                cur.execute("""
+                    SELECT id, home_team, away_team, metadata->>'league',
+                           metadata->>'match_time'
+                    FROM matches
+                    WHERE id LIKE 'CT' || %s || '_%%'
+                    ORDER BY id
+                """, (issue_num,))
+                rows = cur.fetchall()
+                if rows:
+                    matches = []
+                    for i, row in enumerate(rows):
+                        mid = row[0].replace('CT', '')
+                        date_part = (row[4] or '').split(' ')[0]
+                        matches.append({
+                            'id': mid,
+                            'num': f"{i+1:02d}",
+                            'home': row[1],
+                            'away': row[2],
+                            'league': row[3] or '',
+                            'time': date_part,
+                            'issue': issue_num,
+                        })
+                    print(f"兜底: 从matches表读取CT第{issue_num}期赛程: {len(matches)}场")
+                    return matches, issue_num
 
-            # 获取期号
-            issue = None
-            if matches and len(matches) > 0:
-                issue = matches[0].get("issue", "")
-
-            return matches, issue
+            print(f"数据库中没有{game_type}的比赛数据")
+            return [], None
     except Exception as e:
         print(f"读取数据库失败: {e}")
         return [], None
@@ -480,13 +554,15 @@ def parse_ai_response(content):
 
 # ============ 主流程 ============
 
-def predict(game_type, force=False):
+def predict(game_type, force=False, target_issue=None):
     """为指定玩法生成7AI预测"""
     print(f"\n=== 传统彩预测: {game_type} ===")
+    if target_issue:
+        print(f"指定期号: {target_issue}")
 
     # 从数据库读取比赛数据
     print("从数据库读取比赛数据...")
-    matches, issue = fetch_matches_from_db(game_type)
+    matches, issue = fetch_matches_from_db(game_type, target_issue=target_issue)
     if not matches:
         return {"status": "error", "message": f"数据库中没有{game_type}的比赛数据，请先抓取赛程"}
 
@@ -533,13 +609,14 @@ def main():
     parser.add_argument("--game", choices=["胜负彩", "任9", "半全场", "进球彩"], default="胜负彩")
     parser.add_argument("--force", action="store_true", help="强制刷新")
     parser.add_argument("--get", action="store_true", help="获取已有预测")
+    parser.add_argument("--issue", type=str, help="指定期号")
     args = parser.parse_args()
 
     if args.get:
         results = get_predictions(args.game)
         print(json.dumps(results, ensure_ascii=False, indent=2))
     else:
-        result = predict(args.game, force=args.force)
+        result = predict(args.game, force=args.force, target_issue=args.issue)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
