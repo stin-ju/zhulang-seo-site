@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""
-traditional_lottery_predict.py - 传统足彩7AI预测
-支持玩法：胜负彩、半全场、进球彩
-数据源：从数据库已有比赛数据读取（不依赖体彩API）
-"""
+# traditional_lottery_predict.py - 传统足彩7AI预测
+# 支持玩法：胜负彩、半全场、进球彩
+# 数据源：从数据库已有比赛数据读取（不依赖体彩API）
 import os, sys, json, time, re, traceback
 import psycopg2
 import requests
@@ -69,7 +67,7 @@ AI_CONFIGS = {
 
 # ============ Prompt模板（无需赔率） ============
 
-PROMPT_TEMPLATE = """你是一位资深足球赛事分析师。请对以下比赛进行深度分析并给出预测。
+PROMPT_TEMPLATE = '''你是一位资深足球赛事分析师。请对以下比赛进行深度分析并给出预测。
 
 ## ⚠️ 核心要求：必须联网搜索（严禁凭空猜测）
 
@@ -119,15 +117,15 @@ PROMPT_TEMPLATE = """你是一位资深足球赛事分析师。请对以下比�
 }}
 ```
 
-predictions数组必须包含所有{match_count}场比赛。spf只选一个值(3/1/0)。bf为精确比分。zjq为总进球数(0/1/2/3)。bqc为半全场编码。ren9选择最有把握的9场。confidence为整体信心度(高/中/低)。"""
+predictions数组必须包含所有{match_count}场比赛。spf只选一个值(3/1/0)。bf为精确比分。zjq为总进球数(0/1/2/3)。bqc为半全场编码。ren9选择最有把握的9场。confidence为整体信心度(高/中/低)。'''
 
 # ============ 数据库操作 ============
 
 def fetch_matches_from_db(game_type, target_issue=None):
-    """从数据库读取比赛数据
+    '''从数据库读取比赛数据
     优先从 traditional_predictions 读取，如果没有则从 matches 表读取CT赛程
     target_issue: 指定期号，None则取最新有真实对阵的期号
-    """
+    '''
     if not DATABASE_URL:
         print("DATABASE_URL 未配置")
         return [], None
@@ -137,13 +135,13 @@ def fetch_matches_from_db(game_type, target_issue=None):
         with conn.cursor() as cur:
             # 如果指定期号，先尝试从matches表读取CT赛程
             if target_issue:
-                cur.execute("""
+                cur.execute('''
                     SELECT id, home_team, away_team, metadata->>'league',
                            metadata->>'match_time', metadata->>'issue'
                     FROM matches
                     WHERE id LIKE 'CT' || %s || '_%%'
                     ORDER BY id
-                """, (target_issue,))
+                ''', (target_issue,))
                 rows = cur.fetchall()
                 if rows:
                     matches = []
@@ -169,12 +167,12 @@ def fetch_matches_from_db(game_type, target_issue=None):
                         return [], target_issue
 
             # 从 traditional_predictions 读取最新的有真实对阵的赛程
-            cur.execute("""
+            cur.execute('''
                 SELECT matches_info, issue
                 FROM traditional_predictions
                 WHERE game_type = %s AND matches_info IS NOT NULL
                 ORDER BY issue DESC, created_at DESC
-            """, (game_type,))
+            ''', (game_type,))
             rows = cur.fetchall()
             
             for row in rows:
@@ -190,24 +188,24 @@ def fetch_matches_from_db(game_type, target_issue=None):
                     return matches, issue
 
             # 最后兜底：从matches表找最新的有真实对阵的CT期号
-            cur.execute("""
+            cur.execute('''
                 SELECT DISTINCT metadata->>'issue' as issue
                 FROM matches
                 WHERE metadata->>'match_type' = 'ct'
                   AND id LIKE 'CT%%'
                   AND home_team != '待定'
                 ORDER BY issue DESC
-            """)
+            ''')
             ct_issues = [r[0] for r in cur.fetchall() if r[0]]
             
             for issue_num in ct_issues:
-                cur.execute("""
+                cur.execute('''
                     SELECT id, home_team, away_team, metadata->>'league',
                            metadata->>'match_time'
                     FROM matches
                     WHERE id LIKE 'CT' || %s || '_%%'
                     ORDER BY id
-                """, (issue_num,))
+                ''', (issue_num,))
                 rows = cur.fetchall()
                 if rows:
                     matches = []
@@ -236,7 +234,7 @@ def fetch_matches_from_db(game_type, target_issue=None):
 
 
 def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
-    """保存预测结果"""
+    '''保存预测结果'''
     if not DATABASE_URL:
         print("DATABASE_URL 未配置，跳过保存")
         return
@@ -245,22 +243,22 @@ def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
     try:
         with conn.cursor() as cur:
             # 检查是否已有该game_type+ai_name的记录
-            cur.execute("""
+            cur.execute('''
                 SELECT id FROM traditional_predictions
                 WHERE game_type = %s AND ai_name = %s
-            """, (game_type, ai_name))
+            ''', (game_type, ai_name))
             existing = cur.fetchone()
 
             if existing:
                 # 更新：保留已有的matches_info，只更新预测相关字段
-                cur.execute("""
+                cur.execute('''
                     UPDATE traditional_predictions
                     SET predictions = %s,
                         ren9 = %s,
                         confidence = %s,
                         created_at = CURRENT_TIMESTAMP
                     WHERE game_type = %s AND ai_name = %s
-                """, (
+                ''', (
                     json.dumps(predictions_data.get("predictions", [])),
                     json.dumps(predictions_data.get("ren9", [])),
                     predictions_data.get("confidence", "低"),
@@ -268,10 +266,10 @@ def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
                 ))
             else:
                 # 新建记录
-                cur.execute("""
+                cur.execute('''
                     INSERT INTO traditional_predictions (game_type, ai_name, predictions, ren9, confidence, matches_info)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
+                ''', (
                     game_type, ai_name,
                     json.dumps(predictions_data.get("predictions", [])),
                     json.dumps(predictions_data.get("ren9", [])),
@@ -289,19 +287,19 @@ def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
 
 
 def get_predictions(game_type):
-    """获取预测数据，返回所有期号的数据，返回前端期望的格式"""
+    '''获取预测数据，返回所有期号的数据，返回前端期望的格式'''
     if not DATABASE_URL:
         return []
 
     conn = psycopg2.connect(DATABASE_URL)
     try:
         with conn.cursor() as cur:
-            cur.execute("""
+            cur.execute('''
                 SELECT ai_name, predictions, matches_info, issue
                 FROM traditional_predictions
                 WHERE game_type = %s
                 ORDER BY issue DESC, created_at DESC
-            """, (game_type,))
+            ''', (game_type,))
             rows = cur.fetchall()
             if not rows:
                 return []
@@ -359,7 +357,7 @@ def get_predictions(game_type):
 # ============ AI调用 ============
 
 def build_prompt(matches, game_type, issue=""):
-    """构建AI prompt（无需赔率）"""
+    '''构建AI prompt（无需赔率）'''
     match_lines = []
     for m in matches:
         league_tag = f"[{m['league']}]" if m.get('league') else ""
@@ -376,7 +374,7 @@ def build_prompt(matches, game_type, issue=""):
 
 
 def call_kouzi_local(prompt):
-    """扣子本地联网搜索：从网上抓取比赛数据生成预测，并让AI选择ren9"""
+    '''扣子本地联网搜索：从网上抓取比赛数据生成预测，并让AI选择ren9'''
     import re
     
     # 从prompt中提取比赛信息
@@ -461,7 +459,7 @@ def call_kouzi_local(prompt):
 
 
 def call_ai(ai_name, prompt):
-    """调用指定AI生成预测"""
+    '''调用指定AI生成预测'''
     config = AI_CONFIGS.get(ai_name)
     if not config:
         raise Exception(f"未知AI: {ai_name}")
@@ -537,12 +535,12 @@ def call_ai(ai_name, prompt):
 
 
 def generate_template_prediction(prompt):
-    """[已废弃] 扣子模板预测已替换为本地联网搜索"""
+    '''[已废弃] 扣子模板预测已替换为本地联网搜索'''
     raise Exception("模板预测已废弃，扣子已替换为本地联网搜索")
 
 
 def parse_ai_response(content):
-    """解析AI返回的JSON"""
+    '''解析AI返回的JSON'''
     json_match = re.search(r'\{[\s\S]*\}', content)
     if json_match:
         try:
@@ -555,7 +553,7 @@ def parse_ai_response(content):
 # ============ 主流程 ============
 
 def predict(game_type, force=False, target_issue=None):
-    """为指定玩法生成7AI预测"""
+    '''为指定玩法生成7AI预测'''
     print(f"\n=== 传统彩预测: {game_type} ===")
     if target_issue:
         print(f"指定期号: {target_issue}")
