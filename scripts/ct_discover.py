@@ -201,6 +201,7 @@ def save_to_db(issues, verify_only=False, force=False):
                 'source': '竞彩网',
                 'match_time': f"{m['date']} 00:00" if m['date'] else None,
                 'sell_status': 'on_sale',
+                'status': 'on_sale',
             }
             if sale_info:
                 metadata.update(sale_info)

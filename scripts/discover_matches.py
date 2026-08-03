@@ -32,7 +32,7 @@ from odds_source_zgzcw import fetch_football_odds as zgzcw_fetch, match_zgzcw_to
 from odds_source_500 import fetch_football_odds as fetch500_fb, fetch_basketball_odds as fetch500_bk, match_500_to_db
 
 DB_URL = os.environ.get('DATABASE_URL',
-    'postgresql://postgres:" + process.env.DB_PASSWORD + "@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres')
+    'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres')
 
 WEEKDAY_CN = {0: '周一', 1: '周二', 2: '周三', 3: '周四', 4: '周五', 5: '周六', 6: '周日'}
 

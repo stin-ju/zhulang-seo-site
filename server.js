@@ -1239,6 +1239,101 @@ async function initializeSettleTimers() {
   }
 }
 
+
+// ============ 定时抓取任务 ============
+const scheduleTimers = [];
+
+// 计算距下一个目标时间的毫秒数
+function msUntil(hour, minute) {
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(hour, minute, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  return target.getTime() - now.getTime();
+}
+
+// 通用定时调度器
+function scheduleDaily(hour, minute, label, taskFn) {
+  const DAY = 24 * 60 * 60 * 1000;
+  let firstDelay = msUntil(hour, minute);
+  console.log(`[Schedule] ${label}: 每天 ${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')} 执行，首次 ${Math.round(firstDelay/3600000*10)/10}h后`);
+  
+  const timer = setTimeout(() => {
+    console.log(`[Schedule] 开始执行: ${label}`);
+    taskFn().catch(err => console.error(`[Schedule] ${label}失败:`, err.message));
+    // 之后每24小时执行
+    const interval = setInterval(() => {
+      console.log(`[Schedule] 开始执行: ${label}`);
+      taskFn().catch(err => console.error(`[Schedule] ${label}失败:`, err.message));
+    }, DAY);
+    scheduleTimers.push(interval);
+  }, firstDelay);
+  scheduleTimers.push(timer);
+}
+
+// JC定时抓取 - 每天10:00和18:00
+async function runJcDiscover() {
+  if (taskStatus.discover.running) {
+    console.log('[Schedule] JC抓取已在运行，跳过');
+    return;
+  }
+  taskStatus.discover.running = true;
+  try {
+    const result = await runPython('discover_matches.py');
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = result;
+    console.log(`[Schedule] JC抓取完成:`, JSON.stringify(result).slice(0, 200));
+    // 发现新比赛后触发预测
+    const newCount = result.new || result.new_matches_count || 0;
+    if (newCount > 0) {
+      console.log(`[Schedule] 发现${newCount}场新比赛，触发AI预测`);
+      await runPython('auto_predict.py', ['football']);
+    }
+    // 重新初始化结算定时器
+    await initializeSettleTimers();
+  } catch (err) {
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = { error: err.message };
+    console.error(`[Schedule] JC抓取失败:`, err.message);
+  } finally {
+    taskStatus.discover.running = false;
+  }
+}
+
+// CT定时抓取 - 每天10:30
+async function runCtDiscover() {
+  if (taskStatus.discover.running) {
+    console.log('[Schedule] JC抓取正在运行，等待30秒后重试CT');
+    setTimeout(runCtDiscover, 30000);
+    return;
+  }
+  taskStatus.discover.running = true;
+  try {
+    const result = await runPython('ct_discover.py');
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = result;
+    console.log(`[Schedule] CT抓取完成:`, JSON.stringify(result).slice(0, 200));
+    // 发现新比赛后触发预测
+    const saved = result.saved || 0;
+    if (saved > 0) {
+      console.log(`[Schedule] CT发现${saved}场新比赛，触发AI预测`);
+      await runPython('auto_predict.py', ['football']);
+    }
+    await initializeSettleTimers();
+  } catch (err) {
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = { error: err.message };
+    console.error(`[Schedule] CT抓取失败:`, err.message);
+  } finally {
+    taskStatus.discover.running = false;
+  }
+}
+
+// 注册定时任务
+scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
+scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
+scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
+
 server.listen(PORT, HOST, async () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
