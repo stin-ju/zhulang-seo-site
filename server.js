@@ -1084,10 +1084,11 @@ const server = http.createServer(async (req, res) => {
       const { execSync } = require('child_process');
       const scriptPath = path.join(process.cwd(), 'scripts', 'traditional_lottery_predict.py');
       const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL };
-      const responseData = { sfc: [], htf: [], jqc: [] };
+      const responseData = { sfc: [], r9: [], htf: [], jqc: [] };
       
       const gameTypes = [
         { key: 'sfc', name: '胜负彩' },
+        { key: 'r9', name: '任9' },
         { key: 'htf', name: '半全场' },
         { key: 'jqc', name: '进球彩' },
       ];
@@ -1107,7 +1108,7 @@ const server = http.createServer(async (req, res) => {
         }
       }
       
-      if (responseData.sfc.length === 0 && responseData.htf.length === 0 && responseData.jqc.length === 0) {
+      if (responseData.sfc.length === 0 && responseData.r9.length === 0 && responseData.htf.length === 0 && responseData.jqc.length === 0) {
         console.log('[TraditionalLottery] No data, triggering generation...');
         for (const gt of gameTypes) {
           try {
@@ -1134,6 +1135,36 @@ const server = http.createServer(async (req, res) => {
           } catch (e) {
             console.error(`[TraditionalLottery] Failed to re-get ${gt.name}:`, e.message);
           }
+        }
+      }
+      
+      // Enrich r9 data with ren9 and is_r9 fields from database
+      if (responseData.r9.length > 0) {
+        try {
+          const issues = [...new Set(responseData.r9.map(d => d.issue).filter(Boolean))];
+          for (const issue of issues) {
+            const { rows: ren9Rows } = await pgPool.query(
+              `SELECT ai_name, ren9 FROM traditional_predictions WHERE issue = $1 AND game_type = '任9'`,
+              [issue]
+            );
+            const ren9Map = {};
+            for (const r of ren9Rows) {
+              const ren9 = Array.isArray(r.ren9) ? r.ren9 : (r.ren9 ? JSON.parse(r.ren9) : []);
+              ren9Map[r.ai_name] = ren9.map(String);
+            }
+            responseData.r9 = responseData.r9.map(item => {
+              if (item.issue !== issue) return item;
+              const aiRen9 = ren9Map[item.ai_name] || [];
+              const matchNum = item.match_id ? String(item.match_id).split('_')[1] : '';
+              return {
+                ...item,
+                ren9: aiRen9,
+                is_r9: aiRen9.includes(String(matchNum).replace(/^0+/, '')) || aiRen9.includes(String(matchNum))
+              };
+            });
+          }
+        } catch (e) {
+          console.error('[TraditionalLottery] Failed to enrich r9 data:', e.message);
         }
       }
       
