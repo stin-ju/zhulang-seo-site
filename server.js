@@ -1283,9 +1283,9 @@ async function scheduleMatchSettle(matchId, matchTime) {
   const delay = settleTime.getTime() - Date.now();
   
   if (delay <= 0) {
-    // 已经到了结算时间，立即结算
-    console.log(`[AutoSettle] 比赛 ${matchId} 已到结算时间，立即结算`);
-    triggerMatchSettle(matchId);
+    // 已经到了结算时间，延迟结算（避免阻塞启动）
+    console.log(`[AutoSettle] 比赛 ${matchId} 已到结算时间，将在后台结算`);
+    setImmediate(() => triggerMatchSettle(matchId));
     return;
   }
   
@@ -1341,7 +1341,10 @@ async function initializeSettleTimers() {
       const matchId = row.id;
       const matchTime = row.match_time;
       if (matchTime) {
-        await scheduleMatchSettle(matchId, matchTime);
+        // 不 await，让结算任务在后台运行，避免阻塞服务器启动
+        scheduleMatchSettle(matchId, matchTime).catch(err => {
+          console.error(`[AutoSettle] ${matchId} 调度失败:`, err.message);
+        });
       }
     }
   } catch (err) {
@@ -1452,10 +1455,12 @@ scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
 scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
 scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
 
-server.listen(PORT, HOST, async () => {
+server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
   
-  // 初始化比赛级别定时结算
-  await initializeSettleTimers();
+  // 初始化比赛级别定时结算（不阻塞服务器启动）
+  initializeSettleTimers().catch(err => {
+    console.error('[AutoSettle] 初始化失败:', err.message);
+  });
 });
