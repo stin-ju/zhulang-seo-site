@@ -281,7 +281,7 @@ export async function fetchPredictions(matchIds, sport = 'football') {
     }
 
     // 使用本地API替代Supabase REST API
-    const resp = await fetch('/api/predictions');
+    const resp = await fetch(`/api/predictions?sport=${sport}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const allData = await resp.json();
     console.log(`🐾 fetchPredictions: 获取${allData.length}条预测`);
