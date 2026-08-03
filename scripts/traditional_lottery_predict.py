@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""
-traditional_lottery_predict.py - 传统足彩7AI预测
-支持玩法：胜负彩、半全场、进球彩
-数据源：从数据库已有比赛数据读取（不依赖体彩API）
-"""
+# traditional_lottery_predict.py - 传统足彩7AI预测
+# 支持玩法：胜负彩、半全场、进球彩
+# 数据源：从数据库已有比赛数据读取（不依赖体彩API）
 import os, sys, json, time, re, traceback
 import psycopg2
 import requests
@@ -46,6 +44,7 @@ AI_CONFIGS = {
         "key_env": "HUNYUAN_API_KEY",
         "model": "hy-mt2-lite",
         "format": "openai",
+        "max_tokens": 8192,
     },
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
@@ -69,7 +68,7 @@ AI_CONFIGS = {
 
 # ============ Prompt模板（无需赔率） ============
 
-PROMPT_TEMPLATE = """你是一位资深足球赛事分析师。请对以下比赛进行深度分析并给出预测。
+PROMPT_TEMPLATE = '''你是一位资深足球赛事分析师。请对以下比赛进行深度分析并给出预测。
 
 ## ⚠️ 核心要求：必须联网搜索（严禁凭空猜测）
 
@@ -119,12 +118,15 @@ PROMPT_TEMPLATE = """你是一位资深足球赛事分析师。请对以下比�
 }}
 ```
 
-predictions数组必须包含所有{match_count}场比赛。spf只选一个值(3/1/0)。bf为精确比分。zjq为总进球数(0/1/2/3)。bqc为半全场编码。ren9选择最有把握的9场。confidence为整体信心度(高/中/低)。"""
+predictions数组必须包含所有{match_count}场比赛。spf只选一个值(3/1/0)。bf为精确比分。zjq为总进球数(0/1/2/3)。bqc为半全场编码。ren9选择最有把握的9场。confidence为整体信心度(高/中/低)。'''
 
 # ============ 数据库操作 ============
 
-def fetch_matches_from_db(game_type):
-    """从数据库读取最新的比赛数据"""
+def fetch_matches_from_db(game_type, target_issue=None):
+    '''从数据库读取比赛数据
+    优先从 matches 表找最新的有真实对阵的CT期号（确保能发现新期号）
+    target_issue: 指定期号，None则取最新有真实对阵的期号
+    '''
     if not DATABASE_URL:
         print("DATABASE_URL 未配置")
         return [], None
@@ -132,28 +134,90 @@ def fetch_matches_from_db(game_type):
     conn = psycopg2.connect(DATABASE_URL)
     try:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT matches_info, predictions
-                FROM traditional_predictions
-                WHERE game_type = %s
-                ORDER BY created_at DESC
-                LIMIT 1
-            """, (game_type,))
-            row = cur.fetchone()
-            if not row or not row[0]:
-                print(f"数据库中没有{game_type}的比赛数据")
-                return [], None
+            # 第一步：从matches表找所有有真实对阵的CT期号（按期号降序）
+            cur.execute('''
+                SELECT DISTINCT metadata->>'issue' as issue
+                FROM matches
+                WHERE metadata->>'match_type' = 'ct'
+                  AND id LIKE 'CT%%'
+                  AND home_team != '待定'
+                ORDER BY issue DESC
+            ''')
+            ct_issues = [r[0] for r in cur.fetchall() if r[0]]
 
-            matches = row[0]
-            if isinstance(matches, str):
-                matches = json.loads(matches)
+            if target_issue:
+                # 指定期号：只处理该期号
+                if target_issue in ct_issues:
+                    cur.execute('''
+                        SELECT id, home_team, away_team, metadata->>'league',
+                               metadata->>'match_time'
+                        FROM matches
+                        WHERE id LIKE 'CT' || %s || '_%%'
+                        ORDER BY id
+                    ''', (target_issue,))
+                    rows = cur.fetchall()
+                    matches = []
+                    for i, row in enumerate(rows):
+                        mid = row[0].replace('CT', '')
+                        date_part = (row[4] or '').split(' ')[0]
+                        matches.append({
+                            'id': mid,
+                            'num': f"{i+1:02d}",
+                            'home': row[1],
+                            'away': row[2],
+                            'league': row[3] or '',
+                            'time': date_part,
+                            'issue': target_issue,
+                        })
+                    print(f"从matches表读取CT第{target_issue}期赛程: {len(matches)}场")
+                    return matches, target_issue
+                else:
+                    # 指定期号在matches表中没有真实对阵，检查是否全部待定
+                    cur.execute('''
+                        SELECT id, home_team, away_team, metadata->>'league',
+                               metadata->>'match_time'
+                        FROM matches
+                        WHERE id LIKE 'CT' || %s || '_%%'
+                        ORDER BY id
+                    ''', (target_issue,))
+                    rows = cur.fetchall()
+                    if rows:
+                        print(f"第{target_issue}期对阵尚未确定（全部待定）")
+                        return [], target_issue
+                    else:
+                        print(f"第{target_issue}期在数据库中不存在")
+                        return [], target_issue
 
-            # 获取期号
-            issue = None
-            if matches and len(matches) > 0:
-                issue = matches[0].get("issue", "")
+            # 未指定期号：遍历matches表中的CT期号，返回最新的有真实对阵的期号
+            for issue_num in ct_issues:
+                cur.execute('''
+                    SELECT id, home_team, away_team, metadata->>'league',
+                           metadata->>'match_time'
+                    FROM matches
+                    WHERE id LIKE 'CT' || %s || '_%%'
+                    ORDER BY id
+                ''', (issue_num,))
+                rows = cur.fetchall()
+                if rows:
+                    matches = []
+                    for i, row in enumerate(rows):
+                        mid = row[0].replace('CT', '')
+                        date_part = (row[4] or '').split(' ')[0]
+                        matches.append({
+                            'id': mid,
+                            'num': f"{i+1:02d}",
+                            'home': row[1],
+                            'away': row[2],
+                            'league': row[3] or '',
+                            'time': date_part,
+                            'issue': issue_num,
+                        })
+                    print(f"从matches表读取CT第{issue_num}期赛程: {len(matches)}场")
+                    return matches, issue_num
 
-            return matches, issue
+            # matches表没有找到任何有真实对阵的CT比赛
+            print(f"数据库中没有{game_type}的比赛数据")
+            return [], None
     except Exception as e:
         print(f"读取数据库失败: {e}")
         return [], None
@@ -162,50 +226,67 @@ def fetch_matches_from_db(game_type):
 
 
 def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
-    """保存预测结果"""
+    '''保存预测结果（按 game_type + ai_name + issue 唯一标识）'''
     if not DATABASE_URL:
         print("DATABASE_URL 未配置，跳过保存")
         return
 
+    # 从 matches_info 中提取 issue
+    issue = None
+    if matches_info and isinstance(matches_info, list) and len(matches_info) > 0:
+        issue = matches_info[0].get('issue', '')
+    # 也可以从 predictions_data 中获取
+    if not issue:
+        issue = predictions_data.get('issue', '')
+
     conn = psycopg2.connect(DATABASE_URL)
     try:
         with conn.cursor() as cur:
-            # 检查是否已有该game_type+ai_name的记录
-            cur.execute("""
-                SELECT id FROM traditional_predictions
-                WHERE game_type = %s AND ai_name = %s
-            """, (game_type, ai_name))
+            # 按 game_type + ai_name + issue 查找
+            if issue:
+                cur.execute('''
+                    SELECT id FROM traditional_predictions
+                    WHERE game_type = %s AND ai_name = %s AND issue = %s
+                ''', (game_type, ai_name, issue))
+            else:
+                cur.execute('''
+                    SELECT id FROM traditional_predictions
+                    WHERE game_type = %s AND ai_name = %s
+                ''', (game_type, ai_name))
             existing = cur.fetchone()
 
             if existing:
-                # 更新：保留已有的matches_info，只更新预测相关字段
-                cur.execute("""
+                # 更新：只更新当前期号的记录
+                cur.execute('''
                     UPDATE traditional_predictions
                     SET predictions = %s,
                         ren9 = %s,
                         confidence = %s,
+                        matches_info = %s,
                         created_at = CURRENT_TIMESTAMP
-                    WHERE game_type = %s AND ai_name = %s
-                """, (
+                    WHERE game_type = %s AND ai_name = %s AND issue = %s
+                ''', (
                     json.dumps(predictions_data.get("predictions", [])),
                     json.dumps(predictions_data.get("ren9", [])),
                     predictions_data.get("confidence", "低"),
-                    game_type, ai_name,
+                    json.dumps(matches_info) if matches_info else None,
+                    game_type, ai_name, issue,
                 ))
             else:
                 # 新建记录
-                cur.execute("""
-                    INSERT INTO traditional_predictions (game_type, ai_name, predictions, ren9, confidence, matches_info)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
+                cur.execute('''
+                    INSERT INTO traditional_predictions (game_type, ai_name, predictions, ren9, confidence, matches_info, issue)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ''', (
                     game_type, ai_name,
                     json.dumps(predictions_data.get("predictions", [])),
                     json.dumps(predictions_data.get("ren9", [])),
                     predictions_data.get("confidence", "低"),
                     json.dumps(matches_info) if matches_info else None,
+                    issue,
                 ))
         conn.commit()
-        print(f"  ✓ {ai_name} 预测已保存")
+        print(f"  ✓ {ai_name} 预测已保存 (期号: {issue})")
     except Exception as e:
         print(f"  ✗ {ai_name} 保存失败: {e}")
         traceback.print_exc()
@@ -215,19 +296,19 @@ def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
 
 
 def get_predictions(game_type):
-    """获取预测数据，返回所有期号的数据，返回前端期望的格式"""
+    '''获取预测数据，返回所有期号的数据，返回前端期望的格式'''
     if not DATABASE_URL:
         return []
 
     conn = psycopg2.connect(DATABASE_URL)
     try:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT ai_name, predictions, matches_info, issue
+            cur.execute('''
+                SELECT ai_name, predictions, matches_info, issue, ren9
                 FROM traditional_predictions
                 WHERE game_type = %s
                 ORDER BY issue DESC, created_at DESC
-            """, (game_type,))
+            ''', (game_type,))
             rows = cur.fetchall()
             if not rows:
                 return []
@@ -243,6 +324,7 @@ def get_predictions(game_type):
                 predictions = row[1] if isinstance(row[1], list) else json.loads(row[1]) if row[1] else []
                 matches_info = row[2] if isinstance(row[2], list) else json.loads(row[2]) if row[2] else []
                 issue = row[3]
+                ren9 = row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else []
                 # Fallback: get issue from matches_info if not in column
                 if not issue and matches_info:
                     issue = matches_info[0].get("issue", "")
@@ -250,19 +332,22 @@ def get_predictions(game_type):
                     continue
                 if issue not in issue_groups:
                     issue_groups[issue] = {"matches_info": matches_info, "rows": []}
-                issue_groups[issue]["rows"].append((ai_name, predictions))
+                issue_groups[issue]["rows"].append((ai_name, predictions, ren9))
 
             results = []
             for issue, group in issue_groups.items():
                 matches_info = group["matches_info"]
                 for idx, match in enumerate(matches_info):
-                    for ai_name, predictions in group["rows"]:
+                    for ai_name, predictions, ren9 in group["rows"]:
                         pred_obj = predictions[idx] if idx < len(predictions) else {}
 
                         if isinstance(pred_obj, dict):
                             prediction = pred_obj.get(field_key, "")
                         else:
                             prediction = str(pred_obj)
+
+                        match_num = match.get("num", str(idx + 1))
+                        is_r9 = str(match_num) in [str(x) for x in ren9] if ren9 else False
 
                         results.append({
                             "match_id": match.get("id", f"match_{idx+1}"),
@@ -273,6 +358,8 @@ def get_predictions(game_type):
                             "ai_name": ai_name,
                             "prediction": prediction,
                             "issue": issue,
+                            "ren9": ren9,
+                            "is_r9": is_r9,
                         })
             return results
     except Exception as e:
@@ -285,7 +372,7 @@ def get_predictions(game_type):
 # ============ AI调用 ============
 
 def build_prompt(matches, game_type, issue=""):
-    """构建AI prompt（无需赔率）"""
+    '''构建AI prompt（无需赔率）'''
     match_lines = []
     for m in matches:
         league_tag = f"[{m['league']}]" if m.get('league') else ""
@@ -302,7 +389,7 @@ def build_prompt(matches, game_type, issue=""):
 
 
 def call_kouzi_local(prompt):
-    """扣子本地联网搜索：从网上抓取比赛数据生成预测，并让AI选择ren9"""
+    '''扣子本地联网搜索：从网上抓取比赛数据生成预测，并让AI选择ren9'''
     import re
     
     # 从prompt中提取比赛信息
@@ -386,8 +473,11 @@ def call_kouzi_local(prompt):
     return result
 
 
-def call_ai(ai_name, prompt):
-    """调用指定AI生成预测"""
+def call_ai(ai_name, prompt, expected_match_count=None, max_retries=3):
+    '''调用指定AI生成预测
+    expected_match_count: 期望的预测场次数，用于验证完整性
+    max_retries: 返回不完整时的最大重试次数
+    '''
     config = AI_CONFIGS.get(ai_name)
     if not config:
         raise Exception(f"未知AI: {ai_name}")
@@ -412,63 +502,84 @@ def call_ai(ai_name, prompt):
         models_to_try.extend(config["fallback_models"])
 
     last_error = None
-    for i, model in enumerate(models_to_try):
-        try:
-            payload = {
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-                "max_tokens": config.get("max_tokens", 4000),
-            }
+    for attempt in range(max_retries + 1):
+        for i, model in enumerate(models_to_try):
+            try:
+                payload = {
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7,
+                    "max_tokens": config.get("max_tokens", 4000),
+                }
 
-            if fmt == "openai":
-                payload["model"] = model
-                resp = requests.post(
-                    config["url"],
-                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                    json=payload, timeout=90,
-                )
-            elif fmt == "minimax":
-                payload["model"] = model
-                resp = requests.post(
-                    config["url"],
-                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                    json=payload, timeout=90,
-                )
-            else:
-                raise Exception(f"未知格式: {fmt}")
+                if fmt == "openai":
+                    payload["model"] = model
+                    resp = requests.post(
+                        config["url"],
+                        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                        json=payload, timeout=90,
+                    )
+                elif fmt == "minimax":
+                    payload["model"] = model
+                    resp = requests.post(
+                        config["url"],
+                        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                        json=payload, timeout=90,
+                    )
+                else:
+                    raise Exception(f"未知格式: {fmt}")
 
-            resp.raise_for_status()
-            result = resp.json()
+                resp.raise_for_status()
+                result = resp.json()
 
-            if fmt == "openai" or fmt == "minimax":
-                content = result["choices"][0]["message"]["content"]
-                if not content:
-                    raise Exception(f"{ai_name}返回空内容")
-            else:
-                content = str(result)
+                if fmt == "openai" or fmt == "minimax":
+                    content = result["choices"][0]["message"]["content"]
+                    if not content:
+                        raise Exception(f"{ai_name}返回空内容")
+                else:
+                    content = str(result)
 
-            return parse_ai_response(content)
+                parsed = parse_ai_response(content)
+                
+                # 验证预测完整性
+                if expected_match_count is not None:
+                    pred_count = len(parsed.get("predictions", []))
+                    if pred_count < expected_match_count:
+                        if attempt < max_retries:
+                            print(f"  ⚠ {ai_name} 只返回{pred_count}场预测(需要{expected_match_count}场)，第{attempt+1}次重试...")
+                            import time
+                            time.sleep(2)
+                            break  # 跳出内层model循环，进入下一次retry
+                        else:
+                            print(f"  ⚠ {ai_name} 重试{max_retries}次后仍不完整({pred_count}/{expected_match_count})，继续使用")
+                
+                return parsed
 
-        except Exception as e:
-            last_error = e
-            err_msg = str(e)
-            is_rate_limit = any(kw in err_msg for kw in rate_limit_kw)
-            if is_rate_limit and i < len(models_to_try) - 1:
-                print(f"  {ai_name} 模型 {model} 失败，切换 {models_to_try[i+1]}")
-                continue
-            else:
-                raise Exception(f"{ai_name} 调用失败: {last_error}")
+            except Exception as e:
+                last_error = e
+                err_msg = str(e)
+                is_rate_limit = any(kw in err_msg for kw in rate_limit_kw)
+                if is_rate_limit and i < len(models_to_try) - 1:
+                    print(f"  {ai_name} 模型 {model} 失败，切换 {models_to_try[i+1]}")
+                    continue
+                else:
+                    if attempt < max_retries:
+                        print(f"  ⚠ {ai_name} 调用失败，第{attempt+1}次重试: {e}")
+                        import time
+                        time.sleep(2)
+                        break  # 跳出内层model循环，进入下一次retry
+                    else:
+                        raise Exception(f"{ai_name} 调用失败(重试{max_retries}次后): {last_error}")
 
-    raise Exception(f"{ai_name} 所有模型都失败: {last_error}")
+    raise Exception(f"{ai_name} 所有重试都失败: {last_error}")
 
 
 def generate_template_prediction(prompt):
-    """[已废弃] 扣子模板预测已替换为本地联网搜索"""
+    '''[已废弃] 扣子模板预测已替换为本地联网搜索'''
     raise Exception("模板预测已废弃，扣子已替换为本地联网搜索")
 
 
 def parse_ai_response(content):
-    """解析AI返回的JSON"""
+    '''解析AI返回的JSON'''
     json_match = re.search(r'\{[\s\S]*\}', content)
     if json_match:
         try:
@@ -480,13 +591,15 @@ def parse_ai_response(content):
 
 # ============ 主流程 ============
 
-def predict(game_type, force=False):
-    """为指定玩法生成7AI预测"""
+def predict(game_type, force=False, target_issue=None):
+    '''为指定玩法生成7AI预测'''
     print(f"\n=== 传统彩预测: {game_type} ===")
+    if target_issue:
+        print(f"指定期号: {target_issue}")
 
     # 从数据库读取比赛数据
     print("从数据库读取比赛数据...")
-    matches, issue = fetch_matches_from_db(game_type)
+    matches, issue = fetch_matches_from_db(game_type, target_issue=target_issue)
     if not matches:
         return {"status": "error", "message": f"数据库中没有{game_type}的比赛数据，请先抓取赛程"}
 
@@ -497,7 +610,7 @@ def predict(game_type, force=False):
     for ai_name in AI_CONFIGS.keys():
         print(f"调用 {ai_name}...")
         try:
-            predictions = call_ai(ai_name, prompt)
+            predictions = call_ai(ai_name, prompt, expected_match_count=len(matches))
             pred_count = len(predictions.get("predictions", []))
             if pred_count == 0:
                 print(f"  ⚠ {ai_name} 返回了空预测，跳过")
@@ -533,13 +646,14 @@ def main():
     parser.add_argument("--game", choices=["胜负彩", "任9", "半全场", "进球彩"], default="胜负彩")
     parser.add_argument("--force", action="store_true", help="强制刷新")
     parser.add_argument("--get", action="store_true", help="获取已有预测")
+    parser.add_argument("--issue", type=str, help="指定期号")
     args = parser.parse_args()
 
     if args.get:
         results = get_predictions(args.game)
         print(json.dumps(results, ensure_ascii=False, indent=2))
     else:
-        result = predict(args.game, force=args.force)
+        result = predict(args.game, force=args.force, target_issue=args.issue)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
