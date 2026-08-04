@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 Disallow: /matches/
-Sitemap: https://zhulang.coze.site/sitemap.xml
+Sitemap: https://ai5188.cc/sitemap.xml

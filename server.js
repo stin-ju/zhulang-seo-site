@@ -67,12 +67,12 @@ function readBody(req) {
 
 function runPython(scriptName, args = []) {
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, 'scripts', scriptName);
+    const scriptPath = path.join(__dirname, 'JC', scriptName);
     const env = { ...process.env };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
     const child = execFile('python3', [scriptPath, ...args], {
-      cwd: path.join(__dirname, 'scripts'),
+      cwd: path.join(__dirname, 'JC'),
       env,
       timeout: 300000,
       maxBuffer: 10 * 1024 * 1024
@@ -1002,9 +1002,9 @@ const server = http.createServer(async (req, res) => {
       
       console.log(`[Briefing] Triggering: date=${date}, type=${type}`);
       
-      const scriptPath = path.join(process.cwd(), 'scripts', 'generate_brief.py');
+      const scriptPath = path.join(process.cwd(), 'JC', 'generate_brief.py');
       execFile('python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
-        cwd: path.join(process.cwd(), 'scripts'),
+        cwd: path.join(process.cwd(), 'JC'),
         env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL }
       }, (error, stdout, stderr) => {
         if (error) {
@@ -1023,7 +1023,7 @@ const server = http.createServer(async (req, res) => {
     // ======== GET /api/traditional-lottery/predict ========
     if (pathname === '/api/traditional-lottery/predict' && req.method === 'GET') {
       const { execSync } = require('child_process');
-      const scriptPath = path.join(process.cwd(), 'scripts', 'traditional_lottery_predict.py');
+      const scriptPath = path.join(process.cwd(), 'JC', 'traditional_lottery_predict.py');
       const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL };
       const responseData = { sfc: [], htf: [], jqc: [] };
       
@@ -1036,7 +1036,7 @@ const server = http.createServer(async (req, res) => {
       for (const gt of gameTypes) {
         try {
           const result = execSync(`python3 "${scriptPath}" --game "${gt.name}" --get`, {
-            cwd: path.join(process.cwd(), 'scripts'),
+            cwd: path.join(process.cwd(), 'JC'),
             env: pythonEnv,
             timeout: 60000,
             maxBuffer: 10 * 1024 * 1024,
@@ -1053,7 +1053,7 @@ const server = http.createServer(async (req, res) => {
         for (const gt of gameTypes) {
           try {
             execSync(`python3 "${scriptPath}" --game "${gt.name}" --force`, {
-              cwd: path.join(process.cwd(), 'scripts'),
+              cwd: path.join(process.cwd(), 'JC'),
               env: pythonEnv,
               timeout: 300000,
               maxBuffer: 10 * 1024 * 1024,
@@ -1065,7 +1065,7 @@ const server = http.createServer(async (req, res) => {
         for (const gt of gameTypes) {
           try {
             const result = execSync(`python3 "${scriptPath}" --game "${gt.name}" --get`, {
-              cwd: path.join(process.cwd(), 'scripts'),
+              cwd: path.join(process.cwd(), 'JC'),
               env: pythonEnv,
               timeout: 60000,
               maxBuffer: 10 * 1024 * 1024,
@@ -1108,6 +1108,32 @@ const server = http.createServer(async (req, res) => {
   // ============ Static File Routes ============
   let urlPath = pathname;
   if (urlPath === '/') urlPath = '/index.html';
+
+  // URL aliases: map root-level requests to JC/ directory
+  const URL_ALIASES = {
+    '/api.js': '/JC/api.js',
+    '/index.js': '/JC/index.js',
+    '/calculator.js': '/JC/calculator.js',
+    '/calculator.html': '/JC/calculator.html',
+    '/briefs.js': '/JC/briefs.js',
+    '/briefs.html': '/JC/briefs.html',
+    '/styles.css': '/JC/styles.css',
+    '/ix.html': '/JC/ix.html',
+    '/ai-analysis.html': '/JC/ai-analysis.html',
+    '/ai-analysis.js': '/JC/ai-analysis.js',
+    '/ai-hub.html': '/JC/ai-hub.html',
+    '/basketball.html': '/JC/basketball.html',
+    '/basketball.js': '/JC/basketball.js',
+    '/bb2.html': '/JC/bb2.html',
+    '/br2.html': '/JC/br2.html',
+    '/ca.html': '/JC/ca.html',
+    '/ca2.html': '/JC/ca2.html',
+    '/ia2.html': '/JC/ia2.html',
+    '/ct.html': '/CT/ct.html',
+  };
+  if (URL_ALIASES[urlPath]) {
+    urlPath = URL_ALIASES[urlPath];
+  }
 
   const safePath = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
   const filePath = path.join(process.cwd(), safePath);

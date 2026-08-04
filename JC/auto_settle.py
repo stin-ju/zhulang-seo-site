@@ -524,9 +524,10 @@ def fill_missing_scores(conn):
     return updated
 
 
-def get_unsettled(conn):
+def get_unsettled(conn, match_id=None):
     """获取所有已完赛但未结算的比赛及其预测
     同时从 prediction jsonb 和顶层列读取，优先 jsonb
+    如果指定 match_id，只返回该比赛的预测
     """
     # Bug1 fix: 查顶层 m.status = '已完赛'，排除已取消的比赛
     # Bug2 fix: COALESCE 从 prediction jsonb 和顶层列取值，优先 jsonb
@@ -551,8 +552,12 @@ def get_unsettled(conn):
       AND m.metadata->>'status' != '已取消'
       AND (p.is_settled = false OR p.is_settled IS NULL)
     """
+    params = []
+    if match_id:
+        sql += " AND m.id = %s"
+        params.append(match_id)
     with conn.cursor() as cur:
-        cur.execute(sql)
+        cur.execute(sql, params)
         return cur.fetchall()
 
 
@@ -805,10 +810,14 @@ def settle_basketball(row):
 
 
 def main():
-    result_mode = sys.argv[1] if len(sys.argv) > 1 else "display_only"
-    db_url = sys.argv[2] if len(sys.argv) > 2 else None
+    import argparse
+    parser = argparse.ArgumentParser(description='自动结算脚本')
+    parser.add_argument('--match-id', dest='match_id', help='指定单场比赛ID进行结算')
+    parser.add_argument('result_mode', nargs='?', default='display_only', help='结果模式')
+    parser.add_argument('db_url', nargs='?', default=None, help='数据库URL')
+    args = parser.parse_args()
 
-    conn = get_db(db_url)
+    conn = get_db(args.db_url)
     
     # 先从 titan007 补全缺失比分
     try:
@@ -820,7 +829,7 @@ def main():
         import traceback
         traceback.print_exc()
     
-    rows = get_unsettled(conn)
+    rows = get_unsettled(conn, match_id=args.match_id)
 
     if not rows:
         print("无待结算记录")
@@ -897,7 +906,7 @@ def main():
                 print(f"  {ai}: {s['total']}条, 命中{s['hits']}个维度")
 
     # 检查剩余未结算数
-    conn2 = get_db(db_url)
+    conn2 = get_db(args.db_url)
     with conn2.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM predictions WHERE is_settled = false OR is_settled IS NULL")
         remaining = cur.fetchone()[0]
