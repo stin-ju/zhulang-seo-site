@@ -1,763 +1,1482 @@
-        window.MATCH_DATA = []; // 保留作为fallback，实际数据从API动态获取
-        window.MATCH_DATA.forEach(m => {
-            // 兼容 ' VS ' 和 'VS' 两种格式
-            const teams = m.teams || '';
-            const match = teams.match(/^(.+?)\s*VS\s*(.+)$/);
-            if (match) {
-                m.home_team = match[1].trim();
-                m.away_team = match[2].trim();
-            } else {
-                m.home_team = teams;
-                m.away_team = '';
-            }
-            m.sport = m.sport_type;
-        });
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { execFile } = require('child_process');
+const { Pool } = require('pg');
 
-        // 从API加载所有在售比赛
-        async function loadMatches() {
-            try {
-                const resp = await fetch('/api/matches');
-                const data = await resp.json();
-                const now = new Date();
-                // 过滤：只保留在售且未结束的比赛
-                // 1. status 不是"已确认"（容错：反向排除）
-                // 2. selling_status 是 "on_sale"
-                // 3. 当前时间 < match_time - 25分钟（体彩规则：开赛前25分钟停售）
-                const availableMatches = data.filter(m => {
-                    if (m.status === '已确认') return false;
-                    // 不再依赖 selling_status，改为检查比赛状态
-                    if (m.status === '已完赛' || m.status === '已取消') return false;
-                    // 时间容错：如果当前时间已超过开赛前25分钟，视为停售
-                    if (m.match_time) {
-                        const matchStart = new Date(m.match_time);
-                        const cutoff = new Date(matchStart.getTime() - 25 * 60 * 1000);
-                        // 如果比赛还没开始（match_time > now），允许显示
-                        if (now >= matchStart) return false;
-                    }
-                    return true;
-                });
-                // 处理队伍名称和sport字段
-                availableMatches.forEach(m => {
-                    // 兼容 ' VS ' 和 'VS' 两种格式
-                    const teams = m.teams || '';
-                    const match = teams.match(/^(.+?)\s*VS\s*(.+)$/);
-                    if (match) {
-                        m.home_team = match[1].trim();
-                        m.away_team = match[2].trim();
-                    } else {
-                        m.home_team = teams;
-                        m.away_team = '';
-                    }
-                    m.sport = m.sport_type;
-                });
-                state.matches = availableMatches;
-                renderMatches();
-                console.log('✅ 从API加载', availableMatches.length, '场在售比赛');
-            } catch (e) {
-                console.warn('API加载失败，使用备用数据:', e);
-                // fallback也过滤selling_status
-                state.matches = (window.MATCH_DATA || []).filter(m => 
-                    m.selling_status === 'on_sale'
-                );
-                state.matches.forEach(m => { m.sport = m.sport_type; });
-                renderMatches();
-            }
+// ============ Database Connection ============
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres';
+const pgPool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+pgPool.on('error', (err) => {
+  console.error('[PG Pool] Unexpected error on idle client', err.message);
+});
+
+const PORT = process.env.DEPLOY_RUN_PORT || 5000;
+const HOST = '0.0.0.0';
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.txt': 'text/plain; charset=utf-8',
+};
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+// ============ Task Status Tracking ============
+const taskStatus = {
+  discover: { running: false, lastRun: null, lastResult: null },
+  predict: { running: false, lastRun: null, lastResult: null },
+  settle: { running: false, lastRun: null, lastResult: null },
+  report: { running: false, lastRun: null, lastResult: null }
+};
+
+const REPORT_PATH = '/tmp/dispatch_report.md';
+
+// ============ Helper Functions ============
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => resolve(body));
+    req.on('error', reject);
+  });
+}
+
+function runPython(scriptName, args = []) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, 'scripts', scriptName);
+    const env = { ...process.env };
+    if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
+    
+    const child = execFile('python3', [scriptPath, ...args], {
+      cwd: path.join(__dirname, 'scripts'),
+      env,
+      timeout: 300000,
+      maxBuffer: 10 * 1024 * 1024
+    }, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`[Python ${scriptName}] Error:`, error.message);
+        if (stderr) console.error(`[Python ${scriptName}] Stderr:`, stderr);
+        reject(new Error(stderr || error.message));
+        return;
+      }
+      if (stderr) console.warn(`[Python ${scriptName}] Stderr:`, stderr);
+      try {
+        resolve(JSON.parse(stdout.trim()));
+      } catch {
+        resolve({ output: stdout.trim() });
+      }
+    });
+  });
+}
+
+async function generateReport() {
+  taskStatus.report.running = true;
+  try {
+    const result = await runPython('dispatch_report.py');
+    taskStatus.report.lastRun = new Date().toISOString();
+    taskStatus.report.lastResult = result;
+    if (result.status === 'ANOMALY') {
+      console.error(`[Report] Found ${result.anomaly_count} anomalies:`, result.anomalies);
+    } else if (result.status === 'OK') {
+      console.log(`[Report] OK | ${result.total_matches} matches | ${result.on_sale} on sale`);
+    }
+    return result;
+  } catch (err) {
+    console.error('[Report] Report generation failed:', err.message);
+    taskStatus.report.lastRun = new Date().toISOString();
+    taskStatus.report.lastResult = { status: 'ERROR', error: err.message };
+    return { status: 'ERROR', error: err.message };
+  } finally {
+    taskStatus.report.running = false;
+  }
+}
+
+// ============ Data Normalization ============
+// Expand JSONB fields into flat fields for frontend compatibility
+
+// 统一胜分差格式为: 主胜1-5 / 主负1-5 / 客胜1-5 / 客负1-5
+function normalizeScoreDiff(sdr) {
+  if (!sdr || typeof sdr !== 'string') return sdr;
+  sdr = sdr.trim();
+  
+  // 已经是标准格式
+  if (/^(主|客)(胜|负)\d/.test(sdr)) return sdr;
+  
+  let side = '主';  // 默认主队
+  let result = '胜'; // 默认胜
+  let range = sdr;
+  
+  // 提取主/客
+  const sideMatch = sdr.match(/^(主|客)/);
+  if (sideMatch) {
+    side = sideMatch[1];
+    range = sdr.substring(1);
+  }
+  
+  // 提取胜/负（可能在开头或结尾）
+  const resultStart = range.match(/^(胜|负)/);
+  const resultEnd = range.match(/(胜|负)$/);
+  if (resultStart) {
+    result = resultStart[1];
+    range = range.substring(1);
+  } else if (resultEnd) {
+    result = resultEnd[1];
+    range = range.substring(0, range.length - 1);
+  }
+  
+  // range 现在应该是纯数字范围如 "1-5" 或 "16-20" 或 "20+"
+  range = range.trim();
+  if (!range) return sdr; // 无法解析，返回原值
+  
+  return `${side}${result}${range}`;
+}
+
+function cleanAnalysis(text) {
+  if (!text) return '';
+  const jsonPats = [/"spf"\s*:/, /"handicap_spf"\s*:/, /"score"\s*:/,
+                    /"win_loss"\s*:/, /"handicap_win_loss"\s*:/,
+                    /"half_full"\s*:/, /"confidence"\s*:/,
+                    /"market_deviation"\s*:/, /"score_diff_range"\s*:/,
+                    /"total_points"\s*:/, /"cold_warning"\s*:/];
+  const leakCount = jsonPats.filter(p => p.test(text)).length;
+  if (leakCount >= 3) return '';
+  text = text.replace(/```(?:json)?\s*[\s\S]*?```/g, '');
+  return text.trim();
+}
+
+function normalizeMatch(match) {
+  if (!match) return match;
+  // Extract fields from metadata JSONB if not present as direct columns
+  const meta = (typeof match.metadata === 'string') ? JSON.parse(match.metadata) : (match.metadata || {});
+  const odds = meta.odds || match.odds || {};
+  const spf = odds.spf || {};
+  const handicapSpf = odds.handicap_spf || {};
+  
+  // Fix match_time: combine match_date and match_time into full datetime string
+  let matchTime = match.match_time || meta.match_time || '';
+  let matchDate = match.match_date || meta.match_date;
+  
+  // If match_date is a Date object, convert to local date string YYYY-MM-DD
+  if (matchDate instanceof Date) {
+    const y = matchDate.getUTCFullYear();
+    const m = String(matchDate.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(matchDate.getUTCDate()).padStart(2, '0');
+    matchDate = `${y}-${m}-${d}`;
+  } else if (typeof matchDate === 'string') {
+    // Extract date part from ISO string like "2026-07-15T16:00:00.000Z"
+    matchDate = matchDate.substring(0, 10);
+  }
+  
+  // If match_time is just a time (HH:MM:SS or HH:MM), prepend the date
+  if (matchTime && !matchTime.includes('-') && matchDate) {
+    // Extract just HH:MM from time string like "02:15:00"
+    const timeParts = matchTime.split(':');
+    const hhmm = timeParts.length >= 2 ? `${timeParts[0]}:${timeParts[1]}` : matchTime;
+    matchTime = `${matchDate} ${hhmm}`;
+  }
+  
+  return {
+    ...match,
+    match_date: matchDate,
+    match_time: matchTime,
+    teams: match.home_team && match.away_team ? `${match.home_team} vs ${match.away_team}` : '',
+    win_odds: spf.win || null,
+    draw_odds: spf.draw || null,
+    lose_odds: spf.lose || null,
+    handicap_win_odds: handicapSpf.win || null,
+    handicap_draw_odds: handicapSpf.draw || null,
+    handicap_lose_odds: handicapSpf.lose || null,
+    league_name: (match.metadata && match.metadata.league) || '',
+    home_score: meta.home_score != null ? meta.home_score : (match.home_score != null ? match.home_score : null),
+    away_score: meta.away_score != null ? meta.away_score : (match.away_score != null ? match.away_score : null),
+    handicap: meta.handicap || match.handicap || null,
+    selling_status: meta.selling_status || null
+  };
+}
+
+function normalizePrediction(pred, matchMap) {
+  if (!pred) return pred;
+  const prediction = pred.prediction || {};
+  const hitStatus = pred.hit_status || {};
+  const match = matchMap ? matchMap[String(pred.match_id)] : null;
+  
+  const hitFields = ['spf', 'handicap_spf', 'score', 'goals', 'half_full',
+                     'win_loss', 'handicap_win_loss', 'total_points', 'score_diff_range', 'half_win_loss'];
+  const totalHits = hitFields.filter(f => hitStatus[f] === true).length;
+  
+  const normalizedSdr = normalizeScoreDiff(prediction.score_diff_range || pred.score_diff_range || pred.score_diff_range_pred) || null;
+  const normalizedWl = prediction.win_loss || pred.win_loss || pred.win_loss_pred || null;
+  const normalizedHwl = prediction.handicap_win_loss || pred.handicap_win_loss || pred.handicap_win_loss_pred || null;
+  const normalizedTp = prediction.total_points || pred.total_points || pred.total_points_pred || null;
+
+  return {
+    ...pred,
+    spf: prediction.spf || null,
+    handicap_spf: prediction.handicap_spf || null,
+    score: prediction.score || null,
+    goals: prediction.goals || null,
+    half_full: prediction.half_full || null,
+    score_diff_range: normalizedSdr,
+    score_diff_range_pred: normalizedSdr,
+    win_loss: normalizedWl,
+    win_loss_pred: normalizedWl,
+    handicap_win_loss: normalizedHwl,
+    handicap_win_loss_pred: normalizedHwl,
+    total_points: normalizedTp,
+    total_points_pred: normalizedTp,
+    hit_spf: hitStatus.spf === true ? '✅' : hitStatus.spf === false ? '❌' : null,
+    hit_handicap: hitStatus.handicap_spf === true ? '✅' : hitStatus.handicap_spf === false ? '❌' : null,
+    hit_score: hitStatus.score === true ? '✅' : hitStatus.score === false ? '❌' : null,
+    hit_goals: hitStatus.goals === true ? '✅' : hitStatus.goals === false ? '❌' : null,
+    hit_half: hitStatus.half_full === true ? '✅' : hitStatus.half_full === false ? '❌' : null,
+    hit_win_loss: hitStatus.win_loss === true ? '✅' : hitStatus.win_loss === false ? '❌' : null,
+    hit_handicap_win_loss: hitStatus.handicap_win_loss === true ? '✅' : hitStatus.handicap_win_loss === false ? '❌' : null,
+    hit_total_points: hitStatus.total_points === true ? '✅' : hitStatus.total_points === false ? '❌' : null,
+    hit_score_diff_range: hitStatus.score_diff_range === true ? '✅' : hitStatus.score_diff_range === false ? '❌' : null,
+    hit_half_win_loss: hitStatus.half_win_loss === true ? '✅' : hitStatus.half_win_loss === false ? '❌' : null,
+    total_hits: totalHits,
+    sport_type: match ? match.sport_type : null
+  };
+}
+
+// ============ Commentary Generator ============
+const DOUBAO_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+const DOUBAO_API_KEY = process.env.DOUBAO_API_KEY || '';
+const DOUBAO_MODEL = 'ep-20260706041055-2mgpf';
+
+let commentaryRunning = false;
+
+async function callDoubaoCommentary(prompt) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const resp = await fetch(DOUBAO_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DOUBAO_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: DOUBAO_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.85,
+          max_tokens: 600
+        })
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`[Commentary] Doubao API ${resp.status} (attempt ${attempt}): ${errText.slice(0, 200)}`);
+        if (attempt < 3) { await sleep(3000 * attempt); continue; }
+        throw new Error(`Doubao API ${resp.status}: ${errText.slice(0, 200)}`);
+      }
+      const data = await resp.json();
+      return data.choices[0].message.content.trim();
+    } catch (err) {
+      if (attempt < 3) { await sleep(3000 * attempt); continue; }
+      throw err;
+    }
+  }
+}
+
+function buildMatchCommentaryPrompt(match, preds) {
+  const isFootball = (match.sport_type || 'football') === 'football';
+  const home = match.home_team || '';
+  const away = match.away_team || '';
+  const league = (match.metadata && match.metadata.league) || '';
+  
+  const odds = match.odds || {};
+  const spfOdds = odds.spf || {};
+  const handicapOdds = odds.handicap_spf || {};
+
+  const spfCounts = {};
+  preds.forEach(p => {
+    const pred = p.prediction || {};
+    const k = (isFootball ? pred.spf : pred.win_loss) || '未预测';
+    spfCounts[k] = (spfCounts[k] || 0) + 1;
+  });
+  const total = preds.length;
+  const sorted = Object.entries(spfCounts).sort((a, b) => b[1] - a[1]);
+  const consensus = sorted[0];
+  const consensusPct = Math.round(consensus[1] / total * 100);
+
+  const dissenters = preds.filter(p => {
+    const pred = p.prediction || {};
+    return ((isFootball ? pred.spf : pred.win_loss) || '未预测') !== consensus[0];
+  });
+  let dissenterInfo = '';
+  if (dissenters.length > 0) {
+    dissenterInfo = dissenters.map(p => {
+      const pred = p.prediction || {};
+      let s = `${p.ai_name}: "${(isFootball ? pred.spf : pred.win_loss) || '?'}"`;
+      if (p.analysis) s += `, reason: ${p.analysis.replace(/\n/g, ' ').slice(0, 80)}`;
+      return s;
+    }).join('\n');
+  }
+
+  const predDetail = preds.map(p => {
+    const pred = p.prediction || {};
+    let s = `${p.ai_name}: ${isFootball ? 'spf=' : 'win_loss='}${(isFootball ? pred.spf : pred.win_loss) || '?'}`;
+    if (isFootball ? pred.handicap_spf : pred.handicap_win_loss) s += `, handicap=${isFootball ? pred.handicap_spf : pred.handicap_win_loss}`;
+    if (isFootball ? pred.score : pred.score_diff_range) s += `, ${isFootball ? 'score' : 'score_diff'}=${isFootball ? pred.score : pred.score_diff_range}`;
+    if (p.analysis) s += ` | ${p.analysis.replace(/\n/g, ' ').slice(0, 100)}`;
+    return s;
+  }).join('\n');
+
+  const oddsLine = isFootball
+    ? `W${spfOdds.win || '?'} / D${spfOdds.draw || '?'} / L${spfOdds.lose || '?'}`
+    : `W${spfOdds.win || '?'} / L${spfOdds.lose || '?'}`;
+
+  const sportLabel = isFootball ? 'football' : 'basketball';
+
+  return `You are a ${sportLabel} commentator for ZhuLang AI Lab. Style: sharp, colloquial, like a knowledgeable friend chatting in a WeChat group.
+
+## Match Info
+- League: ${league} | Teams: ${home} VS ${away}
+- Handicap: ${match.handicap || 'none'}
+- Odds: ${oddsLine}
+
+## ${total} AI Predictions
+${predDetail}
+
+## Consensus
+${consensusPct}% of AIs (${consensus[1]}/${total}) favor "${consensus[0]}"
+${dissenters.length > 0 ? `Dissenters:\n${dissenterInfo}` : 'All agree, no disagreement'}
+
+Generate 150-250 characters of commentary in Chinese:
+1. Sharp, colloquial, like chatting with friends in WeChat
+2. Focus on AI consensus and disagreement
+3. Have your own judgment, don't just repeat data
+4. No gambling/betting terms
+5. Use Chinese double quotes ""
+6. Plain text only, no markdown`;
+}
+
+async function updateMatchCommentary(matchId, commentary) {
+  const date = new Date().toISOString().split('T')[0];
+  const client = await pgPool.connect();
+  try {
+    await client.query(
+      `UPDATE matches SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('daily_commentary', $1::text, 'commentary_date', $2::text, 'commentary_version', 2) WHERE id = $3`,
+      [commentary, date, matchId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+async function checkAndGenerateCommentary(options = {}) {
+  if (commentaryRunning) {
+    console.log('[Commentary] Previous task still running, skipping');
+    return { skipped: true, reason: 'already_running' };
+  }
+  commentaryRunning = true;
+
+  try {
+    const forceMatchIds = options.forceMatchIds || [];
+    const isForceMode = forceMatchIds.length > 0;
+
+    if (isForceMode) {
+      console.log(`[Commentary] Force mode: clearing and regenerating ${forceMatchIds.length} matches`);
+      const client = await pgPool.connect();
+      try {
+        for (const matchId of forceMatchIds) {
+          await client.query(
+            `UPDATE matches SET metadata = COALESCE(metadata, '{}'::jsonb) - 'daily_commentary' - 'commentary_date' - 'commentary_version' WHERE id = $1`,
+            [matchId]
+          );
+          console.log(`[Commentary] Cleared commentary for ${matchId}`);
         }
+      } finally {
+        client.release();
+      }
+    }
 
-        // 配置
-        const FOOTBALL_PLAYS = [
-            { key: 'spf', label: '胜平负', maxPass: 8 },
-            { key: 'rqspf', label: '让球胜平负', maxPass: 8 },
-            { key: 'bf', label: '比分', maxPass: 4 },
-            { key: 'jqs', label: '总进球', maxPass: 6 },
-            { key: 'bqc', label: '半全场', maxPass: 4 }
-        ];
-        const BASKETBALL_PLAYS = [
-            { key: 'winlose', label: '胜负', maxPass: 8 },
-            { key: 'spread', label: '让分胜负', maxPass: 8 },
-            { key: 'total', label: '大小分', maxPass: 8 },
-            { key: 'scorediff', label: '胜分差', maxPass: 4 }
-        ];
+    // Find matches that need commentary (football, settled, no commentary yet)
+    const client = await pgPool.connect();
+    let matchesNeedingCommentary;
+    try {
+      let query = `
+        SELECT m.*, 
+          array_agg(json_build_object(
+            'ai_name', p.ai_name,
+            'prediction', p.prediction,
+            'analysis', p.analysis
+          )) as predictions
+        FROM matches m
+        LEFT JOIN predictions p ON p.match_id = m.id
+        WHERE m.sport_type = 'football'
+          AND m.status IN ('已确认', '已结算')
+      `;
+      if (isForceMode) {
+        query += ` AND m.id = ANY($1)`;
+        const res = await client.query(query, [forceMatchIds]);
+        matchesNeedingCommentary = res.rows;
+      } else {
+        query += ` AND (m.metadata->>'daily_commentary') IS NULL
+          AND (m.metadata->>'commentary_version') IS DISTINCT FROM '2'
+          GROUP BY m.id
+          ORDER BY (m.metadata->>'match_time') DESC
+          LIMIT 10`;
+        const res = await client.query(query);
+        matchesNeedingCommentary = res.rows;
+      }
+    } finally {
+      client.release();
+    }
 
-        // 过关方式配置（省略详细内容，保持原有逻辑）
-        const PASS_SUBS = {
-            '2x1': [{ m: 2 }], '3x1': [{ m: 3 }], '3x3': [{ m: 2 }], '3x4': [{ m: 2 }, { m: 3 }],
-            '4x1': [{ m: 4 }], '4x4': [{ m: 3 }], '4x5': [{ m: 3 }, { m: 4 }], '4x11': [{ m: 2 }, { m: 3 }, { m: 4 }],
-            '5x1': [{ m: 5 }], '5x5': [{ m: 4 }], '5x10': [{ m: 3 }], '5x16': [{ m: 3 }, { m: 4 }, { m: 5 }],
-            '5x20': [{ m: 2 }], '5x26': [{ m: 2 }, { m: 3 }, { m: 4 }, { m: 5 }],
-            '单关(2场)': [{ m: 1 }], '单关(3场)': [{ m: 1 }], '单关(4场)': [{ m: 1 }], '单关(5场)': [{ m: 1 }]
-        };
-        const PASS_TOTAL = {
-            '2x1': 1, '3x1': 1, '3x3': 3, '3x4': 4, '4x1': 1, '4x4': 4, '4x5': 5, '4x11': 11,
-            '5x1': 1, '5x5': 5, '5x10': 10, '5x16': 16, '5x20': 20, '5x26': 26,
-            '单关(2场)': 2, '单关(3场)': 3, '单关(4场)': 4, '单关(5场)': 5
-        };
-        const PASS_OPTIONS = {
-            2: ['2x1', '单关(2场)'], 3: ['3x1', '3x3', '3x4', '单关(3场)'],
-            4: ['4x1', '4x4', '4x5', '4x11', '单关(4场)'], 5: ['5x1', '5x5', '5x10', '5x16', '5x20', '5x26', '单关(5场)']
-        };
-        const SCORE_DIFF_OPTIONS = [
-            '主胜1-5', '主胜6-10', '主胜11-15', '主胜16-20', '主胜21-25', '主胜26+',
-            '客胜1-5', '客胜6-10', '客胜11-15', '客胜16-20', '客胜21-25', '客胜26+'
-        ];
+    if (matchesNeedingCommentary.length === 0) {
+      console.log('[Commentary] No matches need commentary');
+      return { generated: 0, skipped: 0 };
+    }
 
-        // 组合算法
-        function getCombinations(arr, k) {
-            if (k === 0) return [[]];
-            if (arr.length === 0 || k > arr.length) return [];
-            const result = [];
-            const [first, ...rest] = arr;
-            for (const combo of getCombinations(rest, k - 1)) result.push([first, ...combo]);
-            for (const combo of getCombinations(rest, k)) result.push(combo);
-            return result;
+    console.log(`[Commentary] Generating commentary for ${matchesNeedingCommentary.length} matches`);
+    let generated = 0;
+    for (const match of matchesNeedingCommentary) {
+      const preds = (match.predictions || []).filter(p => p && p.ai_name);
+      if (preds.length < 3) {
+        console.log(`[Commentary] Skipping ${match.id}: only ${preds.length} predictions`);
+        continue;
+      }
+      try {
+        const prompt = buildMatchCommentaryPrompt(match, preds);
+        const commentary = await callDoubaoCommentary(prompt);
+        await updateMatchCommentary(match.id, commentary);
+        generated++;
+        console.log(`[Commentary] Generated for ${match.id} (${match.home_team} vs ${match.away_team})`);
+        await sleep(1000);
+      } catch (err) {
+        console.error(`[Commentary] Failed for ${match.id}:`, err.message);
+      }
+    }
+
+    console.log(`[Commentary] Done: generated ${generated}/${matchesNeedingCommentary.length}`);
+    return { generated, total: matchesNeedingCommentary.length };
+  } finally {
+    commentaryRunning = false;
+  }
+}
+
+// ============ HTTP Server ============
+const server = http.createServer(async (req, res) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, CORS_HEADERS);
+    res.end();
+    return;
+  }
+
+  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+  const pathname = parsedUrl.pathname;
+
+  try {
+    // ======== GET /api/matches ========
+    if (pathname === '/api/matches' && req.method === 'GET') {
+      const date = parsedUrl.searchParams.get('date');
+      const sport = parsedUrl.searchParams.get('sport'); // null means all sports
+      const includePredictions = parsedUrl.searchParams.get('include_predictions') === 'true';
+
+      let query = `SELECT * FROM matches`;
+      const params = [];
+      let paramIdx = 1;
+      let hasWhere = false;
+
+      if (sport) {
+        query += ` WHERE sport_type = $${paramIdx}`;
+        params.push(sport);
+        paramIdx++;
+        hasWhere = true;
+      }
+
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const [year, month, day] = date.split('-').map(Number);
+        const d = new Date(year, month - 1, day);
+        d.setDate(d.getDate() + 1);
+        const nextDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (hasWhere) {
+          query += ` AND (metadata->>'match_time')::date >= $${paramIdx}::date AND (metadata->>'match_time')::date < $${paramIdx + 1}::date`;
+        } else {
+          query += ` WHERE (metadata->>'match_time')::date >= $${paramIdx}::date AND (metadata->>'match_time')::date < $${paramIdx + 1}::date`;
+          hasWhere = true;
         }
+        params.push(date, nextDate);
+        paramIdx += 2;
+      }
 
-        // 状态
-        const state = {
-            matches: window.MATCH_DATA || [],
-            selections: [], passType: '', currentSport: 'football', currentPlay: 'spf',
-            danMatchIds: [], detailOpen: false, multiplier: 1,
-        };
+      // 排除传统彩票（CT）比赛
+      if (hasWhere) {
+        query += ` AND (metadata->>'match_type' IS NULL OR metadata->>'match_type' != 'ct')`;
+      } else {
+        query += ` WHERE (metadata->>'match_type' IS NULL OR metadata->>'match_type' != 'ct')`;
+      }
 
-        // DOM 引用
-        const $ = id => document.getElementById(id);
-        const matchList = $('matchList'), matchCount = $('matchCount'), betList = $('betList');
-        const passGrid = $('passGrid'), passSection = $('passSection'), passHint = $('passHint');
-        const clearAllBtn = $('clearAllBtn'), selCount = $('selCount');
-        const betCount = $('betCount'), betAmount = $('betAmount'), bonusAmount = $('bonusAmount');
-        const calcHint = $('calcHint'), amountBreakdown = $('amountBreakdown');
-        const detailContent = $('detailContent');
-        const playTabs = $('playTabs'), multiplierInput = $('multiplierInput');
-        const panelSelCount = $('panelSelCount');
+      query += ` ORDER BY (metadata->>'match_time') ASC`;
 
-        // 比分三排分类
-        function categorizeScores(oddsList) {
-            const win = [], draw = [], lose = [];
-            // 支持连字符(1-0)和冒号(1:0)两种格式
-            const winOrder = ['1-0','2-0','2-1','3-0','3-1','3-2','4-0','4-1','4-2','5-0','5-1','5-2','胜其它'];
-            const drawOrder = ['0-0','1-1','2-2','3-3','平其它'];
-            const loseOrder = ['0-1','0-2','1-2','0-3','1-3','2-3','0-4','1-4','2-4','0-5','1-5','2-5','负其它'];
-            
-            oddsList.forEach(o => {
-                if (winOrder.includes(o.type)) win.push(o);
-                else if (drawOrder.includes(o.type)) draw.push(o);
-                else if (loseOrder.includes(o.type)) lose.push(o);
-            });
-            
-            // Sort by predefined order
-            win.sort((a, b) => winOrder.indexOf(a.type) - winOrder.indexOf(b.type));
-            draw.sort((a, b) => drawOrder.indexOf(a.type) - drawOrder.indexOf(b.type));
-            lose.sort((a, b) => loseOrder.indexOf(a.type) - loseOrder.indexOf(b.type));
-            
-            return { win, draw, lose };
-        }
+      const { rows } = await pgPool.query(query, params);
+      let enriched = rows.map(normalizeMatch);
 
-        // 篮球赔率映射
-        function getOddsMapForMatch(match, sport, playKey) {
-            if (sport === 'football') {
-                const map = {
-                    'spf': [
-                        { type: 'win', label: '胜', value: match.win_odds },
-                        { type: 'draw', label: '平', value: match.draw_odds },
-                        { type: 'lose', label: '负', value: match.lose_odds },
-                    ],
-                    'rqspf': [
-                        { type: 'hwin', label: '让胜', value: match.handicap_win_odds },
-                        { type: 'hdraw', label: '让平', value: match.handicap_draw_odds },
-                        { type: 'hlose', label: '让负', value: match.handicap_lose_odds },
-                    ],
-                    'bf': Object.keys(match.score_odds || {}).map(k => ({ type: k, label: k, value: match.score_odds[k] })),
-                    'jqs': Object.keys(match.goals_odds || {}).map(k => ({ type: k, label: k, value: match.goals_odds[k] })),
-                    'bqc': Object.keys(match.half_full_odds || {}).map(k => ({ type: k, label: k, value: match.half_full_odds[k] })),
-                };
-                return map[playKey] || map['spf'];
-            }
-            
-            // 篮球赔率映射
-            const spreadOdds = match.spread_odds || {};
-            const totalOdds = match.goals_odds || {};  // 大小分赔率存在 goals_odds
-            const scoreDiffOdds = match.score_diff_odds || {};
-            
-            const map = {
-                'winlose': [
-                    { type: 'bwin', label: '主胜', value: match.win_odds },
-                    { type: 'blose', label: '客胜', value: match.lose_odds },
-                ],
-                'spread': [
-                    { type: 'bspread_win', label: '让分主胜', value: spreadOdds.win || spreadOdds.over },
-                    { type: 'bspread_lose', label: '让分客胜', value: spreadOdds.lose || spreadOdds.under },
-                ],
-                'total': [
-                    { type: 'bover', label: '大分', value: totalOdds.over },
-                    { type: 'bunder', label: '小分', value: totalOdds.under },
-                ],
-                'scorediff': Object.keys(scoreDiffOdds).length > 0 
-                    ? Object.keys(scoreDiffOdds).map(k => ({ type: k, label: k, value: scoreDiffOdds[k] }))
-                    : SCORE_DIFF_OPTIONS.map(k => ({ type: k, label: k, value: null })),
-            };
-            return map[playKey] || map['winlose'];
-        }
-
-        function getHandicap(match, sport) {
-            if (sport === 'football') return match.handicap;
-            const spreadOdds = match.spread_odds || {};
-            return spreadOdds.handicap || null;
-        }
-
-        function getTotalLine(match) {
-            const totalOdds = match.goals_odds || {};
-            return totalOdds.line || match.total_points_odds || null;
-        }
-
-        function getSelectedPlayForMatch(matchId) {
-            const sel = state.selections.find(s => s.matchId === matchId);
-            return sel ? sel.playKey : null;
-        }
-
-        function getMaxPassForSelections() {
-            if (state.selections.length === 0) return 8;
-            const plays = state.selections.map(s => s.playKey);
-            const uniquePlays = [...new Set(plays)];
-            const allPlays = [...FOOTBALL_PLAYS, ...BASKETBALL_PLAYS];
-            let maxPass = 8;
-            for (const playKey of uniquePlays) {
-                const playConfig = allPlays.find(p => p.key === playKey);
-                if (playConfig && playConfig.maxPass < maxPass) maxPass = playConfig.maxPass;
-            }
-            return maxPass;
-        }
-
-        function isMixPass() {
-            if (state.selections.length < 2) return false;
-            const plays = state.selections.map(s => s.playKey);
-            return [...new Set(plays)].length > 1;
-        }
-
-        // 渲染函数
-        function renderPlayTabs() {
-            const plays = state.currentSport === 'football' ? FOOTBALL_PLAYS : BASKETBALL_PLAYS;
-            let html = '';
-            plays.forEach(p => {
-                const active = p.key === state.currentPlay ? 'active' : '';
-                const hasSelected = state.selections.some(s => s.playKey === p.key);
-                html += `<button class="play-tab ${active}" data-play="${p.key}">${p.label} <span class="max-tag">${p.maxPass}关</span>${hasSelected ? ' <span class="check">✓</span>' : ''}</button>`;
-            });
-            playTabs.innerHTML = html;
-            playTabs.querySelectorAll('.play-tab').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    playTabs.querySelectorAll('.play-tab').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    state.currentPlay = btn.dataset.play;
-                    renderMatches();
-                });
-            });
-        }
-
-        function renderMatches() {
-            const data = state.matches.filter(m => m.sport === state.currentSport);
-            if (!data.length) {
-                matchList.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px 0;">暂无赛事</div>';
-                matchCount.textContent = '0 场';
-                return;
-            }
-            matchCount.textContent = data.length + ' 场';
-            let html = '';
-            data.forEach(m => {
-                const isDan = state.danMatchIds.includes(m.id);
-                const selectedPlay = getSelectedPlayForMatch(m.id);
-                const play = (state.currentSport === 'football' ? FOOTBALL_PLAYS : BASKETBALL_PLAYS).find(p => p.key === state.currentPlay);
-                if (!play) return;
-                const oddsList = getOddsMapForMatch(m, state.currentSport, state.currentPlay);
-                const validOdds = oddsList.filter(o => o.value && o.value > 0);
-                if (!validOdds.length) {
-                    html += `<div class="match-item" style="color:#9ca3af;text-align:center;padding:8px 0;">${m.home_team} VS ${m.away_team} - 无${play.label}数据</div>`;
-                    return;
-                }
-                // 检查该场比赛已选的玩法（支持容错：同玩法可多选）
-                const matchSelections = state.selections.filter(s => s.matchId === m.id);
-                const selectedPlays = [...new Set(matchSelections.map(s => s.playKey))];
-                const isSelectedPlay = selectedPlays.includes(state.currentPlay);
-                const isDisabled = selectedPlays.length > 0 && !selectedPlays.includes(state.currentPlay);
-                const isScoreDiff = state.currentPlay === 'scorediff';
-                const isScorePlay = state.currentPlay === 'bf';
-                const handicap = getHandicap(m, state.currentSport);
-                const totalLine = state.currentSport === 'basketball' ? getTotalLine(m) : null;
-                
-                // Format match time
-                const matchTime = m.match_time || '';
-                const timeDisplay = matchTime ? matchTime.substring(5, 16).replace('T', ' ') : '';
-                
-                // 检查某个选项是否已选中
-                const isOptionSelected = (type) => state.selections.some(s => s.matchId === m.id && s.type === type);
-                
-                // Generate odds HTML
-                let oddsHtml = '';
-                if (isScorePlay) {
-                    // 比分三排布局
-                    const { win, draw, lose } = categorizeScores(validOdds);
-                    const renderScoreRow = (label, rowClass, items) => {
-                        if (!items.length) return '';
-                        return `<div class="score-row ${rowClass}">
-                            <span class="row-label">${label}</span>
-                            <div class="row-options">
-                                ${items.map(o => {
-                                    // 将连字符格式(1-0)转换为冒号格式(1:0)显示
-                                    const displayLabel = o.label.includes('-') ? o.label.replace('-', ':') : o.label;
-                                    return `
-                                    <button class="odds-btn ${isOptionSelected(o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
-                                            data-matchid="${m.id}" data-play="${state.currentPlay}" data-type="${o.type}" 
-                                            data-odds="${o.value || 0}" data-label="${displayLabel}">
-                                        <span class="label">${displayLabel}</span>
-                                        <span class="value">${o.value || '-'}</span>
-                                    </button>
-                                `}).join('')}
-                            </div>
-                        </div>`;
-                    };
-                    oddsHtml = `<div class="score-rows">
-                        ${renderScoreRow('胜', 'win-row', win)}
-                        ${renderScoreRow('平', 'draw-row', draw)}
-                        ${renderScoreRow('负', 'lose-row', lose)}
-                    </div>`;
-                } else {
-                    oddsHtml = `<div class="odds-group ${isScoreDiff ? 'score-diff' : ''}">
-                        ${validOdds.map(o => `
-                            <button class="odds-btn ${isOptionSelected(o.type) ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
-                                    data-matchid="${m.id}" data-play="${state.currentPlay}" data-type="${o.type}" 
-                                    data-odds="${o.value || 0}" data-label="${o.label}">
-                                <span class="label">${o.label}</span>
-                                <span class="value">${o.value || '-'}</span>
-                            </button>
-                        `).join('')}
-                    </div>`;
-                }
-                
-                html += `
-                    <div class="match-item" data-matchid="${m.id}">
-                        <div class="match-header" data-matchid="${m.id}">
-                            <div class="match-meta">
-                                <span class="match-id">${m.id}</span>
-                                <span class="match-time">${timeDisplay}</span>
-                            </div>
-                            <button class="collapse-btn" data-matchid="${m.id}">▼</button>
-                        </div>
-                        <div class="match-body" data-matchid="${m.id}">
-                            <div class="teams-row">
-                                <button class="star-btn ${isDan ? 'active' : ''}" data-matchid="${m.id}" title="设胆">${isDan ? '★' : '☆'}</button>
-                                ${m.home_team} <span class="vs">VS</span> ${m.away_team}
-                            </div>
-                            <div class="tags-row">
-                                ${handicap ? `<span class="handicap-label">让${handicap}</span>` : ''}
-                                ${totalLine ? `<span class="handicap-label">总分${totalLine}</span>` : ''}
-                                ${selectedPlay ? `<span class="selected-play-label">已选 ${play.label}</span>` : ''}
-                            </div>
-                            <div class="play-row">
-                                <span class="play-label">${play.label}</span>
-                                ${oddsHtml}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            matchList.innerHTML = html;
-            
-            // Collapse/expand handlers
-            matchList.querySelectorAll('.match-header').forEach(header => {
-                header.addEventListener('click', (e) => {
-                    // Don't toggle if clicking on odds button or star button
-                    if (e.target.closest('.odds-btn') || e.target.closest('.star-btn')) return;
-                    const matchId = header.dataset.matchid;
-                    const body = matchList.querySelector(`.match-body[data-matchid="${matchId}"]`);
-                    const btn = header.querySelector('.collapse-btn');
-                    if (body && btn) {
-                        body.classList.toggle('hidden');
-                        btn.classList.toggle('collapsed');
-                    }
-                });
-            });
-            
-            // Star button handlers
-            matchList.querySelectorAll('.star-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const mid = btn.dataset.matchid;
-                    if (state.danMatchIds.includes(mid)) {
-                        state.danMatchIds = state.danMatchIds.filter(id => id !== mid);
-                    } else {
-                        state.danMatchIds.push(mid);
-                    }
-                    renderMatches();
-                    renderBetSlip();
-                });
-            });
-            
-            // Odds button handlers
-            matchList.querySelectorAll('.odds-btn:not(.disabled)').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const matchId = btn.dataset.matchid;
-                    const playKey = btn.dataset.play;
-                    const type = btn.dataset.type;
-                    const odds = parseFloat(btn.dataset.odds);
-                    const label = btn.dataset.label || type;
-                    if (isNaN(odds) || odds <= 0) return;
-                    toggleSelection(matchId, playKey, type, odds, label);
-                });
-            });
-        }
-
-        function toggleSelection(matchId, playKey, type, odds, label) {
-            // 检查是否已存在相同选择
-            const existingIdx = state.selections.findIndex(s => s.matchId === matchId && s.type === type && s.playKey === playKey);
-            if (existingIdx >= 0) {
-                // 取消选择
-                state.selections.splice(existingIdx, 1);
-                if (state.danMatchIds.includes(matchId)) state.danMatchIds = state.danMatchIds.filter(id => id !== matchId);
-                renderMatches(); renderBetSlip(); renderPlayTabs();
-                return;
-            }
-            
-            // 检查是否已存在同场比赛的其他选择
-            const existingForMatch = state.selections.filter(s => s.matchId === matchId);
-            if (existingForMatch.length > 0) {
-                // 如果已有选择，检查是否同一种玩法
-                const existingPlay = existingForMatch[0].playKey;
-                if (existingPlay !== playKey) {
-                    // 不同玩法，替换（同一场只能选一种玩法）
-                    state.selections = state.selections.filter(s => s.matchId !== matchId);
-                    if (state.danMatchIds.includes(matchId)) state.danMatchIds = state.danMatchIds.filter(id => id !== matchId);
-                }
-                // 同玩法不同选项，允许添加（容错模式）
-            }
-            
-            state.selections.push({ matchId, playKey, type, odds, label, sport: state.currentSport });
-            renderMatches(); renderBetSlip(); renderPlayTabs();
-        }
-
-        function renderBetSlip() {
-            const groups = {};
-            state.selections.forEach(s => {
-                if (!groups[s.matchId]) groups[s.matchId] = [];
-                groups[s.matchId].push(s);
-            });
-            const count = Object.keys(groups).length;
-            selCount.textContent = count;
-            if (panelSelCount) panelSelCount.textContent = count;
-            
-            if (!state.selections.length) {
-                betList.innerHTML = '<div class="panel-empty">点击赔率添加</div>';
-                passSection.style.display = 'none';
-                updateResult();
-                return;
-            }
-            const allPlays = [...FOOTBALL_PLAYS, ...BASKETBALL_PLAYS];
-            let html = '<div class="panel-bet-list">';
-            Object.keys(groups).forEach(mid => {
-                const items = groups[mid];
-                const match = state.matches.find(m => m.id === mid);
-                const label = match ? `${match.home_team} VS ${match.away_team}` : mid;
-                const isDan = state.danMatchIds.includes(mid);
-                const tags = items.map(s => {
-                    const play = allPlays.find(p => p.key === s.playKey);
-                    return `${s.label} ${s.odds}${play ? ' ('+play.label+')' : ''}`;
-                }).join('、');
-                html += `<div class="panel-bet-item">
-                    <span class="dan-star ${isDan ? 'active' : ''}" data-matchid="${mid}" title="设胆">${isDan ? '★' : '☆'}</span>
-                    <span class="match-name">${label}</span>
-                    <span class="bet-info">${tags}</span>
-                    <span class="del-btn" data-matchid="${mid}">✕</span>
-                </div>`;
-            });
-            html += '</div>';
-            html += '<div class="panel-hint">💡 点击 ☆ 可设为胆码（必选），支持多选</div>';
-            betList.innerHTML = html;
-            
-            // 设胆点击
-            betList.querySelectorAll('.dan-star').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const mid = btn.dataset.matchid;
-                    if (state.danMatchIds.includes(mid)) {
-                        state.danMatchIds = state.danMatchIds.filter(id => id !== mid);
-                    } else {
-                        state.danMatchIds.push(mid);
-                    }
-                    renderBetSlip();
-                    renderMatches();
-                });
-            });
-            
-            // 删除点击
-            betList.querySelectorAll('.del-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const mid = btn.dataset.matchid;
-                    state.selections = state.selections.filter(s => s.matchId !== mid);
-                    if (state.danMatchIds.includes(mid)) state.danMatchIds = state.danMatchIds.filter(id => id !== mid);
-                    renderBetSlip(); renderMatches(); renderPlayTabs(); updateResult();
-                });
-            });
-            renderPassOptions();
-            updateResult();
-        }
-
-        function renderPassOptions() {
-            const groups = {};
-            state.selections.forEach(s => {
-                if (!groups[s.matchId]) groups[s.matchId] = [];
-                groups[s.matchId].push(s);
-            });
-            const count = Object.keys(groups).length;
-            if (count < 2) {
-                passGrid.innerHTML = '<span style="color:#9ca3af;font-size:12px;">至少选2场比赛</span>';
-                passSection.style.display = 'block';
-                passHint.textContent = '';
-                return;
-            }
-            const maxPass = getMaxPassForSelections();
-            const effectiveCount = Math.min(count, maxPass);
-            let options = effectiveCount >= 2 ? (PASS_OPTIONS[effectiveCount] || []) : [];
-            if (!options.length) {
-                passGrid.innerHTML = '<span style="color:#9ca3af;font-size:12px;">请选择更多比赛</span>';
-                passSection.style.display = 'block';
-                passHint.textContent = '';
-                return;
-            }
-            if (!state.passType || !options.includes(state.passType)) state.passType = options[0];
-            let html = '';
-            options.forEach(p => {
-                html += `<button class="pass-btn ${p === state.passType ? 'active' : ''}" data-pass="${p}">${p}</button>`;
-            });
-            passGrid.innerHTML = html;
-            passSection.style.display = 'block';
-            passGrid.querySelectorAll('.pass-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    state.passType = btn.dataset.pass;
-                    renderPassOptions(); updateResult();
-                });
-            });
-            passHint.textContent = effectiveCount < count ? `⚠️ 最高 ${maxPass} 关，已选 ${count} 场，超出部分忽略` : `已选 ${count} 场，最高 ${maxPass} 关`;
-            passHint.style.color = effectiveCount < count ? '#f59e0b' : '#6b7280';
-        }
-
-        function updateResult() {
-            const sel = state.selections;
-            if (sel.length < 2) {
-                betCount.textContent = '0';
-                betAmount.textContent = '0.00 元';
-                amountBreakdown.textContent = '每注 2 元 × 0 注 × ' + state.multiplier + ' 倍';
-                bonusAmount.innerHTML = '0.00 <span class="unit">元</span>';
-                calcHint.textContent = '请选择至少 2 场比赛';
-                detailContent.innerHTML = '';
-                detailContent.classList.remove('open');
-                return;
-            }
-            
-            // 按比赛分组，支持容错（同一场多个选项）
-            const matchGroups = {};
-            sel.forEach(s => {
-                if (!matchGroups[s.matchId]) matchGroups[s.matchId] = [];
-                matchGroups[s.matchId].push(s);
-            });
-            
-            const matchIds = Object.keys(matchGroups);
-            const totalMatches = matchIds.length;
-            
-            // 检查是否有容错（某场比赛有多个选项）
-            const hasRongCuo = Object.values(matchGroups).some(group => group.length > 1);
-            
-            const subs = PASS_SUBS[state.passType] || [{ m: 0 }];
-            let totalPrize = 0, maxPrize = 0, detailRows = [], actualBets = 0;
-            
-            // 设胆处理：胆码必须包含在所有组合中
-            const danIds = state.danMatchIds.filter(id => matchIds.includes(id));
-            const hasDan = danIds.length > 0;
-            const otherIds = matchIds.filter(id => !danIds.includes(id));
-            const danCount = danIds.length;
-            
-            for (const sub of subs) {
-                const subM = sub.m;
-                if (totalMatches < subM) continue;
-                
-                // 生成比赛组合（胆码必须包含）
-                let matchCombos;
-                if (hasDan) {
-                    // 有胆码：从其他比赛中选 subM-danCount 场，加上所有胆码
-                    const needOthers = subM - danCount;
-                    if (needOthers > otherIds.length || needOthers < 0) continue;
-                    const otherCombos = getCombinations(otherIds, needOthers);
-                    matchCombos = otherCombos.map(combo => [...danIds, ...combo]);
-                } else {
-                    matchCombos = getCombinations(matchIds, subM);
-                }
-                
-                for (const matchCombo of matchCombos) {
-                    if (hasRongCuo) {
-                        // 容错模式：每场比赛的多个选项都要组合
-                        // 生成所有选项组合
-                        const selectionCombos = matchCombo.reduce((acc, mid) => {
-                            const selections = matchGroups[mid];
-                            if (acc.length === 0) {
-                                return selections.map(s => [s]);
-                            }
-                            const newCombos = [];
-                            acc.forEach(existing => {
-                                selections.forEach(s => {
-                                    newCombos.push([...existing, s]);
-                                });
-                            });
-                            return newCombos;
-                        }, []);
-                        
-                        for (const combo of selectionCombos) {
-                            let comboOdds = 1, comboLabel = '';
-                            for (const s of combo) {
-                                comboOdds *= s.odds;
-                                const match = state.matches.find(m => m.id === s.matchId);
-                                comboLabel += `${match ? match.home_team : s.matchId}(${s.label}) `;
-                            }
-                            if (comboLabel) {
-                                const prize = comboOdds * 2 * state.multiplier;
-                                totalPrize += prize;
-                                if (prize > maxPrize) maxPrize = prize;
-                                actualBets++;
-                                detailRows.push({ combo: comboLabel.trim(), odds: comboOdds, prize: prize.toFixed(2) });
-                            }
-                        }
-                    } else {
-                        // 普通模式：每场一个选项
-                        let comboOdds = 1, comboLabel = '';
-                        for (const id of matchCombo) {
-                            const s = matchGroups[id][0];
-                            comboOdds *= s.odds;
-                            const match = state.matches.find(m => m.id === id);
-                            comboLabel += `${match ? match.home_team : id}(${s.label}) `;
-                        }
-                        if (comboLabel) {
-                            const prize = comboOdds * 2 * state.multiplier;
-                            totalPrize += prize;
-                            if (prize > maxPrize) maxPrize = prize;
-                            actualBets++;
-                            detailRows.push({ combo: comboLabel.trim(), odds: comboOdds, prize: prize.toFixed(2) });
-                        }
-                    }
-                }
-            }
-            
-            const displayBets = actualBets > 0 ? actualBets : 0;
-            const perBet = 2, multiplier = state.multiplier || 1;
-            const totalAmount = perBet * multiplier * displayBets;
-            betCount.textContent = displayBets;
-            betAmount.textContent = totalAmount.toFixed(2) + ' 元';
-            amountBreakdown.textContent = `每注 ${perBet} 元 × ${displayBets} 注 × ${multiplier} 倍`;
-            // 理论最高奖金：无容错时=所有注数总和，有容错时=单版本最高
-            const displayPrize = hasRongCuo ? maxPrize : totalPrize;
-            bonusAmount.innerHTML = `${displayPrize.toFixed(2)} <span class="unit">元</span>`;
-            calcHint.textContent = `${totalMatches} 场比赛${hasRongCuo ? ' · 容错' : ''} · ${state.passType || '未选择'}`;
-            if (detailRows.length > 0) {
-                let detailHtml = '';
-                detailRows.slice(0, 20).forEach((row, i) => {
-                    detailHtml += `<div class="detail-item"><span class="combo">第${i+1}注：${row.combo}</span><span class="prize">${row.prize} 元</span></div>`;
-                });
-                if (detailRows.length > 20) detailHtml += `<div class="detail-item" style="text-align:center;color:#9ca3af;">... 共 ${detailRows.length} 注</div>`;
-                detailContent.innerHTML = detailHtml;
-            } else {
-                detailContent.innerHTML = '<div style="padding:4px;color:#9ca3af;text-align:center;">暂无明细</div>';
-            }
-        }
-
-        // 事件绑定
-        const danBtn = document.getElementById('danBtn');
-        const slipPanel = document.getElementById('slipPanel');
-        const detailModal = document.getElementById('detailModal');
-        const detailBtn = document.getElementById('detailBtn');
-        const closeDetail = document.getElementById('closeDetail');
-        const multMinus = document.getElementById('multMinus');
-        const multPlus = document.getElementById('multPlus');
-
-        // 选单面板展开/收起
-        danBtn.addEventListener('click', () => {
-            slipPanel.classList.toggle('open');
-            danBtn.querySelector('.arrow').textContent = slipPanel.classList.contains('open') ? '▼' : '▲';
-        });
-
-        // 清空选单
-        clearAllBtn.addEventListener('click', () => {
-            state.selections = []; state.danMatchIds = [];
-            renderMatches(); renderBetSlip(); renderPlayTabs();
-        });
-
-        // 奖金详情弹窗
-        detailBtn.addEventListener('click', () => {
-            detailModal.style.display = 'flex';
-        });
-        closeDetail.addEventListener('click', () => {
-            detailModal.style.display = 'none';
-        });
-        detailModal.addEventListener('click', (e) => {
-            if (e.target === detailModal) detailModal.style.display = 'none';
-        });
-
-        // 过关方式切换
-        document.querySelectorAll('.pass-type-options button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.pass-type-options button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                // 这里可以添加M串N和自由过关的切换逻辑
-            });
-        });
-
-        // 倍数控制
-        multMinus.addEventListener('click', () => {
-            let val = parseInt(multiplierInput.value) || 1;
-            if (val > 1) {
-                multiplierInput.value = val - 1;
-                state.multiplier = val - 1;
-                updateResult();
-            }
-        });
-        multPlus.addEventListener('click', () => {
-            let val = parseInt(multiplierInput.value) || 1;
-            if (val < 50) {
-                multiplierInput.value = val + 1;
-                state.multiplier = val + 1;
-                updateResult();
-            }
-        });
-
-        document.querySelectorAll('#sportTabs .tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('#sportTabs .tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                state.currentSport = tab.dataset.sport;
-                state.currentPlay = state.currentSport === 'football' ? 'spf' : 'winlose';
-                state.selections = []; state.danMatchIds = []; state.multiplier = 1;
-                multiplierInput.value = 1;
-                renderPlayTabs(); renderMatches(); renderBetSlip();
-            });
-        });
-
-        multiplierInput.addEventListener('input', () => {
-            let val = parseInt(multiplierInput.value) || 1;
-            if (val < 1) val = 1;
-            if (val > 50) val = 50;
-            state.multiplier = val;
-            updateResult();
-        });
-
-        // 初始化
-        renderPlayTabs();
-        renderMatches();
-        renderBetSlip();
-        // 从API加载在售比赛数据
-        loadMatches();
-        console.log('✅ 竞彩计算器已加载');
-
-        import { fetchMatches, fetchPredictions, fetchAIStats, esc, fmtDate, fmtTime, showError, getCachedData, setCachedData } from './api.js';
+      // Auto-mark past unstarted matches as started (but NOT stopped/cancelled ones)
+      const now = new Date();
+      enriched.forEach(m => {
+        const metaStatus = (m.metadata && m.metadata.status) || '';
+        const hasScore = m.home_score != null && m.away_score != null;
         
-        // 将函数暴露到全局作用域供页面使用
-        window.fetchMatches = fetchMatches;
-        window.fetchPredictions = fetchPredictions;
-        window.fetchAIStats = fetchAIStats;
-        window.esc = esc;
-        window.fmtDate = fmtDate;
-        window.fmtTime = fmtTime;
-        window.showError = showError;
+        // 有比分 → 已完赛（优先级最高）
+        if (hasScore) {
+          m.status = '已完赛';
+          m.selling_status = 'ended';
+        }
+        // metadata明确标记取消 → 已取消
+        else if (metaStatus === '已取消') {
+          m.status = '已取消';
+          m.selling_status = 'ended';
+        }
+        // stopped状态只是不再售卖，不代表取消 → 一律标待比赛（等auto_settle结算）
+        else if (metaStatus === 'stopped') {
+          m.status = '待比赛';
+          m.selling_status = 'stopped';
+        }
+        // 已过时间但未开赛 → 已开赛
+        else if (new Date(m.match_time) < now && (m.status === '未开赛' || m.status === 'on_sale')) {
+          m.status = '已开赛';
+          m.selling_status = 'stopped';
+        }
+        // 未开赛的比赛 → 在售
+        else {
+          m.selling_status = 'on_sale';
+        }
+      });
+
+      // Optionally include predictions
+      if (includePredictions && enriched.length > 0) {
+        const matchIds = enriched.map(m => String(m.id));
+        const predResult = await pgPool.query(
+          `SELECT * FROM predictions WHERE match_id = ANY($1) ORDER BY id DESC`,
+          [matchIds]
+        );
+        const matchMap = {};
+        enriched.forEach(m => { matchMap[String(m.id)] = m; });
+        
+        const allPreds = predResult.rows.map(p => {
+          const cleaned = { ...p, analysis: cleanAnalysis(p.analysis) };
+          return normalizePrediction(cleaned, matchMap);
+        });
+
+        const predictionsByMatch = {};
+        allPreds.forEach(p => {
+          const matchId = String(p.match_id);
+          if (!predictionsByMatch[matchId]) predictionsByMatch[matchId] = [];
+          predictionsByMatch[matchId].push(p);
+        });
+
+        enriched.forEach(m => {
+          m.predictions = predictionsByMatch[String(m.id)] || [];
+        });
+      }
+
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        ...CORS_HEADERS 
+      });
+      res.end(JSON.stringify(enriched));
+      return;
+    }
+
+    // ======== GET /api/matches/:id ========
+    if (pathname.match(/^\/api\/matches\/(.+)$/) && req.method === 'GET') {
+      const matchId = decodeURIComponent(pathname.split('/api/matches/')[1]);
+      
+      const matchRes = await pgPool.query(
+        `SELECT * FROM matches WHERE id = $1`,
+        [matchId]
+      );
+      
+      if (matchRes.rows.length === 0) {
+        res.writeHead(404, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'Match not found' }));
+        return;
+      }
+
+      const match = normalizeMatch(matchRes.rows[0]);
+      
+      const predRes = await pgPool.query(
+        `SELECT * FROM predictions WHERE match_id = $1 ORDER BY ai_name ASC`,
+        [matchId]
+      );
+      
+      const matchMap = { [String(match.id)]: match };
+      match.predictions = predRes.rows.map(p => {
+        const cleaned = { ...p, analysis: cleanAnalysis(p.analysis) };
+        return normalizePrediction(cleaned, matchMap);
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(match));
+      return;
+    }
+
+    // ======== GET /api/predictions ========
+    if (pathname === '/api/predictions' && req.method === 'GET') {
+      const sport = parsedUrl.searchParams.get('sport') || 'football';
+
+      // Get all predictions joined with matches for sport_type
+      const { rows } = await pgPool.query(
+        `SELECT p.*, m.sport_type, m.metadata->>'match_time' as match_time
+         FROM predictions p
+         JOIN matches m ON m.id = p.match_id
+         WHERE m.sport_type = $1
+         ORDER BY p.id DESC`,
+        [sport]
+      );
+
+      // Build match map for normalization
+      const matchIds = [...new Set(rows.map(r => String(r.match_id)))];
+      let matchMap = {};
+      if (matchIds.length > 0) {
+        const matchRes = await pgPool.query(
+          `SELECT id, sport_type FROM matches WHERE id = ANY($1)`,
+          [matchIds]
+        );
+        matchRes.rows.forEach(m => { matchMap[String(m.id)] = m; });
+      }
+
+      const enriched = rows.map(p => {
+        const cleaned = { ...p, analysis: cleanAnalysis(p.analysis) };
+        return normalizePrediction(cleaned, matchMap);
+      });
+
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        ...CORS_HEADERS 
+      });
+      res.end(JSON.stringify(enriched));
+      return;
+    }
+
+    // ======== GET /api/chain_bets ========
+    if (pathname === '/api/chain_bets' && req.method === 'GET') {
+      const { rows } = await pgPool.query(
+        `SELECT * FROM chain_bets ORDER BY bet_date DESC, ai_name ASC`
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(rows));
+      return;
+    }
+
+    // ======== GET /api/ai_stats ========
+    if (pathname === '/api/ai_stats' && req.method === 'GET') {
+      const sport = parsedUrl.searchParams.get('sport') || 'football';
+      const active = parsedUrl.searchParams.get('active');
+      
+      let query = `SELECT * FROM ai_stats WHERE sport_type = $1`;
+      const params = [sport];
+      if (active !== 'false') {
+        query += ` AND is_active = true`;
+      }
+      query += ` ORDER BY rank ASC`;
+      
+      const { rows } = await pgPool.query(query, params);
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(rows));
+      return;
+    }
+
+    // ======== GET /api/betting_daily ========
+    if (pathname === '/api/betting_daily' && req.method === 'GET') {
+      const sport = parsedUrl.searchParams.get('sport') || 'football';
+      const { rows } = await pgPool.query(
+        `SELECT * FROM betting_daily WHERE sport_type = $1 ORDER BY match_date DESC`,
+        [sport]
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(rows));
+      return;
+    }
+
+    // ======== GET /api/betting_summary ========
+    if (pathname === '/api/betting_summary' && req.method === 'GET') {
+      const sport = parsedUrl.searchParams.get('sport') || 'football';
+      const { rows } = await pgPool.query(
+        `SELECT * FROM betting_summary WHERE sport_type = $1 ORDER BY rank ASC`,
+        [sport]
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(rows));
+      return;
+    }
+
+    // ======== GET /api/briefs ========
+    if (pathname === '/api/briefs' && req.method === 'GET') {
+      const { rows } = await pgPool.query(`SELECT * FROM briefs ORDER BY date DESC`);
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(rows));
+      return;
+    }
+
+    // ======== GET /api/date-tabs ========
+    if (pathname === '/api/date-tabs' && req.method === 'GET') {
+      const today = new Date();
+      const tabs = [];
+      for (let i = -3; i <= 3; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const displayStr = `${date.getMonth() + 1}月${date.getDate()}日`;
+        tabs.push({ date: dateStr, display: displayStr, isToday: i === 0 });
+      }
+      const todayTab = tabs.find(t => t.isToday);
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ tabs, defaultDate: todayTab ? todayTab.date : tabs[3].date }));
+      return;
+    }
+
+    // ======== GET /api/football-recent ========
+    if (pathname === '/api/football-recent' && req.method === 'GET') {
+      const matchRes = await pgPool.query(
+        `SELECT * FROM matches WHERE sport_type = 'football' AND (metadata->>'match_time') IS NOT NULL AND (metadata->>'match_time') != '' ORDER BY (metadata->>'match_time') DESC LIMIT 500`
+      );
+      if (matchRes.rows.length === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ date: null, matches: [], predictions: [] }));
+        return;
+      }
+
+      const getMatchTime = (m) => {
+        const meta = (typeof m.metadata === 'string') ? JSON.parse(m.metadata) : (m.metadata || {});
+        return meta.match_time || m.match_time || null;
+      };
+      const getDateFromMatchTime = (matchTime) => {
+        if (!matchTime) return null;
+        return String(matchTime).substring(0, 10);
+      };
+
+      const latestDate = getDateFromMatchTime(getMatchTime(matchRes.rows[0]));
+      const recentMatches = matchRes.rows.filter(m => getDateFromMatchTime(getMatchTime(m)) === latestDate);
+      const matchIds = recentMatches.map(m => m.id);
+
+      const predRes = await pgPool.query(
+        `SELECT * FROM predictions WHERE match_id = ANY($1) ORDER BY id DESC`,
+        [matchIds]
+      );
+
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      const predMatchMap = {};
+      recentMatches.forEach(m => { predMatchMap[String(m.id)] = m; });
+      res.end(JSON.stringify({
+        date: latestDate,
+        matches: recentMatches.map(normalizeMatch),
+        predictions: predRes.rows.map(p => {
+          const cleaned = { ...p, analysis: cleanAnalysis(p.analysis) };
+          return normalizePrediction(cleaned, predMatchMap);
+        })
+      }));
+      return;
+    }
+
+    // ======== GET /api/football-history ========
+    if (pathname === '/api/football-history' && req.method === 'GET') {
+      const matchRes = await pgPool.query(
+        `SELECT * FROM matches WHERE sport_type = 'football' AND (metadata->>'match_time') IS NOT NULL AND (metadata->>'match_time') != '' ORDER BY (metadata->>'match_time') DESC LIMIT 5000`
+      );
+      const predRes = await pgPool.query(
+        `SELECT * FROM predictions ORDER BY id DESC LIMIT 5000`
+      );
+
+      const getMatchTime = (m) => {
+        const meta = (typeof m.metadata === 'string') ? JSON.parse(m.metadata) : (m.metadata || {});
+        return meta.match_time || m.match_time || null;
+      };
+      const getDateFromMatchTime = (matchTime) => {
+        if (!matchTime) return null;
+        return String(matchTime).substring(0, 10);
+      };
+
+      const byDate = {};
+      for (const m of matchRes.rows) {
+        const date = getDateFromMatchTime(getMatchTime(m));
+        if (!date) continue;
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push(m);
+      }
+
+      const dates = Object.keys(byDate).sort().reverse();
+      const historyDates = dates.slice(1);
+
+      const historyPredMap = {};
+      predRes.rows.forEach(p => { historyPredMap[String(p.match_id)] = predRes.rows.filter(r => r.match_id === p.match_id); });
+      const result = historyDates.map(date => {
+        const dateMatchMap = {};
+        byDate[date].forEach(m => { dateMatchMap[String(m.id)] = m; });
+        return {
+          date,
+          matches: byDate[date].map(normalizeMatch),
+          predictions: predRes.rows.filter(p => byDate[date].some(m => m.id === p.match_id))
+            .map(p => {
+              const cleaned = { ...p, analysis: cleanAnalysis(p.analysis) };
+              return normalizePrediction(cleaned, dateMatchMap);
+            })
+        };
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    // ======== GET /api/parlay-latest ========
+    if (pathname === '/api/parlay-latest' && req.method === 'GET') {
+      const { rows } = await pgPool.query(
+        `SELECT * FROM chain_bets ORDER BY bet_date DESC, ai_name ASC`
+      );
+      if (rows.length === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ date: null, records: [] }));
+        return;
+      }
+      const latestDate = rows[0].bet_date;
+      const latestRecords = rows.filter(r => r.bet_date === latestDate);
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ date: latestDate, records: latestRecords }));
+      return;
+    }
+
+    // ======== GET /api/parlay-history ========
+    if (pathname === '/api/parlay-history' && req.method === 'GET') {
+      const { rows } = await pgPool.query(
+        `SELECT * FROM chain_bets ORDER BY bet_date DESC, ai_name ASC`
+      );
+      const byDate = {};
+      for (const r of rows) {
+        if (!byDate[r.bet_date]) byDate[r.bet_date] = [];
+        byDate[r.bet_date].push(r);
+      }
+      const dates = Object.keys(byDate).sort().reverse();
+      const historyDates = dates.slice(1);
+      const result = historyDates.map(date => ({ date, records: byDate[date] }));
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    // ======== Admin API Routes ========
+
+    // POST /api/admin/discover
+    if (pathname === '/api/admin/discover' && req.method === 'POST') {
+      if (taskStatus.discover.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'discover task is running' }));
+        return;
+      }
+      taskStatus.discover.running = true;
+      try {
+        const result = await runPython('discover_matches.py');
+        taskStatus.discover.lastRun = new Date().toISOString();
+        taskStatus.discover.lastResult = result;
+        
+        // 新比赛发现后，重新初始化结算定时器
+        await initializeSettleTimers();
+        
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: result }));
+      } catch (err) {
+        taskStatus.discover.lastRun = new Date().toISOString();
+        taskStatus.discover.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.discover.running = false;
+      }
+      return;
+    }
+
+    // POST /api/admin/predict
+    if (pathname === '/api/admin/predict' && req.method === 'POST') {
+      if (taskStatus.predict.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'predict task is running' }));
+        return;
+      }
+      taskStatus.predict.running = true;
+      let predictBody = {};
+      try {
+        const rawBody = await readBody(req);
+        predictBody = rawBody ? JSON.parse(rawBody) : {};
+      } catch(e) { predictBody = {}; }
+      const predictSport = predictBody.sport || 'football';
+      const predictArgs = predictSport !== 'football' ? ['--sport', predictSport] : [];
+      try {
+        const result = await runPython('auto_predict.py', predictArgs);
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = result;
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: result }));
+      } catch (err) {
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.predict.running = false;
+      }
+      return;
+    }
+
+    // POST /api/admin/traditional-predict - 触发CT传统彩预测
+    if (pathname === '/api/admin/traditional-predict' && req.method === 'POST') {
+      if (taskStatus.predict.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'predict task is running' }));
+        return;
+      }
+      taskStatus.predict.running = true;
+      let ctBody = {};
+      try {
+        const rawBody = await readBody(req);
+        ctBody = rawBody ? JSON.parse(rawBody) : {};
+      } catch(e) { ctBody = {}; }
+      const ctGame = ctBody.game || null; // 可选: '胜负彩', '任9', '半全场', '进球彩'
+      const ctIssue = ctBody.issue || null; // 可选: 指定期号
+      const ctGameTypes = ctGame ? [ctGame] : ['胜负彩', '任9', '半全场', '进球彩'];
+      const results = {};
+      try {
+        for (const gt of ctGameTypes) {
+          try {
+            const args = ['--game', gt, '--force'];
+            if (ctIssue) args.push('--issue', ctIssue);
+            console.log(`[Admin] CT预测: ${gt}${ctIssue ? ' 期号' + ctIssue : ''}`);
+            const result = await runPython('traditional_lottery_predict.py', args);
+            results[gt] = result;
+          } catch (e) {
+            console.error(`[Admin] CT预测${gt}失败:`, e.message);
+            results[gt] = { error: e.message };
+          }
+        }
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = results;
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: results }));
+      } catch (err) {
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.predict.running = false;
+      }
+      return;
+    }
+
+    // POST /api/admin/settle
+    if (pathname === '/api/admin/settle' && req.method === 'POST') {
+      if (taskStatus.settle.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'settle task is running' }));
+        return;
+      }
+      taskStatus.settle.running = true;
+      try {
+        const result = await runPython('auto_settle.py');
+        taskStatus.settle.lastRun = new Date().toISOString();
+        taskStatus.settle.lastResult = result;
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: result }));
+      } catch (err) {
+        taskStatus.settle.lastRun = new Date().toISOString();
+        taskStatus.settle.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.settle.running = false;
+      }
+      return;
+    }
+
+    // GET /api/admin/status
+    if (pathname === '/api/admin/status' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(taskStatus));
+      return;
+    }
+
+    // GET /api/admin/report
+    if (pathname === '/api/admin/report' && req.method === 'GET') {
+      try {
+        const report = fs.readFileSync(REPORT_PATH, 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', ...CORS_HEADERS });
+        res.end(report);
+      } catch (err) {
+        res.writeHead(404, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'Report file not found' }));
+      }
+      return;
+    }
+
+    // POST /api/admin/report
+    if (pathname === '/api/admin/report' && req.method === 'POST') {
+      const result = await generateReport();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    // POST /api/admin/commentary
+    if (pathname === '/api/admin/commentary' && req.method === 'POST') {
+      if (commentaryRunning) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'commentary generation is running' }));
+        return;
+      }
+      const rawBody = await readBody(req);
+      let body = {};
+      try { body = JSON.parse(rawBody); } catch (e) { /* empty body is ok */ }
+      const forceMatchIds = (body && Array.isArray(body.match_ids)) ? body.match_ids : [];
+      const isForceMode = forceMatchIds.length > 0;
+      
+      checkAndGenerateCommentary({ forceMatchIds }).then(result => {
+        console.log(`[Commentary] Done:`, result);
+      }).catch(err => {
+        console.error(`[Commentary] Failed:`, err);
+      });
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ 
+        success: true, 
+        message: isForceMode 
+          ? `Force mode: triggered ${forceMatchIds.length} matches commentary regeneration` 
+          : 'Commentary generation triggered' 
+      }));
+      return;
+    }
+
+    // POST /api/admin/briefing
+    if (pathname === '/api/admin/briefing' && req.method === 'POST') {
+      const rawBody = await readBody(req);
+      let body = {};
+      try { body = JSON.parse(rawBody); } catch (e) { /* empty body */ }
+      const date = body.date || new Date().toISOString().split('T')[0];
+      const type = body.type || 'prediction';
+      
+      console.log(`[Briefing] Triggering: date=${date}, type=${type}`);
+      
+      const scriptPath = path.join(process.cwd(), 'scripts', 'generate_brief.py');
+      execFile('python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
+        cwd: path.join(process.cwd(), 'scripts'),
+        env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL }
+      }, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`[Briefing] Failed:`, error.message);
+          if (stderr) console.error(`[Briefing] stderr:`, stderr);
+          return;
+        }
+        console.log(`[Briefing] Success:`, stdout);
+      });
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, message: `Briefing triggered: ${date} (${type})` }));
+      return;
+    }
+
+    // ======== GET /api/traditional-lottery/predict ========
+    if (pathname === '/api/traditional-lottery/predict' && req.method === 'GET') {
+      try {
+        const { rows } = await pgPool.query(
+          `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info
+           FROM traditional_predictions
+           ORDER BY game_type, issue DESC, id`
+        );
+
+        const typeMap = { '胜负彩': 'sfc', '任9': 'r9', '半全场': 'htf', '进球彩': 'jqc' };
+        const predFieldMap = { 'sfc': 'spf', 'r9': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
+        const responseData = { sfc: [], htf: [], jqc: [], r9: [] };
+
+        for (const row of rows) {
+          const frontendKey = typeMap[row.game_type];
+          if (!frontendKey) continue;
+
+          let matchesArr = row.matches_info;
+          if (typeof matchesArr === 'string') {
+            try { matchesArr = JSON.parse(matchesArr); } catch (e) { continue; }
+          }
+          if (matchesArr && !Array.isArray(matchesArr) && Array.isArray(matchesArr.matches)) {
+            matchesArr = matchesArr.matches;
+          }
+          if (!Array.isArray(matchesArr)) continue;
+
+          let predictionsArr = row.predictions;
+          if (typeof predictionsArr === 'string') {
+            try { predictionsArr = JSON.parse(predictionsArr); } catch (e) { predictionsArr = null; }
+          }
+
+          const predField = predFieldMap[frontendKey] || 'spf';
+
+          for (const m of matchesArr) {
+            const matchNum = m.num || m.match_num || 0;
+            const issue = row.issue || m.issue || '';
+            const matchId = m.id || `${issue}_${matchNum}`;
+
+            let prediction = null;
+            if (Array.isArray(predictionsArr)) {
+              const pred = predictionsArr.find(p => String(p.match) === String(matchNum));
+              if (pred) prediction = pred[predField] || null;
+            }
+
+            responseData[frontendKey].push({
+              match_id: matchId,
+              match_num: String(matchNum),
+              issue: issue,
+              home_team: m.home || m.home_team || '',
+              away_team: m.away || m.away_team || '',
+              league: m.league || '',
+              match_time: m.time || m.match_time || '',
+              ai_name: row.ai_name || 'system',
+              prediction: prediction,
+              confidence: row.confidence || null,
+              lottery_type: frontendKey
+            });
+          }
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: responseData }));
+      } catch (e) {
+        console.error('[TraditionalLottery] /predict error:', e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'Internal server error', message: e.message }));
+      }
+      return;
+    }
+
+    // ======== GET /api/traditional-lottery/latest ========
+    if (pathname === '/api/traditional-lottery/latest' && req.method === 'GET') {
+      const urlObj = new URL(req.url, `http://${req.headers.host}`);
+      const lotteryType = urlObj.searchParams.get('type') || 'sf';
+      const typeMap = { 'sf': '胜负彩', 'htf': '半全场', 'jqc': '进球彩', 'r9': '任9' };
+      const gameType = typeMap[lotteryType] || '胜负彩';
+      
+      // 从traditional_predictions表读取最新一期的预测
+      const { rows } = await pgPool.query(
+        `SELECT tp.ai_name, tp.predictions, tp.matches_info, tp.issue
+         FROM traditional_predictions tp
+         WHERE tp.game_type = $1 AND tp.issue = (
+           SELECT MAX(issue) FROM traditional_predictions WHERE game_type = $1
+         )
+         ORDER BY tp.ai_name`,
+        [gameType]
+      );
+      
+      // 转换为前端友好格式
+      const predictions = [];
+      if (rows.length > 0) {
+        const matchesInfo = rows[0].matches_info;
+        const matches = Array.isArray(matchesInfo) ? matchesInfo : (matchesInfo ? JSON.parse(matchesInfo) : []);
+        for (const row of rows) {
+          const preds = Array.isArray(row.predictions) ? row.predictions : (row.predictions ? JSON.parse(row.predictions) : []);
+          const fieldMap = { '胜负彩': 'spf', '任9': 'spf', '半全场': 'bqc', '进球彩': 'bf' };
+          const fieldKey = fieldMap[gameType] || 'spf';
+          for (let i = 0; i < matches.length && i < preds.length; i++) {
+            predictions.push({
+              match_id: matches[i].id || `match_${i+1}`,
+              home_team: matches[i].home || '未知',
+              away_team: matches[i].away || '未知',
+              ai_name: row.ai_name,
+              prediction: preds[i]?.[fieldKey] || '',
+              issue: row.issue,
+            });
+          }
+        }
+      }
+      
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, type: lotteryType, predictions }));
+      return;
+    }
+
+  } catch (err) {
+    console.error('API error:', err);
+    res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+    res.end(JSON.stringify({ error: 'Internal server error', message: err.message }));
+    return;
+  }
+
+  // ============ Static File Routes ============
+  let urlPath = pathname;
+  if (urlPath === '/') urlPath = '/index.html';
+  // URL别名：旧路径 -> 新目录路径（文件已归类到JC/和CT/目录）
+  const URL_ALIASES = {
+    '/ix.html': '/JC/ix.html',
+    '/api.js': '/JC/api.js',
+    '/index.js': '/JC/index.js',
+    '/styles.css': '/JC/styles.css',
+    '/basketball.html': '/JC/basketball.html',
+    '/basketball.js': '/JC/basketball.js',
+    '/ai-analysis.html': '/JC/ai-analysis.html',
+    '/ai-analysis.js': '/JC/ai-analysis.js',
+    '/ai-hub.html': '/JC/ai-hub.html',
+    '/ia2.html': '/JC/ia2.html',
+    '/bb2.html': '/JC/bb2.html',
+    '/br2.html': '/JC/br2.html',
+    '/ca2.html': '/JC/ca2.html',
+    '/ca.html': '/JC/ca.html',
+    '/calculator.html': '/JC/calculator.html',
+    '/calculator.js': '/JC/calculator.js',
+    '/briefs.html': '/JC/briefs.html',
+    '/briefs.js': '/JC/briefs.js',
+    '/ct.html': '/CT/ct.html',
+    '/calculator_template.html': '/CT/calculator_template.html',
+  };
+  if (URL_ALIASES[urlPath]) urlPath = URL_ALIASES[urlPath];
+
+
+  const safePath = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
+  const filePath = path.join(process.cwd(), safePath);
+
+  fs.stat(filePath, (err, stats) => {
+    if (err || !stats.isFile()) {
+      const indexPath = path.join(process.cwd(), 'index.html');
+      fs.readFile(indexPath, (err2, data) => {
+        if (err2) {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('404 Not Found');
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(data);
+      });
+      return;
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const headers = { 'Content-Type': contentType };
+    if (ext === '.html') {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+    }
+
+    const stream = fs.createReadStream(filePath);
+    res.writeHead(200, headers);
+    stream.pipe(res);
+    stream.on('error', () => {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('500 Internal Server Error');
+    });
+  });
+});
+
+// 比赛级别定时结算：为每场比赛设置3小时后的定时器
+const settleTimers = new Map(); // matchId -> timeout
+
+async function scheduleMatchSettle(matchId, matchTime) {
+  // 清除旧的定时器
+  if (settleTimers.has(matchId)) {
+    clearTimeout(settleTimers.get(matchId));
+  }
+  
+  // 计算结算时间（开赛后3小时）
+  const settleTime = new Date(matchTime);
+  settleTime.setHours(settleTime.getHours() + 3);
+  
+  const delay = settleTime.getTime() - Date.now();
+  
+  if (delay <= 0) {
+    // 已经到了结算时间，立即结算
+    console.log(`[AutoSettle] 比赛 ${matchId} 已到结算时间，立即结算`);
+    triggerMatchSettle(matchId);
+    return;
+  }
+  
+  // 设置定时器
+  const timer = setTimeout(() => {
+    console.log(`[AutoSettle] 触发比赛 ${matchId} 的结算`);
+    triggerMatchSettle(matchId);
+    settleTimers.delete(matchId);
+  }, delay);
+  
+  settleTimers.set(matchId, timer);
+  console.log(`[AutoSettle] 比赛 ${matchId} 将在 ${Math.round(delay/1000/60)} 分钟后结算 (${settleTime.toISOString()})`);
+}
+
+async function triggerMatchSettle(matchId) {
+  if (taskStatus.settle.running) {
+    console.log(`[AutoSettle] 结算任务正在运行，等待完成后再处理比赛 ${matchId}`);
+    setTimeout(() => triggerMatchSettle(matchId), 60000); // 1分钟后重试
+    return;
+  }
+  
+  taskStatus.settle.running = true;
+  try {
+    // 调用auto_settle.py结算特定比赛
+    const result = await runPython('auto_settle.py', ['--match-id', String(matchId)]);
+    taskStatus.settle.lastRun = new Date().toISOString();
+    taskStatus.settle.lastResult = result;
+    console.log(`[AutoSettle] 比赛 ${matchId} 结算完成:`, result);
+  } catch (err) {
+    taskStatus.settle.lastRun = new Date().toISOString();
+    taskStatus.settle.lastResult = { error: err.message };
+    console.error(`[AutoSettle] 比赛 ${matchId} 结算失败:`, err.message);
+  } finally {
+    taskStatus.settle.running = false;
+  }
+}
+
+async function initializeSettleTimers() {
+  try {
+    // 查询所有未结算的比赛
+    const result = await pgPool.query(`
+      SELECT id, metadata->>'match_time' as match_time
+      FROM matches
+      WHERE (metadata->>'status' != '已取消' OR status != '已取消')
+        AND (metadata->>'selling_status' IS DISTINCT FROM 'settled')
+        AND (metadata->>'match_time') IS NOT NULL
+      ORDER BY (metadata->>'match_time') ASC
+    `);
+    
+    console.log(`[AutoSettle] 初始化定时器，找到 ${result.rows.length} 场未结算比赛`);
+    
+    for (const row of result.rows) {
+      const matchId = row.id;
+      const matchTime = row.match_time;
+      if (matchTime) {
+        await scheduleMatchSettle(matchId, matchTime);
+      }
+    }
+  } catch (err) {
+    console.error('[AutoSettle] 初始化定时器失败:', err.message);
+  }
+}
+
+
+// ============ 定时抓取任务 ============
+const scheduleTimers = [];
+
+// 计算距下一个目标时间的毫秒数
+function msUntil(hour, minute) {
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(hour, minute, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  return target.getTime() - now.getTime();
+}
+
+// 通用定时调度器
+function scheduleDaily(hour, minute, label, taskFn) {
+  const DAY = 24 * 60 * 60 * 1000;
+  let firstDelay = msUntil(hour, minute);
+  console.log(`[Schedule] ${label}: 每天 ${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')} 执行，首次 ${Math.round(firstDelay/3600000*10)/10}h后`);
+  
+  const timer = setTimeout(() => {
+    console.log(`[Schedule] 开始执行: ${label}`);
+    taskFn().catch(err => console.error(`[Schedule] ${label}失败:`, err.message));
+    // 之后每24小时执行
+    const interval = setInterval(() => {
+      console.log(`[Schedule] 开始执行: ${label}`);
+      taskFn().catch(err => console.error(`[Schedule] ${label}失败:`, err.message));
+    }, DAY);
+    scheduleTimers.push(interval);
+  }, firstDelay);
+  scheduleTimers.push(timer);
+}
+
+// JC定时抓取 - 每天10:00和18:00
+async function runJcDiscover() {
+  if (taskStatus.discover.running) {
+    console.log('[Schedule] JC抓取已在运行，跳过');
+    return;
+  }
+  taskStatus.discover.running = true;
+  try {
+    const result = await runPython('discover_matches.py');
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = result;
+    console.log(`[Schedule] JC抓取完成:`, JSON.stringify(result).slice(0, 200));
+    // 发现新比赛后触发预测
+    const newCount = result.new || result.new_matches_count || 0;
+    if (newCount > 0) {
+      console.log(`[Schedule] 发现${newCount}场新比赛，触发AI预测`);
+      await runPython('auto_predict.py', ['football']);
+    }
+    // 重新初始化结算定时器
+    await initializeSettleTimers();
+  } catch (err) {
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = { error: err.message };
+    console.error(`[Schedule] JC抓取失败:`, err.message);
+  } finally {
+    taskStatus.discover.running = false;
+  }
+}
+
+// CT定时抓取 - 每天10:30
+async function runCtDiscover() {
+  if (taskStatus.discover.running) {
+    console.log('[Schedule] 预测任务正在运行，等待30秒后重试CT');
+    setTimeout(runCtDiscover, 30000);
+    return;
+  }
+  taskStatus.discover.running = true;
+  try {
+    const result = await runPython('ct_discover.py');
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = result;
+    console.log(`[Schedule] CT抓取完成:`, JSON.stringify(result).slice(0, 200));
+    // 发现新比赛后触发CT预测（4种玩法）
+    const saved = result.saved || 0;
+    if (saved > 0) {
+      console.log(`[Schedule] CT发现${saved}场新比赛，触发CT AI预测`);
+      const ctGameTypes = ['胜负彩', '任9', '半全场', '进球彩'];
+      for (const gt of ctGameTypes) {
+        try {
+          console.log(`[Schedule] CT预测: ${gt}`);
+          await runPython('traditional_lottery_predict.py', ['--game', gt, '--force']);
+        } catch (e) {
+          console.error(`[Schedule] CT预测${gt}失败:`, e.message);
+        }
+      }
+    }
+    await initializeSettleTimers();
+  } catch (err) {
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = { error: err.message };
+    console.error(`[Schedule] CT抓取失败:`, err.message);
+  } finally {
+    taskStatus.discover.running = false;
+  }
+}
+
+// 注册定时任务
+scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
+scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
+scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
+
+server.listen(PORT, HOST, async () => {
+  console.log(`Server running at http://${HOST}:${PORT}`);
+  console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
+  
+  // 初始化比赛级别定时结算
+  await initializeSettleTimers();
+});

@@ -546,18 +546,26 @@ const server = http.createServer(async (req, res) => {
         // 有比分 → 已完赛（优先级最高）
         if (hasScore) {
           m.status = '已完赛';
+          m.selling_status = 'ended';
         }
         // metadata明确标记取消 → 已取消
         else if (metaStatus === '已取消') {
           m.status = '已取消';
+          m.selling_status = 'ended';
         }
         // stopped状态只是不再售卖，不代表取消 → 一律标待比赛（等auto_settle结算）
         else if (metaStatus === 'stopped') {
           m.status = '待比赛';
+          m.selling_status = 'stopped';
         }
         // 已过时间但未开赛 → 已开赛
         else if (new Date(m.match_time) < now && (m.status === '未开赛' || m.status === 'on_sale')) {
           m.status = '已开赛';
+          m.selling_status = 'stopped';
+        }
+        // 未开赛的比赛 → 在售
+        else {
+          m.selling_status = 'on_sale';
         }
       });
 
