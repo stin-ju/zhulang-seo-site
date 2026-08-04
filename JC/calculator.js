@@ -25,12 +25,14 @@
                 // 3. 当前时间 < match_time - 25分钟（体彩规则：开赛前25分钟停售）
                 const availableMatches = data.filter(m => {
                     if (m.status === '已确认') return false;
-                    if (m.selling_status !== 'on_sale') return false;
+                    // 不再依赖 selling_status，改为检查比赛状态
+                    if (m.status === '已完赛' || m.status === '已取消') return false;
                     // 时间容错：如果当前时间已超过开赛前25分钟，视为停售
                     if (m.match_time) {
                         const matchStart = new Date(m.match_time);
                         const cutoff = new Date(matchStart.getTime() - 25 * 60 * 1000);
-                        if (now >= cutoff) return false;
+                        // 如果比赛还没开始（match_time > now），允许显示
+                        if (now >= matchStart) return false;
                     }
                     return true;
                 });
