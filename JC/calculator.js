@@ -749,7 +749,7 @@
         loadMatches();
         console.log('✅ 竞彩计算器已加载');
 
-        import { fetchMatches, fetchPredictions, fetchAIStats, esc, fmtDate, fmtTime, showError, getCachedData, setCachedData } from './api.v20260727a.js';
+        import { fetchMatches, fetchPredictions, fetchAIStats, esc, fmtDate, fmtTime, showError, getCachedData, setCachedData } from './api.js';
         
         // 将函数暴露到全局作用域供页面使用
         window.fetchMatches = fetchMatches;
