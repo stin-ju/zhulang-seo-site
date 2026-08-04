@@ -1217,6 +1217,31 @@ const server = http.createServer(async (req, res) => {
   // ============ Static File Routes ============
   let urlPath = pathname;
   if (urlPath === '/') urlPath = '/index.html';
+  // URL别名：旧路径 -> 新目录路径（文件已归类到JC/和CT/目录）
+  const URL_ALIASES = {
+    '/ix.html': '/JC/ix.html',
+    '/api.js': '/JC/api.js',
+    '/index.js': '/JC/index.js',
+    '/styles.css': '/JC/styles.css',
+    '/basketball.html': '/JC/basketball.html',
+    '/basketball.js': '/JC/basketball.js',
+    '/ai-analysis.html': '/JC/ai-analysis.html',
+    '/ai-analysis.js': '/JC/ai-analysis.js',
+    '/ai-hub.html': '/JC/ai-hub.html',
+    '/ia2.html': '/JC/ia2.html',
+    '/bb2.html': '/JC/bb2.html',
+    '/br2.html': '/JC/br2.html',
+    '/ca2.html': '/JC/ca2.html',
+    '/ca.html': '/JC/ca.html',
+    '/calculator.html': '/JC/calculator.html',
+    '/calculator.js': '/JC/calculator.js',
+    '/briefs.html': '/JC/briefs.html',
+    '/briefs.js': '/JC/briefs.js',
+    '/ct.html': '/CT/ct.html',
+    '/calculator_template.html': '/CT/calculator_template.html',
+  };
+  if (URL_ALIASES[urlPath]) urlPath = URL_ALIASES[urlPath];
+
 
   const safePath = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
   const filePath = path.join(process.cwd(), safePath);

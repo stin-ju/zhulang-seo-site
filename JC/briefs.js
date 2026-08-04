@@ -1,4 +1,4 @@
-        import { fetchAllMatches, fetchPredictions, esc, fmtDate, fmtTime, showError } from './api.v20260727a.js';
+        import { fetchAllMatches, fetchPredictions, esc, fmtDate, fmtTime, showError } from './api.js';
 
         async function loadBriefList() {
             const container = document.getElementById('briefList');

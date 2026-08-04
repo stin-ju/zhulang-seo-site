@@ -1,1 +1,0 @@
-{"url": "https://webapi.sporttery.cn/gateway/uniform/basketball/getMatchListV1.qry?clientCode=3001", "timestamp": "2026-07-25T14:00:23.559803", "data": {"dataFrom": "", "emptyFlag": false, "errorCode": "0", "errorMessage": "处理成功", "success": true, "value": {"totalCount": 0, "lastUpdateTime": "2026-07-25 13:59:00"}}}
