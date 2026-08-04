@@ -67,12 +67,12 @@ function readBody(req) {
 
 function runPython(scriptName, args = []) {
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, 'scripts', scriptName);
+    const scriptPath = path.join(__dirname, 'JC', scriptName);
     const env = { ...process.env };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
     const child = execFile('python3', [scriptPath, ...args], {
-      cwd: path.join(__dirname, 'scripts'),
+      cwd: path.join(__dirname, 'JC'),
       env,
       timeout: 300000,
       maxBuffer: 10 * 1024 * 1024
@@ -1002,9 +1002,9 @@ const server = http.createServer(async (req, res) => {
       
       console.log(`[Briefing] Triggering: date=${date}, type=${type}`);
       
-      const scriptPath = path.join(process.cwd(), 'scripts', 'generate_brief.py');
+      const scriptPath = path.join(process.cwd(), 'JC', 'generate_brief.py');
       execFile('python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
-        cwd: path.join(process.cwd(), 'scripts'),
+        cwd: path.join(process.cwd(), 'JC'),
         env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL }
       }, (error, stdout, stderr) => {
         if (error) {
@@ -1023,7 +1023,7 @@ const server = http.createServer(async (req, res) => {
     // ======== GET /api/traditional-lottery/predict ========
     if (pathname === '/api/traditional-lottery/predict' && req.method === 'GET') {
       const { execSync } = require('child_process');
-      const scriptPath = path.join(process.cwd(), 'scripts', 'traditional_lottery_predict.py');
+      const scriptPath = path.join(process.cwd(), 'JC', 'traditional_lottery_predict.py');
       const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL };
       const responseData = { sfc: [], htf: [], jqc: [] };
       
@@ -1036,7 +1036,7 @@ const server = http.createServer(async (req, res) => {
       for (const gt of gameTypes) {
         try {
           const result = execSync(`python3 "${scriptPath}" --game "${gt.name}" --get`, {
-            cwd: path.join(process.cwd(), 'scripts'),
+            cwd: path.join(process.cwd(), 'JC'),
             env: pythonEnv,
             timeout: 60000,
             maxBuffer: 10 * 1024 * 1024,
@@ -1053,7 +1053,7 @@ const server = http.createServer(async (req, res) => {
         for (const gt of gameTypes) {
           try {
             execSync(`python3 "${scriptPath}" --game "${gt.name}" --force`, {
-              cwd: path.join(process.cwd(), 'scripts'),
+              cwd: path.join(process.cwd(), 'JC'),
               env: pythonEnv,
               timeout: 300000,
               maxBuffer: 10 * 1024 * 1024,
@@ -1065,7 +1065,7 @@ const server = http.createServer(async (req, res) => {
         for (const gt of gameTypes) {
           try {
             const result = execSync(`python3 "${scriptPath}" --game "${gt.name}" --get`, {
-              cwd: path.join(process.cwd(), 'scripts'),
+              cwd: path.join(process.cwd(), 'JC'),
               env: pythonEnv,
               timeout: 60000,
               maxBuffer: 10 * 1024 * 1024,
