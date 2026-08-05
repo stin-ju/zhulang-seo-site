@@ -126,7 +126,7 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         // 获取该场比赛的预测
         let prediction = null;
         if (Array.isArray(predictionsArr)) {
-          const pred = predictionsArr.find(p => String(p.match).replace(/^0+/, '') === String(matchNum).replace(/^0+/, ''));
+          const pred = predictionsArr.find(p => String(p.match) === String(matchNum));
           if (pred) prediction = pred[predField] || null;
         }
 
@@ -196,7 +196,7 @@ app.get('/api/traditional-lottery/latest', async (req, res) => {
  * 触发传统彩赛程抓取
  */
 app.get('/api/traditional-lottery/fetch', async (req, res) => {
-  const scriptPath = path.join(__dirname, '..', 'JC', 'traditional_lottery_predict.py');
+  const scriptPath = path.join(__dirname, 'traditional_lottery_predict.py');
   
   if (!fs.existsSync(scriptPath)) {
     return res.status(501).json({ 
@@ -213,7 +213,7 @@ app.get('/api/traditional-lottery/fetch', async (req, res) => {
     const result = execSync(
       `python3 "${scriptPath}" --game '胜负彩' --get`,
       {
-        cwd: path.join(__dirname, '..', 'JC'),
+        cwd: path.join(__dirname),
         env: pythonEnv,
         timeout: 60000,
         maxBuffer: 10 * 1024 * 1024,
