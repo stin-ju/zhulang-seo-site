@@ -317,17 +317,40 @@ def generate_template_prediction(prompt, sport="football"):
 
 def parse_ai_response(text, sport="football"):
     """从AI回复中提取JSON预测结果"""
+    # 方法1: 提取```json代码块
     json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
     if json_match:
-        return json.loads(json_match.group(1))
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
     
+    # 方法2: 尝试提取所有JSON对象（处理嵌套花括号）
+    json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+    json_matches = re.findall(json_pattern, text, re.DOTALL)
+    
+    for match in json_matches:
+        try:
+            data = json.loads(match)
+            # 检查是否是有效的预测结果
+            if sport == "basketball" and "win_loss" in data:
+                return data
+            elif sport == "football" and "spf" in data:
+                return data
+        except json.JSONDecodeError:
+            continue
+    
+    # 方法3: 宽松匹配，提取包含关键字段的JSON
     if sport == "basketball":
-        json_match = re.search(r'\{[^{}]*"win_loss"[^{}]*\}', text, re.DOTALL)
+        json_match = re.search(r'\{[^}]*"win_loss"[^}]*\}', text, re.DOTALL)
     else:
-        json_match = re.search(r'\{[^{}]*"spf"[^{}]*\}', text, re.DOTALL)
+        json_match = re.search(r'\{[^}]*"spf"[^}]*\}', text, re.DOTALL)
     
     if json_match:
-        return json.loads(json_match.group(0))
+        try:
+            return json.loads(json_match.group(0))
+        except json.JSONDecodeError:
+            pass
     
     print(f"  WARNING: 无法解析AI回复，使用默认值")
     if sport == "basketball":
