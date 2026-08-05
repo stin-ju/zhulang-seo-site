@@ -356,8 +356,8 @@ function buildPreds(items, keyFn, issueFilter){
     if(!preds[key]) preds[key] = {};
     if(it.prediction) {
       preds[key][it.ai_name] = it.prediction;
-      // 保存任9推荐信息 - 只记录true，不覆盖为false
-      if (it.is_r9) {
+      // 保存任9推荐信息 - 只记录推荐的，不覆盖
+      if(it.is_r9) {
         if(!preds[key]._r9) preds[key]._r9 = {};
         preds[key]._r9[it.ai_name] = true;
       }
@@ -574,10 +574,25 @@ function renderSubBtns(tab){
     return;
   }
   let html = "";
-  iss.forEach(i => {
-    const on = activeIssue[tab]===i ? " on" : "";
-    html += `<span class="sub-btn${on}" onclick="switchIssue('${tab}','${i}')">${i}期</span>`;
-  });
+  // 只显示最近3个期号
+  const showCount = Math.min(3, iss.length);
+  for(let i = 0; i < showCount; i++){
+    const item = iss[i];
+    const on = activeIssue[tab]===item ? " on" : "";
+    html += `<span class="sub-btn${on}" onclick="switchIssue('${tab}','${item}')">${item}期</span>`;
+  }
+  // 多余的折叠
+  if(iss.length > 3){
+    html += `<div class="more-dropdown" style="position:relative;display:inline-block">
+      <span class="sub-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">更多期号 ▾</span>
+      <div class="more-menu" style="display:none;position:absolute;top:100%;left:0;background:#1a1a30;border:1px solid #333;border-radius:4px;z-index:100;min-width:80px">`;
+    for(let i = 3; i < iss.length; i++){
+      const item = iss[i];
+      const on = activeIssue[tab]===item ? " on" : "";
+      html += `<div class="sub-btn${on}" style="display:block;width:100%;border-radius:0;border:none;text-align:left" onclick="switchIssue('${tab}','${item}');this.parentElement.style.display='none'">${item}期</div>`;
+    }
+    html += `</div></div>`;
+  }
   document.getElementById("subBtns").innerHTML = html;
 }
 
