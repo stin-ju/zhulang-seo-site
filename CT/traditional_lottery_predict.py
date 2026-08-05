@@ -69,7 +69,7 @@ AI_CONFIGS = {
     "混元": {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
-        "model": "hunyuan-lite",
+        "model": "hy3",
     },
 }
 
