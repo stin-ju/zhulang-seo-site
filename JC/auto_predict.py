@@ -787,7 +787,7 @@ def run_predict(sport="football"):
                     pred = {
                         "match_id": match_id,
                         "match_uid": match.get("match_uid", match_id),
-                        "ai_name": ai_name,
+                        "ai_name": ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name,
                         "spf": spf,
                         "handicap_spf": handicap_spf,
                         "score": score,
