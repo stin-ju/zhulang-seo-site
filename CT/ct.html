@@ -288,31 +288,32 @@ async function loadData(){
     if(!j.success) throw new Error("API返回失败");
     rawData = j.data;
 
-    // 提取所有期号（新→旧排序）
+    // 先提取所有期号（新→旧排序）
     issues.sfc  = [...new Set((j.data.sfc||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
-    activeIssue.sfc = issues.sfc[0] || null; // 默认最新期
+    issues.htf  = [...new Set((j.data.htf||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
+    issues.jqc  = [...new Set((j.data.jqc||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
+    
+    // 设置默认期号（最新）
+    activeIssue.sfc = issues.sfc[0] || null;
+    activeIssue.htf = issues.htf[0] || null;
+    activeIssue.jqc = issues.jqc[0] || null;
 
-    // 整理 SFC（按期号过滤）
+    // 整理 SFC（胜负彩，按期号过滤）
     matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
     aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
-    aiNames.sfc = uniqueAIs(j.data.sfc);
+    aiNames.sfc = uniqueAIs(j.data.sfc.filter(i => !activeIssue.sfc || i.issue === activeIssue.sfc));
 
-    // 整理 HTF（半全场每场比赛有独立期号，但展示时合并为一个整体）
+    // 整理 HTF（半全场，按期号过滤）
     const htfItems = j.data.htf;
-    matches.htf = buildMatches(htfItems);
-    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]));
-    aiNames.htf = uniqueAIs(htfItems);
-    // HTF/JQC 期号
-    issues.htf = [...new Set(htfItems.map(i=>i.issue))].filter(Boolean).sort().reverse();
-    issues.jqc = [...new Set(j.data.jqc.map(i=>i.issue))].filter(Boolean).sort().reverse();
-    if(issues.htf.length) activeIssue.htf = issues.htf[0];
-    if(issues.jqc.length) activeIssue.jqc = issues.jqc[0];
+    matches.htf = buildMatches(htfItems, activeIssue.htf);
+    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]), activeIssue.htf);
+    aiNames.htf = uniqueAIs(htfItems.filter(i => !activeIssue.htf || i.issue === activeIssue.htf));
 
-    // 整理 JQC（进球彩同理，合并展示）
+    // 整理 JQC（进球彩，按期号过滤）
     const jqcItems = j.data.jqc;
-    matches.jqc = buildMatches(jqcItems);
-    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]));
-    aiNames.jqc = uniqueAIs(jqcItems);
+    matches.jqc = buildMatches(jqcItems, activeIssue.jqc);
+    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]), activeIssue.jqc);
+    aiNames.jqc = uniqueAIs(jqcItems.filter(i => !activeIssue.jqc || i.issue === activeIssue.jqc));
 
     // 更新顶部期号
     if(issues.sfc.length){
