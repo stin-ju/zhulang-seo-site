@@ -1074,9 +1074,9 @@ const server = http.createServer(async (req, res) => {
       
       console.log(`[Briefing] Triggering: date=${date}, type=${type}`);
       
-      const scriptPath = path.join(process.cwd(), 'scripts', 'generate_brief.py');
-      execFile('python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
-        cwd: path.join(process.cwd(), 'scripts'),
+      const scriptPath = path.join(process.cwd(), 'JC', 'generate_brief.py');
+      execFile('/usr/bin/python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
+        cwd: path.join(process.cwd(), 'JC'),
         env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL }
       }, (error, stdout, stderr) => {
         if (error) {
