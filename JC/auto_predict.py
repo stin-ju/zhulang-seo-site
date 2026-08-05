@@ -250,7 +250,8 @@ def insert_basketball_prediction(pred):
         "match_id": pred["match_id"],
         "ai_name": pred["ai_name"],
         "prediction": prediction_json,
-        "analysis": pred.get("analysis", "")
+        "analysis": pred.get("analysis", ""),
+        "sport_type": "basketball"
     })
 
 
@@ -706,7 +707,18 @@ def run_predict(sport="football"):
         else:
             prompt = build_football_prompt(match)
         
-        missing_ais = [ai for ai in AI_CONFIGS if ai not in existing]
+        # 标准化比较：AI_CONFIGS的key有"AI-"前缀，数据库存储时去掉了前缀
+        # 需要将AI_CONFIGS的key也去掉前缀后再比较
+        existing_normalized = set()
+        for name in existing:
+            existing_normalized.add(name)
+            # 如果数据库里有"AI-"前缀，也加上无前缀版本
+            if name.startswith("AI-"):
+                existing_normalized.add(name[3:])
+            # 同时加上有前缀版本
+            existing_normalized.add(f"AI-{name}")
+        
+        missing_ais = [ai for ai in AI_CONFIGS if ai not in existing_normalized]
         if not missing_ais:
             continue
         
