@@ -147,14 +147,8 @@ def get_existing_ai_names(match_id):
     """获取某场比赛已有的AI名称集合"""
     client = get_client()
     result = client.table("predictions").select("ai_name").eq("match_id", match_id).execute()
-    raw_names = {row["ai_name"] for row in result.data}
-    normalized = set()
-    for name in raw_names:
-        if name.startswith("AI-"):
-            normalized.add(name)
-        else:
-            normalized.add(f"AI-{name}")
-    return normalized
+    # 直接返回原始名称，不做任何转换
+    return {row["ai_name"] for row in result.data}
 
 
 def insert_prediction(pred_data):
