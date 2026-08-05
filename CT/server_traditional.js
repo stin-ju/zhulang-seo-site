@@ -126,7 +126,7 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         // 获取该场比赛的预测
         let prediction = null;
         if (Array.isArray(predictionsArr)) {
-          const pred = predictionsArr.find(p => String(p.match) === String(matchNum));
+          const pred = predictionsArr.find(p => String(p.match).replace(/^0+/, '') === String(matchNum).replace(/^0+/, ''));
           if (pred) prediction = pred[predField] || null;
         }
 
