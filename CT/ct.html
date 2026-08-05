@@ -356,9 +356,11 @@ function buildPreds(items, keyFn, issueFilter){
     if(!preds[key]) preds[key] = {};
     if(it.prediction) {
       preds[key][it.ai_name] = it.prediction;
-      // 保存任9推荐信息
-      if(!preds[key]._r9) preds[key]._r9 = {};
-      preds[key]._r9[it.ai_name] = it.is_r9 || false;
+      // 保存任9推荐信息 - 只记录true，不覆盖为false
+      if (it.is_r9) {
+        if(!preds[key]._r9) preds[key]._r9 = {};
+        preds[key]._r9[it.ai_name] = true;
+      }
     }
   });
   return preds;
