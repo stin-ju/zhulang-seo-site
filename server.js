@@ -67,12 +67,12 @@ function readBody(req) {
 
 function runPython(scriptName, args = []) {
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, 'JC', scriptName);
+    const scriptPath = path.join(__dirname, 'scripts', scriptName);
     const env = { ...process.env };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
     const child = execFile('python3', [scriptPath, ...args], {
-      cwd: path.join(__dirname, 'JC'),
+      cwd: path.join(__dirname, 'scripts'),
       env,
       timeout: 300000,
       maxBuffer: 10 * 1024 * 1024
@@ -224,7 +224,8 @@ function normalizePrediction(pred, matchMap) {
   const hitStatus = pred.hit_status || {};
   const match = matchMap ? matchMap[String(pred.match_id)] : null;
   
-  const hitFields = ['spf', 'handicap_spf', 'score', 'goals', 'half_full'];
+  const hitFields = ['spf', 'handicap_spf', 'score', 'goals', 'half_full',
+                     'win_loss', 'handicap_win_loss', 'total_points', 'score_diff_range', 'half_win_loss'];
   const totalHits = hitFields.filter(f => hitStatus[f] === true).length;
   
   const normalizedSdr = normalizeScoreDiff(prediction.score_diff_range || pred.score_diff_range || pred.score_diff_range_pred) || null;
@@ -252,6 +253,11 @@ function normalizePrediction(pred, matchMap) {
     hit_score: hitStatus.score === true ? '✅' : hitStatus.score === false ? '❌' : null,
     hit_goals: hitStatus.goals === true ? '✅' : hitStatus.goals === false ? '❌' : null,
     hit_half: hitStatus.half_full === true ? '✅' : hitStatus.half_full === false ? '❌' : null,
+    hit_win_loss: hitStatus.win_loss === true ? '✅' : hitStatus.win_loss === false ? '❌' : null,
+    hit_handicap_win_loss: hitStatus.handicap_win_loss === true ? '✅' : hitStatus.handicap_win_loss === false ? '❌' : null,
+    hit_total_points: hitStatus.total_points === true ? '✅' : hitStatus.total_points === false ? '❌' : null,
+    hit_score_diff_range: hitStatus.score_diff_range === true ? '✅' : hitStatus.score_diff_range === false ? '❌' : null,
+    hit_half_win_loss: hitStatus.half_win_loss === true ? '✅' : hitStatus.half_win_loss === false ? '❌' : null,
     total_hits: totalHits,
     sport_type: match ? match.sport_type : null
   };
@@ -259,7 +265,7 @@ function normalizePrediction(pred, matchMap) {
 
 // ============ Commentary Generator ============
 const DOUBAO_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
-const DOUBAO_API_KEY = 'ark-e27a1337-a759-46fb-b30c-efe5ce5541bd-2a204';
+const DOUBAO_API_KEY = process.env.DOUBAO_API_KEY || '';
 const DOUBAO_MODEL = 'ep-20260706041055-2mgpf';
 
 let commentaryRunning = false;
@@ -495,11 +501,13 @@ const server = http.createServer(async (req, res) => {
       let query = `SELECT * FROM matches`;
       const params = [];
       let paramIdx = 1;
+      let hasWhere = false;
 
       if (sport) {
         query += ` WHERE sport_type = $${paramIdx}`;
         params.push(sport);
         paramIdx++;
+        hasWhere = true;
       }
 
       if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -507,13 +515,21 @@ const server = http.createServer(async (req, res) => {
         const d = new Date(year, month - 1, day);
         d.setDate(d.getDate() + 1);
         const nextDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (sport) {
+        if (hasWhere) {
           query += ` AND (metadata->>'match_time')::date >= $${paramIdx}::date AND (metadata->>'match_time')::date < $${paramIdx + 1}::date`;
         } else {
           query += ` WHERE (metadata->>'match_time')::date >= $${paramIdx}::date AND (metadata->>'match_time')::date < $${paramIdx + 1}::date`;
+          hasWhere = true;
         }
         params.push(date, nextDate);
         paramIdx += 2;
+      }
+
+      // 排除传统彩票（CT）比赛
+      if (hasWhere) {
+        query += ` AND (metadata->>'match_type' IS NULL OR metadata->>'match_type' != 'ct')`;
+      } else {
+        query += ` WHERE (metadata->>'match_type' IS NULL OR metadata->>'match_type' != 'ct')`;
       }
 
       query += ` ORDER BY (metadata->>'match_time') ASC`;
@@ -521,10 +537,26 @@ const server = http.createServer(async (req, res) => {
       const { rows } = await pgPool.query(query, params);
       let enriched = rows.map(normalizeMatch);
 
-      // Auto-mark past unstarted matches as started
+      // Auto-mark past unstarted matches as started (but NOT stopped/cancelled ones)
       const now = new Date();
       enriched.forEach(m => {
-        if (new Date(m.match_time) < now && (m.status === '未开赛' || m.status === 'on_sale')) {
+        const metaStatus = (m.metadata && m.metadata.status) || '';
+        const hasScore = m.home_score != null && m.away_score != null;
+        
+        // 有比分 → 已完赛（优先级最高）
+        if (hasScore) {
+          m.status = '已完赛';
+        }
+        // metadata明确标记取消 → 已取消
+        else if (metaStatus === '已取消') {
+          m.status = '已取消';
+        }
+        // stopped状态只是不再售卖，不代表取消 → 一律标待比赛（等auto_settle结算）
+        else if (metaStatus === 'stopped') {
+          m.status = '待比赛';
+        }
+        // 已过时间但未开赛 → 已开赛
+        else if (new Date(m.match_time) < now && (m.status === '未开赛' || m.status === 'on_sale')) {
           m.status = '已开赛';
         }
       });
@@ -905,6 +937,51 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // POST /api/admin/traditional-predict - 触发CT传统彩预测
+    if (pathname === '/api/admin/traditional-predict' && req.method === 'POST') {
+      if (taskStatus.predict.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'predict task is running' }));
+        return;
+      }
+      taskStatus.predict.running = true;
+      let ctBody = {};
+      try {
+        const rawBody = await readBody(req);
+        ctBody = rawBody ? JSON.parse(rawBody) : {};
+      } catch(e) { ctBody = {}; }
+      const ctGame = ctBody.game || null; // 可选: '胜负彩', '任9', '半全场', '进球彩'
+      const ctIssue = ctBody.issue || null; // 可选: 指定期号
+      const ctGameTypes = ctGame ? [ctGame] : ['胜负彩', '任9', '半全场', '进球彩'];
+      const results = {};
+      try {
+        for (const gt of ctGameTypes) {
+          try {
+            const args = ['--game', gt, '--force'];
+            if (ctIssue) args.push('--issue', ctIssue);
+            console.log(`[Admin] CT预测: ${gt}${ctIssue ? ' 期号' + ctIssue : ''}`);
+            const result = await runPython('traditional_lottery_predict.py', args);
+            results[gt] = result;
+          } catch (e) {
+            console.error(`[Admin] CT预测${gt}失败:`, e.message);
+            results[gt] = { error: e.message };
+          }
+        }
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = results;
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: results }));
+      } catch (err) {
+        taskStatus.predict.lastRun = new Date().toISOString();
+        taskStatus.predict.lastResult = { error: err.message };
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      } finally {
+        taskStatus.predict.running = false;
+      }
+      return;
+    }
+
     // POST /api/admin/settle
     if (pathname === '/api/admin/settle' && req.method === 'POST') {
       if (taskStatus.settle.running) {
@@ -932,13 +1009,8 @@ const server = http.createServer(async (req, res) => {
 
     // GET /api/admin/status
     if (pathname === '/api/admin/status' && req.method === 'GET') {
-      const cronStatus = cronJobs.map(j => ({
-        name: j.name,
-        schedule: j.schedule,
-        nextRun: j.nextRun ? j.nextRun.toISOString() : null
-      }));
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ tasks: taskStatus, cron: cronStatus }));
+      res.end(JSON.stringify(taskStatus));
       return;
     }
 
@@ -1002,9 +1074,9 @@ const server = http.createServer(async (req, res) => {
       
       console.log(`[Briefing] Triggering: date=${date}, type=${type}`);
       
-      const scriptPath = path.join(process.cwd(), 'JC', 'generate_brief.py');
+      const scriptPath = path.join(process.cwd(), 'scripts', 'generate_brief.py');
       execFile('python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
-        cwd: path.join(process.cwd(), 'JC'),
+        cwd: path.join(process.cwd(), 'scripts'),
         env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL }
       }, (error, stdout, stderr) => {
         if (error) {
@@ -1022,64 +1094,71 @@ const server = http.createServer(async (req, res) => {
 
     // ======== GET /api/traditional-lottery/predict ========
     if (pathname === '/api/traditional-lottery/predict' && req.method === 'GET') {
-      const { execSync } = require('child_process');
-      const scriptPath = path.join(process.cwd(), 'JC', 'traditional_lottery_predict.py');
-      const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL };
-      const responseData = { sfc: [], htf: [], jqc: [] };
-      
-      const gameTypes = [
-        { key: 'sfc', name: '胜负彩' },
-        { key: 'htf', name: '半全场' },
-        { key: 'jqc', name: '进球彩' },
-      ];
-      
-      for (const gt of gameTypes) {
-        try {
-          const result = execSync(`python3 "${scriptPath}" --game "${gt.name}" --get`, {
-            cwd: path.join(process.cwd(), 'JC'),
-            env: pythonEnv,
-            timeout: 60000,
-            maxBuffer: 10 * 1024 * 1024,
-          });
-          const parsed = JSON.parse(result.toString().trim());
-          responseData[gt.key] = Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-          console.error(`[TraditionalLottery] Failed to get ${gt.name}:`, e.message);
-        }
-      }
-      
-      if (responseData.sfc.length === 0 && responseData.htf.length === 0 && responseData.jqc.length === 0) {
-        console.log('[TraditionalLottery] No data, triggering generation...');
-        for (const gt of gameTypes) {
-          try {
-            execSync(`python3 "${scriptPath}" --game "${gt.name}" --force`, {
-              cwd: path.join(process.cwd(), 'JC'),
-              env: pythonEnv,
-              timeout: 300000,
-              maxBuffer: 10 * 1024 * 1024,
+      try {
+        const { rows } = await pgPool.query(
+          `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info
+           FROM traditional_predictions
+           ORDER BY game_type, issue DESC, id`
+        );
+
+        const typeMap = { '胜负彩': 'sfc', '任9': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
+        const predFieldMap = { 'sfc': 'spf', 'r9': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
+        const responseData = { sfc: [], htf: [], jqc: [] };
+
+        for (const row of rows) {
+          const frontendKey = typeMap[row.game_type];
+          if (!frontendKey) continue;
+
+          let matchesArr = row.matches_info;
+          if (typeof matchesArr === 'string') {
+            try { matchesArr = JSON.parse(matchesArr); } catch (e) { continue; }
+          }
+          if (matchesArr && !Array.isArray(matchesArr) && Array.isArray(matchesArr.matches)) {
+            matchesArr = matchesArr.matches;
+          }
+          if (!Array.isArray(matchesArr)) continue;
+
+          let predictionsArr = row.predictions;
+          if (typeof predictionsArr === 'string') {
+            try { predictionsArr = JSON.parse(predictionsArr); } catch (e) { predictionsArr = null; }
+          }
+
+          const predField = predFieldMap[frontendKey] || 'spf';
+
+          for (const m of matchesArr) {
+            const matchNum = m.num || m.match_num || 0;
+            const issue = row.issue || m.issue || '';
+            const matchId = m.id || `${issue}_${matchNum}`;
+
+            let prediction = null;
+            if (Array.isArray(predictionsArr)) {
+              const pred = predictionsArr.find(p => String(p.match) === String(matchNum));
+              if (pred) prediction = pred[predField] || null;
+            }
+
+            responseData[frontendKey].push({
+              match_id: matchId,
+              match_num: String(matchNum),
+              issue: issue,
+              home_team: m.home || m.home_team || '',
+              away_team: m.away || m.away_team || '',
+              league: m.league || '',
+              match_time: m.time || m.match_time || '',
+              ai_name: row.ai_name || 'system',
+              prediction: prediction,
+              confidence: row.confidence || null,
+              lottery_type: frontendKey
             });
-          } catch (e) {
-            console.error(`[TraditionalLottery] Failed to generate ${gt.name}:`, e.message);
           }
         }
-        for (const gt of gameTypes) {
-          try {
-            const result = execSync(`python3 "${scriptPath}" --game "${gt.name}" --get`, {
-              cwd: path.join(process.cwd(), 'JC'),
-              env: pythonEnv,
-              timeout: 60000,
-              maxBuffer: 10 * 1024 * 1024,
-            });
-            const parsed = JSON.parse(result.toString().trim());
-            responseData[gt.key] = Array.isArray(parsed) ? parsed : [];
-          } catch (e) {
-            console.error(`[TraditionalLottery] Failed to re-get ${gt.name}:`, e.message);
-          }
-        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ success: true, data: responseData }));
+      } catch (e) {
+        console.error('[TraditionalLottery] /predict error:', e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'Internal server error', message: e.message }));
       }
-      
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, data: responseData }));
       return;
     }
 
@@ -1087,14 +1166,44 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/traditional-lottery/latest' && req.method === 'GET') {
       const urlObj = new URL(req.url, `http://${req.headers.host}`);
       const lotteryType = urlObj.searchParams.get('type') || 'sf';
+      const typeMap = { 'sf': '胜负彩', 'htf': '半全场', 'jqc': '进球彩', 'r9': '任9' };
+      const gameType = typeMap[lotteryType] || '胜负彩';
       
+      // 从traditional_predictions表读取最新一期的预测
       const { rows } = await pgPool.query(
-        `SELECT * FROM predictions WHERE match_id LIKE $1 ORDER BY id DESC LIMIT 100`,
-        [`TL-${lotteryType}-%`]
+        `SELECT tp.ai_name, tp.predictions, tp.matches_info, tp.issue
+         FROM traditional_predictions tp
+         WHERE tp.game_type = $1 AND tp.issue = (
+           SELECT MAX(issue) FROM traditional_predictions WHERE game_type = $1
+         )
+         ORDER BY tp.ai_name`,
+        [gameType]
       );
       
+      // 转换为前端友好格式
+      const predictions = [];
+      if (rows.length > 0) {
+        const matchesInfo = rows[0].matches_info;
+        const matches = Array.isArray(matchesInfo) ? matchesInfo : (matchesInfo ? JSON.parse(matchesInfo) : []);
+        for (const row of rows) {
+          const preds = Array.isArray(row.predictions) ? row.predictions : (row.predictions ? JSON.parse(row.predictions) : []);
+          const fieldMap = { '胜负彩': 'spf', '任9': 'spf', '半全场': 'bqc', '进球彩': 'bf' };
+          const fieldKey = fieldMap[gameType] || 'spf';
+          for (let i = 0; i < matches.length && i < preds.length; i++) {
+            predictions.push({
+              match_id: matches[i].id || `match_${i+1}`,
+              home_team: matches[i].home || '未知',
+              away_team: matches[i].away || '未知',
+              ai_name: row.ai_name,
+              prediction: preds[i]?.[fieldKey] || '',
+              issue: row.issue,
+            });
+          }
+        }
+      }
+      
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, type: lotteryType, predictions: rows || [] }));
+      res.end(JSON.stringify({ success: true, type: lotteryType, predictions }));
       return;
     }
 
@@ -1108,32 +1217,31 @@ const server = http.createServer(async (req, res) => {
   // ============ Static File Routes ============
   let urlPath = pathname;
   if (urlPath === '/') urlPath = '/index.html';
-
-  // URL aliases: map root-level requests to JC/ directory
+  // URL别名：旧路径 → 新目录路径（文件已归类到JC/和CT/目录）
   const URL_ALIASES = {
+    '/ix.html': '/JC/ix.html',
     '/api.js': '/JC/api.js',
     '/index.js': '/JC/index.js',
-    '/calculator.js': '/JC/calculator.js',
-    '/calculator.html': '/JC/calculator.html',
-    '/briefs.js': '/JC/briefs.js',
-    '/briefs.html': '/JC/briefs.html',
     '/styles.css': '/JC/styles.css',
-    '/ix.html': '/JC/ix.html',
+    '/basketball.html': '/JC/basketball.html',
+    '/basketball.js': '/JC/basketball.js',
     '/ai-analysis.html': '/JC/ai-analysis.html',
     '/ai-analysis.js': '/JC/ai-analysis.js',
     '/ai-hub.html': '/JC/ai-hub.html',
-    '/basketball.html': '/JC/basketball.html',
-    '/basketball.js': '/JC/basketball.js',
+    '/ia2.html': '/JC/ia2.html',
     '/bb2.html': '/JC/bb2.html',
     '/br2.html': '/JC/br2.html',
-    '/ca.html': '/JC/ca.html',
     '/ca2.html': '/JC/ca2.html',
-    '/ia2.html': '/JC/ia2.html',
+    '/ca.html': '/JC/ca.html',
+    '/calculator.html': '/JC/calculator.html',
+    '/calculator.js': '/JC/calculator.js',
+    '/briefs.html': '/JC/briefs.html',
+    '/briefs.js': '/JC/briefs.js',
     '/ct.html': '/CT/ct.html',
+    '/calculator_template.html': '/CT/calculator_template.html',
   };
-  if (URL_ALIASES[urlPath]) {
-    urlPath = URL_ALIASES[urlPath];
-  }
+  if (URL_ALIASES[urlPath]) urlPath = URL_ALIASES[urlPath];
+
 
   const safePath = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
   const filePath = path.join(process.cwd(), safePath);
@@ -1254,187 +1362,108 @@ async function initializeSettleTimers() {
   }
 }
 
-// ============ 定时任务调度器 ============
-// 纯 Node.js 实现，不依赖外部库
 
-const cronJobs = [];
+// ============ 定时抓取任务 ============
+const scheduleTimers = [];
 
-/**
- * 添加定时任务
- * @param {string} name - 任务名称
- * @param {string} schedule - 时间格式 "HH:MM" 或 "every Xh" 
- * @param {Function} task - 异步任务函数
- */
-function addCronJob(name, schedule, task) {
-  const job = { name, schedule, task, nextRun: null, timer: null };
-  cronJobs.push(job);
-  scheduleNextRun(job);
-  console.log(`[Cron] 已注册定时任务: ${name} (${schedule})`);
-  return job;
-}
-
-function scheduleNextRun(job) {
+// 计算距下一个目标时间的毫秒数
+function msUntil(hour, minute) {
   const now = new Date();
-  let nextRun;
-  
-  if (job.schedule.startsWith('every ')) {
-    // "every 2h" 格式
-    const hours = parseInt(job.schedule.match(/\d+/)[0]);
-    nextRun = new Date(now.getTime() + hours * 60 * 60 * 1000);
-  } else {
-    // "HH:MM" 格式 - 找到下一个执行时间
-    const [hour, minute] = job.schedule.split(':').map(Number);
-    nextRun = new Date(now);
-    nextRun.setHours(hour, minute, 0, 0);
-    
-    // 如果今天的时间已过，设为明天
-    if (nextRun <= now) {
-      nextRun.setDate(nextRun.getDate() + 1);
-    }
-  }
-  
-  const delay = nextRun.getTime() - now.getTime();
-  job.nextRun = nextRun;
-  job.timer = setTimeout(() => {
-    console.log(`[Cron] 触发任务: ${job.name}`);
-    job.task()
-      .then(result => {
-        console.log(`[Cron] 任务完成: ${job.name}`, JSON.stringify(result).slice(0, 200));
-      })
-      .catch(err => {
-        console.error(`[Cron] 任务失败: ${job.name}`, err.message);
-      })
-      .finally(() => {
-        // 重新调度下一次
-        scheduleNextRun(job);
-      });
-  }, delay);
-  
-  console.log(`[Cron] ${job.name} 下次执行: ${nextRun.toISOString()} (${Math.round(delay/1000/60)}分钟后)`);
+  const target = new Date(now);
+  target.setHours(hour, minute, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  return target.getTime() - now.getTime();
 }
 
-// ============ 定时任务定义 ============
-
-async function taskPredict(sport = 'football') {
-  const sportName = sport === 'basketball' ? '篮球' : '足球';
-  console.log(`[Predict] 开始执行: ${sportName}AI预测`);
+// 通用定时调度器
+function scheduleDaily(hour, minute, label, taskFn) {
+  const DAY = 24 * 60 * 60 * 1000;
+  let firstDelay = msUntil(hour, minute);
+  console.log(`[Schedule] ${label}: 每天 ${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')} 执行，首次 ${Math.round(firstDelay/3600000*10)/10}h后`);
   
-  if (taskStatus.predict.running) {
-    console.log(`[Predict] 预测任务已在运行，跳过`);
-    return { skipped: true };
-  }
-  
-  taskStatus.predict.running = true;
-  try {
-    const script = sport === 'basketball' ? 'auto_predict_basketball.py' : 'auto_predict.py';
-    const predictResult = await runPython(script, [sport]);
-    taskStatus.predict.lastRun = new Date().toISOString();
-    taskStatus.predict.lastResult = predictResult;
-    console.log(`[Predict] ${sportName}预测完成:`, JSON.stringify(predictResult).slice(0, 200));
-    return predictResult;
-  } catch (err) {
-    console.error(`[Predict] ${sportName}预测失败:`, err.message);
-    taskStatus.predict.lastRun = new Date().toISOString();
-    taskStatus.predict.lastResult = { error: err.message };
-    return { error: err.message };
-  } finally {
-    taskStatus.predict.running = false;
-  }
+  const timer = setTimeout(() => {
+    console.log(`[Schedule] 开始执行: ${label}`);
+    taskFn().catch(err => console.error(`[Schedule] ${label}失败:`, err.message));
+    // 之后每24小时执行
+    const interval = setInterval(() => {
+      console.log(`[Schedule] 开始执行: ${label}`);
+      taskFn().catch(err => console.error(`[Schedule] ${label}失败:`, err.message));
+    }, DAY);
+    scheduleTimers.push(interval);
+  }, firstDelay);
+  scheduleTimers.push(timer);
 }
 
-async function taskDiscover() {
-  console.log('[Discover] 开始执行: 抓取比赛赛程');
-  
+// JC定时抓取 - 每天10:00和18:00
+async function runJcDiscover() {
   if (taskStatus.discover.running) {
-    console.log('[Discover] 抓取任务已在运行，跳过');
-    return { skipped: true };
+    console.log('[Schedule] JC抓取已在运行，跳过');
+    return;
   }
-  
   taskStatus.discover.running = true;
-  let newMatches = 0;
-  
   try {
-    const discoverResult = await runPython('discover_matches.py');
+    const result = await runPython('discover_matches.py');
     taskStatus.discover.lastRun = new Date().toISOString();
-    taskStatus.discover.lastResult = discoverResult;
-    
-    // 检查是否有新比赛
-    newMatches = discoverResult?.new_matches || discoverResult?.added || 0;
-    console.log(`[Discover] 比赛抓取完成: 新增 ${newMatches} 场`, JSON.stringify(discoverResult).slice(0, 200));
-    
+    taskStatus.discover.lastResult = result;
+    console.log(`[Schedule] JC抓取完成:`, JSON.stringify(result).slice(0, 200));
+    // 发现新比赛后触发预测
+    const newCount = result.new || result.new_matches_count || 0;
+    if (newCount > 0) {
+      console.log(`[Schedule] 发现${newCount}场新比赛，触发AI预测`);
+      await runPython('auto_predict.py', ['football']);
+    }
     // 重新初始化结算定时器
     await initializeSettleTimers();
-    
-    // 抓取完成后，立即触发预测（不管有没有新比赛，都检查一下待预测的）
-    console.log('[Discover] 赛程抓取完成，立即触发AI预测...');
-    await sleep(2000); // 等2秒让数据落盘
-    
-    // 并行触发足球和篮球预测
-    await Promise.all([
-      taskPredict('football'),
-      taskPredict('basketball')
-    ]);
-    
   } catch (err) {
-    console.error('[Discover] 比赛抓取失败:', err.message);
     taskStatus.discover.lastRun = new Date().toISOString();
     taskStatus.discover.lastResult = { error: err.message };
+    console.error(`[Schedule] JC抓取失败:`, err.message);
   } finally {
     taskStatus.discover.running = false;
   }
-  
-  return { success: true, newMatches };
 }
 
-async function taskSettle() {
-  console.log('[Cron] 开始执行: 自动结算');
-  
-  if (taskStatus.settle.running) {
-    console.log('[Cron] 结算任务已在运行，跳过');
-    return { skipped: true };
+// CT定时抓取 - 每天10:30
+async function runCtDiscover() {
+  if (taskStatus.discover.running) {
+    console.log('[Schedule] 预测任务正在运行，等待30秒后重试CT');
+    setTimeout(runCtDiscover, 30000);
+    return;
   }
-  
-  taskStatus.settle.running = true;
+  taskStatus.discover.running = true;
   try {
-    const result = await runPython('auto_settle.py');
-    taskStatus.settle.lastRun = new Date().toISOString();
-    taskStatus.settle.lastResult = result;
-    console.log('[Cron] 自动结算完成:', JSON.stringify(result).slice(0, 200));
-    return result;
+    const result = await runPython('ct_discover.py');
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = result;
+    console.log(`[Schedule] CT抓取完成:`, JSON.stringify(result).slice(0, 200));
+    // 发现新比赛后触发CT预测（4种玩法）
+    const saved = result.saved || 0;
+    if (saved > 0) {
+      console.log(`[Schedule] CT发现${saved}场新比赛，触发CT AI预测`);
+      const ctGameTypes = ['胜负彩', '任9', '半全场', '进球彩'];
+      for (const gt of ctGameTypes) {
+        try {
+          console.log(`[Schedule] CT预测: ${gt}`);
+          await runPython('traditional_lottery_predict.py', ['--game', gt, '--force']);
+        } catch (e) {
+          console.error(`[Schedule] CT预测${gt}失败:`, e.message);
+        }
+      }
+    }
+    await initializeSettleTimers();
   } catch (err) {
-    console.error('[Cron] 自动结算失败:', err.message);
-    taskStatus.settle.lastRun = new Date().toISOString();
-    taskStatus.settle.lastResult = { error: err.message };
-    return { error: err.message };
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = { error: err.message };
+    console.error(`[Schedule] CT抓取失败:`, err.message);
   } finally {
-    taskStatus.settle.running = false;
+    taskStatus.discover.running = false;
   }
 }
 
-// ============ 初始化定时任务 ============
-
-function initCronJobs() {
-  console.log('[Cron] 初始化定时任务...');
-  
-  // 定时抓取赛程（抓取完自动触发预测）: 03:00, 09:30, 15:00, 21:00
-  addCronJob('早盘赛程抓取', '03:00', taskDiscover);
-  addCronJob('午间赛程抓取', '09:30', taskDiscover);
-  addCronJob('午后赛程抓取', '15:00', taskDiscover);
-  addCronJob('晚间赛程抓取', '21:00', taskDiscover);
-  
-  // 自动结算: 每2小时
-  addCronJob('自动结算', 'every 2h', taskSettle);
-  
-  // 启动时立即执行一次（延迟30秒等服务器完全启动）
-  setTimeout(() => {
-    console.log('[Cron] 启动时自动检查...');
-    taskDiscover().catch(err => {
-      console.error('[Cron] 启动检查失败:', err.message);
-    });
-  }, 30000);
-  
-  console.log('[Cron] 定时任务初始化完成');
-}
+// 注册定时任务
+scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
+scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
+scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
 
 server.listen(PORT, HOST, async () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
@@ -1442,9 +1471,4 @@ server.listen(PORT, HOST, async () => {
   
   // 初始化比赛级别定时结算
   await initializeSettleTimers();
-  
-  // 初始化定时任务
-  initCronJobs();
 });
-
-
