@@ -96,6 +96,13 @@ a:hover{text-decoration:underline}
 .ob.gs{min-width:28px;height:26px;font-size:11px;padding:0 5px;border-radius:3px}
 /* 进球彩主客行标签 */
 .row-sub{font-size:10px;color:#556;display:block;margin-bottom:1px}
+/* 进球彩两行布局 */
+.jqc-home td,.jqc-away td{border-bottom:none;border-top:none}
+.jqc-home td{border-bottom:1px solid #1a1a35}
+.jqc-away{background:rgba(255,255,255,.02)}
+.col-team{text-align:left;padding-left:8px!important;font-weight:600;color:#ddd;width:90px;overflow:hidden;text-overflow:ellipsis;font-size:12px;white-space:nowrap}
+.col-team.col-home{color:#e8b87a}
+.col-team.col-away{color:#7ab8e8}
 
 /* ===== AI推荐区 ===== */
 .rec-box{margin:12px 16px;padding:14px;background:#10102a;border-radius:8px;border:1px solid #1e1e3a}
@@ -503,7 +510,7 @@ function renderHTF(){
 }
 
 /* ==========================================================
-   渲染: 进球彩
+   渲染: 进球彩 (每场两行: 主队行 + 客队行)
    ========================================================== */
 function renderJQC(){
   const ms = matches.jqc;
@@ -516,15 +523,14 @@ function renderJQC(){
   const ans = aiNames.jqc;
 
   const tbl = document.getElementById("t-jqc");
-  // thead
-  let th1 = "<tr><th rowspan='2'>场次</th><th rowspan='2'>联赛</th><th rowspan='2'>开赛</th><th rowspan='2'>主队</th><th rowspan='2'></th><th rowspan='2'>客队</th>";
-  th1 += `<th colspan="4">主队进球</th><th colspan="4">客队进球</th>`;
-  ans.forEach(n => { th1 += `<th rowspan="2">${shortAI(n)}</th>`; });
-  th1 += "</tr><tr>";
-  GOAL_OPTS.forEach(g => { th1 += `<th>${g}</th>`; });
-  GOAL_OPTS.forEach(g => { th1 += `<th>${g}</th>`; });
-  th1 += "</tr>";
-  tbl.querySelector("thead").innerHTML = th1;
+  // thead - 简化表头
+  let th = "<tr><th rowspan='2'>场次</th><th rowspan='2'>联赛</th><th rowspan='2'>开赛</th><th rowspan='2'>球队</th>";
+  th += `<th colspan="4">进球数</th>`;
+  ans.forEach(n => { th += `<th rowspan="2">${shortAI(n)}</th>`; });
+  th += "</tr><tr>";
+  GOAL_OPTS.forEach(g => { th += `<th>${g}</th>`; });
+  th += "</tr>";
+  tbl.querySelector("thead").innerHTML = th;
 
   let html = "";
   ms.forEach(m => {
@@ -533,30 +539,35 @@ function renderJQC(){
       const sH = sel.jqc[kH] || new Set();
       const sA = sel.jqc[kA] || new Set();
       const p = preds["jqc_"+m.num] || {};
-      html += `<tr>`;
-      html += `<td class="col-num">${m.num}</td>`;
-      html += `<td class="col-league">${m.league}</td>`;
-      html += `<td class="col-time">${fmtDate(m.time)}</td>`;
-      html += `<td class="col-home">${m.home}</td>`;
-      html += `<td class="col-vs">VS</td>`;
-      html += `<td class="col-away">${m.away}</td>`;
+      
+      // 主队行
+      html += `<tr class="jqc-home">`;
+      html += `<td class="col-num" rowspan="2">${m.num}</td>`;
+      html += `<td class="col-league" rowspan="2">${m.league}</td>`;
+      html += `<td class="col-time" rowspan="2">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-team col-home">${m.home}</td>`;
       // 主队进球
       html += `<td colspan="4"><div class="opts">`;
       GOAL_OPTS.forEach(g => {
         html += `<span class="ob gs ${sH.has(g)?"sel":""}" onclick="togOpt('jqc','${kH}','${g}',this)">${g}</span>`;
       });
       html += `</div></td>`;
+      // AI列 (主队行显示总进球预测)
+      ans.forEach(n => {
+        const v = p[n] || "";
+        html += `<td class="col-ai${v?" has":""}" rowspan="2">${v||"暂无"}</td>`;
+      });
+      html += "</tr>";
+      
+      // 客队行
+      html += `<tr class="jqc-away">`;
+      html += `<td class="col-team col-away">${m.away}</td>`;
       // 客队进球
       html += `<td colspan="4"><div class="opts">`;
       GOAL_OPTS.forEach(g => {
         html += `<span class="ob gs ${sA.has(g)?"sel":""}" onclick="togOpt('jqc','${kA}','${g}',this)">${g}</span>`;
       });
       html += `</div></td>`;
-      // AI列
-      ans.forEach(n => {
-        const v = p[n] || "";
-        html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
-      });
       html += "</tr>";
   });
   tbl.querySelector("tbody").innerHTML = html;
