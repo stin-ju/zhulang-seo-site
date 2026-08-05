@@ -298,14 +298,14 @@ async function loadData(){
     if(issues.htf.length) activeIssue.htf = issues.htf[0];
     if(issues.jqc.length) activeIssue.jqc = issues.jqc[0];
     
-    // 保存所有期号的数据用于分组显示
-    matches.htf = buildMatchesAll(htfItems);
+    // 保存所有期号的数据用于分组显示（半全场6场，进球彩4场）
+    matches.htf = buildMatchesAll(htfItems, 6);
     aiPreds.htf = buildPredsAll(htfItems, k => "htf_"+parseInt(k.split("_")[1]));
     aiNames.htf = uniqueAIs(htfItems);
 
-    // 整理 JQC（进球彩同理，显示最近3期）
+    // 整理 JQC（进球彩同理，显示最近3期，每期4场）
     const jqcItems = j.data.jqc;
-    matches.jqc = buildMatchesAll(jqcItems);
+    matches.jqc = buildMatchesAll(jqcItems, 4);
     aiPreds.jqc = buildPredsAll(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]));
     aiNames.jqc = uniqueAIs(jqcItems);
 
@@ -350,7 +350,8 @@ function buildMatches(items, issueFilter){
 }
 
 // 按期号分组，返回 {期号: [比赛列表]}
-function buildMatchesAll(items){
+// maxMatches: 每期最多显示多少场比赛（进球彩=4，半全场=6，不传则不限制）
+function buildMatchesAll(items, maxMatches){
   const groups = {};
   const issueSet = new Set();
   items.forEach(it => { if(it.issue) issueSet.add(it.issue); });
@@ -374,13 +375,18 @@ function buildMatchesAll(items){
         });
       }
     });
-    groups[issue] = Array.from(map.values()).sort((a,b)=>a.num-b.num);
+    let matches = Array.from(map.values()).sort((a,b)=>a.num-b.num);
+    if(maxMatches && matches.length > maxMatches) {
+      matches = matches.slice(0, maxMatches);
+    }
+    groups[issue] = matches;
   });
   return groups;
 }
 
 function buildPreds(items, keyFn, issueFilter){
   const preds = {};
+  
   items.forEach(it => {
     if(issueFilter && it.issue !== issueFilter) return;
     if(it.ai_name === "system") return;
@@ -388,8 +394,8 @@ function buildPreds(items, keyFn, issueFilter){
     if(!preds[key]) preds[key] = {};
     if(it.prediction) {
       preds[key][it.ai_name] = it.prediction;
-      // 保存任9推荐信息 - 只记录推荐的，不覆盖
-      if(it.is_r9) {
+      // 只有实际有任9推荐数据时才记录
+      if(it.is_r9 === true) {
         if(!preds[key]._r9) preds[key]._r9 = {};
         preds[key]._r9[it.ai_name] = true;
       }
@@ -478,11 +484,13 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
     // AI列
     ans.forEach(n => {
       let v = p[n] || "";
-      // 任9模式：只有AI推荐的场次才显示预测
-      if(isR9 && (!p._r9 || !p._r9[n])) {
-        v = "";
+      // 任9模式：只有AI推荐的场次才显示预测，未选中显示"-"
+      if(isR9) {
+        if(!p._r9 || !p._r9[n]) {
+          v = "-";
+        }
       }
-      html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
+      html += `<td class="col-ai${v && v!=="-"?" has":""}">${v||"暂无"}</td>`;
     });
     html += "</tr>";
   });
@@ -541,9 +549,11 @@ function renderHTF(){
         const cls = ["w","d","l"][i];
         html += `<td class="col-htf"><span class="ob ${cls} ${sH.has(v)?"sel":""}" onclick="togOpt('htf','${keyH}','${v}',this)">${v}</span></td>`;
       });
+      // AI列：拆分半全场预测
       ans.forEach(n => {
         const v = p[n] || "";
-        html += `<td class="col-ai${v?" has":""}" rowspan="2">${v||"暂无"}</td>`;
+        const half = v.length >= 2 ? v[0] : ""; // 第一个字符是半场
+        html += `<td class="col-ai${half?" has":""}">${half||"暂无"}</td>`;
       });
       html += "</tr>";
       
@@ -553,6 +563,12 @@ function renderHTF(){
       ["3","1","0"].forEach((v,i) => {
         const cls = ["w","d","l"][i];
         html += `<td class="col-htf"><span class="ob ${cls} ${sF.has(v)?"sel":""}" onclick="togOpt('htf','${keyF}','${v}',this)">${v}</span></td>`;
+      });
+      // AI列：全场预测
+      ans.forEach(n => {
+        const v = p[n] || "";
+        const full = v.length >= 2 ? v[1] : ""; // 第二个字符是全场
+        html += `<td class="col-ai${full?" has":""}">${full||"暂无"}</td>`;
       });
       html += "</tr>";
     });

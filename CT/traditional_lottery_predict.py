@@ -40,36 +40,42 @@ HEADERS = [
 
 AI_NAMES = ["扣子", "豆包", "文心", "混元", "DeepSeek", "智谱清言", "MiniMax"]
 
+# 每个AI配置多个备用模型，按优先级排序，主模型失败时自动切换
 AI_CONFIGS = {
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
         "key_env": "DEEPSEEK_API_KEY",
-        "model": "deepseek-chat",
+        "models": ["deepseek-chat", "deepseek-chat-v2"],
     },
     "MiniMax": {
         "url": "https://api.minimax.chat/v1/text/chatcompletion_v2",
         "key_env": "MINIMAX_API_KEY",
-        "model": "MiniMax-Text-01",
+        "models": ["MiniMax-Text-01", "abab6.5s-chat"],
     },
     "豆包": {
         "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         "key_env": "DOUBAO_API_KEY",
-        "model": "doubao-seed-2-0-mini-260428",
+        "models": ["doubao-seed-2-0-mini-260428", "doubao-seed-1-6-lite-32k-250428"],
     },
     "智谱清言": {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "key_env": "ZHIPU_API_KEY",
-        "model": "glm-4-flash",
+        "models": ["glm-4-flash", "glm-4-air", "glm-4-flashx"],
     },
     "文心": {
         "url": "https://qianfan.baidubce.com/v2/chat/completions",
         "key_env": "WENXIN_API_KEY",
-        "model": "ernie-4.0-8k-latest",
+        "models": ["ernie-4.0-8k-latest", "ernie-3.5-8k", "ernie-speed-8k"],
     },
     "混元": {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
-        "model": "hy3-preview",
+        "models": ["hunyuan-lite", "hunyuan-turbo", "hunyuan-standard"],
+    },
+    "扣子": {
+        "url": "https://api.coze.cn/v3/chat/completions",
+        "key_env": "COZE_API_KEY",
+        "models": ["doubao-seed-2-0-mini-260428", "deepseek-v3"],
     },
 }
 
@@ -292,7 +298,7 @@ r9: true表示这场比赛入选你的任9推荐（必须恰好9场为true）"""
 
 
 def call_ai_api(ai_name, prompt, timeout=120):
-    """调用单个AI的API"""
+    """调用单个AI的API，自动切换备用模型"""
     config = AI_CONFIGS.get(ai_name)
     if not config:
         return None
@@ -306,25 +312,36 @@ def call_ai_api(ai_name, prompt, timeout=120):
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": config["model"],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 1000,
-    }
 
-    try:
-        resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        error_str = str(e)
-        if any(kw in error_str for kw in RATE_LIMIT_KEYWORDS):
-            print(f"  [{ai_name}] 额度/限流: {error_str[:100]}")
-        else:
-            print(f"  [{ai_name}] 调用失败: {error_str[:100]}")
-        return None
+    # 尝试每个模型，直到成功或全部失败
+    models = config.get("models", [config.get("model", "")])
+    last_error = None
+    
+    for model in models:
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_tokens": 1000,
+        }
+
+        try:
+            resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            last_error = str(e)
+            error_str = last_error
+            if any(kw in error_str for kw in RATE_LIMIT_KEYWORDS):
+                print(f"  [{ai_name}] {model} 额度/限流，切换备用模型...")
+            else:
+                print(f"  [{ai_name}] {model} 调用失败，切换备用模型...")
+            continue
+    
+    # 所有模型都失败
+    print(f"  [{ai_name}] 所有模型均失败: {last_error[:100] if last_error else '未知错误'}")
+    return None
 
 
 def parse_ct_response(text, game_type):
@@ -439,14 +456,6 @@ def predict_issue(issue_data, game_types, force=False):
         for ai_name in AI_NAMES:
             if ai_name in existing:
                 print(f"  [{ai_name}] 已有预测，跳过")
-                continue
-
-            if ai_name == "扣子":
-                # 扣子使用模板预测（不调API）
-                preds = generate_template(matches, game_type)
-                if preds:
-                    save_predictions(issue, game_type, matches, ai_name, preds)
-                    print(f"  [{ai_name}] 模板预测完成 ({len(preds)}场)")
                 continue
 
             print(f"  [{ai_name}] 预测中...", end=' ', flush=True)
