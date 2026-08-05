@@ -77,12 +77,23 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
     const issueFilter = req.query.issue;
 
     // 查询所有数据，包含issue字段
+    // 官网在售最新期号（用于过滤无效测试数据）
+    const MAX_VALID_ISSUE = 26103;
+    
     let query = `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info FROM traditional_predictions`;
     let params = [];
+    const conditions = [];
 
     if (issueFilter) {
-      query += ` WHERE issue = $1`;
+      conditions.push(`issue = $${conditions.length + 1}`);
       params.push(issueFilter);
+    }
+    // 过滤无效期号
+    conditions.push(`CAST(issue AS INTEGER) <= $${conditions.length + 1}`);
+    params.push(MAX_VALID_ISSUE);
+    
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
     }
     query += ` ORDER BY game_type, issue DESC, id`;
 
