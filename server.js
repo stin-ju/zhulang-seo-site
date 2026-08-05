@@ -67,12 +67,12 @@ function readBody(req) {
 
 function runPython(scriptName, args = []) {
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, 'scripts', scriptName);
-    const env = { ...process.env };
+    const scriptPath = path.join(__dirname, 'JC', scriptName);
+    const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
-    const child = execFile('python3', [scriptPath, ...args], {
-      cwd: path.join(__dirname, 'scripts'),
+    const child = execFile('/usr/bin/python3', [scriptPath, ...args], {
+      cwd: path.join(__dirname, 'JC'),
       env,
       timeout: 300000,
       maxBuffer: 10 * 1024 * 1024
@@ -1350,11 +1350,12 @@ async function initializeSettleTimers() {
     
     console.log(`[AutoSettle] 初始化定时器，找到 ${result.rows.length} 场未结算比赛`);
     
+    // 使用 setImmediate 避免阻塞事件循环
     for (const row of result.rows) {
       const matchId = row.id;
       const matchTime = row.match_time;
       if (matchTime) {
-        await scheduleMatchSettle(matchId, matchTime);
+        setImmediate(() => scheduleMatchSettle(matchId, matchTime).catch(e => console.error(`[AutoSettle] 调度失败:`, e.message)));
       }
     }
   } catch (err) {
@@ -1465,10 +1466,10 @@ scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
 scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
 scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
 
-server.listen(PORT, HOST, async () => {
+server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
   
-  // 初始化比赛级别定时结算
-  await initializeSettleTimers();
+  // 初始化比赛级别定时结算（不阻塞启动）
+  initializeSettleTimers().catch(err => console.error('[AutoSettle] 启动初始化失败:', err.message));
 });
