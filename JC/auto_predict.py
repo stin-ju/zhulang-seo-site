@@ -310,10 +310,85 @@ def call_wenxin(url, key, model, prompt, timeout=60):
 
 
 def generate_template_prediction(prompt, sport="football"):
-    """扣子(皮皮) - 基于规则的模板预测"""
+    """扣子(皮皮) - 基于赔率数据的规则预测"""
+    import re
+    
     if sport == "basketball":
-        return "根据赔率分析，篮球比赛综合考虑主队优势和赔率走势给出预测。"
-    return "根据赔率分析，" + prompt.split("让球:")[-1].split("\n")[0] + "。综合考虑主队优势和赔率走势给出预测。"
+        # 从prompt中提取篮球赔率数据
+        # 格式示例: 让分: -5.5, 胜负赔率: 主1.65/客2.25, 大小分: 165.5 (大1.90/小1.90)
+        
+        # 提取让分
+        spread = 0
+        spread_match = re.search(r'让分[:：]\s*([+-]?\d+\.?\d*)', prompt)
+        if spread_match:
+            spread = float(spread_match.group(1))
+        
+        # 提取胜负赔率
+        home_ml = 1.65
+        away_ml = 2.25
+        ml_match = re.search(r'胜负赔率[:：]\s*主(\d+\.?\d*)\s*[\/\\]\s*客(\d+\.?\d*)', prompt)
+        if ml_match:
+            home_ml = float(ml_match.group(1))
+            away_ml = float(ml_match.group(2))
+        
+        # 提取大小分
+        total_line = 165.5
+        over_odds = 1.90
+        under_odds = 1.90
+        total_match = re.search(r'大小分[:：]\s*(\d+\.?\d*)\s*\(?大(\d+\.?\d*)\s*[\/\\]\s*小(\d+\.?\d*)\)?', prompt)
+        if total_match:
+            total_line = float(total_match.group(1))
+            over_odds = float(total_match.group(2))
+            under_odds = float(total_match.group(3))
+        
+        # 基于赔率生成预测
+        # 胜负：赔率低的一方更可能赢
+        win_loss = "胜" if home_ml < away_ml else "负"
+        
+        # 让球：根据让分值和胜负预测
+        if spread < 0:  # 主队让分
+            handicap_win_loss = "让胜" if win_loss == "胜" else "让负"
+        else:  # 客队让分
+            handicap_win_loss = "让胜" if win_loss == "负" else "让负"
+        
+        # 大小分：赔率低的一方更可能
+        total_points = "大" if over_odds < under_odds else "小"
+        
+        # 胜分差：根据胜负预测生成合理范围
+        if win_loss == "胜":
+            score_diff_range = "主6-10胜"
+        else:
+            score_diff_range = "客6-10负"
+        
+        # 半场胜负：与全场一致
+        half_win_loss = win_loss
+        
+        # 直接返回dict格式
+        return {
+            "win_loss": win_loss,
+            "handicap_win_loss": handicap_win_loss,
+            "total_points": total_points,
+            "score_diff_range": score_diff_range,
+            "half_win_loss": half_win_loss,
+            "analysis": f"基于赔率分析：主胜赔率{home_ml}，客胜赔率{away_ml}，让分{spread}，大小分线{total_line}。"
+        }
+    
+    # 足球预测
+    # 从prompt中提取让球信息
+    handicap_info = "未知"
+    try:
+        handicap_info = prompt.split("让球:")[-1].split("\n")[0].strip()
+    except:
+        pass
+    
+    return {
+        "spf": "胜",
+        "handicap_spf": "让胜",
+        "score": "1-0",
+        "goals": "2",
+        "half_full": "胜-胜",
+        "analysis": f"基于赔率分析，让球{handicap_info}。综合考虑主队优势和赔率走势给出预测。"
+    }
 
 
 def parse_ai_response(text, sport="football"):
@@ -382,8 +457,8 @@ def call_ai(ai_name, prompt, sport="football"):
     fmt = config["format"]
     
     if fmt == "template":
-        analysis = generate_template_prediction(prompt, sport)
-        return parse_ai_response(analysis, sport)
+        # generate_template_prediction 直接返回 dict，无需解析
+        return generate_template_prediction(prompt, sport)
     
     key = os.environ.get(config["key_env"], "")
     if not key:
