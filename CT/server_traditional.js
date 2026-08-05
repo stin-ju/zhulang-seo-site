@@ -93,7 +93,10 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
     const typeMap = { '胜负彩': 'sfc', '任9': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
     // 前端key到预测字段的映射
     const predFieldMap = { 'sfc': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
-    const responseData = { sfc: [], htf: [], jqc: [] };
+    const responseData = { sfc: [], htf: [], jqc: [], ren9: [] };
+
+    // 先收集任9推荐信息: { match_id: { ai_name: true/false } }
+    const ren9Recommendations = {};
 
     for (const row of rows) {
       const frontendKey = typeMap[row.game_type];
@@ -116,6 +119,13 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         try { predictionsArr = JSON.parse(predictionsArr); } catch (e) { predictionsArr = null; }
       }
 
+      // 解析 ren9 (任9推荐的场次列表)
+      let ren9Arr = row.ren9;
+      if (typeof ren9Arr === 'string') {
+        try { ren9Arr = JSON.parse(ren9Arr); } catch (e) { ren9Arr = null; }
+      }
+      const ren9Set = new Set(Array.isArray(ren9Arr) ? ren9Arr : []);
+
       const predField = predFieldMap[frontendKey] || 'spf';
 
       for (const m of matchesArr) {
@@ -130,6 +140,15 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
           if (pred) prediction = pred[predField] || null;
         }
 
+        // 判断该场次是否被AI推荐为任9
+        const isR9 = row.game_type === '任9' || ren9Set.has(String(matchNum)) || ren9Set.has(matchNum);
+
+        // 收集任9推荐信息
+        if (row.game_type === '任9' && isR9) {
+          if (!ren9Recommendations[matchId]) ren9Recommendations[matchId] = {};
+          ren9Recommendations[matchId][row.ai_name] = true;
+        }
+
         responseData[frontendKey].push({
           match_id: matchId,
           match_num: String(matchNum),
@@ -141,12 +160,28 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
           ai_name: row.ai_name || 'system',
           prediction: prediction,
           confidence: row.confidence || null,
-          lottery_type: frontendKey
+          lottery_type: frontendKey,
+          is_r9: isR9,
+          ren9: ren9Arr
         });
       }
     }
 
-    res.json({ success: true, data: responseData });
+    // 为胜负彩记录添加任9推荐标记
+    for (const item of responseData.sfc) {
+      if (ren9Recommendations[item.match_id]) {
+        item._r9_recommended = ren9Recommendations[item.match_id];
+      }
+    }
+
+    // 提取各玩法的期号列表
+    const issues = {
+      sfc: [...new Set(responseData.sfc.map(r => r.issue))].filter(Boolean).sort().reverse(),
+      htf: [...new Set(responseData.htf.map(r => r.issue))].filter(Boolean).sort().reverse(),
+      jqc: [...new Set(responseData.jqc.map(r => r.issue))].filter(Boolean).sort().reverse()
+    };
+
+    res.json({ success: true, data: { ...responseData, issues } });
   } catch (err) {
     console.error('[TraditionalLottery] /predict error:', err.message);
     res.status(500).json({ error: 'Internal server error', message: err.message });

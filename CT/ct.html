@@ -50,6 +50,11 @@ a:hover{text-decoration:underline}
 .sub-btn:hover{border-color:#555;color:#ccc}
 .sub-btn.on{background:#2a2a55;color:#fff;border-color:#5ab8f0}
 .sub-right{margin-left:auto;font-size:12px;color:#666}
+.dropdown{display:inline-block;position:relative}
+.dropdown-menu{display:none;position:absolute;top:100%;left:0;background:#1a1a2e;border:1px solid #333;border-radius:4px;z-index:100;min-width:100px;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.dropdown-menu.show{display:block}
+.dropdown-menu a{display:block;padding:6px 12px;font-size:12px;color:#999;text-decoration:none;transition:.15s}
+.dropdown-menu a:hover{background:#2a2a55;color:#fff}
 
 /* ===== 内容区 ===== */
 .panel{display:none}
@@ -575,21 +580,54 @@ function renderJQC(){
 }
 
 /* ==========================================================
-   子期号按钮
+   子期号按钮（显示最近3个，更多在下拉菜单）
    ========================================================== */
 function renderSubBtns(tab){
   const iss = issues[tab];
-  if(!iss || iss.length <= 1){
-    document.getElementById("subBtns").innerHTML = (iss && iss.length && iss[0]) ? `<span class="sub-btn on">${iss[0]}期</span>` : "";
+  if(!iss || iss.length === 0){
+    document.getElementById("subBtns").innerHTML = "";
     return;
   }
+  if(iss.length === 1){
+    document.getElementById("subBtns").innerHTML = `<span class="sub-btn on">${iss[0]}期</span>`;
+    return;
+  }
+  
+  const MAX_VISIBLE = 3;
   let html = "";
-  iss.forEach(i => {
+  
+  // 显示最近3个期号按钮
+  const visibleIssues = iss.slice(0, MAX_VISIBLE);
+  visibleIssues.forEach(i => {
     const on = activeIssue[tab]===i ? " on" : "";
     html += `<span class="sub-btn${on}" onclick="switchIssue('${tab}','${i}')">${i}期</span>`;
   });
+  
+  // 如果有多余的期号，添加"更多期号"下拉菜单
+  if(iss.length > MAX_VISIBLE){
+    const moreIssues = iss.slice(MAX_VISIBLE);
+    const currentOn = activeIssue[tab];
+    const isMoreActive = moreIssues.includes(currentOn);
+    
+    html += `<div class="dropdown" style="display:inline-block;position:relative;">`;
+    html += `<button class="sub-btn${isMoreActive ? ' on' : ''}" onclick="this.nextElementSibling.classList.toggle('show')">更多期号 ▾</button>`;
+    html += `<div class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;background:#1a1a2e;border:1px solid #333;border-radius:4px;z-index:100;min-width:100px;">`;
+    moreIssues.forEach(i => {
+      const on = currentOn===i ? " style=\"background:#333;\"" : "";
+      html += `<a href="#" onclick="switchIssue('${tab}','${i}');this.closest('.dropdown-menu').classList.remove('show');return false;"${on}>${i}期</a>`;
+    });
+    html += `</div></div>`;
+  }
+  
   document.getElementById("subBtns").innerHTML = html;
 }
+
+// 点击其他地方关闭下拉菜单
+document.addEventListener('click', function(e) {
+  if(!e.target.closest('.dropdown')){
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+  }
+});
 
 function switchIssue(tab, issue){
   activeIssue[tab] = issue;
