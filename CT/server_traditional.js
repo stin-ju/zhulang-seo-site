@@ -151,9 +151,9 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
           if (pred) prediction = pred[predField] || null;
         }
 
-        // 判断该场次是否被AI推荐为任9
-        // 只根据ren9列表判断，不是所有任9记录的比赛都推荐
-        const isR9 = ren9Set.has(String(matchNum).padStart(2, '0')) || ren9Set.has(String(matchNum)) || ren9Set.has(matchNum);
+        // 判断该场次是否被当前AI推荐为任9
+        // ren9Set包含当前AI推荐的场次号
+        const isR9 = ren9Set.has(String(matchNum)) || ren9Set.has(String(matchNum).padStart(2, '0'));
 
         // 收集任9推荐信息
         if (row.game_type === '任9' && isR9) {
