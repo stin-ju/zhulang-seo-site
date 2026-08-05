@@ -369,9 +369,11 @@ function buildPreds(items, keyFn, issueFilter){
     if(!preds[key]) preds[key] = {};
     if(it.prediction) {
       preds[key][it.ai_name] = it.prediction;
-      // 保存任9推荐信息
-      if(!preds[key]._r9) preds[key]._r9 = {};
-      preds[key]._r9[it.ai_name] = it.is_r9 || false;
+      // 保存任9推荐信息（只在is_r9为true时设置，避免被false覆盖）
+      if(it.is_r9) {
+        if(!preds[key]._r9) preds[key]._r9 = {};
+        preds[key]._r9[it.ai_name] = true;
+      }
     }
   });
   return preds;
@@ -425,8 +427,10 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
   let html = "";
   ms.forEach(m => {
     const key = tab + "_" + m.num;
+    // 任9和胜负彩共用相同的预测数据，用sfc_前缀查找
+    const predKey = "sfc_" + m.num;
     const s = sel[tab][key] || new Set();
-    const p = preds[key] || {};
+    const p = preds[predKey] || {};
     html += `<tr>`;
     html += `<td class="col-num">${m.num}</td>`;
     html += `<td class="col-league">${m.league}</td>`;
