@@ -50,11 +50,6 @@ a:hover{text-decoration:underline}
 .sub-btn:hover{border-color:#555;color:#ccc}
 .sub-btn.on{background:#2a2a55;color:#fff;border-color:#5ab8f0}
 .sub-right{margin-left:auto;font-size:12px;color:#666}
-.dropdown{display:inline-block;position:relative}
-.dropdown-menu{display:none;position:absolute;top:100%;left:0;background:#1a1a2e;border:1px solid #333;border-radius:4px;z-index:100;min-width:100px;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
-.dropdown-menu.show{display:block}
-.dropdown-menu a{display:block;padding:6px 12px;font-size:12px;color:#999;text-decoration:none;transition:.15s}
-.dropdown-menu a:hover{background:#2a2a55;color:#fff}
 
 /* ===== 内容区 ===== */
 .panel{display:none}
@@ -101,13 +96,6 @@ a:hover{text-decoration:underline}
 .ob.gs{min-width:28px;height:26px;font-size:11px;padding:0 5px;border-radius:3px}
 /* 进球彩主客行标签 */
 .row-sub{font-size:10px;color:#556;display:block;margin-bottom:1px}
-/* 进球彩两行布局 */
-.jqc-home td,.jqc-away td{border-bottom:none;border-top:none}
-.jqc-home td{border-bottom:1px solid #1a1a35}
-.jqc-away{background:rgba(255,255,255,.02)}
-.col-team{text-align:left;padding-left:8px!important;font-weight:600;color:#ddd;width:90px;overflow:hidden;text-overflow:ellipsis;font-size:12px;white-space:nowrap}
-.col-team.col-home{color:#e8b87a}
-.col-team.col-away{color:#7ab8e8}
 
 /* ===== AI推荐区 ===== */
 .rec-box{margin:12px 16px;padding:14px;background:#10102a;border-radius:8px;border:1px solid #1e1e3a}
@@ -293,32 +281,31 @@ async function loadData(){
     if(!j.success) throw new Error("API返回失败");
     rawData = j.data;
 
-    // 先提取所有期号（新→旧排序）
+    // 提取所有期号（新→旧排序）
     issues.sfc  = [...new Set((j.data.sfc||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
-    issues.htf  = [...new Set((j.data.htf||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
-    issues.jqc  = [...new Set((j.data.jqc||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
-    
-    // 设置默认期号（最新）
-    activeIssue.sfc = issues.sfc[0] || null;
-    activeIssue.htf = issues.htf[0] || null;
-    activeIssue.jqc = issues.jqc[0] || null;
+    activeIssue.sfc = issues.sfc[0] || null; // 默认最新期
 
-    // 整理 SFC（胜负彩，按期号过滤）
+    // 整理 SFC（按期号过滤）
     matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
     aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
-    aiNames.sfc = uniqueAIs(j.data.sfc.filter(i => !activeIssue.sfc || i.issue === activeIssue.sfc));
+    aiNames.sfc = uniqueAIs(j.data.sfc);
 
-    // 整理 HTF（半全场，按期号过滤）
+    // 整理 HTF（半全场每场比赛有独立期号，但展示时合并为一个整体）
     const htfItems = j.data.htf;
-    matches.htf = buildMatches(htfItems, activeIssue.htf);
-    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]), activeIssue.htf);
-    aiNames.htf = uniqueAIs(htfItems.filter(i => !activeIssue.htf || i.issue === activeIssue.htf));
+    matches.htf = buildMatches(htfItems);
+    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]));
+    aiNames.htf = uniqueAIs(htfItems);
+    // HTF/JQC 期号
+    issues.htf = [...new Set(htfItems.map(i=>i.issue))].filter(Boolean).sort().reverse();
+    issues.jqc = [...new Set(j.data.jqc.map(i=>i.issue))].filter(Boolean).sort().reverse();
+    if(issues.htf.length) activeIssue.htf = issues.htf[0];
+    if(issues.jqc.length) activeIssue.jqc = issues.jqc[0];
 
-    // 整理 JQC（进球彩，按期号过滤）
+    // 整理 JQC（进球彩同理，合并展示）
     const jqcItems = j.data.jqc;
-    matches.jqc = buildMatches(jqcItems, activeIssue.jqc);
-    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]), activeIssue.jqc);
-    aiNames.jqc = uniqueAIs(jqcItems.filter(i => !activeIssue.jqc || i.issue === activeIssue.jqc));
+    matches.jqc = buildMatches(jqcItems);
+    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]));
+    aiNames.jqc = uniqueAIs(jqcItems);
 
     // 更新顶部期号
     if(issues.sfc.length){
@@ -369,11 +356,9 @@ function buildPreds(items, keyFn, issueFilter){
     if(!preds[key]) preds[key] = {};
     if(it.prediction) {
       preds[key][it.ai_name] = it.prediction;
-      // 保存任9推荐信息（只在is_r9为true时设置，避免被false覆盖）
-      if(it.is_r9) {
-        if(!preds[key]._r9) preds[key]._r9 = {};
-        preds[key]._r9[it.ai_name] = true;
-      }
+      // 保存任9推荐信息
+      if(!preds[key]._r9) preds[key]._r9 = {};
+      preds[key]._r9[it.ai_name] = it.is_r9 || false;
     }
   });
   return preds;
@@ -426,11 +411,9 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
   // tbody
   let html = "";
   ms.forEach(m => {
-    const key = tab + "_" + m.num;
-    // 任9和胜负彩共用相同的预测数据，用sfc_前缀查找
-    const predKey = "sfc_" + m.num;
+    const key = (isR9 ? "sfc" : tab) + "_" + m.num;
     const s = sel[tab][key] || new Set();
-    const p = preds[predKey] || {};
+    const p = preds[key] || {};
     html += `<tr>`;
     html += `<td class="col-num">${m.num}</td>`;
     html += `<td class="col-league">${m.league}</td>`;
@@ -447,12 +430,11 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
     // AI列
     ans.forEach(n => {
       let v = p[n] || "";
-      // 任9模式：只有AI推荐的场次才显示预测，未推荐的显示"-"
-      // 如果 p._r9 不存在（没有任何AI推荐此场）或此AI未推荐，则清空
-      if(isR9 && (!p._r9 || !p._r9[n])) {
+      // 任9模式：只有AI推荐的场次才显示预测
+      if(isR9 && p._r9 && p._r9[n] === false) {
         v = "";
       }
-      html += `<td class="col-ai${v?" has":""}">${v||"-"}</td>`;
+      html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
     });
     html += "</tr>";
   });
@@ -521,7 +503,7 @@ function renderHTF(){
 }
 
 /* ==========================================================
-   渲染: 进球彩 (每场两行: 主队行 + 客队行)
+   渲染: 进球彩
    ========================================================== */
 function renderJQC(){
   const ms = matches.jqc;
@@ -534,14 +516,15 @@ function renderJQC(){
   const ans = aiNames.jqc;
 
   const tbl = document.getElementById("t-jqc");
-  // thead - 简化表头
-  let th = "<tr><th rowspan='2'>场次</th><th rowspan='2'>联赛</th><th rowspan='2'>开赛</th><th rowspan='2'>球队</th>";
-  th += `<th colspan="4">进球数</th>`;
-  ans.forEach(n => { th += `<th rowspan="2">${shortAI(n)}</th>`; });
-  th += "</tr><tr>";
-  GOAL_OPTS.forEach(g => { th += `<th>${g}</th>`; });
-  th += "</tr>";
-  tbl.querySelector("thead").innerHTML = th;
+  // thead
+  let th1 = "<tr><th rowspan='2'>场次</th><th rowspan='2'>联赛</th><th rowspan='2'>开赛</th><th rowspan='2'>主队</th><th rowspan='2'></th><th rowspan='2'>客队</th>";
+  th1 += `<th colspan="4">主队进球</th><th colspan="4">客队进球</th>`;
+  ans.forEach(n => { th1 += `<th rowspan="2">${shortAI(n)}</th>`; });
+  th1 += "</tr><tr>";
+  GOAL_OPTS.forEach(g => { th1 += `<th>${g}</th>`; });
+  GOAL_OPTS.forEach(g => { th1 += `<th>${g}</th>`; });
+  th1 += "</tr>";
+  tbl.querySelector("thead").innerHTML = th1;
 
   let html = "";
   ms.forEach(m => {
@@ -550,89 +533,51 @@ function renderJQC(){
       const sH = sel.jqc[kH] || new Set();
       const sA = sel.jqc[kA] || new Set();
       const p = preds["jqc_"+m.num] || {};
-      
-      // 主队行
-      html += `<tr class="jqc-home">`;
-      html += `<td class="col-num" rowspan="2">${m.num}</td>`;
-      html += `<td class="col-league" rowspan="2">${m.league}</td>`;
-      html += `<td class="col-time" rowspan="2">${fmtDate(m.time)}</td>`;
-      html += `<td class="col-team col-home">${m.home}</td>`;
+      html += `<tr>`;
+      html += `<td class="col-num">${m.num}</td>`;
+      html += `<td class="col-league">${m.league}</td>`;
+      html += `<td class="col-time">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-home">${m.home}</td>`;
+      html += `<td class="col-vs">VS</td>`;
+      html += `<td class="col-away">${m.away}</td>`;
       // 主队进球
       html += `<td colspan="4"><div class="opts">`;
       GOAL_OPTS.forEach(g => {
         html += `<span class="ob gs ${sH.has(g)?"sel":""}" onclick="togOpt('jqc','${kH}','${g}',this)">${g}</span>`;
       });
       html += `</div></td>`;
-      // AI列 (主队行显示总进球预测)
-      ans.forEach(n => {
-        const v = p[n] || "";
-        html += `<td class="col-ai${v?" has":""}" rowspan="2">${v||"暂无"}</td>`;
-      });
-      html += "</tr>";
-      
-      // 客队行
-      html += `<tr class="jqc-away">`;
-      html += `<td class="col-team col-away">${m.away}</td>`;
       // 客队进球
       html += `<td colspan="4"><div class="opts">`;
       GOAL_OPTS.forEach(g => {
         html += `<span class="ob gs ${sA.has(g)?"sel":""}" onclick="togOpt('jqc','${kA}','${g}',this)">${g}</span>`;
       });
       html += `</div></td>`;
+      // AI列
+      ans.forEach(n => {
+        const v = p[n] || "";
+        html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
+      });
       html += "</tr>";
   });
   tbl.querySelector("tbody").innerHTML = html;
 }
 
 /* ==========================================================
-   子期号按钮（显示最近3个，更多在下拉菜单）
+   子期号按钮
    ========================================================== */
 function renderSubBtns(tab){
   const iss = issues[tab];
-  if(!iss || iss.length === 0){
-    document.getElementById("subBtns").innerHTML = "";
+  if(!iss || iss.length <= 1){
+    document.getElementById("subBtns").innerHTML = (iss && iss.length && iss[0]) ? `<span class="sub-btn on">${iss[0]}期</span>` : "";
     return;
   }
-  if(iss.length === 1){
-    document.getElementById("subBtns").innerHTML = `<span class="sub-btn on">${iss[0]}期</span>`;
-    return;
-  }
-  
-  const MAX_VISIBLE = 3;
   let html = "";
-  
-  // 显示最近3个期号按钮
-  const visibleIssues = iss.slice(0, MAX_VISIBLE);
-  visibleIssues.forEach(i => {
+  iss.forEach(i => {
     const on = activeIssue[tab]===i ? " on" : "";
     html += `<span class="sub-btn${on}" onclick="switchIssue('${tab}','${i}')">${i}期</span>`;
   });
-  
-  // 如果有多余的期号，添加"更多期号"下拉菜单
-  if(iss.length > MAX_VISIBLE){
-    const moreIssues = iss.slice(MAX_VISIBLE);
-    const currentOn = activeIssue[tab];
-    const isMoreActive = moreIssues.includes(currentOn);
-    
-    html += `<div class="dropdown" style="display:inline-block;position:relative;">`;
-    html += `<button class="sub-btn${isMoreActive ? ' on' : ''}" onclick="this.nextElementSibling.classList.toggle('show')">更多期号 ▾</button>`;
-    html += `<div class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;background:#1a1a2e;border:1px solid #333;border-radius:4px;z-index:100;min-width:100px;">`;
-    moreIssues.forEach(i => {
-      const on = currentOn===i ? " style=\"background:#333;\"" : "";
-      html += `<a href="#" onclick="switchIssue('${tab}','${i}');this.closest('.dropdown-menu').classList.remove('show');return false;"${on}>${i}期</a>`;
-    });
-    html += `</div></div>`;
-  }
-  
   document.getElementById("subBtns").innerHTML = html;
 }
-
-// 点击其他地方关闭下拉菜单
-document.addEventListener('click', function(e) {
-  if(!e.target.closest('.dropdown')){
-    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
-  }
-});
 
 function switchIssue(tab, issue){
   activeIssue[tab] = issue;
