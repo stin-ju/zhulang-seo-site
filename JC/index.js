@@ -306,7 +306,7 @@ function renderMatchCard(match) {
     const matchPredictions = state.predictions.filter(p => p.match_id === match.id);
     const homeTeam = match.home_team || '主队';
     const awayTeam = match.away_team || '客队';
-    const matchTime = fmtTime(match.match_time) || '--:--';
+    const matchTime = fmtTime(match.match_time);
     const isDone = isMatchDone(match);
     
     // 构建 badges
@@ -365,7 +365,7 @@ function renderMatchCard(match) {
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
             <span class="time">${leaguePrefix}${matchTime}</span>
             ${match.id ? `<a href="/ia2.html?match=${encodeURIComponent(match.id)}" class="match-lottery-id" onclick="event.stopPropagation()">${match.id}</a>` : ''}
-            <span class="teams">${esc(homeTeam)} ${(match.home_score != null && match.away_score != null) ? '<span class="score-inline">' + match.home_score + ':' + match.away_score + '</span>' : 'vs'} ${esc(awayTeam)}${handicapDisplay ? ' <span class="handicap-tag">' + handicapDisplay + '</span>' : ''}</span>
+            <span class="teams">${esc(homeTeam)} ${match.status === '已确认' ? '<span class="score-inline">' + match.home_score + ':' + match.away_score + '</span>' : match.status === '已取消' ? '<span class="score-inline" style="color:#9ca3af;">已取消</span>' : 'vs'} ${esc(awayTeam)}${handicapDisplay ? ' <span class="handicap-tag">' + handicapDisplay + '</span>' : ''}</span>
             <div class="badge-group">
                 ${badges}
                 ${predCount > 0 ? `<span class="badge-sm" style="background:rgba(139,92,246,0.1);color:#a78bfa;">${predCount}AI预测</span>` : ''}
@@ -400,9 +400,8 @@ function renderPredictionsTable(predictions, match) {
         col3: { key: 'score_diff_range', hitKey: 'score_diff_range', label: '胜分差',
             format: (pred) => {
                 const range = pred.score_diff_range || '-';
-                const wl = pred.win_loss || '';
                 if (range === '-') return '-';
-                return (wl === '主胜' || wl === '胜') ? '主' + range : (wl === '客胜' || wl === '负') ? '客' + range : range;
+                return range;
             }
         },
         col4: { key: 'total_points', hitKey: 'total_points', label: '总分' }
