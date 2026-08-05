@@ -290,21 +290,23 @@ async function loadData(){
     aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
     aiNames.sfc = uniqueAIs(j.data.sfc);
 
-    // 整理 HTF（半全场每场比赛有独立期号，但展示时合并为一个整体）
+    // 整理 HTF（半全场显示最近3期）
     const htfItems = j.data.htf;
-    matches.htf = buildMatches(htfItems);
-    aiPreds.htf = buildPreds(htfItems, k => "htf_"+parseInt(k.split("_")[1]));
-    aiNames.htf = uniqueAIs(htfItems);
     // HTF/JQC 期号
     issues.htf = [...new Set(htfItems.map(i=>i.issue))].filter(Boolean).sort().reverse();
     issues.jqc = [...new Set(j.data.jqc.map(i=>i.issue))].filter(Boolean).sort().reverse();
     if(issues.htf.length) activeIssue.htf = issues.htf[0];
     if(issues.jqc.length) activeIssue.jqc = issues.jqc[0];
+    
+    // 保存所有期号的数据用于分组显示
+    matches.htf = buildMatchesAll(htfItems);
+    aiPreds.htf = buildPredsAll(htfItems, k => "htf_"+parseInt(k.split("_")[1]));
+    aiNames.htf = uniqueAIs(htfItems);
 
-    // 整理 JQC（进球彩同理，合并展示）
+    // 整理 JQC（进球彩同理，显示最近3期）
     const jqcItems = j.data.jqc;
-    matches.jqc = buildMatches(jqcItems);
-    aiPreds.jqc = buildPreds(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]));
+    matches.jqc = buildMatchesAll(jqcItems);
+    aiPreds.jqc = buildPredsAll(jqcItems, k => "jqc_"+parseInt(k.split("_")[1]));
     aiNames.jqc = uniqueAIs(jqcItems);
 
     // 更新顶部期号
@@ -347,6 +349,36 @@ function buildMatches(items, issueFilter){
   return Array.from(map.values()).sort((a,b)=>a.num-b.num);
 }
 
+// 按期号分组，返回 {期号: [比赛列表]}
+function buildMatchesAll(items){
+  const groups = {};
+  const issueSet = new Set();
+  items.forEach(it => { if(it.issue) issueSet.add(it.issue); });
+  const sortedIssues = [...issueSet].sort().reverse().slice(0, 3); // 最近3期
+  
+  sortedIssues.forEach(issue => {
+    const map = new Map();
+    items.forEach(it => {
+      if(it.issue !== issue) return;
+      const mid = it.match_id;
+      if(!map.has(mid)){
+        const num = parseInt(mid.split("_")[1]) || 0;
+        map.set(mid, {
+          match_id: mid,
+          num: num,
+          home: it.home_team,
+          away: it.away_team,
+          league: it.league,
+          time: it.match_time,
+          issue: issue
+        });
+      }
+    });
+    groups[issue] = Array.from(map.values()).sort((a,b)=>a.num-b.num);
+  });
+  return groups;
+}
+
 function buildPreds(items, keyFn, issueFilter){
   const preds = {};
   items.forEach(it => {
@@ -361,6 +393,20 @@ function buildPreds(items, keyFn, issueFilter){
         if(!preds[key]._r9) preds[key]._r9 = {};
         preds[key]._r9[it.ai_name] = true;
       }
+    }
+  });
+  return preds;
+}
+
+// 不按期号过滤，全部返回
+function buildPredsAll(items, keyFn){
+  const preds = {};
+  items.forEach(it => {
+    if(it.ai_name === "system") return;
+    const key = it.issue + "_" + keyFn(it.match_id);
+    if(!preds[key]) preds[key] = {};
+    if(it.prediction) {
+      preds[key][it.ai_name] = it.prediction;
     }
   });
   return preds;
@@ -444,16 +490,16 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
 }
 
 /* ==========================================================
-   渲染: 半全场
+   渲染: 半全场（显示最近3期）
    ========================================================== */
 function renderHTF(){
-  const ms = matches.htf;
-  if(!ms || !ms.length){
+  const groups = matches.htf;
+  if(!groups || Object.keys(groups).length === 0){
     const tbl = document.getElementById("t-htf");
     if(tbl) tbl.querySelector("tbody").innerHTML = '<tr><td colspan="15" style="padding:30px;color:#556">暂无赛程数据，请先抓取赛程</td></tr>';
     return;
   }
-  const preds = aiPreds.htf || {};
+  const allPreds = aiPreds.htf || {};
   const ans = aiNames.htf;
 
   const tbl = document.getElementById("t-htf");
@@ -466,21 +512,30 @@ function renderHTF(){
   tbl.querySelector("thead").innerHTML = th1;
 
   let html = "";
-  ms.forEach(m => {
-      const keyH = "htf_" + m.num + "_h";
-      const keyF = "htf_" + m.num + "_f";
+  // 按期号分组渲染
+  const sortedIssues = Object.keys(groups).sort().reverse().slice(0, 3);
+  sortedIssues.forEach((issue, idx) => {
+    const ms = groups[issue];
+    if(!ms || !ms.length) return;
+    // 期号分组标题
+    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${10+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
+    
+    ms.forEach(m => {
+      const keyH = issue + "_htf_" + m.num + "_h";
+      const keyF = issue + "_htf_" + m.num + "_f";
       const sH = sel.htf[keyH] || new Set();
       const sF = sel.htf[keyF] || new Set();
-      const p = preds["htf_"+m.num] || {};
+      const predKey = issue + "_htf_" + m.num;
+      const p = allPreds[predKey] || {};
       
       // 第一行：半场
       html += `<tr>`;
-      html += `<td class="col-num" rowspan="2">${m.num}</td>`;
-      html += `<td class="col-league" rowspan="2">${m.league}</td>`;
-      html += `<td class="col-time" rowspan="2">${fmtDate(m.time)}</td>`;
-      html += `<td class="col-home" rowspan="2">${m.home}</td>`;
-      html += `<td class="col-vs" rowspan="2">VS</td>`;
-      html += `<td class="col-away" rowspan="2">${m.away}</td>`;
+      html += `<td class="col-num">${m.num}</td>`;
+      html += `<td class="col-league">${m.league}</td>`;
+      html += `<td class="col-time">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-home">${m.home}</td>`;
+      html += `<td class="col-vs">VS</td>`;
+      html += `<td class="col-away">${m.away}</td>`;
       html += `<td style="font-size:11px;color:#888;text-align:center">半</td>`;
       ["3","1","0"].forEach((v,i) => {
         const cls = ["w","d","l"][i];
@@ -500,21 +555,22 @@ function renderHTF(){
         html += `<td class="col-htf"><span class="ob ${cls} ${sF.has(v)?"sel":""}" onclick="togOpt('htf','${keyF}','${v}',this)">${v}</span></td>`;
       });
       html += "</tr>";
+    });
   });
   tbl.querySelector("tbody").innerHTML = html;
 }
 
 /* ==========================================================
-   渲染: 进球彩
+   渲染: 进球彩（显示最近3期）
    ========================================================== */
 function renderJQC(){
-  const ms = matches.jqc;
-  if(!ms || !ms.length){
+  const groups = matches.jqc;
+  if(!groups || Object.keys(groups).length === 0){
     const tbl = document.getElementById("t-jqc");
     if(tbl) tbl.querySelector("tbody").innerHTML = '<tr><td colspan="14" style="padding:30px;color:#556">暂无赛程数据，请先抓取赛程</td></tr>';
     return;
   }
-  const preds = aiPreds.jqc || {};
+  const allPreds = aiPreds.jqc || {};
   const ans = aiNames.jqc;
 
   const tbl = document.getElementById("t-jqc");
@@ -529,12 +585,21 @@ function renderJQC(){
   tbl.querySelector("thead").innerHTML = th1;
 
   let html = "";
-  ms.forEach(m => {
-      const kH = "jqc_" + m.num + "_h";
-      const kA = "jqc_" + m.num + "_a";
+  // 按期号分组渲染
+  const sortedIssues = Object.keys(groups).sort().reverse().slice(0, 3);
+  sortedIssues.forEach((issue, idx) => {
+    const ms = groups[issue];
+    if(!ms || !ms.length) return;
+    // 期号分组标题
+    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${7+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
+    
+    ms.forEach(m => {
+      const kH = issue + "_jqc_" + m.num + "_h";
+      const kA = issue + "_jqc_" + m.num + "_a";
       const sH = sel.jqc[kH] || new Set();
       const sA = sel.jqc[kA] || new Set();
-      const p = preds["jqc_"+m.num] || {};
+      const predKey = issue + "_jqc_" + m.num;
+      const p = allPreds[predKey] || {};
       html += `<tr>`;
       html += `<td class="col-num">${m.num}</td>`;
       html += `<td class="col-league">${m.league}</td>`;
@@ -560,6 +625,7 @@ function renderJQC(){
         html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
       });
       html += "</tr>";
+    });
   });
   tbl.querySelector("tbody").innerHTML = html;
 }
@@ -714,9 +780,12 @@ function calcBets(tab){
   }
   if(tab==="htf"){
     let p=1, any=false;
-    (matches.htf || []).forEach(m => {
-      const sH = sel.htf["htf_"+m.num+"_h"];
-      const sF = sel.htf["htf_"+m.num+"_f"];
+    const groups = matches.htf || {};
+    const issue = Object.keys(groups).sort().reverse()[0]; // 最新一期
+    const ms = groups[issue] || [];
+    ms.forEach(m => {
+      const sH = sel.htf[issue + "_htf_" + m.num + "_h"];
+      const sF = sel.htf[issue + "_htf_" + m.num + "_f"];
       const cH = sH ? sH.size : 0;
       const cF = sF ? sF.size : 0;
       const fc = cH * cF;
@@ -726,9 +795,12 @@ function calcBets(tab){
   }
   if(tab==="jqc"){
     let p=1, any=false;
-    (matches.jqc || []).forEach(m => {
-      const sH = sel.jqc["jqc_"+m.num+"_h"];
-      const sA = sel.jqc["jqc_"+m.num+"_a"];
+    const groups = matches.jqc || {};
+    const issue = Object.keys(groups).sort().reverse()[0]; // 最新一期
+    const ms = groups[issue] || [];
+    ms.forEach(m => {
+      const sH = sel.jqc[issue + "_jqc_" + m.num + "_h"];
+      const sA = sel.jqc[issue + "_jqc_" + m.num + "_a"];
       const cH = sH ? sH.size : 0;
       const cA = sA ? sA.size : 0;
       const fc = cH * cA;

@@ -69,7 +69,7 @@ AI_CONFIGS = {
     "混元": {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
-        "model": "hy3",
+        "model": "hy3-preview",
     },
 }
 
@@ -232,22 +232,26 @@ def build_ct_prompt(matches, game_type="胜负彩"):
 1. 请联网搜索每场比赛的球队近期状态、历史交锋、伤停信息
 2. 综合考虑实力、状态、主客场等因素
 3. 每场给出最可能的单一结果（胜/平/负）
+4. 同时从14场中选出你认为最有把握的9场作为任9推荐
 
 ## 输出格式（严格JSON数组，不要输出其他内容）:
 ```json
 [
-  {{"match": "01", "spf": "3", "analysis": "简要分析"}},
-  {{"match": "02", "spf": "1", "analysis": "..."}},
+  {{"match": "01", "spf": "3", "analysis": "简要分析", "r9": true}},
+  {{"match": "02", "spf": "1", "analysis": "...", "r9": false}},
   ...
 ]
 ```
-其中 spf: "3"=胜, "1"=平, "0"=负"""
+其中 spf: "3"=胜, "1"=平, "0"=负
+r9: true表示这场比赛入选你的任9推荐（必须恰好9场为true）"""
 
     elif game_type == "半全场":
-        return f"""你是专业足球预测分析师。请预测以下14场比赛的半全场结果。
+        return f"""你是专业足球预测分析师。请预测以下6场半全场比赛的半全场结果。
 
 ## 比赛列表
 {match_text}
+
+注意：只预测前6场比赛（01-06）
 
 ## 预测要求
 1. 请联网搜索每场比赛的球队近期状态
@@ -264,10 +268,12 @@ def build_ct_prompt(matches, game_type="胜负彩"):
 例如: "31"=半场胜全场平, "33"=半场胜全场胜, "00"=半场负全场负"""
 
     elif game_type == "进球彩":
-        return f"""你是专业足球预测分析师。请预测以下14场比赛的进球数。
+        return f"""你是专业足球预测分析师。请预测以下4场比赛的进球数。
 
 ## 比赛列表
 {match_text}
+
+注意：只预测前4场比赛（01-04）
 
 ## 预测要求
 1. 请联网搜索每场比赛的球队近期进攻/防守数据
@@ -363,7 +369,7 @@ def get_existing_predictions(issue, game_type):
     return existing
 
 
-def save_predictions(issue, game_type, matches, ai_name, predictions, ren9=None):
+def save_predictions(issue, game_type, matches, ai_name, predictions):
     """保存预测到数据库"""
     conn = get_db()
     cur = conn.cursor()
@@ -389,65 +395,23 @@ def save_predictions(issue, game_type, matches, ai_name, predictions, ren9=None)
     existing = cur.fetchone()
 
     if existing:
-        if ren9 is not None:
-            cur.execute("""
-                UPDATE traditional_predictions
-                SET predictions = %s::jsonb, matches_info = %s::jsonb, ren9 = %s, created_at = NOW()
-                WHERE issue = %s AND game_type = %s AND ai_name = %s
-            """, (json.dumps(predictions, ensure_ascii=False),
-                  json.dumps(matches_info, ensure_ascii=False),
-                  json.dumps(ren9),
-                  issue, game_type, ai_name))
-        else:
-            cur.execute("""
-                UPDATE traditional_predictions
-                SET predictions = %s::jsonb, matches_info = %s::jsonb, created_at = NOW()
-                WHERE issue = %s AND game_type = %s AND ai_name = %s
-            """, (json.dumps(predictions, ensure_ascii=False),
-                  json.dumps(matches_info, ensure_ascii=False),
-                  issue, game_type, ai_name))
+        cur.execute("""
+            UPDATE traditional_predictions
+            SET predictions = %s::jsonb, matches_info = %s::jsonb, created_at = NOW()
+            WHERE issue = %s AND game_type = %s AND ai_name = %s
+        """, (json.dumps(predictions, ensure_ascii=False),
+              json.dumps(matches_info, ensure_ascii=False),
+              issue, game_type, ai_name))
     else:
-        if ren9 is not None:
-            cur.execute("""
-                INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, matches_info, ren9, created_at)
-                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s, NOW())
-            """, (game_type, ai_name, issue,
-                  json.dumps(predictions, ensure_ascii=False),
-                  json.dumps(matches_info, ensure_ascii=False),
-                  json.dumps(ren9)))
-        else:
-            cur.execute("""
-                INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, matches_info, created_at)
-                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, NOW())
-            """, (game_type, ai_name, issue,
-                  json.dumps(predictions, ensure_ascii=False),
-                  json.dumps(matches_info, ensure_ascii=False)))
+        cur.execute("""
+            INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, matches_info, created_at)
+            VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, NOW())
+        """, (game_type, ai_name, issue,
+              json.dumps(predictions, ensure_ascii=False),
+              json.dumps(matches_info, ensure_ascii=False)))
 
     conn.commit()
     conn.close()
-
-
-def generate_ren9_selection(matches, predictions):
-    """为任9选择9场比赛 - 选择信心较高的比赛（非平局预测）"""
-    # 优先选择有明确胜负预测的比赛
-    clear_wins = []
-    draws = []
-    
-    for pred in predictions:
-        match_num = pred.get('match', '')
-        spf = pred.get('spf', '')
-        if spf in ['3', '0']:  # 主胜或客胜
-            clear_wins.append(str(match_num))
-        else:
-            draws.append(str(match_num))
-    
-    # 如果明确胜负的比赛>=9场，从中选9场
-    if len(clear_wins) >= 9:
-        return clear_wins[:9]
-    
-    # 否则用平局场次补齐
-    selected = clear_wins + draws
-    return selected[:9]
 
 
 # ============ 主流程 ============
@@ -465,13 +429,9 @@ def predict_issue(issue_data, game_types, force=False):
         print(f"  {m['num']} [{m['league']}] {m['home']} vs {m['away']} ({m['date']})")
 
     results = {}
-    
-    # 先处理非任9玩法
-    other_game_types = [g for g in game_types if g != '任9']
 
-    for game_type in other_game_types:
+    for game_type in game_types:
         print(f"\n--- {game_type} ---")
-        results[game_type] = {}
 
         existing = get_existing_predictions(issue, game_type) if not force else set()
         prompt = build_ct_prompt(matches, game_type)
@@ -479,17 +439,6 @@ def predict_issue(issue_data, game_types, force=False):
         for ai_name in AI_NAMES:
             if ai_name in existing:
                 print(f"  [{ai_name}] 已有预测，跳过")
-                # 从数据库获取已有预测
-                conn = get_db()
-                cur = conn.cursor()
-                cur.execute("""
-                    SELECT predictions FROM traditional_predictions 
-                    WHERE issue = %s AND game_type = %s AND ai_name = %s
-                """, (issue, game_type, ai_name))
-                row = cur.fetchone()
-                conn.close()
-                if row and row[0]:
-                    results[game_type][ai_name] = row[0]
                 continue
 
             if ai_name == "扣子":
@@ -497,7 +446,6 @@ def predict_issue(issue_data, game_types, force=False):
                 preds = generate_template(matches, game_type)
                 if preds:
                     save_predictions(issue, game_type, matches, ai_name, preds)
-                    results[game_type][ai_name] = preds
                     print(f"  [{ai_name}] 模板预测完成 ({len(preds)}场)")
                 continue
 
@@ -508,7 +456,6 @@ def predict_issue(issue_data, game_types, force=False):
                 parsed = parse_ct_response(raw, game_type)
                 if parsed and len(parsed) >= len(matches):
                     save_predictions(issue, game_type, matches, ai_name, parsed)
-                    results[game_type][ai_name] = parsed
                     print(f"完成 ({len(parsed)}场)")
                 else:
                     print(f"解析失败 (got {len(parsed) if parsed else 0} fields)")
@@ -517,38 +464,6 @@ def predict_issue(issue_data, game_types, force=False):
 
             time.sleep(1)
 
-    # 任9: 基于胜负彩预测生成
-    if '任9' in game_types:
-        print(f"\n--- 任9 ---")
-        sfc_existing = get_existing_predictions(issue, '任9') if not force else set()
-        
-        for ai_name in AI_NAMES:
-            if ai_name in sfc_existing:
-                print(f"  [{ai_name}] 已有预测，跳过")
-                continue
-            
-            # 从胜负彩预测中获取
-            sfc_preds = results.get('胜负彩', {}).get(ai_name, [])
-            if not sfc_preds:
-                # 尝试从数据库获取
-                conn = get_db()
-                cur = conn.cursor()
-                cur.execute("""
-                    SELECT predictions FROM traditional_predictions 
-                    WHERE issue = %s AND game_type = '胜负彩' AND ai_name = %s
-                """, (issue, ai_name))
-                row = cur.fetchone()
-                conn.close()
-                if row and row[0]:
-                    sfc_preds = row[0]
-            
-            if sfc_preds:
-                ren9_selection = generate_ren9_selection(matches, sfc_preds)
-                save_predictions(issue, '任9', matches, ai_name, sfc_preds, ren9=ren9_selection)
-                print(f"  [{ai_name}] 任9预测完成 (选择场次: {','.join(ren9_selection)})")
-            else:
-                print(f"  [{ai_name}] 无胜负彩预测，跳过任9")
-    
     print(f"\n第{issue}期预测完成!")
     return results
 
@@ -556,12 +471,22 @@ def predict_issue(issue_data, game_types, force=False):
 def generate_template(matches, game_type):
     """扣子模板预测 - 基于简单规则"""
     preds = []
-    for m in matches:
-        if game_type == "胜负彩" or game_type == "任9":
-            preds.append({"match": m['num'], "spf": "3", "analysis": "模板预测"})
-        elif game_type == "半全场":
+    if game_type == "胜负彩":
+        # 前9场作为任9推荐
+        for i, m in enumerate(matches):
+            preds.append({
+                "match": m['num'], 
+                "spf": "3", 
+                "analysis": "模板预测",
+                "r9": i < 9  # 前9场为true
+            })
+    elif game_type == "半全场":
+        # 只预测前6场
+        for m in matches[:6]:
             preds.append({"match": m['num'], "bqc": "33", "analysis": "模板预测"})
-        elif game_type == "进球彩":
+    elif game_type == "进球彩":
+        # 只预测前4场
+        for m in matches[:4]:
             preds.append({"match": m['num'], "zjq": "2", "analysis": "模板预测"})
     return preds
 
@@ -571,7 +496,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='传统彩7AI预测')
     parser.add_argument('--issue', type=str, help='指定期号')
-    parser.add_argument('--game', type=str, help='指定玩法(胜负彩/任9/半全场/进球彩/全部)')
+    parser.add_argument('--game', type=str, help='指定玩法(胜负彩/半全场/进球彩/全部)')
     parser.add_argument('--force', action='store_true', help='强制覆盖已有预测')
     parser.add_argument('--get', action='store_true', help='只抓取赛程不预测')
     args = parser.parse_args()
@@ -579,7 +504,7 @@ def main():
     if args.game and args.game != '全部':
         game_types = [args.game]
     else:
-        game_types = ['胜负彩', '任9', '半全场', '进球彩']
+        game_types = ['胜负彩', '半全场', '进球彩']
 
     print(f"传统彩7AI预测")
     print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
