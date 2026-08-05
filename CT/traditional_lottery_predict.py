@@ -1,547 +1,526 @@
 #!/usr/bin/env python3
 """
-traditional_lottery_predict.py - 传统足彩7AI预测
-支持玩法：胜负彩、半全场、进球彩
-数据源：从数据库已有比赛数据读取（不依赖体彩API）
+traditional_lottery_predict.py - 传统彩7AI预测脚本
+
+功能:
+  1. 从体彩官网抓取胜负彩14场赛程
+  2. 调用7个AI生成预测（胜负彩spf、半全场bqc、进球彩zjq）
+  3. 将预测结果写入 traditional_predictions 表
+
+用法:
+  python3 traditional_lottery_predict.py                    # 抓取赛程 + 7AI预测
+  python3 traditional_lottery_predict.py --issue 26101      # 指定期号
+  python3 traditional_lottery_predict.py --game 胜负彩      # 只预测胜负彩
+  python3 traditional_lottery_predict.py --force            # 强制覆盖已有预测
 """
-import os, sys, json, time, re, traceback
-import psycopg2
+
+import os
+import sys
+import re
+import json
+import time
+import subprocess
+import traceback
 import requests
+import psycopg2
 from datetime import datetime
 
 # ============ 配置 ============
+DB_URL = os.environ.get('DATABASE_URL',
+    'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres')
 
-# 设置API Keys (从环境变量读取，实际值在 .env 文件中)
-# os.environ.setdefault("DOUBAO_API_KEY", "...")
-# os.environ.setdefault("WENXIN_API_KEY", "...")
-# os.environ.setdefault("HUNYUAN_API_KEY", "...")
-# os.environ.setdefault("DEEPSEEK_API_KEY", "...")
-# os.environ.setdefault("ZHIPU_API_KEY", "...")
-# os.environ.setdefault("MINIMAX_API_KEY", "...")
-# os.environ.setdefault("DATABASE_URL", "...")
+LIST_URL = 'http://www.sporttery.cn/ctzc/zcgg/index.html'
+BASE_URL = 'http://www.sporttery.cn'
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+HEADERS = [
+    '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    '-H', 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    '-H', 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8',
+]
 
-# 7个AI配置
+AI_NAMES = ["扣子", "豆包", "文心", "混元", "DeepSeek", "智谱清言", "MiniMax"]
+
 AI_CONFIGS = {
-    "扣子": {
-        "format": "local",  # 本地联网搜索，不走外部API
-    },
-    "豆包": {
-        "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-        "key_env": "DOUBAO_API_KEY",
-        "model": "doubao-seed-2-0-mini-260428",
-        "format": "openai",
-        "fallback_models": ["doubao-seed-2-1-turbo-260628", "doubao-seed-2-0-mini-260215"],
-    },
-    "文心": {
-        "url": "https://qianfan.baidubce.com/v2/chat/completions",
-        "key_env": "WENXIN_API_KEY",
-        "model": "ernie-4.0-8k-latest",
-        "format": "openai",
-        "max_tokens": 2048,
-    },
-    "混元": {
-        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
-        "key_env": "HUNYUAN_API_KEY",
-        "model": "hy-mt2-lite",
-        "format": "openai",
-    },
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
         "key_env": "DEEPSEEK_API_KEY",
         "model": "deepseek-chat",
-        "format": "openai",
-    },
-    "智谱清言": {
-        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        "key_env": "ZHIPU_API_KEY",
-        "model": "glm-4-flash",
-        "format": "openai",
     },
     "MiniMax": {
         "url": "https://api.minimax.chat/v1/text/chatcompletion_v2",
         "key_env": "MINIMAX_API_KEY",
         "model": "MiniMax-Text-01",
-        "format": "minimax",
+    },
+    "豆包": {
+        "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+        "key_env": "DOUBAO_API_KEY",
+        "model": "doubao-seed-2-0-mini-260428",
+    },
+    "智谱清言": {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "key_env": "ZHIPU_API_KEY",
+        "model": "glm-4-flash",
+    },
+    "文心": {
+        "url": "https://qianfan.baidubce.com/v2/chat/completions",
+        "key_env": "WENXIN_API_KEY",
+        "model": "ernie-4.0-8k-latest",
+    },
+    "混元": {
+        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
+        "key_env": "HUNYUAN_API_KEY",
+        "model": "hy3-preview",
     },
 }
 
-# ============ Prompt模板（无需赔率） ============
+RATE_LIMIT_KEYWORDS = [
+    "Arrearage", "Overdue", "quota", "QuotaExceeded", "insufficient",
+    "SetLimitExceeded", "LimitExceeded", "ServerOverloaded",
+    "RequestBurstTooFast", "RateLimitExceeded", "TooManyRequests", "429",
+    "402", "balance", "Payment Required",
+]
 
-PROMPT_TEMPLATE = """你是一位资深足球赛事分析师。请对以下比赛进行深度分析并给出预测。
 
-## ⚠️ 核心要求：必须联网搜索（严禁凭空猜测）
+# ============ 赛程抓取 ============
 
-**你必须对每一场比赛的双方球队都进行联网搜索**，获取以下真实数据后再做判断：
-
-### 1. 近期战绩（最重要）
-- 搜索每支球队**近10场**正式比赛结果（胜/平/负各几场）
-- 重点关注近5场的状态走势（是连胜还是连败）
-- 区分主客场：主队近6个主场战绩、客队近6个客场战绩
-
-### 2. 交锋记录（关键参考）
-- 搜索双方**近5次直接交锋**结果
-- 注意是否有"克星"关系（某队连续多年压制另一队）
-- 主客场交锋是否有明显差异
-
-### 3. 球队状态与情报
-- 搜索球队近期是否有**关键球员伤停**
-- 是否有**多线作战疲劳**（如刚踢完欧战/杯赛）
-- 球队**赛季目标**：保级队拼死一搏 vs 无欲无求的中游队
-- 是否有**换帅效应**（新帅上任前几场通常表现不同）
-
-### 4. 联赛特性分析
-- 不同联赛有不同的主客场权重（如巴甲主场优势明显、北欧联赛夏季赛程密集）
-- 杯赛（欧冠/欧罗巴）注意球队是否已锁定出线或已出局
-
-## 编码规则
-
-【胜平负】3=主胜, 1=平局, 0=客负
-【半全场】33=胜胜, 31=胜平, 30=胜负, 13=平胜, 11=平平, 10=平负, 03=负胜, 01=负平, 00=负负
-【进球数】0=0球, 1=1球, 2=2球, 3=3球及以上
-
-## 比赛数据（{game_type} 第{issue}期）
-
-{match_data}
-
-## 输出要求
-
-只输出以下JSON，不要任何分析过程或其他文字：
-```json
-{{
-  "predictions": [
-    {{"match": "1", "spf": "3", "bf": "2:1", "zjq": "2", "bqc": "33"}},
-    {{"match": "2", "spf": "1", "bf": "1:1", "zjq": "2", "bqc": "11"}}
-  ],
-  "ren9": ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
-  "confidence": "高"
-}}
-```
-
-predictions数组必须包含所有{match_count}场比赛。spf只选一个值(3/1/0)。bf为精确比分。zjq为总进球数(0/1/2/3)。bqc为半全场编码。ren9选择最有把握的9场。confidence为整体信心度(高/中/低)。"""
-
-# ============ 数据库操作 ============
-
-def fetch_matches_from_db(game_type):
-    """从数据库读取最新的比赛数据"""
-    if not DATABASE_URL:
-        print("DATABASE_URL 未配置")
-        return [], None
-
-    conn = psycopg2.connect(DATABASE_URL)
+def fetch_html(url):
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT matches_info, predictions
-                FROM traditional_predictions
-                WHERE game_type = %s
-                ORDER BY created_at DESC
-                LIMIT 1
-            """, (game_type,))
-            row = cur.fetchone()
-            if not row or not row[0]:
-                print(f"数据库中没有{game_type}的比赛数据")
-                return [], None
-
-            matches = row[0]
-            if isinstance(matches, str):
-                matches = json.loads(matches)
-
-            # 获取期号
-            issue = None
-            if matches and len(matches) > 0:
-                issue = matches[0].get("issue", "")
-
-            return matches, issue
+        cmd = ['curl', '-sL', '--max-time', '15'] + HEADERS + [url]
+        result = subprocess.run(cmd, capture_output=True, timeout=20)
+        html = result.stdout.decode('utf-8', errors='replace')
+        if len(html) < 500:
+            return None
+        return html
     except Exception as e:
-        print(f"读取数据库失败: {e}")
-        return [], None
-    finally:
-        conn.close()
+        print(f"  [ERR] 请求失败: {e}")
+        return None
 
 
-def save_predictions(game_type, ai_name, predictions_data, matches_info=None):
-    """保存预测结果"""
-    if not DATABASE_URL:
-        print("DATABASE_URL 未配置，跳过保存")
-        return
+def find_schedule_links(html):
+    links = re.findall(r'href="([^"]+)"[^>]*>[^<]*竞猜场次安排[^<]*<', html)
+    if not links:
+        links = re.findall(r'href="(/ctzc/zcgg/\d+/\d+\.html)"', html)
+    return links
 
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        with conn.cursor() as cur:
-            # 检查是否已有该game_type+ai_name的记录
-            cur.execute("""
-                SELECT id FROM traditional_predictions
-                WHERE game_type = %s AND ai_name = %s
-            """, (game_type, ai_name))
-            existing = cur.fetchone()
 
-            if existing:
-                # 更新：保留已有的matches_info，只更新预测相关字段
-                cur.execute("""
-                    UPDATE traditional_predictions
-                    SET predictions = %s,
-                        ren9 = %s,
-                        confidence = %s,
-                        created_at = CURRENT_TIMESTAMP
-                    WHERE game_type = %s AND ai_name = %s
-                """, (
-                    json.dumps(predictions_data.get("predictions", [])),
-                    json.dumps(predictions_data.get("ren9", [])),
-                    predictions_data.get("confidence", "低"),
-                    game_type, ai_name,
-                ))
+def parse_schedule_page(html):
+    tables = re.findall(r'<table[^>]*>(.*?)</table>', html, re.DOTALL)
+    results = []
+
+    for table_html in tables:
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', table_html, re.DOTALL)
+        if len(rows) < 15:
+            continue
+
+        header_cells = re.findall(r'<td[^>]*>(.*?)</td>', rows[0], re.DOTALL)
+        header_text = [re.sub(r'<[^>]+>', '', c).strip() for c in header_cells]
+        if '期号' not in header_text and '序号' not in header_text:
+            continue
+
+        matches = []
+        current_issue = None
+        current_league = None
+
+        for ri in range(1, min(len(rows), 20)):
+            cells = re.findall(r'<td[^>]*>(.*?)</td>', rows[ri], re.DOTALL)
+            cells_clean = [re.sub(r'<[^>]+>', '', c).replace('&nbsp;', ' ').strip() for c in cells]
+            if not cells_clean or all(not c for c in cells_clean):
+                continue
+
+            num_cells = len(cells_clean)
+            if num_cells == 6:
+                current_issue = cells_clean[0]
+                current_league = cells_clean[1]
+                match_num = cells_clean[2]
+                home = cells_clean[3]
+                away = cells_clean[4]
+                date = cells_clean[5]
+            elif num_cells == 5:
+                current_league = cells_clean[0]
+                match_num = cells_clean[1]
+                home = cells_clean[2]
+                away = cells_clean[3]
+                date = cells_clean[4]
+            elif num_cells == 4:
+                match_num = cells_clean[0]
+                home = cells_clean[1]
+                away = cells_clean[2]
+                date = cells_clean[3]
             else:
-                # 新建记录
-                cur.execute("""
-                    INSERT INTO traditional_predictions (game_type, ai_name, predictions, ren9, confidence, matches_info)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
-                    game_type, ai_name,
-                    json.dumps(predictions_data.get("predictions", [])),
-                    json.dumps(predictions_data.get("ren9", [])),
-                    predictions_data.get("confidence", "低"),
-                    json.dumps(matches_info) if matches_info else None,
-                ))
-        conn.commit()
-        print(f"  ✓ {ai_name} 预测已保存")
-    except Exception as e:
-        print(f"  ✗ {ai_name} 保存失败: {e}")
-        traceback.print_exc()
-        conn.rollback()
-    finally:
-        conn.close()
+                continue
+
+            if not current_issue:
+                continue
+            try:
+                int(match_num)
+            except (ValueError, TypeError):
+                continue
+
+            matches.append({
+                'num': str(int(match_num)).zfill(2),
+                'league': current_league or '',
+                'home': home,
+                'away': away,
+                'date': date,
+            })
+
+        if not matches or not current_issue:
+            continue
+
+        issue_match = re.search(r'(\d{5})', current_issue)
+        if not issue_match:
+            continue
+
+        results.append({
+            'issue': issue_match.group(1),
+            'matches': matches,
+        })
+
+    return results
 
 
-def get_predictions(game_type):
-    """获取预测数据，返回所有期号的数据，返回前端期望的格式"""
-    if not DATABASE_URL:
+def fetch_schedules():
+    """从体彩官网抓取最新在售赛程"""
+    print("[1] 获取公告列表...")
+    list_html = fetch_html(LIST_URL)
+    if not list_html:
+        print("  无法获取公告列表页")
         return []
 
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT ai_name, predictions, matches_info, issue
-                FROM traditional_predictions
-                WHERE game_type = %s
-                ORDER BY issue DESC, created_at DESC
-            """, (game_type,))
-            rows = cur.fetchall()
-            if not rows:
-                return []
+    links = find_schedule_links(list_html)
+    print(f"  找到 {len(links)} 个公告链接")
 
-            field_map = {"胜负彩": "spf", "任9": "spf", "半全场": "bqc", "进球彩": "bf"}
-            field_key = field_map.get(game_type, "spf")
+    all_issues = []
+    seen = set()
 
-            # Group rows by issue
-            from collections import OrderedDict
-            issue_groups = OrderedDict()
-            for row in rows:
-                ai_name = row[0]
-                predictions = row[1] if isinstance(row[1], list) else json.loads(row[1]) if row[1] else []
-                matches_info = row[2] if isinstance(row[2], list) else json.loads(row[2]) if row[2] else []
-                issue = row[3]
-                # Fallback: get issue from matches_info if not in column
-                if not issue and matches_info:
-                    issue = matches_info[0].get("issue", "")
-                if not issue:
-                    continue
-                if issue not in issue_groups:
-                    issue_groups[issue] = {"matches_info": matches_info, "rows": []}
-                issue_groups[issue]["rows"].append((ai_name, predictions))
+    for link in links[:3]:
+        url = BASE_URL + link if link.startswith('/') else link
+        print(f"  解析: {url}")
+        time.sleep(1)
 
-            results = []
-            for issue, group in issue_groups.items():
-                matches_info = group["matches_info"]
-                for idx, match in enumerate(matches_info):
-                    for ai_name, predictions in group["rows"]:
-                        pred_obj = predictions[idx] if idx < len(predictions) else {}
+        page_html = fetch_html(url)
+        if not page_html:
+            continue
 
-                        if isinstance(pred_obj, dict):
-                            prediction = pred_obj.get(field_key, "")
-                        else:
-                            prediction = str(pred_obj)
+        issues = parse_schedule_page(page_html)
+        for issue in issues:
+            if issue['issue'] not in seen and len(issue['matches']) == 14:
+                seen.add(issue['issue'])
+                all_issues.append(issue)
+                print(f"    第{issue['issue']}期: {len(issue['matches'])}场")
 
-                        results.append({
-                            "match_id": match.get("id", f"match_{idx+1}"),
-                            "home_team": match.get("home", "未知"),
-                            "away_team": match.get("away", "未知"),
-                            "league": match.get("league", ""),
-                            "match_time": match.get("time", ""),
-                            "ai_name": ai_name,
-                            "prediction": prediction,
-                            "issue": issue,
-                        })
-            return results
-    except Exception as e:
-        print(f"获取预测失败: {e}")
-        return []
-    finally:
-        conn.close()
+    return all_issues
 
 
 # ============ AI调用 ============
 
-def build_prompt(matches, game_type, issue=""):
-    """构建AI prompt（无需赔率）"""
+def build_ct_prompt(matches, game_type="胜负彩"):
+    """构建传统彩预测prompt"""
     match_lines = []
     for m in matches:
-        league_tag = f"[{m['league']}]" if m.get('league') else ""
-        match_lines.append(f"{m['num']}. {league_tag} {m['home']} vs {m['away']} ({m['time']})")
-    match_data = "\n".join(match_lines)
+        match_lines.append(f"  {m['num']}. [{m['league']}] {m['home']} vs {m['away']} ({m['date']})")
 
-    prompt = PROMPT_TEMPLATE.format(
-        match_data=match_data,
-        match_count=len(matches),
-        game_type=game_type,
-        issue=issue,
-    )
-    return prompt
+    match_text = "\n".join(match_lines)
 
+    if game_type == "胜负彩":
+        return f"""你是专业足球预测分析师。请预测以下14场胜负彩比赛的胜平负结果。
 
-def call_kouzi_local(prompt):
-    """扣子本地联网搜索：从网上抓取比赛数据生成预测，并让AI选择ren9"""
-    import re
-    
-    # 从prompt中提取比赛信息
-    # 格式示例：1. [欧冠] 萨巴赫 vs 库奥皮 (2026-07-22)
-    matches = re.findall(r'^(\d+)\.\s*\[([^\]]*)\]\s*(.*?)\s+vs\s+(.*?)\s*\(', prompt, re.MULTILINE)
-    
-    if not matches:
-        raise Exception(f"扣子：无法从prompt中解析比赛信息，prompt片段: {prompt[:500]}")
-    
-    predictions = []
-    match_confidence = []  # 记录每场比赛的"信心度"用于选ren9
-    
-    for match_num, league, home, away in matches:
-        home = home.strip()
-        away = away.strip()
-        league = league.strip()
-        
-        # 基于球队名和联赛特性的简单规则预测
-        import random
-        random.seed(hash(f"{home}{away}{match_num}") % (2**32))
-        
-        # 主场优势概率
-        home_win_prob = 0.45
-        draw_prob = 0.25
-        away_win_prob = 0.30
-        
-        # 根据联赛调整
-        if "巴甲" in league:
-            home_win_prob += 0.05  # 巴甲主场优势明显
-        elif "欧冠" in league or "欧罗巴" in league:
-            away_win_prob += 0.05  # 欧战客场球队通常更强
-        
-        rand = random.random()
-        if rand < home_win_prob:
-            spf = "3"
-            score_options = ["2:1", "2:0", "1:0", "3:1", "3:2"]
-            confidence = home_win_prob  # 用概率作为信心度
-        elif rand < home_win_prob + draw_prob:
-            spf = "1"
-            score_options = ["1:1", "0:0", "2:2"]
-            confidence = draw_prob
-        else:
-            spf = "0"
-            score_options = ["1:2", "0:1", "1:3", "0:2"]
-            confidence = away_win_prob
-        
-        bf = random.choice(score_options)
-        total_goals = sum(int(x) for x in bf.split(":"))
-        if total_goals >= 3:
-            zjq = "3"
-        else:
-            zjq = str(total_goals)
-        
-        # 半全场
-        if spf == "3":
-            bqc = random.choice(["33", "31", "13"])
-        elif spf == "1":
-            bqc = random.choice(["11", "13", "31"])
-        else:
-            bqc = random.choice(["00", "01", "10"])
-        
-        predictions.append({
-            "match": match_num,
-            "spf": spf,
-            "bf": bf,
-            "zjq": zjq,
-            "bqc": bqc
-        })
-        match_confidence.append((match_num, confidence))
-    
-    # 按信心度排序，选最高的9场作为ren9
-    match_confidence.sort(key=lambda x: x[1], reverse=True)
-    ren9 = [str(m[0]) for m in match_confidence[:9]]
-    
-    result = {
-        "predictions": predictions,
-        "ren9": ren9,
-        "confidence": "中"
-    }
-    
-    return result
+## 比赛列表
+{match_text}
+
+## 预测要求
+1. 请联网搜索每场比赛的球队近期状态、历史交锋、伤停信息
+2. 综合考虑实力、状态、主客场等因素
+3. 每场给出最可能的单一结果（胜/平/负）
+
+## 输出格式（严格JSON数组，不要输出其他内容）:
+```json
+[
+  {{"match": "01", "spf": "3", "analysis": "简要分析"}},
+  {{"match": "02", "spf": "1", "analysis": "..."}},
+  ...
+]
+```
+其中 spf: "3"=胜, "1"=平, "0"=负"""
+
+    elif game_type == "半全场":
+        return f"""你是专业足球预测分析师。请预测以下14场比赛的半全场结果。
+
+## 比赛列表
+{match_text}
+
+## 预测要求
+1. 请联网搜索每场比赛的球队近期状态
+2. 预测每场比赛半场和全场的胜平负组合
+
+## 输出格式（严格JSON数组）:
+```json
+[
+  {{"match": "01", "bqc": "31", "analysis": "简要分析"}},
+  ...
+]
+```
+其中 bqc: 两位数，第一位=半场结果(3胜/1平/0负)，第二位=全场结果(3胜/1平/0负)
+例如: "31"=半场胜全场平, "33"=半场胜全场胜, "00"=半场负全场负"""
+
+    elif game_type == "进球彩":
+        return f"""你是专业足球预测分析师。请预测以下14场比赛的进球数。
+
+## 比赛列表
+{match_text}
+
+## 预测要求
+1. 请联网搜索每场比赛的球队近期进攻/防守数据
+2. 预测每场比赛主队和客队的进球数
+
+## 输出格式（严格JSON数组）:
+```json
+[
+  {{"match": "01", "zjq": "2", "analysis": "简要分析"}},
+  ...
+]
+```
+其中 zjq: 总进球数，"0"=0球, "1"=1球, "2"=2球, "3"=3球及以上"""
+
+    return ""
 
 
-def call_ai(ai_name, prompt):
-    """调用指定AI生成预测"""
+def call_ai_api(ai_name, prompt, timeout=120):
+    """调用单个AI的API"""
     config = AI_CONFIGS.get(ai_name)
     if not config:
-        raise Exception(f"未知AI: {ai_name}")
-
-    fmt = config["format"]
-
-    # 扣子走本地联网搜索
-    if fmt == "local":
-        return call_kouzi_local(prompt)
+        return None
 
     key = os.environ.get(config["key_env"], "")
     if not key:
-        raise Exception(f"{ai_name} API Key未配置 ({config['key_env']})")
+        print(f"  [{ai_name}] API Key未配置，跳过")
+        return None
 
-    rate_limit_kw = ["Arrearage", "Overdue", "quota", "QuotaExceeded", "insufficient",
-                     "SetLimitExceeded", "LimitExceeded", "ServerOverloaded",
-                     "RequestBurstTooFast", "RateLimitExceeded", "TooManyRequests", "429",
-                     "Payment Required"]
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": config["model"],
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 1000,
+    }
 
-    models_to_try = [config["model"]]
-    if config.get("fallback_models"):
-        models_to_try.extend(config["fallback_models"])
-
-    last_error = None
-    for i, model in enumerate(models_to_try):
-        try:
-            payload = {
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-                "max_tokens": config.get("max_tokens", 4000),
-            }
-
-            if fmt == "openai":
-                payload["model"] = model
-                resp = requests.post(
-                    config["url"],
-                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                    json=payload, timeout=90,
-                )
-            elif fmt == "minimax":
-                payload["model"] = model
-                resp = requests.post(
-                    config["url"],
-                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                    json=payload, timeout=90,
-                )
-            else:
-                raise Exception(f"未知格式: {fmt}")
-
-            resp.raise_for_status()
-            result = resp.json()
-
-            if fmt == "openai" or fmt == "minimax":
-                content = result["choices"][0]["message"]["content"]
-                if not content:
-                    raise Exception(f"{ai_name}返回空内容")
-            else:
-                content = str(result)
-
-            return parse_ai_response(content)
-
-        except Exception as e:
-            last_error = e
-            err_msg = str(e)
-            is_rate_limit = any(kw in err_msg for kw in rate_limit_kw)
-            if is_rate_limit and i < len(models_to_try) - 1:
-                print(f"  {ai_name} 模型 {model} 失败，切换 {models_to_try[i+1]}")
-                continue
-            else:
-                raise Exception(f"{ai_name} 调用失败: {last_error}")
-
-    raise Exception(f"{ai_name} 所有模型都失败: {last_error}")
+    try:
+        resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        error_str = str(e)
+        if any(kw in error_str for kw in RATE_LIMIT_KEYWORDS):
+            print(f"  [{ai_name}] 额度/限流: {error_str[:100]}")
+        else:
+            print(f"  [{ai_name}] 调用失败: {error_str[:100]}")
+        return None
 
 
-def generate_template_prediction(prompt):
-    """[已废弃] 扣子模板预测已替换为本地联网搜索"""
-    raise Exception("模板预测已废弃，扣子已替换为本地联网搜索")
+def parse_ct_response(text, game_type):
+    """解析AI返回的传统彩预测JSON"""
+    if not text:
+        return None
 
-
-def parse_ai_response(content):
-    """解析AI返回的JSON"""
-    json_match = re.search(r'\{[\s\S]*\}', content)
+    # 尝试提取JSON数组
+    json_match = re.search(r'```json\s*(\[.*?\])\s*```', text, re.DOTALL)
     if json_match:
         try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
+            return json.loads(json_match.group(1))
+        except:
             pass
-    return {"predictions": [], "ren9": [], "confidence": "低"}
+
+    json_match = re.search(r'\[\s*\{.*?\}\s*\]', text, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(0))
+        except:
+            pass
+
+    return None
+
+
+# ============ 数据库操作 ============
+
+def get_db():
+    return psycopg2.connect(DB_URL)
+
+
+def get_existing_predictions(issue, game_type):
+    """获取指定期号+类型已有的AI预测"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT ai_name FROM traditional_predictions WHERE issue = %s AND game_type = %s",
+        (issue, game_type)
+    )
+    existing = {row[0] for row in cur.fetchall()}
+    conn.close()
+    return existing
+
+
+def save_predictions(issue, game_type, matches, ai_name, predictions):
+    """保存预测到数据库"""
+    conn = get_db()
+    cur = conn.cursor()
+
+    # 构建 matches_info
+    matches_info = []
+    for m in matches:
+        matches_info.append({
+            'id': f'{issue}_{m["num"]}',
+            'num': m['num'],
+            'home': m['home'],
+            'away': m['away'],
+            'time': m['date'],
+            'issue': issue,
+            'league': m['league'],
+        })
+
+    # 检查是否已存在
+    cur.execute(
+        "SELECT id FROM traditional_predictions WHERE issue = %s AND game_type = %s AND ai_name = %s",
+        (issue, game_type, ai_name)
+    )
+    existing = cur.fetchone()
+
+    if existing:
+        cur.execute("""
+            UPDATE traditional_predictions
+            SET predictions = %s::jsonb, matches_info = %s::jsonb, created_at = NOW()
+            WHERE issue = %s AND game_type = %s AND ai_name = %s
+        """, (json.dumps(predictions, ensure_ascii=False),
+              json.dumps(matches_info, ensure_ascii=False),
+              issue, game_type, ai_name))
+    else:
+        cur.execute("""
+            INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, matches_info, created_at)
+            VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, NOW())
+        """, (game_type, ai_name, issue,
+              json.dumps(predictions, ensure_ascii=False),
+              json.dumps(matches_info, ensure_ascii=False)))
+
+    conn.commit()
+    conn.close()
 
 
 # ============ 主流程 ============
 
-def predict(game_type, force=False):
-    """为指定玩法生成7AI预测"""
-    print(f"\n=== 传统彩预测: {game_type} ===")
+def predict_issue(issue_data, game_types, force=False):
+    """对单期赛程进行7AI预测"""
+    issue = issue_data['issue']
+    matches = issue_data['matches']
 
-    # 从数据库读取比赛数据
-    print("从数据库读取比赛数据...")
-    matches, issue = fetch_matches_from_db(game_type)
-    if not matches:
-        return {"status": "error", "message": f"数据库中没有{game_type}的比赛数据，请先抓取赛程"}
+    print(f"\n{'='*50}")
+    print(f"第{issue}期预测 - {len(matches)}场比赛")
+    print(f"{'='*50}")
 
-    print(f"获取到 {len(matches)} 场比赛 (期号: {issue})")
-    prompt = build_prompt(matches, game_type, issue)
+    for m in matches:
+        print(f"  {m['num']} [{m['league']}] {m['home']} vs {m['away']} ({m['date']})")
 
-    results = []
-    for ai_name in AI_CONFIGS.keys():
-        print(f"调用 {ai_name}...")
-        try:
-            predictions = call_ai(ai_name, prompt)
-            pred_count = len(predictions.get("predictions", []))
-            if pred_count == 0:
-                print(f"  ⚠ {ai_name} 返回了空预测，跳过")
-                results.append({"ai_name": ai_name, "error": "AI返回空预测"})
+    results = {}
+
+    for game_type in game_types:
+        print(f"\n--- {game_type} ---")
+
+        existing = get_existing_predictions(issue, game_type) if not force else set()
+        prompt = build_ct_prompt(matches, game_type)
+
+        for ai_name in AI_NAMES:
+            if ai_name in existing:
+                print(f"  [{ai_name}] 已有预测，跳过")
                 continue
-            save_predictions(game_type, ai_name, predictions, matches)
-            results.append({
-                "ai_name": ai_name,
-                "predictions": predictions.get("predictions", []),
-                "ren9": predictions.get("ren9", []),
-                "confidence": predictions.get("confidence", "低"),
-            })
-            print(f"  ✓ {ai_name} 成功 ({pred_count}场预测)")
-        except Exception as e:
-            print(f"  ✗ {ai_name} 失败: {e}")
-            results.append({"ai_name": ai_name, "error": str(e)})
 
-    success_count = sum(1 for r in results if "error" not in r)
-    return {
-        "status": "success",
-        "game_type": game_type,
-        "issue": issue,
-        "match_count": len(matches),
-        "ai_success": success_count,
-        "ai_total": len(AI_CONFIGS),
-        "predictions": results,
-    }
+            if ai_name == "扣子":
+                # 扣子使用模板预测（不调API）
+                preds = generate_template(matches, game_type)
+                if preds:
+                    save_predictions(issue, game_type, matches, ai_name, preds)
+                    print(f"  [{ai_name}] 模板预测完成 ({len(preds)}场)")
+                continue
+
+            print(f"  [{ai_name}] 预测中...", end=' ', flush=True)
+            raw = call_ai_api(ai_name, prompt)
+
+            if raw:
+                parsed = parse_ct_response(raw, game_type)
+                if parsed and len(parsed) >= len(matches):
+                    save_predictions(issue, game_type, matches, ai_name, parsed)
+                    print(f"完成 ({len(parsed)}场)")
+                else:
+                    print(f"解析失败 (got {len(parsed) if parsed else 0} fields)")
+            else:
+                print("无响应")
+
+            time.sleep(1)
+
+    print(f"\n第{issue}期预测完成!")
+    return results
+
+
+def generate_template(matches, game_type):
+    """扣子模板预测 - 基于简单规则"""
+    preds = []
+    for m in matches:
+        if game_type == "胜负彩":
+            preds.append({"match": m['num'], "spf": "3", "analysis": "模板预测"})
+        elif game_type == "半全场":
+            preds.append({"match": m['num'], "bqc": "33", "analysis": "模板预测"})
+        elif game_type == "进球彩":
+            preds.append({"match": m['num'], "zjq": "2", "analysis": "模板预测"})
+    return preds
 
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="传统足彩7AI预测")
-    parser.add_argument("--game", choices=["胜负彩", "任9", "半全场", "进球彩"], default="胜负彩")
-    parser.add_argument("--force", action="store_true", help="强制刷新")
-    parser.add_argument("--get", action="store_true", help="获取已有预测")
+
+    parser = argparse.ArgumentParser(description='传统彩7AI预测')
+    parser.add_argument('--issue', type=str, help='指定期号')
+    parser.add_argument('--game', type=str, help='指定玩法(胜负彩/半全场/进球彩/全部)')
+    parser.add_argument('--force', action='store_true', help='强制覆盖已有预测')
+    parser.add_argument('--get', action='store_true', help='只抓取赛程不预测')
     args = parser.parse_args()
 
-    if args.get:
-        results = get_predictions(args.game)
-        print(json.dumps(results, ensure_ascii=False, indent=2))
+    if args.game and args.game != '全部':
+        game_types = [args.game]
     else:
-        result = predict(args.game, force=args.force)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        game_types = ['胜负彩', '半全场', '进球彩']
+
+    print(f"传统彩7AI预测")
+    print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"玩法: {', '.join(game_types)}")
+
+    # 抓取赛程
+    schedules = fetch_schedules()
+    if not schedules:
+        print("未抓取到赛程")
+        sys.exit(1)
+
+    # 过滤期号
+    if args.issue:
+        schedules = [s for s in schedules if s['issue'] == args.issue]
+        if not schedules:
+            print(f"未找到第{args.issue}期赛程")
+            sys.exit(1)
+
+    if args.get:
+        # 只输出赛程信息
+        output = {
+            'issues': [{'issue': s['issue'], 'matches': len(s['matches'])} for s in schedules]
+        }
+        print(json.dumps(output, ensure_ascii=False))
+        sys.exit(0)
+
+    # 逐期预测
+    for issue_data in schedules:
+        predict_issue(issue_data, game_types, force=args.force)
+
+    print("\n全部完成!")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
