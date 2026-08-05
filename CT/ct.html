@@ -158,16 +158,16 @@ a:hover{text-decoration:underline}
 <nav class="top-bar">
   <div class="logo">⚽ <i>传统足彩</i></div>
   <div class="nav-links">
-    <a href="/index.html">竞彩</a>
-    <a href="/ct.html" class="on">传统足彩</a>
-    <a href="/ai-hub.html">AI分析</a>
-    <a href="/ca.html">计算器</a>
+    <a href="index.html">竞彩</a>
+    <a href="ct.html" class="on">传统足彩</a>
+    <a href="ai.html">AI分析</a>
+    <a href="calc.html">计算器</a>
   </div>
 </nav>
 
 <!-- 面包屑 -->
 <div class="breadcrumb">
-  <a href="/">竞彩网</a> &gt; <a href="/ct.html">传统足彩</a> &gt; 传足计算器
+  <a href="/">竞彩网</a> &gt; <a href="ct.html">传统足彩</a> &gt; 传足计算器
 </div>
 
 <!-- 期号信息 -->
@@ -282,7 +282,7 @@ async function loadData(){
     rawData = j.data;
 
     // 提取所有期号（新→旧排序）
-    issues.sfc  = [...new Set(j.data.sfc.map(i=>i.issue))].filter(Boolean).sort().reverse();
+    issues.sfc  = [...new Set((j.data.sfc||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
     activeIssue.sfc = issues.sfc[0] || null; // 默认最新期
 
     // 整理 SFC（按期号过滤）
@@ -309,7 +309,7 @@ async function loadData(){
 
     // 更新顶部期号
     if(issues.sfc.length){
-      document.getElementById("issueNum").textContent = issues.sfc[0] + "期";
+      document.getElementById("issueNum").textContent = (issues.sfc[0] || "--") + "期";
     }
 
     // 计算截止时间
@@ -387,6 +387,13 @@ function calcDeadline(){
    渲染: 胜负游戏 / 任选9场
    ========================================================== */
 function renderSFC(){
+  if(!matches.sfc || !matches.sfc.length){
+    ["t-sfc","t-r9"].forEach(tid => {
+      const tbl = document.getElementById(tid);
+      if(tbl) tbl.querySelector("tbody").innerHTML = '<tr><td colspan="13" style="padding:30px;color:#556">暂无赛程数据，请先抓取赛程</td></tr>';
+    });
+    return;
+  }
   renderSFCTable("t-sfc", "sfc", matches.sfc, aiPreds.sfc, false);
   // 任9：显示所有比赛，但只有AI推荐的场次才显示预测
   renderSFCTable("t-r9", "r9", matches.sfc, aiPreds.sfc, true);
@@ -439,7 +446,11 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
    ========================================================== */
 function renderHTF(){
   const ms = matches.htf;
-  if(!ms || !ms.length) return;
+  if(!ms || !ms.length){
+    const tbl = document.getElementById("t-htf");
+    if(tbl) tbl.querySelector("tbody").innerHTML = '<tr><td colspan="15" style="padding:30px;color:#556">暂无赛程数据，请先抓取赛程</td></tr>';
+    return;
+  }
   const preds = aiPreds.htf || {};
   const ans = aiNames.htf;
 
@@ -496,7 +507,11 @@ function renderHTF(){
    ========================================================== */
 function renderJQC(){
   const ms = matches.jqc;
-  if(!ms || !ms.length) return;
+  if(!ms || !ms.length){
+    const tbl = document.getElementById("t-jqc");
+    if(tbl) tbl.querySelector("tbody").innerHTML = '<tr><td colspan="14" style="padding:30px;color:#556">暂无赛程数据，请先抓取赛程</td></tr>';
+    return;
+  }
   const preds = aiPreds.jqc || {};
   const ans = aiNames.jqc;
 
@@ -553,7 +568,7 @@ function renderJQC(){
 function renderSubBtns(tab){
   const iss = issues[tab];
   if(!iss || iss.length <= 1){
-    document.getElementById("subBtns").innerHTML = iss ? `<span class="sub-btn on">${iss[0]}期</span>` : "";
+    document.getElementById("subBtns").innerHTML = (iss && iss.length && iss[0]) ? `<span class="sub-btn on">${iss[0]}期</span>` : "";
     return;
   }
   let html = "";
@@ -570,7 +585,7 @@ function switchIssue(tab, issue){
   if(tab==="sfc"||tab==="r9"){
     matches.sfc = buildMatches(rawData.sfc, activeIssue.sfc);
     aiPreds.sfc = buildPreds(rawData.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
-    document.getElementById("issueNum").textContent = issue + "期";
+    document.getElementById("issueNum").textContent = (issue || "--") + "期";
     calcDeadline();
     renderSFC();
     renderRecs();
