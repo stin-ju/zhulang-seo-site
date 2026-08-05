@@ -447,8 +447,8 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
     // AI列
     ans.forEach(n => {
       let v = p[n] || "";
-      // 任9模式：只有AI推荐的场次才显示预测
-      if(isR9 && p._r9 && p._r9[n] === false) {
+      // 任9模式：只有AI推荐的场次才显示预测，未推荐的显示"-"
+      if(isR9 && p._r9 && !p._r9[n]) {
         v = "";
       }
       html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
