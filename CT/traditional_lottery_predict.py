@@ -459,6 +459,17 @@ def predict_issue(issue_data, game_types, force=False):
                 continue
 
             print(f"  [{ai_name}] 预测中...", end=' ', flush=True)
+            
+            # 扣子使用规则预测，不调用API
+            if ai_name == "扣子":
+                parsed = generate_template(matches, game_type)
+                if parsed:
+                    save_predictions(issue, game_type, matches, ai_name, parsed)
+                    print(f"完成 (规则预测，{len(parsed)}场)")
+                else:
+                    print("规则预测失败")
+                continue
+            
             raw = call_ai_api(ai_name, prompt)
 
             if raw:
@@ -478,25 +489,96 @@ def predict_issue(issue_data, game_types, force=False):
 
 
 def generate_template(matches, game_type):
-    """扣子模板预测 - 基于简单规则"""
+    """扣子规则预测 - 基于球队名称哈希生成多样化预测"""
+    import hashlib
+    
+    def get_hash_value(text):
+        """获取文本的哈希值（0-100）"""
+        return int(hashlib.md5(text.encode()).hexdigest(), 16) % 100
+    
+    def predict_spf(match):
+        """胜负彩预测：基于球队名称哈希"""
+        text = f"{match['home']}{match['away']}"
+        h = get_hash_value(text)
+        # 分布：45%主胜，30%平局，25%客胜
+        if h < 45:
+            return "3"  # 主胜
+        elif h < 75:
+            return "1"  # 平局
+        else:
+            return "0"  # 客胜
+    
+    def predict_bqc(match):
+        """半全场预测：基于球队名称哈希"""
+        text = f"{match['home']}{match['away']}half"
+        h = get_hash_value(text)
+        # 半场结果：3=主,1=平,0=客
+        # 全场结果：3=主,1=平,0=客
+        half = "3" if h < 40 else ("1" if h < 70 else "0")
+        full = "3" if h < 45 else ("1" if h < 75 else "0")
+        return half + full
+    
+    def predict_zjq(match):
+        """进球彩预测：基于球队名称哈希"""
+        text = f"{match['home']}{match['away']}goals"
+        h = get_hash_value(text)
+        # 进球数：0=0球,1=1球,2=2球,3=3+球
+        # 分布：15%0球,25%1球,35%2球,25%3+球
+        if h < 15:
+            return "0"
+        elif h < 40:
+            return "1"
+        elif h < 75:
+            return "2"
+        else:
+            return "3"
+    
     preds = []
     if game_type == "胜负彩":
-        # 前9场作为任9推荐
-        for i, m in enumerate(matches):
+        # 选择"最有把握"的9场作为任9推荐（哈希值接近边界的）
+        match_confidence = []
+        for m in matches:
+            text = f"{m['home']}{m['away']}"
+            h = get_hash_value(text)
+            # 置信度：距离边界越远越"有把握"
+            if h < 45:
+                conf = 45 - h  # 主胜置信度
+            elif h < 75:
+                conf = min(h - 45, 75 - h)  # 平局置信度
+            else:
+                conf = h - 75  # 客胜置信度
+            match_confidence.append((m, conf))
+        
+        # 按置信度排序，选前9场作为任9
+        match_confidence.sort(key=lambda x: -x[1])
+        r9_matches = set(m['num'] for m, _ in match_confidence[:9])
+        
+        for m in matches:
+            spf = predict_spf(m)
             preds.append({
                 "match": m['num'], 
-                "spf": "3", 
-                "analysis": "模板预测",
-                "r9": i < 9  # 前9场为true
+                "spf": spf, 
+                "analysis": f"规则预测-{m['home']}vs{m['away']}",
+                "r9": m['num'] in r9_matches
             })
     elif game_type == "半全场":
-        # 只预测前6场
+        # 预测前6场
         for m in matches[:6]:
-            preds.append({"match": m['num'], "bqc": "33", "analysis": "模板预测"})
+            bqc = predict_bqc(m)
+            preds.append({
+                "match": m['num'], 
+                "bqc": bqc, 
+                "analysis": f"规则预测-{m['home']}vs{m['away']}"
+            })
     elif game_type == "进球彩":
-        # 只预测前4场
+        # 预测前4场
         for m in matches[:4]:
-            preds.append({"match": m['num'], "zjq": "2", "analysis": "模板预测"})
+            zjq = predict_zjq(m)
+            preds.append({
+                "match": m['num'], 
+                "zjq": zjq, 
+                "analysis": f"规则预测-{m['home']}vs{m['away']}"
+            })
     return preds
 
 
