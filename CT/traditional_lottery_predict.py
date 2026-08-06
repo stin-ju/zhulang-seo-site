@@ -69,7 +69,8 @@ AI_CONFIGS = {
     "混元": {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
-        "model": "hy3-preview",
+        "key_default": "REMOVED",
+        "model": "hy-mt2-lite",
     },
     "扣子": {
         "url": "https://7hsjv6c4cn.coze.site/stream_run",
