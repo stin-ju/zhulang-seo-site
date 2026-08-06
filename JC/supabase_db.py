@@ -144,11 +144,19 @@ def get_predictions_by_match(match_id):
 
 
 def get_existing_ai_names(match_id):
-    """获取某场比赛已有的AI名称集合"""
+    """获取某场比赛已有的AI预测名称集合（返回AI_CONFIGS格式，即带AI-前缀）"""
     client = get_client()
     result = client.table("predictions").select("ai_name").eq("match_id", match_id).execute()
-    # 直接返回原始名称，不做任何转换
-    return {row["ai_name"] for row in result.data}
+    raw_names = {row["ai_name"] for row in result.data}
+    
+    # 数据库存的是无前缀名称（如"扣子（皮皮）"），转为AI_CONFIGS格式（如"AI-扣子（皮皮）"）
+    result_set = set()
+    for name in raw_names:
+        if not name.startswith("AI-"):
+            result_set.add("AI-" + name)
+        else:
+            result_set.add(name)
+    return result_set
 
 
 def insert_prediction(pred_data):

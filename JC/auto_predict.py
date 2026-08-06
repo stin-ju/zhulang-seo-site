@@ -782,18 +782,8 @@ def run_predict(sport="football"):
         else:
             prompt = build_football_prompt(match)
         
-        # 标准化比较：AI_CONFIGS的key有"AI-"前缀，数据库存储时去掉了前缀
-        # 需要将AI_CONFIGS的key也去掉前缀后再比较
-        existing_normalized = set()
-        for name in existing:
-            existing_normalized.add(name)
-            # 如果数据库里有"AI-"前缀，也加上无前缀版本
-            if name.startswith("AI-"):
-                existing_normalized.add(name[3:])
-            # 同时加上有前缀版本
-            existing_normalized.add(f"AI-{name}")
-        
-        missing_ais = [ai for ai in AI_CONFIGS if ai not in existing_normalized]
+        # get_existing_ai_names 现在返回带 "AI-" 前缀的名称，与 AI_CONFIGS 的 key 格式一致
+        missing_ais = [ai for ai in AI_CONFIGS if ai not in existing]
         if not missing_ais:
             continue
         
