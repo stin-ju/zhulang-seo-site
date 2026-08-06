@@ -40,42 +40,44 @@ HEADERS = [
 
 AI_NAMES = ["扣子", "豆包", "文心", "混元", "DeepSeek", "智谱清言", "MiniMax"]
 
-# 每个AI配置多个备用模型，按优先级排序，主模型失败时自动切换
 AI_CONFIGS = {
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
         "key_env": "DEEPSEEK_API_KEY",
-        "models": ["deepseek-chat", "deepseek-chat-v2"],
+        "model": "deepseek-chat",
     },
     "MiniMax": {
         "url": "https://api.minimax.chat/v1/text/chatcompletion_v2",
         "key_env": "MINIMAX_API_KEY",
-        "models": ["MiniMax-Text-01", "abab6.5s-chat"],
+        "model": "MiniMax-Text-01",
     },
     "豆包": {
         "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         "key_env": "DOUBAO_API_KEY",
-        "models": ["doubao-seed-2-0-mini-260428", "doubao-seed-1-6-lite-32k-250428"],
+        "model": "doubao-seed-2-0-mini-260428",
     },
     "智谱清言": {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "key_env": "ZHIPU_API_KEY",
-        "models": ["glm-4-flash", "glm-4-air", "glm-4-flashx"],
+        "model": "glm-4-flash",
     },
     "文心": {
         "url": "https://qianfan.baidubce.com/v2/chat/completions",
         "key_env": "WENXIN_API_KEY",
-        "models": ["ernie-4.0-8k-latest", "ernie-3.5-8k", "ernie-speed-8k"],
+        "model": "ernie-4.0-8k-latest",
     },
     "混元": {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
-        "models": ["hunyuan-lite", "hunyuan-turbo", "hunyuan-standard"],
+        "model": "hy3-preview",
     },
     "扣子": {
-        "url": "https://api.coze.cn/v3/chat/completions",
-        "key_env": "COZE_API_KEY",
-        "models": ["doubao-seed-2-0-mini-260428", "deepseek-v3"],
+        "url": "https://7hsjv6c4cn.coze.site/stream_run",
+        "key_env": "COZE_PROJECT_API_TOKEN",
+        "key_default": "REMOVED",
+        "model": None,
+        "format": "coze_code",
+        "project_id": 7667164681706078217,
     },
 }
 
@@ -238,26 +240,22 @@ def build_ct_prompt(matches, game_type="胜负彩"):
 1. 请联网搜索每场比赛的球队近期状态、历史交锋、伤停信息
 2. 综合考虑实力、状态、主客场等因素
 3. 每场给出最可能的单一结果（胜/平/负）
-4. 同时从14场中选出你认为最有把握的9场作为任9推荐
 
 ## 输出格式（严格JSON数组，不要输出其他内容）:
 ```json
 [
-  {{"match": "01", "spf": "3", "analysis": "简要分析", "r9": true}},
-  {{"match": "02", "spf": "1", "analysis": "...", "r9": false}},
+  {{"match": "01", "spf": "3", "analysis": "简要分析"}},
+  {{"match": "02", "spf": "1", "analysis": "..."}},
   ...
 ]
 ```
-其中 spf: "3"=胜, "1"=平, "0"=负
-r9: true表示这场比赛入选你的任9推荐（必须恰好9场为true）"""
+其中 spf: "3"=胜, "1"=平, "0"=负"""
 
     elif game_type == "半全场":
-        return f"""你是专业足球预测分析师。请预测以下6场半全场比赛的半全场结果。
+        return f"""你是专业足球预测分析师。请预测以下14场比赛的半全场结果。
 
 ## 比赛列表
 {match_text}
-
-注意：只预测前6场比赛（01-06）
 
 ## 预测要求
 1. 请联网搜索每场比赛的球队近期状态
@@ -274,12 +272,10 @@ r9: true表示这场比赛入选你的任9推荐（必须恰好9场为true）"""
 例如: "31"=半场胜全场平, "33"=半场胜全场胜, "00"=半场负全场负"""
 
     elif game_type == "进球彩":
-        return f"""你是专业足球预测分析师。请预测以下4场比赛的进球数。
+        return f"""你是专业足球预测分析师。请预测以下14场比赛的进球数。
 
 ## 比赛列表
 {match_text}
-
-注意：只预测前4场比赛（01-04）
 
 ## 预测要求
 1. 请联网搜索每场比赛的球队近期进攻/防守数据
@@ -297,11 +293,120 @@ r9: true表示这场比赛入选你的任9推荐（必须恰好9场为true）"""
     return ""
 
 
+def call_coze_code(url, token, prompt, project_id=None):
+    """调用扣子编程（Coze Code）项目部署的API端点
+    官方文档: https://docs.coze.cn/dev_how_to_guides_qeesmmos
+    请求格式:
+    {
+      "content": {"query": {"prompt": [{"type": "text", "content": {"text": "..."}}]}},
+      "type": "query",
+      "session_id": "...",
+      "project_id": 7667164681706078217
+    }
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "content": {
+            "query": {
+                "prompt": [
+                    {
+                        "type": "text",
+                        "content": {
+                            "text": prompt,
+                        },
+                    }
+                ],
+            },
+        },
+        "type": "query",
+        "session_id": f"ct_predict_{int(time.time())}",
+    }
+    if project_id:
+        payload["project_id"] = project_id
+
+    print(f"  [扣子API] 请求URL: {url}")
+    print(f"  [扣子API] project_id: {project_id}")
+
+    resp = requests.post(url, headers=headers, json=payload, timeout=120)
+
+    # 详细记录错误信息
+    if resp.status_code != 200:
+        error_body = resp.text[:500]
+        print(f"  [扣子API] HTTP {resp.status_code}: {error_body}")
+        resp.raise_for_status()
+
+    content_type = resp.headers.get("Content-Type", "")
+    print(f"  [扣子API] 响应Content-Type: {content_type}")
+
+    # 尝试JSON响应
+    if "json" in content_type:
+        data = resp.json()
+        print(f"  [扣子API] JSON响应keys: {list(data.keys()) if isinstance(data, dict) else 'not dict'}")
+        if isinstance(data, dict):
+            if "data" in data and isinstance(data["data"], dict):
+                messages = data["data"].get("messages", [])
+                for msg in reversed(messages):
+                    if msg.get("role") == "assistant" and msg.get("content"):
+                        return msg["content"]
+            if "messages" in data:
+                for msg in reversed(data["messages"]):
+                    if msg.get("role") == "assistant" and msg.get("content"):
+                        return msg["content"]
+            if "result" in data:
+                return str(data["result"])
+            if "text" in data:
+                return str(data["text"])
+        return json.dumps(data, ensure_ascii=False)
+
+    # SSE流式响应：收集所有answer分片并拼接
+    answer_chunks = []
+    for line in resp.iter_lines(decode_unicode=True):
+        if not line:
+            continue
+        if line.startswith("data:"):
+            line = line[5:].strip()
+            if not line:
+                continue
+            try:
+                evt = json.loads(line)
+                if isinstance(evt, dict):
+                    evt_type = evt.get("type", "")
+                    if evt_type == "answer":
+                        content = evt.get("content", {})
+                        if isinstance(content, dict):
+                            chunk = content.get("answer")
+                            if chunk:
+                                answer_chunks.append(chunk)
+            except json.JSONDecodeError:
+                pass
+    if answer_chunks:
+        full_answer = "".join(answer_chunks)
+        print(f"  [扣子API] SSE拼接完成，回答长度: {len(full_answer)}")
+        return full_answer
+
+    # 回退：直接返回原始文本
+    print(f"  [扣子API] 回退返回原始文本，长度: {len(resp.text)}")
+    return resp.text
+
+
 def call_ai_api(ai_name, prompt, timeout=120):
-    """调用单个AI的API，自动切换备用模型"""
+    """调用单个AI的API"""
     config = AI_CONFIGS.get(ai_name)
     if not config:
         return None
+
+    fmt = config.get("format", "openai")
+
+    # 扣子走Coze Code API
+    if fmt == "coze_code":
+        token = os.environ.get(config.get("key_env", ""), "") or config.get("key_default", "")
+        if not token:
+            print(f"  [{ai_name}] API Token未配置")
+            return None
+        return call_coze_code(config["url"], token, prompt, config.get("project_id"))
 
     key = os.environ.get(config["key_env"], "")
     if not key:
@@ -312,36 +417,25 @@ def call_ai_api(ai_name, prompt, timeout=120):
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
+    payload = {
+        "model": config["model"],
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 1000,
+    }
 
-    # 尝试每个模型，直到成功或全部失败
-    models = config.get("models", [config.get("model", "")])
-    last_error = None
-    
-    for model in models:
-        payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-            "max_tokens": 1000,
-        }
-
-        try:
-            resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            last_error = str(e)
-            error_str = last_error
-            if any(kw in error_str for kw in RATE_LIMIT_KEYWORDS):
-                print(f"  [{ai_name}] {model} 额度/限流，切换备用模型...")
-            else:
-                print(f"  [{ai_name}] {model} 调用失败，切换备用模型...")
-            continue
-    
-    # 所有模型都失败
-    print(f"  [{ai_name}] 所有模型均失败: {last_error[:100] if last_error else '未知错误'}")
-    return None
+    try:
+        resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        error_str = str(e)
+        if any(kw in error_str for kw in RATE_LIMIT_KEYWORDS):
+            print(f"  [{ai_name}] 额度/限流: {error_str[:100]}")
+        else:
+            print(f"  [{ai_name}] 调用失败: {error_str[:100]}")
+        return None
 
 
 def parse_ct_response(text, game_type):
@@ -459,17 +553,6 @@ def predict_issue(issue_data, game_types, force=False):
                 continue
 
             print(f"  [{ai_name}] 预测中...", end=' ', flush=True)
-            
-            # 扣子使用规则预测，不调用API
-            if ai_name == "扣子":
-                parsed = generate_template(matches, game_type)
-                if parsed:
-                    save_predictions(issue, game_type, matches, ai_name, parsed)
-                    print(f"完成 (规则预测，{len(parsed)}场)")
-                else:
-                    print("规则预测失败")
-                continue
-            
             raw = call_ai_api(ai_name, prompt)
 
             if raw:
@@ -487,99 +570,6 @@ def predict_issue(issue_data, game_types, force=False):
     print(f"\n第{issue}期预测完成!")
     return results
 
-
-def generate_template(matches, game_type):
-    """扣子规则预测 - 基于球队名称哈希生成多样化预测"""
-    import hashlib
-    
-    def get_hash_value(text):
-        """获取文本的哈希值（0-100）"""
-        return int(hashlib.md5(text.encode()).hexdigest(), 16) % 100
-    
-    def predict_spf(match):
-        """胜负彩预测：基于球队名称哈希"""
-        text = f"{match['home']}{match['away']}"
-        h = get_hash_value(text)
-        # 分布：45%主胜，30%平局，25%客胜
-        if h < 45:
-            return "3"  # 主胜
-        elif h < 75:
-            return "1"  # 平局
-        else:
-            return "0"  # 客胜
-    
-    def predict_bqc(match):
-        """半全场预测：基于球队名称哈希"""
-        text = f"{match['home']}{match['away']}half"
-        h = get_hash_value(text)
-        # 半场结果：3=主,1=平,0=客
-        # 全场结果：3=主,1=平,0=客
-        half = "3" if h < 40 else ("1" if h < 70 else "0")
-        full = "3" if h < 45 else ("1" if h < 75 else "0")
-        return half + full
-    
-    def predict_zjq(match):
-        """进球彩预测：基于球队名称哈希"""
-        text = f"{match['home']}{match['away']}goals"
-        h = get_hash_value(text)
-        # 进球数：0=0球,1=1球,2=2球,3=3+球
-        # 分布：15%0球,25%1球,35%2球,25%3+球
-        if h < 15:
-            return "0"
-        elif h < 40:
-            return "1"
-        elif h < 75:
-            return "2"
-        else:
-            return "3"
-    
-    preds = []
-    if game_type == "胜负彩":
-        # 选择"最有把握"的9场作为任9推荐（哈希值接近边界的）
-        match_confidence = []
-        for m in matches:
-            text = f"{m['home']}{m['away']}"
-            h = get_hash_value(text)
-            # 置信度：距离边界越远越"有把握"
-            if h < 45:
-                conf = 45 - h  # 主胜置信度
-            elif h < 75:
-                conf = min(h - 45, 75 - h)  # 平局置信度
-            else:
-                conf = h - 75  # 客胜置信度
-            match_confidence.append((m, conf))
-        
-        # 按置信度排序，选前9场作为任9
-        match_confidence.sort(key=lambda x: -x[1])
-        r9_matches = set(m['num'] for m, _ in match_confidence[:9])
-        
-        for m in matches:
-            spf = predict_spf(m)
-            preds.append({
-                "match": m['num'], 
-                "spf": spf, 
-                "analysis": f"规则预测-{m['home']}vs{m['away']}",
-                "r9": m['num'] in r9_matches
-            })
-    elif game_type == "半全场":
-        # 预测前6场
-        for m in matches[:6]:
-            bqc = predict_bqc(m)
-            preds.append({
-                "match": m['num'], 
-                "bqc": bqc, 
-                "analysis": f"规则预测-{m['home']}vs{m['away']}"
-            })
-    elif game_type == "进球彩":
-        # 预测前4场
-        for m in matches[:4]:
-            zjq = predict_zjq(m)
-            preds.append({
-                "match": m['num'], 
-                "zjq": zjq, 
-                "analysis": f"规则预测-{m['home']}vs{m['away']}"
-            })
-    return preds
 
 
 def main():
