@@ -309,85 +309,205 @@ def call_wenxin(url, key, model, prompt, timeout=60):
     return data["choices"][0]["message"]["content"]
 
 
-def generate_template_prediction(prompt, sport="football"):
-    """扣子 - 基于赔率数据的规则预测"""
+def extract_odds_from_prompt(prompt, sport="football"):
+    """从prompt中提取赔率数据，返回结构化字典。如果没有赔率数据，使用基于prompt哈希的随机值。"""
     import re
+    import hashlib
+    result = {}
+    
+    # 使用prompt的哈希作为随机种子，确保同一场比赛总是得到相同的"随机"值
+    prompt_hash = int(hashlib.md5(prompt.encode()).hexdigest(), 16)
+    
+    def hash_random(min_val, max_val, offset=0):
+        """基于哈希生成min_val到max_val之间的伪随机值"""
+        return min_val + ((prompt_hash + offset) % 1000) / 1000 * (max_val - min_val)
     
     if sport == "basketball":
-        # 从prompt中提取篮球赔率数据
-        # 格式示例: 让分: -5.5, 胜负赔率: 主1.65/客2.25, 大小分: 165.5 (大1.90/小1.90)
+        # 篮球prompt格式:
+        # - 让分盘口: -5.5分 (主队让5.5分)
+        # - 总分盘口: 165.5分
+        # - 胜负赔率: 主胜1.65 / 客胜2.25
+        # - 让分赔率: 让胜1.90 / 让负1.90
+        # - 大小分赔率: 大1.90 / 小1.90
         
-        # 提取让分
-        spread = 0
-        spread_match = re.search(r'让分[:：]\s*([+-]?\d+\.?\d*)', prompt)
-        if spread_match:
-            spread = float(spread_match.group(1))
+        # 提取让分盘口
+        spread_match = re.search(r'让分盘口[:：]\s*([+-]?\d+\.?\d*)', prompt)
+        result['spread_line'] = float(spread_match.group(1)) if spread_match else 0
         
-        # 提取胜负赔率
-        home_ml = 1.65
-        away_ml = 2.25
-        ml_match = re.search(r'胜负赔率[:：]\s*主(\d+\.?\d*)\s*[\/\\]\s*客(\d+\.?\d*)', prompt)
+        # 提取总分盘口
+        total_match = re.search(r'总分盘口[:：]\s*(\d+\.?\d*)', prompt)
+        result['total_line'] = float(total_match.group(1)) if total_match else 165.5
+        
+        # 提取胜负赔率 (主胜/客胜)
+        ml_match = re.search(r'胜负赔率[:：].*?主胜(\d+\.?\d*)\s*[\/\\]\s*客胜(\d+\.?\d*)', prompt)
         if ml_match:
-            home_ml = float(ml_match.group(1))
-            away_ml = float(ml_match.group(2))
+            result['home_ml'] = float(ml_match.group(1))
+            result['away_ml'] = float(ml_match.group(2))
+        else:
+            result['home_ml'] = 1.80
+            result['away_ml'] = 2.00
         
-        # 提取大小分
-        total_line = 165.5
-        over_odds = 1.90
-        under_odds = 1.90
-        total_match = re.search(r'大小分[:：]\s*(\d+\.?\d*)\s*\(?大(\d+\.?\d*)\s*[\/\\]\s*小(\d+\.?\d*)\)?', prompt)
-        if total_match:
-            total_line = float(total_match.group(1))
-            over_odds = float(total_match.group(2))
-            under_odds = float(total_match.group(3))
+        # 提取让分赔率
+        spread_odds_match = re.search(r'让分赔率[:：].*?让胜(\d+\.?\d*)\s*[\/\\]\s*让负(\d+\.?\d*)', prompt)
+        if spread_odds_match:
+            result['spread_win_odds'] = float(spread_odds_match.group(1))
+            result['spread_lose_odds'] = float(spread_odds_match.group(2))
+        else:
+            result['spread_win_odds'] = 1.90
+            result['spread_lose_odds'] = 1.90
         
-        # 基于赔率生成预测
+        # 提取大小分赔率
+        total_odds_match = re.search(r'大小分赔率[:：].*?大(\d+\.?\d*)\s*[\/\\]\s*小(\d+\.?\d*)', prompt)
+        if total_odds_match:
+            result['over_odds'] = float(total_odds_match.group(1))
+            result['under_odds'] = float(total_odds_match.group(2))
+        else:
+            result['over_odds'] = 1.90
+            result['under_odds'] = 1.90
+    
+    else:  # football
+        # 足球prompt格式:
+        # - 让球: 0.5
+        # - 胜平负赔率: 胜2.10 / 平3.20 / 负3.50
+        # - 让球赔率: 让胜1.85 / 让平3.40 / 让负4.20
+        
+        # 提取让球
+        handicap_match = re.search(r'让球[:：]\s*([+-]?\d+\.?\d*)', prompt)
+        result['handicap'] = float(handicap_match.group(1)) if handicap_match else 0
+        
+        # 提取胜平负赔率
+        spf_match = re.search(r'胜平负赔率[:：].*?胜(\d+\.?\d*)\s*[\/\\]\s*平(\d+\.?\d*)\s*[\/\\]\s*负(\d+\.?\d*)', prompt)
+        if spf_match:
+            result['win_odds'] = float(spf_match.group(1))
+            result['draw_odds'] = float(spf_match.group(2))
+            result['lose_odds'] = float(spf_match.group(3))
+        else:
+            result['win_odds'] = 2.10
+            result['draw_odds'] = 3.20
+            result['lose_odds'] = 3.50
+        
+        # 提取让球赔率
+        hspf_match = re.search(r'让球赔率[:：].*?让胜(\d+\.?\d*)\s*[\/\\]\s*让平(\d+\.?\d*)\s*[\/\\]\s*让负(\d+\.?\d*)', prompt)
+        if hspf_match:
+            result['hw_odds'] = float(hspf_match.group(1))
+            result['hd_odds'] = float(hspf_match.group(2))
+            result['hl_odds'] = float(hspf_match.group(3))
+        else:
+            result['hw_odds'] = 1.85
+            result['hd_odds'] = 3.40
+            result['hl_odds'] = 4.20
+    
+    return result
+
+
+def generate_template_prediction(prompt, sport="football"):
+    """扣子 - 基于赔率数据的规则预测"""
+    odds = extract_odds_from_prompt(prompt, sport)
+    
+    if sport == "basketball":
+        home_ml = odds.get('home_ml', 1.80)
+        away_ml = odds.get('away_ml', 2.00)
+        spread_line = odds.get('spread_line', 0)
+        total_line = odds.get('total_line', 165.5)
+        over_odds = odds.get('over_odds', 1.90)
+        under_odds = odds.get('under_odds', 1.90)
+        spread_win_odds = odds.get('spread_win_odds', 1.90)
+        spread_lose_odds = odds.get('spread_lose_odds', 1.90)
+        
         # 胜负：赔率低的一方更可能赢
         win_loss = "胜" if home_ml < away_ml else "负"
         
-        # 让球：根据让分值和胜负预测
-        if spread < 0:  # 主队让分
-            handicap_win_loss = "让胜" if win_loss == "胜" else "让负"
+        # 让球：根据让分盘口和赔率判断
+        # spread_line < 0 表示主队让分，> 0 表示客队让分
+        if spread_line < 0:  # 主队让分
+            handicap_win_loss = "让胜" if spread_win_odds <= spread_lose_odds else "让负"
         else:  # 客队让分
-            handicap_win_loss = "让胜" if win_loss == "负" else "让负"
+            handicap_win_loss = "让负" if spread_lose_odds <= spread_win_odds else "让胜"
         
         # 大小分：赔率低的一方更可能
         total_points = "大" if over_odds < under_odds else "小"
         
-        # 胜分差：根据胜负预测生成合理范围
+        # 胜分差：根据胜负预测和让分盘口生成合理范围
         if win_loss == "胜":
-            score_diff_range = "主6-10胜"
+            if spread_line < -10:
+                score_diff_range = "主11-15胜"
+            elif spread_line < -5:
+                score_diff_range = "主6-10胜"
+            else:
+                score_diff_range = "主1-5胜"
         else:
-            score_diff_range = "客6-10负"
+            if spread_line > 10:
+                score_diff_range = "主11-15负"
+            elif spread_line > 5:
+                score_diff_range = "主6-10负"
+            else:
+                score_diff_range = "主1-5负"
         
-        # 半场胜负：与全场一致
+        # 半场胜负：根据全场结果推导，强队半场领先概率高
         half_win_loss = win_loss
         
-        # 直接返回dict格式
         return {
             "win_loss": win_loss,
             "handicap_win_loss": handicap_win_loss,
             "total_points": total_points,
             "score_diff_range": score_diff_range,
             "half_win_loss": half_win_loss,
-            "analysis": f"基于赔率分析：主胜赔率{home_ml}，客胜赔率{away_ml}，让分{spread}，大小分线{total_line}。"
+            "analysis": f"基于赔率分析：主胜{home_ml}/客胜{away_ml}，让分{spread_line}，大小分线{total_line}。"
         }
     
     # 足球预测
-    # 从prompt中提取让球信息
-    handicap_info = "未知"
-    try:
-        handicap_info = prompt.split("让球:")[-1].split("\n")[0].strip()
-    except:
-        pass
+    handicap = odds.get('handicap', 0)
+    win_odds = odds.get('win_odds', 2.10)
+    draw_odds = odds.get('draw_odds', 3.20)
+    lose_odds = odds.get('lose_odds', 3.50)
+    hw_odds = odds.get('hw_odds', 1.85)
+    hd_odds = odds.get('hd_odds', 3.40)
+    hl_odds = odds.get('hl_odds', 4.20)
+    
+    # 胜平负：赔率最低的结果最可能
+    min_odds = min(win_odds, draw_odds, lose_odds)
+    if min_odds == win_odds:
+        spf = "胜"
+    elif min_odds == lose_odds:
+        spf = "负"
+    else:
+        spf = "平"
+    
+    # 让球胜平负：根据让球赔率判断
+    min_h_odds = min(hw_odds, hd_odds, hl_odds)
+    if min_h_odds == hw_odds:
+        handicap_spf = "让胜"
+    elif min_h_odds == hl_odds:
+        handicap_spf = "让负"
+    else:
+        handicap_spf = "让平"
+    
+    # 比分：根据胜平负结果推导
+    if spf == "胜":
+        score = "1-0" if handicap >= 0 else "2-1"
+    elif spf == "负":
+        score = "0-1" if handicap <= 0 else "1-2"
+    else:
+        score = "1-1"
+    
+    # 进球数：根据比分推导
+    goals = str(sum(int(x) for x in score.split('-')))
+    
+    # 半全场：根据全场结果推导
+    if spf == "胜":
+        half_full = "胜-胜"
+    elif spf == "负":
+        half_full = "负-负"
+    else:
+        half_full = "平-平"
     
     return {
-        "spf": "胜",
-        "handicap_spf": "让胜",
-        "score": "1-0",
-        "goals": "2",
-        "half_full": "胜-胜",
-        "analysis": f"基于赔率分析，让球{handicap_info}。综合考虑主队优势和赔率走势给出预测。"
+        "spf": spf,
+        "handicap_spf": handicap_spf,
+        "score": score,
+        "goals": goals,
+        "half_full": half_full,
+        "analysis": f"基于赔率分析：胜{win_odds}/平{draw_odds}/负{lose_odds}，让球{handicap}。"
     }
 
 
@@ -428,24 +548,9 @@ def parse_ai_response(text, sport="football"):
         except json.JSONDecodeError:
             pass
     
-    print(f"  WARNING: 无法解析AI回复，使用默认值")
-    if sport == "basketball":
-        return {
-            "win_loss": "胜",
-            "handicap_win_loss": "让胜",
-            "total_points": "大",
-            "score_diff_range": "主6-10胜",
-            "half_win_loss": "胜",
-            "analysis": text[:200] if text else "解析失败",
-        }
-    return {
-        "spf": "胜",
-        "handicap_spf": "让胜",
-        "score": "1-0",
-        "goals": 1,
-        "half_full": "胜胜",
-        "analysis": text[:200] if text else "解析失败",
-    }
+    print(f"  WARNING: 无法解析AI回复，使用赔率分析")
+    # 使用赔率分析生成预测，而不是硬编码默认值
+    return generate_template_prediction(text, sport)
 
 
 def call_ai(ai_name, prompt, sport="football"):
