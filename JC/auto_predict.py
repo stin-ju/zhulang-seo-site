@@ -77,7 +77,7 @@ AI_CONFIGS = {
         "format": "openai",
         "fallback_models": ["hy-mt2-lite"],
     },
-    "AI-扣子（皮皮）": {
+    "AI-扣子": {
         "url": None,
         "key_env": None,
         "model": None,
@@ -310,7 +310,7 @@ def call_wenxin(url, key, model, prompt, timeout=60):
 
 
 def generate_template_prediction(prompt, sport="football"):
-    """扣子(皮皮) - 基于赔率数据的规则预测"""
+    """扣子 - 基于赔率数据的规则预测"""
     import re
     
     if sport == "basketball":
