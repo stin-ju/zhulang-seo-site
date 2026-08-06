@@ -848,9 +848,9 @@ function renderAILogos() {
 }
 
 // ============================================================
-// 初始化
+// 初始化（支持bfcache恢复）
 // ============================================================
-document.addEventListener('DOMContentLoaded', async () => {
+async function init() {
     // 先加载AI数据，再渲染Logo
     try {
         state.aiStats = await fetchAIStats();
@@ -859,22 +859,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     renderAILogos();
     loadAll();
-});
+}
 
-// 处理从bfcache恢复的情况（如从CT页面返回）
+// 首次加载
+document.addEventListener('DOMContentLoaded', init);
+
+// bfcache恢复时重新加载（从其他页面返回时）
 window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
-        // 页面从bfcache恢复，重新加载数据
-        console.log('页面从bfcache恢复，重新加载数据');
-        loadAll();
-    }
-});
-
-// 处理页面可见性变化（如从其他标签页切换回来）
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && state.matches.length === 0) {
-        // 页面变为可见且数据为空，重新加载
-        console.log('页面变为可见，数据为空，重新加载');
-        loadAll();
+        // 页面从bfcache恢复，重新初始化
+        console.log('[PageShow] 从bfcache恢复，重新加载数据');
+        init();
     }
 });
