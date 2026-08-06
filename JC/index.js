@@ -860,3 +860,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAILogos();
     loadAll();
 });
+
+// 处理从bfcache恢复的情况（如从CT页面返回）
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        // 页面从bfcache恢复，重新加载数据
+        console.log('页面从bfcache恢复，重新加载数据');
+        loadAll();
+    }
+});
+
+// 处理页面可见性变化（如从其他标签页切换回来）
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.matches.length === 0) {
+        // 页面变为可见且数据为空，重新加载
+        console.log('页面变为可见，数据为空，重新加载');
+        loadAll();
+    }
+});
