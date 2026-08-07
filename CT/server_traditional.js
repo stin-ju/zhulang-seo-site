@@ -135,10 +135,12 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         const issue = row.issue || m.issue || '';
         const matchId = m.id || `${issue}_${matchNum}`;
 
+        // 统一的matchNum处理（去除前导零）
+        const matchNumStripped = String(matchNum).replace(/^0+/, '') || '0';
+
         // 获取该场比赛的预测（兼容 "1" 和 "01" 两种格式）
         let prediction = null;
         if (Array.isArray(predictionsArr)) {
-          const matchNumStripped = String(matchNum).replace(/^0+/, '') || '0';
           const pred = predictionsArr.find(p => {
             const pMatch = String(p.match).replace(/^0+/, '') || '0';
             return pMatch === matchNumStripped;
@@ -147,7 +149,6 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         }
 
         // 判断该场是否在任9推荐中
-        const matchNumStripped = String(matchNum).replace(/^0+/, '') || '0';
         const isR9 = ren9Set.size > 0 ? ren9Set.has(matchNumStripped) : false;
 
         responseData[frontendKey].push({
