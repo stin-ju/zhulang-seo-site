@@ -245,12 +245,12 @@ def build_ct_prompt(matches, game_type="胜负彩"):
 ## 输出格式（严格JSON数组，不要输出其他内容）:
 ```json
 [
-  {{"match": "01", "spf": "3", "analysis": "简要分析"}},
-  {{"match": "02", "spf": "1", "analysis": "..."}},
+  {{"match": "01", "spf": "3", "analysis": "简要分析", "intelligence": {{"home_recent_form": "主队近况", "away_recent_form": "客队近况", "head_to_head": "交锋记录", "home_injuries": "主队伤停", "away_injuries": "客队伤停", "league_position": "联赛排名", "key_factors": "关键因素"}}}},
   ...
 ]
 ```
-其中 spf: "3"=胜, "1"=平, "0"=负"""
+其中 spf: "3"=胜, "1"=平, "0"=负
+**重要**：intelligence字段必须通过联网搜索填写真实数据，每个字段都要有具体内容。"""
 
     elif game_type == "半全场":
         return f"""你是专业足球预测分析师。请预测以下14场比赛的半全场结果。
@@ -481,6 +481,29 @@ def get_existing_predictions(issue, game_type):
     return existing
 
 
+def generate_ren9(predictions):
+    """根据预测结果生成任9推荐（选9场最有把握的）
+    策略：优先选非平局场次（主胜/客胜更有把握），不足9场再用平局补齐
+    """
+    non_draws = []  # 非平局场次 (spf=0或2)
+    draws = []      # 平局场次 (spf=1)
+    
+    for p in predictions:
+        spf = str(p.get('spf', ''))
+        match_num = str(p.get('match', '')).lstrip('0') or '0'
+        if spf in ('0', '2', '3'):  # 客胜或主胜
+            non_draws.append(match_num)
+        else:
+            draws.append(match_num)
+    
+    # 优先选非平局，不足9场用平局补齐
+    ren9 = non_draws[:9]
+    if len(ren9) < 9:
+        ren9.extend(draws[:9 - len(ren9)])
+    
+    return ren9[:9]
+
+
 def save_predictions(issue, game_type, matches, ai_name, predictions):
     """保存预测到数据库"""
     conn = get_db()
@@ -499,6 +522,12 @@ def save_predictions(issue, game_type, matches, ai_name, predictions):
             'league': m['league'],
         })
 
+    # 生成任9推荐（仅胜负彩）
+    ren9_json = None
+    if game_type == '胜负彩':
+        ren9_picks = generate_ren9(predictions)
+        ren9_json = json.dumps(ren9_picks, ensure_ascii=False)
+
     # 检查是否已存在
     cur.execute(
         "SELECT id FROM traditional_predictions WHERE issue = %s AND game_type = %s AND ai_name = %s",
@@ -507,23 +536,134 @@ def save_predictions(issue, game_type, matches, ai_name, predictions):
     existing = cur.fetchone()
 
     if existing:
-        cur.execute("""
-            UPDATE traditional_predictions
-            SET predictions = %s::jsonb, matches_info = %s::jsonb, created_at = NOW()
-            WHERE issue = %s AND game_type = %s AND ai_name = %s
-        """, (json.dumps(predictions, ensure_ascii=False),
-              json.dumps(matches_info, ensure_ascii=False),
-              issue, game_type, ai_name))
+        if ren9_json is not None:
+            cur.execute("""
+                UPDATE traditional_predictions
+                SET predictions = %s::jsonb, matches_info = %s::jsonb, ren9 = %s::jsonb, created_at = NOW()
+                WHERE issue = %s AND game_type = %s AND ai_name = %s
+            """, (json.dumps(predictions, ensure_ascii=False),
+                  json.dumps(matches_info, ensure_ascii=False),
+                  ren9_json,
+                  issue, game_type, ai_name))
+        else:
+            cur.execute("""
+                UPDATE traditional_predictions
+                SET predictions = %s::jsonb, matches_info = %s::jsonb, created_at = NOW()
+                WHERE issue = %s AND game_type = %s AND ai_name = %s
+            """, (json.dumps(predictions, ensure_ascii=False),
+                  json.dumps(matches_info, ensure_ascii=False),
+                  issue, game_type, ai_name))
     else:
-        cur.execute("""
-            INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, matches_info, created_at)
-            VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, NOW())
-        """, (game_type, ai_name, issue,
-              json.dumps(predictions, ensure_ascii=False),
-              json.dumps(matches_info, ensure_ascii=False)))
+        if ren9_json is not None:
+            cur.execute("""
+                INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, ren9, matches_info, created_at)
+                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, NOW())
+            """, (game_type, ai_name, issue,
+                  json.dumps(predictions, ensure_ascii=False),
+                  ren9_json,
+                  json.dumps(matches_info, ensure_ascii=False)))
+        else:
+            cur.execute("""
+                INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, matches_info, created_at)
+                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, NOW())
+            """, (game_type, ai_name, issue,
+                  json.dumps(predictions, ensure_ascii=False),
+                  json.dumps(matches_info, ensure_ascii=False)))
 
     conn.commit()
     conn.close()
+
+
+# ============ 情报库函数 ============
+
+def save_ct_intelligence(issue, match_num, match_data, intelligence_json):
+    """将扣子生成的情报存入match_intelligence表"""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        match_id = f"CT_{issue}_{match_num}"
+        home_team = match_data.get("home", "")
+        away_team = match_data.get("away", "")
+        league = match_data.get("league", "")
+        
+        # 构造summary
+        parts = []
+        for k, v in intelligence_json.items():
+            if v and str(v).strip() not in ("", "暂无", "待查"):
+                label = {"home_recent_form": "主队近况", "away_recent_form": "客队近况", 
+                         "head_to_head": "交锋", "home_injuries": "主伤停", "away_injuries": "客伤停",
+                         "league_position": "排名", "key_factors": "关键因素"}.get(k, k)
+                parts.append(f"{label}: {v}")
+        summary = "\n".join(parts) if parts else json.dumps(intelligence_json, ensure_ascii=False)
+        
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cur.execute("SELECT id FROM match_intelligence WHERE match_id = %s", (match_id,))
+        if cur.fetchone():
+            cur.execute("UPDATE match_intelligence SET basic_data=%s, summary=%s, updated_at=%s WHERE match_id=%s",
+                        (json.dumps(intelligence_json, ensure_ascii=False), summary, now, match_id))
+        else:
+            cur.execute("""INSERT INTO match_intelligence (match_id, home_team, away_team, league, basic_data, summary, created_at, updated_at)
+                          VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (match_id, home_team, away_team, league,
+                         json.dumps(intelligence_json, ensure_ascii=False), summary, now, now))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"  [情报库] 保存CT {issue}_{match_num} 失败: {e}")
+        return False
+
+
+def get_ct_intelligence(issue, match_num):
+    """从DB读取CT比赛情报"""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        match_id = f"CT_{issue}_{match_num}"
+        cur.execute("SELECT basic_data, summary FROM match_intelligence WHERE match_id=%s ORDER BY updated_at DESC LIMIT 1", (match_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row:
+            bd = row[0]
+            if isinstance(bd, str):
+                try: bd = json.loads(bd)
+                except: bd = {}
+            return {"basic_data": bd, "summary": row[1] or ""}
+        return None
+    except Exception as e:
+        print(f"  [情报库] 读取CT情报失败: {e}")
+        return None
+
+
+def format_ct_intelligence_for_prompt(matches, issue):
+    """为CT彩构建情报文本，注入其他AI的prompt"""
+    lines = []
+    for m in matches:
+        intel = get_ct_intelligence(issue, m["num"])
+        if not intel:
+            continue
+        bd = intel.get("basic_data", {})
+        if not bd:
+            continue
+        
+        parts = []
+        if bd.get("home_recent_form"): parts.append(f"近况:{bd['home_recent_form']}")
+        if bd.get("away_recent_form"): parts.append(f"客况:{bd['away_recent_form']}")
+        if bd.get("head_to_head"): parts.append(f"交锋:{bd['head_to_head']}")
+        if bd.get("home_injuries"): parts.append(f"主伤停:{bd['home_injuries']}")
+        if bd.get("away_injuries"): parts.append(f"客伤停:{bd['away_injuries']}")
+        if bd.get("league_position"): parts.append(f"排名:{bd['league_position']}")
+        if bd.get("key_factors"): parts.append(f"关键:{bd['key_factors']}")
+        
+        if parts:
+            lines.append(f"  {m['num']}. [{m['league']}] {m['home']} vs {m['away']} | {'; '.join(parts)}")
+    
+    if not lines:
+        return ""
+    
+    return "\n\n## 情报数据（联网搜索获取）\n" + "\n".join(lines) + "\n\n请结合以上情报做出预测。\n"
 
 
 # ============ 主流程 ============
@@ -546,7 +686,41 @@ def predict_issue(issue_data, game_types, force=False):
         print(f"\n--- {game_type} ---")
 
         existing = get_existing_predictions(issue, game_type) if not force else set()
-        prompt = build_ct_prompt(matches, game_type)
+        base_prompt = build_ct_prompt(matches, game_type)
+
+        # ===== 情报库：扣子先跑，生成情报 =====
+        coze_pre_raw = None
+        coze_pre_parsed = None
+        
+        if "扣子" not in existing:
+            print(f"  [情报库] 扣子先跑，生成情报数据...", end=' ', flush=True)
+            coze_pre_raw = call_ai_api("扣子", base_prompt)
+            if coze_pre_raw:
+                coze_pre_parsed = parse_ct_response(coze_pre_raw, game_type)
+                if coze_pre_parsed:
+                    # 提取每场比赛的情报并保存
+                    saved_count = 0
+                    for pred_item in coze_pre_parsed:
+                        match_num = str(pred_item.get("match", "")).strip()
+                        intel = pred_item.pop("intelligence", None)
+                        if intel and isinstance(intel, dict):
+                            # 找到对应的比赛数据（兼容"1"和"01"两种格式）
+                            match_data = next((m for m in matches if str(m["num"]).lstrip('0') == match_num.lstrip('0')), {})
+                            has_content = any(v for v in intel.values() if v and str(v).strip() not in ("", "暂无", "待查"))
+                            if has_content and match_data:
+                                save_ct_intelligence(issue, match_num, match_data, intel)
+                                saved_count += 1
+                    print(f"完成 (保存{saved_count}场情报)")
+                else:
+                    print("解析失败")
+            else:
+                print("无响应")
+        
+        # 构建带情报的prompt给其他AI
+        intel_text = format_ct_intelligence_for_prompt(matches, issue)
+        prompt = base_prompt + intel_text if intel_text else base_prompt
+        if intel_text:
+            print(f"  [情报库] 情报已注入其他AI的prompt")
 
         for ai_name in AI_NAMES:
             if ai_name in existing:
@@ -554,11 +728,19 @@ def predict_issue(issue_data, game_types, force=False):
                 continue
 
             print(f"  [{ai_name}] 预测中...", end=' ', flush=True)
-            raw = call_ai_api(ai_name, prompt)
+            
+            # 扣子已经预跑过，直接用预跑结果
+            if ai_name == "扣子" and coze_pre_raw:
+                raw = coze_pre_raw
+            else:
+                raw = call_ai_api(ai_name, prompt)
 
             if raw:
                 parsed = parse_ct_response(raw, game_type)
                 if parsed and len(parsed) >= len(matches):
+                    # 清理intelligence字段（不需要存入predictions表）
+                    for item in parsed:
+                        item.pop("intelligence", None)
                     save_predictions(issue, game_type, matches, ai_name, parsed)
                     print(f"完成 ({len(parsed)}场)")
                 else:

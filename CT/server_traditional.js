@@ -118,27 +118,37 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
 
       const predField = predFieldMap[frontendKey] || 'spf';
 
+      // 解析 ren9（任9推荐场次列表）
+      let ren9Set = new Set();
+      if (row.ren9) {
+        let ren9Arr = row.ren9;
+        if (typeof ren9Arr === 'string') {
+          try { ren9Arr = JSON.parse(ren9Arr); } catch (e) { ren9Arr = []; }
+        }
+        if (Array.isArray(ren9Arr)) {
+          ren9Arr.forEach(n => ren9Set.add(String(n).replace(/^0+/, '') || '0'));
+        }
+      }
+
       for (const m of matchesArr) {
         const matchNum = m.num || m.match_num || 0;
         const issue = row.issue || m.issue || '';
         const matchId = m.id || `${issue}_${matchNum}`;
 
-        // 获取该场比赛的预测
+        // 获取该场比赛的预测（兼容 "1" 和 "01" 两种格式）
         let prediction = null;
-        let isR9 = null;
-        let ren9List = null;
         if (Array.isArray(predictionsArr)) {
-          const pred = predictionsArr.find(p => String(p.match) === String(matchNum));
-          if (pred) {
-            prediction = pred[predField] || null;
-            // 提取任9标记
-            isR9 = pred.r9 === true ? true : false;
-            // 如果这条记录有ren9字段（该AI选择的9场）
-            if (pred.ren9 && Array.isArray(pred.ren9)) {
-              ren9List = pred.ren9;
-            }
-          }
+          const matchNumStripped = String(matchNum).replace(/^0+/, '') || '0';
+          const pred = predictionsArr.find(p => {
+            const pMatch = String(p.match).replace(/^0+/, '') || '0';
+            return pMatch === matchNumStripped;
+          });
+          if (pred) prediction = pred[predField] !== undefined ? pred[predField] : null;
         }
+
+        // 判断该场是否在任9推荐中
+        const matchNumStripped = String(matchNum).replace(/^0+/, '') || '0';
+        const isR9 = ren9Set.size > 0 ? ren9Set.has(matchNumStripped) : false;
 
         responseData[frontendKey].push({
           match_id: matchId,
@@ -151,9 +161,8 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
           ai_name: row.ai_name || 'system',
           prediction: prediction,
           confidence: row.confidence || null,
-          lottery_type: frontendKey,
           is_r9: isR9,
-          ren9: ren9List
+          lottery_type: frontendKey
         });
       }
     }
@@ -208,7 +217,7 @@ app.get('/api/traditional-lottery/latest', async (req, res) => {
  * 触发传统彩赛程抓取
  */
 app.get('/api/traditional-lottery/fetch', async (req, res) => {
-  const scriptPath = path.join(__dirname, 'traditional_lottery_predict.py');
+  const scriptPath = path.join(__dirname, 'scripts', 'traditional_lottery_predict.py');
   
   if (!fs.existsSync(scriptPath)) {
     return res.status(501).json({ 
@@ -225,7 +234,7 @@ app.get('/api/traditional-lottery/fetch', async (req, res) => {
     const result = execSync(
       `python3 "${scriptPath}" --game '胜负彩' --get`,
       {
-        cwd: path.join(__dirname),
+        cwd: path.join(__dirname, 'scripts'),
         env: pythonEnv,
         timeout: 60000,
         maxBuffer: 10 * 1024 * 1024,
