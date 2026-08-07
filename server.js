@@ -1092,118 +1092,27 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // ======== GET /api/traditional-lottery/predict ========
-    if (pathname === '/api/traditional-lottery/predict' && req.method === 'GET') {
-      try {
-        const { rows } = await pgPool.query(
-          `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info
-           FROM traditional_predictions
-           ORDER BY game_type, issue DESC, id`
-        );
-
-        const typeMap = { '胜负彩': 'sfc', '任9': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
-        const predFieldMap = { 'sfc': 'spf', 'r9': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
-        const responseData = { sfc: [], htf: [], jqc: [] };
-
-        for (const row of rows) {
-          const frontendKey = typeMap[row.game_type];
-          if (!frontendKey) continue;
-
-          let matchesArr = row.matches_info;
-          if (typeof matchesArr === 'string') {
-            try { matchesArr = JSON.parse(matchesArr); } catch (e) { continue; }
-          }
-          if (matchesArr && !Array.isArray(matchesArr) && Array.isArray(matchesArr.matches)) {
-            matchesArr = matchesArr.matches;
-          }
-          if (!Array.isArray(matchesArr)) continue;
-
-          let predictionsArr = row.predictions;
-          if (typeof predictionsArr === 'string') {
-            try { predictionsArr = JSON.parse(predictionsArr); } catch (e) { predictionsArr = null; }
-          }
-
-          const predField = predFieldMap[frontendKey] || 'spf';
-
-          for (const m of matchesArr) {
-            const matchNum = m.num || m.match_num || 0;
-            const issue = row.issue || m.issue || '';
-            const matchId = m.id || `${issue}_${matchNum}`;
-
-            let prediction = null;
-            if (Array.isArray(predictionsArr)) {
-              const pred = predictionsArr.find(p => String(p.match) === String(matchNum));
-              if (pred) prediction = pred[predField] || null;
-            }
-
-            responseData[frontendKey].push({
-              match_id: matchId,
-              match_num: String(matchNum),
-              issue: issue,
-              home_team: m.home || m.home_team || '',
-              away_team: m.away || m.away_team || '',
-              league: m.league || '',
-              match_time: m.time || m.match_time || '',
-              ai_name: row.ai_name || 'system',
-              prediction: prediction,
-              confidence: row.confidence || null,
-              lottery_type: frontendKey
-            });
-          }
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ success: true, data: responseData }));
-      } catch (e) {
-        console.error('[TraditionalLottery] /predict error:', e.message);
-        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: 'Internal server error', message: e.message }));
-      }
-      return;
-    }
-
-    // ======== GET /api/traditional-lottery/latest ========
-    if (pathname === '/api/traditional-lottery/latest' && req.method === 'GET') {
-      const urlObj = new URL(req.url, `http://${req.headers.host}`);
-      const lotteryType = urlObj.searchParams.get('type') || 'sf';
-      const typeMap = { 'sf': '胜负彩', 'htf': '半全场', 'jqc': '进球彩', 'r9': '任9' };
-      const gameType = typeMap[lotteryType] || '胜负彩';
-      
-      // 从traditional_predictions表读取最新一期的预测
-      const { rows } = await pgPool.query(
-        `SELECT tp.ai_name, tp.predictions, tp.matches_info, tp.issue
-         FROM traditional_predictions tp
-         WHERE tp.game_type = $1 AND tp.issue = (
-           SELECT MAX(issue) FROM traditional_predictions WHERE game_type = $1
-         )
-         ORDER BY tp.ai_name`,
-        [gameType]
-      );
-      
-      // 转换为前端友好格式
-      const predictions = [];
-      if (rows.length > 0) {
-        const matchesInfo = rows[0].matches_info;
-        const matches = Array.isArray(matchesInfo) ? matchesInfo : (matchesInfo ? JSON.parse(matchesInfo) : []);
-        for (const row of rows) {
-          const preds = Array.isArray(row.predictions) ? row.predictions : (row.predictions ? JSON.parse(row.predictions) : []);
-          const fieldMap = { '胜负彩': 'spf', '任9': 'spf', '半全场': 'bqc', '进球彩': 'bf' };
-          const fieldKey = fieldMap[gameType] || 'spf';
-          for (let i = 0; i < matches.length && i < preds.length; i++) {
-            predictions.push({
-              match_id: matches[i].id || `match_${i+1}`,
-              home_team: matches[i].home || '未知',
-              away_team: matches[i].away || '未知',
-              ai_name: row.ai_name,
-              prediction: preds[i]?.[fieldKey] || '',
-              issue: row.issue,
-            });
-          }
-        }
-      }
-      
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, type: lotteryType, predictions }));
+    // ======== 传统彩路由 - 代理转发到CT服务 (端口5001) ========
+    if (pathname.startsWith('/api/traditional-lottery/')) {
+      const http = require('http');
+      const ctPort = parseInt(process.env.TRADITIONAL_PORT || '5001', 10);
+      const proxyOpts = {
+        hostname: '127.0.0.1',
+        port: ctPort,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `127.0.0.1:${ctPort}` }
+      };
+      const proxyReq = http.request(proxyOpts, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.pipe(res);
+      });
+      proxyReq.on('error', (err) => {
+        console.error('[Proxy] CT service error:', err.message);
+        res.writeHead(502, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'CT service unavailable', message: err.message }));
+      });
+      req.pipe(proxyReq);
       return;
     }
 
