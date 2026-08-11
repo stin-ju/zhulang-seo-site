@@ -48,7 +48,13 @@ const taskStatus = {
   discover: { running: false, lastRun: null, lastResult: null },
   predict: { running: false, lastRun: null, lastResult: null },
   settle: { running: false, lastRun: null, lastResult: null },
-  report: { running: false, lastRun: null, lastResult: null }
+  report: { running: false, lastRun: null, lastResult: null },
+  // === 新增定时任务状态 ===
+  multiPredict: { running: false, lastRun: null, lastResult: null },
+  globalSettle: { running: false, lastRun: null, lastResult: null },
+  healthCheck: { running: false, lastRun: null, lastResult: null },
+  coverage: { running: false, lastRun: null, lastResult: null },
+  nightlyReview: { running: false, lastRun: null, lastResult: null },
 };
 
 const REPORT_PATH = '/tmp/dispatch_report.md';
@@ -1064,6 +1070,95 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // ======== 新增管理 API：手动触发定时任务 ========
+
+    // POST /api/admin/multi-predict - 手动触发7AI预测
+    if (pathname === '/api/admin/multi-predict' && req.method === 'POST') {
+      if (taskStatus.multiPredict.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: '7AI predict is running' }));
+        return;
+      }
+      runMultiAiPredict();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, message: '7AI predict triggered' }));
+      return;
+    }
+
+    // POST /api/admin/global-settle - 手动触发全局结算
+    if (pathname === '/api/admin/global-settle' && req.method === 'POST') {
+      if (taskStatus.globalSettle.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'global settle is running' }));
+        return;
+      }
+      runGlobalSettle();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, message: 'Global settle triggered' }));
+      return;
+    }
+
+    // POST /api/admin/health-check - 手动触发健康巡检
+    if (pathname === '/api/admin/health-check' && req.method === 'POST') {
+      if (taskStatus.healthCheck.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'health check is running' }));
+        return;
+      }
+      runHealthCheck();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, message: 'Health check triggered' }));
+      return;
+    }
+
+    // POST /api/admin/coverage - 手动触发覆盖检查
+    if (pathname === '/api/admin/coverage' && req.method === 'POST') {
+      if (taskStatus.coverage.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'coverage check is running' }));
+        return;
+      }
+      runCoverageCheck();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, message: 'Coverage check triggered' }));
+      return;
+    }
+
+    // POST /api/admin/nightly-review - 手动触发晚间复核
+    if (pathname === '/api/admin/nightly-review' && req.method === 'POST') {
+      if (taskStatus.nightlyReview.running) {
+        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'nightly review is running' }));
+        return;
+      }
+      runNightlyReview();
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ success: true, message: 'Nightly review triggered' }));
+      return;
+    }
+
+    // GET /api/admin/schedule - 查看所有定时任务状态和调度信息
+    if (pathname === '/api/admin/schedule' && req.method === 'GET') {
+      const schedule = {
+        tasks: [
+          { label: '网站健康巡检', time: '08:30', status: taskStatus.healthCheck, script: 'website_health_check.py' },
+          { label: '7AI多模型竞彩预测', time: '08:38', status: taskStatus.multiPredict, script: 'multi_ai_predict.py' },
+          { label: '预测覆盖检查', time: '10:20', status: taskStatus.coverage, script: 'check_prediction_coverage.py' },
+          { label: 'JC上午抓取', time: '10:00', status: taskStatus.discover, script: 'discover_matches.py' },
+          { label: 'CT每日抓取', time: '10:30', status: taskStatus.discover, script: 'ct_discover.py' },
+          { label: '全局自动结算(中午)', time: '12:00', status: taskStatus.globalSettle, script: 'auto_settle.py' },
+          { label: 'JC下午抓取', time: '18:00', status: taskStatus.discover, script: 'discover_matches.py' },
+          { label: '晚间预测复核', time: '23:00', status: taskStatus.nightlyReview, script: 'nightly_prediction_review.py' },
+          { label: '全局自动结算(凌晨)', time: '00:00', status: taskStatus.globalSettle, script: 'auto_settle.py' },
+        ],
+        matchSettleTimers: settleTimers.size,
+        serverTime: new Date().toISOString()
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(schedule));
+      return;
+    }
+
     // POST /api/admin/briefing
     if (pathname === '/api/admin/briefing' && req.method === 'POST') {
       const rawBody = await readBody(req);
@@ -1370,10 +1465,130 @@ async function runCtDiscover() {
   }
 }
 
-// 注册定时任务
+// === 新增定时任务函数 ===
+
+// 7AI多模型竞彩预测 - 每天 08:38
+async function runMultiAiPredict() {
+  if (taskStatus.multiPredict.running) {
+    console.log('[Schedule] 7AI预测已在运行，跳过');
+    return;
+  }
+  taskStatus.multiPredict.running = true;
+  try {
+    console.log('[Schedule] 开始执行 7AI多模型竞彩预测...');
+    const result = await runPython('multi_ai_predict.py');
+    taskStatus.multiPredict.lastRun = new Date().toISOString();
+    taskStatus.multiPredict.lastResult = result;
+    console.log('[Schedule] 7AI预测完成:', JSON.stringify(result).slice(0, 200));
+  } catch (err) {
+    taskStatus.multiPredict.lastRun = new Date().toISOString();
+    taskStatus.multiPredict.lastResult = { error: err.message };
+    console.error('[Schedule] 7AI预测失败:', err.message);
+  } finally {
+    taskStatus.multiPredict.running = false;
+  }
+}
+
+// 全局自动结算 - 每天 0:00 和 12:00
+async function runGlobalSettle() {
+  if (taskStatus.globalSettle.running) {
+    console.log('[Schedule] 全局结算已在运行，跳过');
+    return;
+  }
+  taskStatus.globalSettle.running = true;
+  try {
+    console.log('[Schedule] 开始执行全局自动结算...');
+    const result = await runPython('auto_settle.py');
+    taskStatus.globalSettle.lastRun = new Date().toISOString();
+    taskStatus.globalSettle.lastResult = result;
+    console.log('[Schedule] 全局结算完成:', JSON.stringify(result).slice(0, 200));
+  } catch (err) {
+    taskStatus.globalSettle.lastRun = new Date().toISOString();
+    taskStatus.globalSettle.lastResult = { error: err.message };
+    console.error('[Schedule] 全局结算失败:', err.message);
+  } finally {
+    taskStatus.globalSettle.running = false;
+  }
+}
+
+// 网站健康巡检 - 每天 08:30
+async function runHealthCheck() {
+  if (taskStatus.healthCheck.running) {
+    console.log('[Schedule] 健康巡检已在运行，跳过');
+    return;
+  }
+  taskStatus.healthCheck.running = true;
+  try {
+    console.log('[Schedule] 开始执行网站健康巡检...');
+    const result = await runPython('website_health_check.py');
+    taskStatus.healthCheck.lastRun = new Date().toISOString();
+    taskStatus.healthCheck.lastResult = result;
+    console.log('[Schedule] 健康巡检完成:', JSON.stringify(result).slice(0, 200));
+  } catch (err) {
+    taskStatus.healthCheck.lastRun = new Date().toISOString();
+    taskStatus.healthCheck.lastResult = { error: err.message };
+    console.error('[Schedule] 健康巡检失败:', err.message);
+  } finally {
+    taskStatus.healthCheck.running = false;
+  }
+}
+
+// 预测覆盖检查 - 每天 10:20
+async function runCoverageCheck() {
+  if (taskStatus.coverage.running) {
+    console.log('[Schedule] 覆盖检查已在运行，跳过');
+    return;
+  }
+  taskStatus.coverage.running = true;
+  try {
+    console.log('[Schedule] 开始执行预测覆盖检查...');
+    const result = await runPython('check_prediction_coverage.py');
+    taskStatus.coverage.lastRun = new Date().toISOString();
+    taskStatus.coverage.lastResult = result;
+    console.log('[Schedule] 覆盖检查完成:', JSON.stringify(result).slice(0, 200));
+  } catch (err) {
+    taskStatus.coverage.lastRun = new Date().toISOString();
+    taskStatus.coverage.lastResult = { error: err.message };
+    console.error('[Schedule] 覆盖检查失败:', err.message);
+  } finally {
+    taskStatus.coverage.running = false;
+  }
+}
+
+// 晚间预测复核 - 每天 23:00
+async function runNightlyReview() {
+  if (taskStatus.nightlyReview.running) {
+    console.log('[Schedule] 晚间复核已在运行，跳过');
+    return;
+  }
+  taskStatus.nightlyReview.running = true;
+  try {
+    console.log('[Schedule] 开始执行晚间预测复核...');
+    const result = await runPython('nightly_prediction_review.py');
+    taskStatus.nightlyReview.lastRun = new Date().toISOString();
+    taskStatus.nightlyReview.lastResult = result;
+    console.log('[Schedule] 晚间复核完成:', JSON.stringify(result).slice(0, 200));
+  } catch (err) {
+    taskStatus.nightlyReview.lastRun = new Date().toISOString();
+    taskStatus.nightlyReview.lastResult = { error: err.message };
+    console.error('[Schedule] 晚间复核失败:', err.message);
+  } finally {
+    taskStatus.nightlyReview.running = false;
+  }
+}
+
+// === 注册所有定时任务 ===
+// 原有的
 scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
 scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
 scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
+// 新增的
+scheduleDaily(8, 30, '网站健康巡检', runHealthCheck);
+scheduleDaily(8, 38, '7AI多模型竞彩预测', runMultiAiPredict);
+scheduleDaily(0, 0, '全局自动结算(凌晨)', runGlobalSettle);
+scheduleDaily(10, 20, '预测覆盖检查', runCoverageCheck);
+scheduleDaily(12, 0, '全局自动结算(中午)', runGlobalSettle);
+scheduleDaily(23, 0, '晚间预测复核', runNightlyReview);
 
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
