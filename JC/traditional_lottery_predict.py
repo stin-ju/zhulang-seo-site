@@ -98,7 +98,7 @@ def main():
                 result = call_ai(ai_name, prompt)
                 if result:
                     try:
-                        json_match = re.search(r{[^}]+}, result, re.DOTALL)
+                        json_match = re.search(r"\{[^}]+\}", result, re.DOTALL)
                         if json_match:
                             pred_data = json.loads(json_match.group())
                         else:
