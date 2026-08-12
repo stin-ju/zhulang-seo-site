@@ -80,6 +80,7 @@ function runPython(scriptName, args = []) {
     const jcDir = path.join(__dirname, 'JC');
     const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || ''), PYTHONPATH: jcDir + ':' + (process.env.PYTHONPATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
+    console.log('[runPython] PYTHONPATH:', env.PYTHONPATH, 'jcDir:', jcDir, '__dirname:', __dirname);
     
     const child = execFile('/usr/bin/python3', [scriptPath, ...args], {
       cwd: path.join(__dirname, 'JC'),
