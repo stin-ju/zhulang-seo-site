@@ -1047,8 +1047,8 @@ def main():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT sport_type, COUNT(*), 
-               COUNT(CASE WHEN metadata->>'status'='on_sale' THEN 1 END) 
+        SELECT sport_type, COUNT(*) AS total, 
+               COUNT(CASE WHEN metadata->>'status'='on_sale' THEN 1 END) AS on_sale
         FROM matches 
         GROUP BY sport_type ORDER BY sport_type
     """)
