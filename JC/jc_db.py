@@ -2,6 +2,38 @@ import os, json, urllib.request, urllib.error
 SERVER_PORT = os.environ.get('DEPLOY_RUN_PORT', '5000')
 SERVER_URL = f'http://127.0.0.1:{SERVER_PORT}/api/internal/query'
 
+def _convert_value(v):
+    """将HTTP代理返回的字符串值转换为正确的Python类型"""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        # None/null
+        if v in ('None', 'null', 'NULL'):
+            return None
+        # bool
+        if v.lower() == 'true':
+            return True
+        if v.lower() == 'false':
+            return False
+        # int (纯数字，可能带负号)
+        if v and (v.isdigit() or (v[0] in '+-' and v[1:].isdigit())):
+            return int(v)
+        # float
+        try:
+            if '.' in v:
+                return float(v)
+        except (ValueError, TypeError):
+            pass
+    return v
+
+def _convert_row(row):
+    """转换一行数据中所有值的类型"""
+    if isinstance(row, dict):
+        return tuple(_convert_value(v) for v in row.values())
+    elif isinstance(row, (list, tuple)):
+        return tuple(_convert_value(v) for v in row)
+    return row
+
 class Cursor:
     def __init__(self, conn):
         self.conn = conn
@@ -51,14 +83,14 @@ class Cursor:
     def fetchall(self):
         result = []
         for row in self._rows:
-            result.append(tuple(row.values()) if isinstance(row, dict) else row)
+            result.append(_convert_row(row))
         self._rows = []
         return result
     def fetchone(self):
         if self._index < len(self._rows):
             row = self._rows[self._index]
             self._index += 1
-            return tuple(row.values()) if isinstance(row, dict) else row
+            return _convert_row(row)
         return None
     def fetchmany(self, size=None):
         if size is None: size = len(self._rows) - self._index
@@ -66,7 +98,7 @@ class Cursor:
         for _ in range(min(size, len(self._rows) - self._index)):
             row = self._rows[self._index]
             self._index += 1
-            result.append(tuple(row.values()) if isinstance(row, dict) else row)
+            result.append(_convert_row(row))
         return result
     def close(self): pass
     def __iter__(self): return iter(self.fetchall())
