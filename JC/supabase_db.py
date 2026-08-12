@@ -41,8 +41,30 @@ def _convert_value(v):
     return v
 
 
+def _convert_placeholders(sql, params):
+    """将 %s 占位符转为 $1, $2 格式"""
+    if not params:
+        return sql, params
+    idx = 0
+    result = []
+    new_params = []
+    i = 0
+    while i < len(sql):
+        if sql[i] == "%" and i + 1 < len(sql) and sql[i+1] == "s":
+            idx += 1
+            result.append(f"${idx}")
+            new_params.append(params[idx - 1])
+            i += 2
+        else:
+            result.append(sql[i])
+            i += 1
+    return "".join(result), new_params
+
+
 def _execute_query(sql, params=None):
     """执行 SQL 查询并返回结果"""
+    # 将 %s 占位符转为 $1, $2 格式
+    sql, params = _convert_placeholders(sql, params)
     payload = json.dumps({'sql': sql, 'params': params or []}).encode('utf-8')
     req = urllib.request.Request(
         SERVER_URL,
