@@ -1191,6 +1191,31 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // 内部数据库查询接口（供Python脚本通过HTTP访问数据库）
+    if (pathname === '/api/internal/query' && req.method === 'POST') {
+      const remoteAddr = req.socket.remoteAddress;
+      if (remoteAddr !== '127.0.0.1' && remoteAddr !== '::1' && remoteAddr !== '::ffff:127.0.0.1') {
+        res.writeHead(403, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'Forbidden: localhost only' }));
+        return;
+      }
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const { sql, params } = JSON.parse(body);
+          const result = await pgPool.query(sql, params || []);
+          res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+          res.end(JSON.stringify({ rows: result.rows, rowCount: result.rowCount, fields: result.fields ? result.fields.map(f => ({ name: f.name, dataTypeID: f.dataTypeID })) : [] }));
+        } catch (err) {
+          console.error('[Internal Query] Error:', err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+      return;
+    }
+
     // ======== 传统彩路由 - 代理转发到CT服务 (端口5001) ========
     if (pathname.startsWith('/api/traditional-lottery/')) {
       const http = require('http');
@@ -1597,16 +1622,6 @@ scheduleDaily(23, 0, '晚间预测复核', runNightlyReview);
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
-  
-  // 修复 psycopg2：安装兼容的二进制版本到JC/目录（PYTHONPATH优先加载）
-  const jcDir = path.join(__dirname, 'JC');
-  execFile('/usr/bin/python3', ['-m', 'pip', 'install', 'psycopg2-binary', '--target', jcDir, '--upgrade', '--quiet'], {
-    timeout: 60000,
-    env: { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') }
-  }, (pipErr) => {
-    if (pipErr) console.warn('[Startup] pip install psycopg2-binary failed:', pipErr.message);
-    else console.log('[Startup] psycopg2-binary installed to JC/ successfully');
-  });
   
   // 初始化比赛级别定时结算（不阻塞启动）
   initializeSettleTimers().catch(err => console.error('[AutoSettle] 启动初始化失败:', err.message));
