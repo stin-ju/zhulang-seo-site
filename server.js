@@ -77,7 +77,8 @@ function readBody(req) {
 function runPython(scriptName, args = []) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, 'JC', scriptName);
-    const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
+    const jcDir = path.join(__dirname, 'JC');
+    const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || ''), PYTHONPATH: jcDir + ':' + (process.env.PYTHONPATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
     const child = execFile('/usr/bin/python3', [scriptPath, ...args], {
@@ -1596,6 +1597,16 @@ scheduleDaily(23, 0, '晚间预测复核', runNightlyReview);
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
+  
+  // 修复 psycopg2：安装兼容的二进制版本到JC/目录（PYTHONPATH优先加载）
+  const jcDir = path.join(__dirname, 'JC');
+  execFile('/usr/bin/python3', ['-m', 'pip', 'install', 'psycopg2-binary', '--target', jcDir, '--upgrade', '--quiet'], {
+    timeout: 60000,
+    env: { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') }
+  }, (pipErr) => {
+    if (pipErr) console.warn('[Startup] pip install psycopg2-binary failed:', pipErr.message);
+    else console.log('[Startup] psycopg2-binary installed to JC/ successfully');
+  });
   
   // 初始化比赛级别定时结算（不阻塞启动）
   initializeSettleTimers().catch(err => console.error('[AutoSettle] 启动初始化失败:', err.message));
