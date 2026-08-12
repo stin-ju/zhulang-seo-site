@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 """
 多AI预测生成脚本
 调用6个AI API为指定比赛生成预测，写入predictions表。

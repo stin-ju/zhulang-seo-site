@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 """
 自动结算脚本 v2 - 扫描已完赛但未结算的比赛，对比AI预测与实际结果
 支持足球和篮球，适配当前数据库schema

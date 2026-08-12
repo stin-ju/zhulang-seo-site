@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 """
 CT传统彩票赛程抓取脚本 - 从竞彩网抓取胜负彩14场赛程
 

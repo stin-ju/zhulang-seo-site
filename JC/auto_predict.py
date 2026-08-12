@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 """
 auto_predict.py - 7AI预测调度
 为待预测比赛调用7个AI生成预测，写入predictions表。
