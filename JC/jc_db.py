@@ -80,6 +80,7 @@ class Connection:
     def cursor(self): return Cursor(self)
     def commit(self): pass
     def rollback(self): pass
+    def set_client_encoding(self, encoding): pass
     def close(self): self._closed = True
     def __enter__(self): return self
     def __exit__(self, *a): self.close()
