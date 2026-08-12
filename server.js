@@ -1,3 +1,6 @@
+// 设置北京时间，确保定时任务按北京时间触发
+process.env.TZ = 'Asia/Shanghai';
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
