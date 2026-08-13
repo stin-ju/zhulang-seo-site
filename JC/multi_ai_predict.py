@@ -1484,6 +1484,8 @@ async def main():
 
         match_ids = [m["id"] for m in ordered_matches]
         ai_names = list(AI_CONFIGS.keys())
+        # 排除扣子，其他6个AI在阶段3B调用
+        other_ai_names = [name for name in ai_names if name != "扣子"]
 
         # 2. 删除已有预测（重新生成）
         for ai_name in ai_names:
@@ -1492,29 +1494,130 @@ async def main():
                 deleted = delete_existing_predictions(match_ids, ai_name)
                 print(f"  删除 {ai_name} 旧预测 {deleted} 条")
 
-        # 3. 并发调用6个AI × N场比赛
-        print(f"\n[步骤3] 开始调用 {len(ai_names)} 个AI为 {len(ordered_matches)} 场比赛生成预测...")
-        sem = asyncio.Semaphore(6)  # 最多6个并发API请求
-
-        async with aiohttp.ClientSession() as session:
-            tasks = []
-            task_info = []  # (ai_name, match) for each task
-
-            for match in ordered_matches:
-                for ai_name in ai_names:
-                    tasks.append(call_ai_api(session, ai_name, match, sem))
-                    task_info.append((ai_name, match))
-
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # 4. 解析结果并写入数据库
-        print(f"\n[步骤4] 解析预测结果并写入数据库...")
+        # 统计变量
         success_count = 0
         fail_count = 0
         fail_details = []
         predictions_summary = {}  # {match_id: {ai_name: parsed_summary}}
+        kouzi_intelligence = {}  # {match_id: intelligence_data}
+        intelligence_coverage = 0  # 有情报的比赛数
 
-        for i, result in enumerate(results):
+        sem = asyncio.Semaphore(6)  # 最多6个并发API请求
+
+        # ============================================================
+        # 阶段3A: 扣子情报搜集 + 预测
+        # ============================================================
+        print(f"\n[阶段3A] 扣子情报搜集 + 预测 ({len(ordered_matches)} 场比赛)...")
+
+        async with aiohttp.ClientSession() as session:
+            # 并发调用扣子进行情报搜集+预测
+            kouzi_tasks = []
+            for match in ordered_matches:
+                kouzi_tasks.append(call_ai_api_with_intelligence(session, match, sem))
+
+            kouzi_results = await asyncio.gather(*kouzi_tasks, return_exceptions=True)
+
+        # 处理扣子结果
+        for i, match in enumerate(ordered_matches):
+            result = kouzi_results[i]
+            mid = match["id"]
+
+            if isinstance(result, Exception):
+                print(f"  [FAIL] 扣子 × {mid}: {result}")
+                fail_count += 1
+                fail_details.append(f"扣子/{mid}")
+                continue
+
+            raw_text, error = result
+            if error:
+                print(f"  [FAIL] 扣子 × {mid}: {error}")
+                fail_count += 1
+                fail_details.append(f"扣子/{mid}")
+                continue
+
+            # 解析情报+预测
+            parsed_result = parse_kouzi_intelligence_response(raw_text, match)
+            if parsed_result is None:
+                # 解析失败，降级为普通预测处理
+                print(f"  [WARN] 扣子 × {mid}: 情报解析失败，降级为普通预测")
+                if match["sport_type"] == "football":
+                    parsed = parse_football_prediction(raw_text, "扣子")
+                else:
+                    parsed = parse_basketball_prediction(raw_text, "扣子")
+
+                if parsed:
+                    record = build_prediction_record(match, "扣子", parsed, raw_text)
+                    if write_prediction(record):
+                        success_count += 1
+                        if mid not in predictions_summary:
+                            predictions_summary[mid] = {}
+                        if match["sport_type"] == "football":
+                            predictions_summary[mid]["扣子"] = f"spf={parsed['spf']} score={parsed['score']}"
+                        else:
+                            predictions_summary[mid]["扣子"] = f"wl={parsed['win_loss']} diff={parsed['score_diff']}"
+                        print(f"  [OK] 扣子 × {mid} (降级模式)")
+                    else:
+                        fail_count += 1
+                        fail_details.append(f"扣子/{mid}(写入失败)")
+                else:
+                    fail_count += 1
+                    fail_details.append(f"扣子/{mid}(解析失败)")
+                continue
+
+            # 解析成功：保存情报和预测
+            intelligence_data, prediction_data = parsed_result
+
+            # 保存情报告
+            if save_match_intelligence(match, intelligence_data):
+                kouzi_intelligence[mid] = intelligence_data
+                intelligence_coverage += 1
+                print(f"  [OK] 扣子 × {mid}: 情报已保存")
+            else:
+                print(f"  [WARN] 扣子 × {mid}: 情报保存失败")
+
+            # 保存预测
+            if prediction_data:
+                record = build_prediction_record(match, "扣子", prediction_data, raw_text)
+                if write_prediction(record):
+                    success_count += 1
+                    if mid not in predictions_summary:
+                        predictions_summary[mid] = {}
+                    if match["sport_type"] == "football":
+                        predictions_summary[mid]["扣子"] = f"spf={prediction_data['spf']} score={prediction_data['score']}"
+                    else:
+                        predictions_summary[mid]["扣子"] = f"wl={prediction_data['win_loss']} diff={prediction_data['score_diff']}"
+                    print(f"  [OK] 扣子 × {mid}: 预测已保存")
+                else:
+                    fail_count += 1
+                    fail_details.append(f"扣子/{mid}(写入失败)")
+            else:
+                print(f"  [WARN] 扣子 × {mid}: 无预测数据")
+
+        # ============================================================
+        # 阶段3B: 其他6个AI基于情报包预测
+        # ============================================================
+        print(f"\n[阶段3B] 其他 {len(other_ai_names)} 个AI基于情报预测...")
+        print(f"  情报覆盖: {intelligence_coverage}/{len(ordered_matches)} 场")
+
+        async with aiohttp.ClientSession() as session:
+            other_tasks = []
+            task_info = []  # (ai_name, match, intelligence) for each task
+
+            for match in ordered_matches:
+                mid = match["id"]
+                # 获取情报：优先用扣子刚搜集的，否则从数据库读取
+                intelligence = kouzi_intelligence.get(mid)
+                if intelligence is None:
+                    intelligence = fetch_match_intelligence(mid)
+
+                for ai_name in other_ai_names:
+                    other_tasks.append(call_ai_api_with_intel(session, ai_name, match, intelligence, sem))
+                    task_info.append((ai_name, match))
+
+            other_results = await asyncio.gather(*other_tasks, return_exceptions=True)
+
+        # 处理其他AI结果
+        for i, result in enumerate(other_results):
             ai_name, match = task_info[i]
 
             if isinstance(result, Exception):
@@ -1561,6 +1664,7 @@ async def main():
 
         total = len(ai_names) * len(ordered_matches)
         print(f"\n  完成: 成功{success_count}/{total}, 失败{fail_count}")
+        print(f"  情报覆盖: {intelligence_coverage}/{len(ordered_matches)} 场")
         if fail_details:
             print(f"  失败明细: {fail_details}")
 
@@ -1573,6 +1677,7 @@ async def main():
             f"AI数量: {len(ai_names)} ({', '.join(ai_names)})",
             f"比赛场次: {len(ordered_matches)}场",
             f"预测总数: {success_count}/{total}",
+            f"情报覆盖: {intelligence_coverage}/{len(ordered_matches)} 场",
             f"",
         ]
 
@@ -1580,7 +1685,9 @@ async def main():
         for match in ordered_matches:
             mid = match["id"]
             sport = match["sport_type"]
-            report_lines.append(f"## {mid} {match['home_team']} vs {match['away_team']} ({match['league']})")
+            has_intel = mid in kouzi_intelligence or fetch_match_intelligence(mid) is not None
+            intel_mark = "📊" if has_intel else ""
+            report_lines.append(f"## {mid} {match['home_team']} vs {match['away_team']} ({match['league']}) {intel_mark}")
             report_lines.append("")
 
             if sport == "football":
@@ -1590,8 +1697,6 @@ async def main():
                 report_lines.append("| AI | 胜负 | 让分 | 大小 | 分差 | 把握度 |")
                 report_lines.append("|----|------|------|------|------|--------|")
 
-            ai_preds = predictions_summary.get(mid, {})
-            # 需要重新获取预测数据来生成表格（因为之前只存了摘要字符串）
             # 从数据库读取刚写入的预测
             conn = get_db_conn()
             try:
@@ -1640,6 +1745,7 @@ async def main():
             f"",
             f"比赛: {len(ordered_matches)}场 (足球{fb_count}/篮球{bb_count})",
             f"AI: {', '.join(ai_names)}",
+            f"情报覆盖: {intelligence_coverage}/{len(ordered_matches)} 场",
         ]
         if fail_count > 0:
             message_lines.append(f"失败: {fail_count}条 ({', '.join(fail_details[:5])}{'...' if len(fail_details)>5 else ''})")
@@ -1660,6 +1766,7 @@ async def main():
                 "football_matches": fb_count,
                 "basketball_matches": bb_count,
                 "ai_count": len(ai_names),
+                "intelligence_coverage": intelligence_coverage,
                 "fail_details": fail_details[:10],
                 "report_path": report_path,
             },
