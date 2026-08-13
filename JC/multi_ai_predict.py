@@ -372,6 +372,130 @@ def write_prediction(pred_data):
         conn.close()
 
 
+def save_match_intelligence(match, intelligence_data):
+    """将情报告写入 match_intelligence 表（upsert）
+    
+    Args:
+        match: dict，包含 id, home_team, away_team, match_time, league
+        intelligence_data: dict，包含 basic_data, expert_opinions, media_analysis, market_sentiment, summary
+    
+    Returns:
+        bool: 成功返回 True，失败返回 False
+    """
+    conn = get_db_conn()
+    try:
+        cur = conn.cursor()
+        match_id = match["id"]
+        
+        # 检查是否已存在
+        cur.execute("SELECT id FROM match_intelligence WHERE match_id = %s", (match_id,))
+        existing = cur.fetchone()
+        
+        # 序列化 jsonb 字段
+        basic_data = intelligence_data.get("basic_data")
+        if isinstance(basic_data, dict):
+            basic_data = json.dumps(basic_data, ensure_ascii=False)
+        
+        expert_opinions = intelligence_data.get("expert_opinions")
+        if isinstance(expert_opinions, dict):
+            expert_opinions = json.dumps(expert_opinions, ensure_ascii=False)
+        
+        media_analysis = intelligence_data.get("media_analysis")
+        if isinstance(media_analysis, dict):
+            media_analysis = json.dumps(media_analysis, ensure_ascii=False)
+        
+        market_sentiment = intelligence_data.get("market_sentiment")
+        if isinstance(market_sentiment, dict):
+            market_sentiment = json.dumps(market_sentiment, ensure_ascii=False)
+        
+        summary = intelligence_data.get("summary", "")
+        match_time = match.get("match_time")
+        home_team = match.get("home_team", "")
+        away_team = match.get("away_team", "")
+        league = match.get("league", "")
+        
+        if existing:
+            # UPDATE
+            cur.execute("""
+                UPDATE match_intelligence 
+                SET home_team = %s, away_team = %s, match_time = %s, league = %s,
+                    basic_data = %s::jsonb, expert_opinions = %s::jsonb,
+                    media_analysis = %s::jsonb, market_sentiment = %s::jsonb,
+                    summary = %s, updated_at = NOW()
+                WHERE match_id = %s
+            """, (home_team, away_team, match_time, league,
+                  basic_data, expert_opinions, media_analysis, market_sentiment,
+                  summary, match_id))
+        else:
+            # INSERT
+            cur.execute("""
+                INSERT INTO match_intelligence 
+                (match_id, home_team, away_team, match_time, league,
+                 basic_data, expert_opinions, media_analysis, market_sentiment, summary)
+                VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s)
+            """, (match_id, home_team, away_team, match_time, league,
+                  basic_data, expert_opinions, media_analysis, market_sentiment, summary))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERROR] 写入情报告失败 match={match.get('id')}: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def fetch_match_intelligence(match_id):
+    """从 match_intelligence 表读取情报
+    
+    Args:
+        match_id: str，比赛ID
+    
+    Returns:
+        dict or None: 包含 basic_data, expert_opinions, media_analysis, market_sentiment, summary
+                      如果不存在返回 None
+    """
+    conn = get_db_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT basic_data, expert_opinions, media_analysis, market_sentiment, summary
+            FROM match_intelligence 
+            WHERE match_id = %s
+        """, (match_id,))
+        row = cur.fetchone()
+        
+        if not row:
+            return None
+        
+        # 反序列化 jsonb 字段
+        def parse_jsonb(val):
+            if val is None:
+                return None
+            if isinstance(val, dict):
+                return val
+            if isinstance(val, str):
+                try:
+                    return json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    return val
+            return val
+        
+        return {
+            "basic_data": parse_jsonb(row[0]),
+            "expert_opinions": parse_jsonb(row[1]),
+            "media_analysis": parse_jsonb(row[2]),
+            "market_sentiment": parse_jsonb(row[3]),
+            "summary": row[4] or "",
+        }
+    except Exception as e:
+        print(f"[ERROR] 读取情报告失败 match={match_id}: {e}")
+        return None
+    finally:
+        conn.close()
+
+
 # ============================================================
 # AI API 调用
 # ============================================================
