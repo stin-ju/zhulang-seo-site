@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 多AI预测生成脚本
 调用6个AI API为指定比赛生成预测，写入predictions表。
 
-AI列表: DeepSeek, MiniMax, 文心, 智谱清言, 混元, 豆包
+AI列表: DeepSeek, MiniMax, 文心, 智谱清言, 混元, 豆包, 扣子
 足球5维度: spf/handicap_spf/goals/score/half_full
 篮球4维度: win_loss/handicap_result/total_points/score_diff
 
@@ -18,6 +18,7 @@ AI列表: DeepSeek, MiniMax, 文心, 智谱清言, 混元, 豆包
 """
 import asyncio
 import sys
+import time
 import os
 import json
 import re
@@ -76,6 +77,15 @@ AI_CONFIGS = {
         "model": "ep-20260706041055-2mgpf",
         "max_tokens": 800,
         "timeout": 60,  # 豆包推理模型需要更长超时
+    },
+    "扣子": {
+        "base_url": "https://7hsjv6c4cn.coze.site/stream_run",
+        "api_key": os.environ.get("COZE_PROJECT_API_TOKEN", "REMOVED"),
+        "model": None,
+        "max_tokens": 800,
+        "timeout": 120,
+        "format": "coze_code",
+        "project_id": 7667164681706078217,
     },
 }
 
@@ -342,6 +352,96 @@ async def _call_ai_api_once(session, ai_name, match, sem):
 
     async with sem:
         try:
+            timeout_sec = config.get("timeout", 30)
+            timeout = aiohttp.ClientTimeout(total=timeout_sec)
+
+            # 扣子专用调用逻辑（coze_code格式）
+            if config.get("format") == "coze_code":
+                headers = {
+                    "Authorization": f"Bearer {config['api_key']}",
+                    "Content-Type": "application/json",
+                }
+                payload = {
+                    "content": {
+                        "query": {
+                            "prompt": [
+                                {
+                                    "type": "text",
+                                    "content": {"text": prompt},
+                                }
+                            ],
+                        },
+                    },
+                    "type": "query",
+                    "session_id": f"predict_{int(time.time())}",
+                }
+                if config.get("project_id"):
+                    payload["project_id"] = config["project_id"]
+
+                async with session.post(
+                    config["base_url"],
+                    headers=headers,
+                    json=payload,
+                    timeout=timeout,
+                ) as resp:
+                    if resp.status != 200:
+                        text = await resp.text()
+                        print(f"[WARN] {ai_name} API返回 {resp.status}: {text[:200]}")
+                        return None, f"HTTP {resp.status}"
+
+                    content_type = resp.headers.get("Content-Type", "")
+
+                    # JSON响应
+                    if "json" in content_type:
+                        data = await resp.json()
+                        if isinstance(data, dict):
+                            if "data" in data and isinstance(data["data"], dict):
+                                messages = data["data"].get("messages", [])
+                                for msg in reversed(messages):
+                                    if msg.get("role") == "assistant" and msg.get("content"):
+                                        return msg["content"], None
+                            if "messages" in data:
+                                for msg in reversed(data["messages"]):
+                                    if msg.get("role") == "assistant" and msg.get("content"):
+                                        return msg["content"], None
+                            if "result" in data:
+                                return str(data["result"]), None
+                            if "text" in data:
+                                return str(data["text"]), None
+                        return json.dumps(data, ensure_ascii=False), None
+
+                    # SSE流式响应
+                    answer_chunks = []
+                    async for line in resp.content:
+                        line_str = line.decode("utf-8").strip()
+                        if not line_str:
+                            continue
+                        if line_str.startswith("data:"):
+                            line_str = line_str[5:].strip()
+                            if not line_str:
+                                continue
+                            try:
+                                evt = json.loads(line_str)
+                                if isinstance(evt, dict):
+                                    if evt.get("type") == "answer":
+                                        content = evt.get("content", {})
+                                        if isinstance(content, dict):
+                                            chunk = content.get("answer")
+                                            if chunk:
+                                                answer_chunks.append(chunk)
+                            except json.JSONDecodeError:
+                                pass
+                    if answer_chunks:
+                        return "".join(answer_chunks), None
+
+                    # 回退：返回原始文本
+                    text = await resp.text()
+                    if text:
+                        return text, None
+                    print(f"[WARN] {ai_name} 返回空内容 match={match['id']}")
+                    return None, "空响应"
+
+            # 标准OpenAI格式调用
             headers = {
                 "Authorization": f"Bearer {config['api_key']}",
                 "Content-Type": "application/json",
@@ -353,8 +453,6 @@ async def _call_ai_api_once(session, ai_name, match, sem):
                 "temperature": 0.7,
             }
 
-            timeout_sec = config.get("timeout", 30)
-            timeout = aiohttp.ClientTimeout(total=timeout_sec)
             async with session.post(
                 config["base_url"],
                 headers=headers,
