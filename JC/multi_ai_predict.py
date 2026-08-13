@@ -255,7 +255,7 @@ def write_prediction(pred_data):
                 INSERT INTO predictions (
                     id, match_id, ai_name, prediction, analysis,
                     sport_type, confidence, match_date,
-                    win_loss, handicap_win_loss, total_points, score_diff_range,
+                    win_loss_pred, handicap_win_loss_pred, total_points_pred, score_diff_range_pred,
                     raw_response
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
