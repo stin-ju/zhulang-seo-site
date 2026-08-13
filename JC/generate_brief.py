@@ -295,7 +295,7 @@ AI_CONFIGS = {
     'AI-智谱清言': {'display': '智谱清言'},
     'AI-文心': {'display': '文心'},
     'AI-混元': {'display': '混元'},
-    'AI-扣子（皮皮）': {'display': '扣子（皮皮）'},
+    'AI-扣子': {'display': '扣子'},
 }
 
 

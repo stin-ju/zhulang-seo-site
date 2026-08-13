@@ -80,7 +80,7 @@ AI_CONFIGS = {
         "model": "hy-mt2-lite",
         "format": "openai",
     },
-    "AI-扣子（皮皮）": {
+    "AI-扣子": {
         "url": "https://7hsjv6c4cn.coze.site/stream_run",
         "key_env": "COZE_PROJECT_API_TOKEN",
         "key_default": "REMOVED",

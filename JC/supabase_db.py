@@ -283,7 +283,7 @@ def get_existing_ai_names(match_id):
     )
     raw_names = {row["ai_name"] for row in rows}
     
-    # 数据库存的是无前缀名称（如"扣子（皮皮）"），转为AI_CONFIGS格式（如"AI-扣子（皮皮）"）
+    # 数据库存的是无前缀名称（如"扣子"），转为AI_CONFIGS格式（如"AI-扣子"）
     result_set = set()
     for name in raw_names:
         if not name.startswith("AI-"):
