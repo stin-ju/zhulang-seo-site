@@ -875,6 +875,337 @@ async def _call_ai_api_once(session, ai_name, match, sem):
             return None, str(e)
 
 
+# ============================================================
+# 情报增强版 AI 调用函数
+# ============================================================
+
+def parse_kouzi_intelligence_response(raw_text, match):
+    """解析扣子情报搜集响应，提取 intelligence 和 prediction 两部分
+
+    Args:
+        raw_text: 扣子返回的原始文本（JSON格式）
+        match: 比赛信息 dict
+
+    Returns:
+        (intelligence_data, prediction_data) 元组，解析失败返回 None
+        intelligence_data: dict，包含 basic_data, expert_opinions, market_sentiment, summary
+        prediction_data: dict，已适配成现有格式（与 parse_football_prediction/parse_basketball_prediction 返回格式一致）
+    """
+    if not raw_text:
+        return None
+
+    # 预处理：修复JSON格式问题
+    cleaned = raw_text.strip()
+    open_braces = cleaned.count('{') - cleaned.count('}')
+    if open_braces > 0:
+        cleaned += '}' * open_braces
+    cleaned = re.sub(r',\s*}', '}', cleaned)
+    cleaned = re.sub(r',\s*]', ']', cleaned)
+
+    # 提取最外层JSON
+    json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+    if not json_match:
+        print(f"[WARN] 扣子情报响应未找到JSON: {raw_text[:100]}")
+        return None
+
+    try:
+        data = json.loads(json_match.group())
+    except json.JSONDecodeError:
+        print(f"[WARN] 扣子情报响应JSON解析失败: {raw_text[:100]}")
+        return None
+
+    if not isinstance(data, dict):
+        return None
+
+    # 提取 intelligence 部分
+    intel_raw = data.get("intelligence", {})
+    if not isinstance(intel_raw, dict):
+        intel_raw = {}
+
+    intelligence_data = {
+        "basic_data": intel_raw.get("basic_data", {}),
+        "expert_opinions": intel_raw.get("expert_opinions", {}),
+        "media_analysis": intel_raw.get("media_analysis", {}),
+        "market_sentiment": intel_raw.get("market_sentiment", {}),
+        "summary": intel_raw.get("summary", ""),
+    }
+
+    # 提取 prediction 部分，适配成现有格式
+    pred_raw = data.get("prediction", {})
+    if not isinstance(pred_raw, dict):
+        print(f"[WARN] 扣子情报响应缺少prediction字段")
+        return None
+
+    sport_type = match.get("sport_type", "football")
+
+    if sport_type == "football":
+        # 构造与 parse_football_prediction 兼容的输入
+        # 将 pred_raw 转为 JSON 字符串让 parse_football_prediction 处理
+        pred_json_str = json.dumps(pred_raw, ensure_ascii=False)
+        prediction_data = parse_football_prediction(pred_json_str, "扣子")
+        if prediction_data is None:
+            # 如果解析失败，手动构造默认值
+            prediction_data = {
+                "spf": pred_raw.get("spf", "平"),
+                "handicap_spf": pred_raw.get("handicap_spf", "让负"),
+                "goals": int(pred_raw.get("goals", 2)),
+                "score": pred_raw.get("score", "1-1"),
+                "half_full": pred_raw.get("half_full", "平平"),
+                "confidence": float(pred_raw.get("confidence", 0.5)),
+                "analysis": pred_raw.get("analysis", ""),
+            }
+    else:  # basketball
+        pred_json_str = json.dumps(pred_raw, ensure_ascii=False)
+        prediction_data = parse_basketball_prediction(pred_json_str, "扣子")
+        if prediction_data is None:
+            prediction_data = {
+                "win_loss": pred_raw.get("win_loss", "客胜"),
+                "handicap_result": pred_raw.get("handicap_result", "让负"),
+                "total_points": pred_raw.get("total_points", "小"),
+                "score_diff": pred_raw.get("score_diff", "6-10"),
+                "confidence": float(pred_raw.get("confidence", 0.5)),
+                "analysis": pred_raw.get("analysis", ""),
+            }
+
+    return intelligence_data, prediction_data
+
+
+def _build_intelligence_prompt(match):
+    """根据比赛类型构建情报搜集prompt（扣子专用）"""
+    odds = match.get("odds", {})
+
+    if match["sport_type"] == "football":
+        spf = odds.get("spf", {})
+        hdc = odds.get("handicap_spf", {})
+        return INTELLIGENCE_PROMPT_FOOTBALL.format(
+            home_team=match["home_team"],
+            away_team=match["away_team"],
+            league=match["league"],
+            match_time=match["match_time"],
+            spf_win=spf.get("win", "?"),
+            spf_draw=spf.get("draw", "?"),
+            spf_lose=spf.get("lose", "?"),
+            handicap=hdc.get("handicap", "?"),
+            hdc_win=hdc.get("win", "?"),
+            hdc_draw=hdc.get("draw", "?"),
+            hdc_lose=hdc.get("lose", "?"),
+        )
+    else:  # basketball
+        mnl = odds.get("mnl", odds.get("spf", {}))
+        hdc = odds.get("hdc", {})
+        hilo = odds.get("hilo", {})
+        return INTELLIGENCE_PROMPT_BASKETBALL.format(
+            home_team=match["home_team"],
+            away_team=match["away_team"],
+            league=match["league"],
+            match_time=match["match_time"],
+            mnl_win=mnl.get("win", "?"),
+            mnl_lose=mnl.get("lose", "?"),
+            handicap_line=hdc.get("line", "?"),
+            hdc_win=hdc.get("win", "?"),
+            hdc_lose=hdc.get("lose", "?"),
+            hilo_line=hilo.get("line", "?"),
+            hilo_over=hilo.get("over", "?"),
+            hilo_under=hilo.get("under", "?"),
+        )
+
+
+async def _call_kouzi_api(session, prompt, match, sem):
+    """调用扣子API（coze_code格式），返回 (raw_text, error)"""
+    config = AI_CONFIGS["扣子"]
+
+    async with sem:
+        try:
+            timeout_sec = config.get("timeout", 120)
+            timeout = aiohttp.ClientTimeout(total=timeout_sec)
+            headers = {
+                "Authorization": f"Bearer {config['api_key']}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "content": {
+                    "query": {
+                        "prompt": [
+                            {
+                                "type": "text",
+                                "content": {"text": prompt},
+                            }
+                        ],
+                    },
+                },
+                "type": "query",
+                "session_id": f"intel_{int(time.time())}",
+            }
+            if config.get("project_id"):
+                payload["project_id"] = config["project_id"]
+
+            async with session.post(
+                config["base_url"],
+                headers=headers,
+                json=payload,
+                timeout=timeout,
+            ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    print(f"[WARN] 扣子情报API返回 {resp.status}: {text[:200]}")
+                    return None, f"HTTP {resp.status}"
+
+                content_type = resp.headers.get("Content-Type", "")
+
+                # JSON响应
+                if "json" in content_type:
+                    data = await resp.json()
+                    if isinstance(data, dict):
+                        if "data" in data and isinstance(data["data"], dict):
+                            messages = data["data"].get("messages", [])
+                            for msg in reversed(messages):
+                                if msg.get("role") == "assistant" and msg.get("content"):
+                                    return msg["content"], None
+                        if "messages" in data:
+                            for msg in reversed(data["messages"]):
+                                if msg.get("role") == "assistant" and msg.get("content"):
+                                    return msg["content"], None
+                        if "result" in data:
+                            return str(data["result"]), None
+                        if "text" in data:
+                            return str(data["text"]), None
+                    return json.dumps(data, ensure_ascii=False), None
+
+                # SSE流式响应
+                answer_chunks = []
+                async for line in resp.content:
+                    line_str = line.decode("utf-8").strip()
+                    if not line_str:
+                        continue
+                    if line_str.startswith("data:"):
+                        line_str = line_str[5:].strip()
+                        if not line_str:
+                            continue
+                        try:
+                            evt = json.loads(line_str)
+                            if isinstance(evt, dict):
+                                if evt.get("type") == "answer":
+                                    content = evt.get("content", {})
+                                    if isinstance(content, dict):
+                                        chunk = content.get("answer")
+                                        if chunk:
+                                            answer_chunks.append(chunk)
+                        except json.JSONDecodeError:
+                            pass
+                if answer_chunks:
+                    return "".join(answer_chunks), None
+
+                # 回退
+                text = await resp.text()
+                if text:
+                    return text, None
+                return None, "空响应"
+
+        except asyncio.TimeoutError:
+            return None, "超时"
+        except Exception as e:
+            return None, str(e)
+
+
+async def call_ai_api_with_intelligence(session, match, sem):
+    """扣子专用：先搜集情报，再返回情报+预测
+
+    流程：
+    1. 用 INTELLIGENCE_PROMPT 调用扣子API，获取情报+预测
+    2. 解析响应，分离 intelligence 和 prediction
+    3. 返回 (raw_text, error)
+
+    Returns:
+        (raw_text, error): raw_text 为扣子返回的原始文本，error 为错误信息
+    """
+    prompt = _build_intelligence_prompt(match)
+    raw_text, error = await _call_kouzi_api(session, prompt, match, sem)
+
+    # 超时重试一次
+    if error and "超时" in error:
+        print(f"[RETRY] 扣子情报搜集超时重试 match={match['id']}")
+        raw_text, error = await _call_kouzi_api(session, prompt, match, sem)
+
+    return raw_text, error
+
+
+async def call_ai_api_with_intel(session, ai_name, match, intelligence, sem):
+    """其他6个AI：带情报增强的预测调用
+
+    流程：
+    1. 构建基础prompt（FOOTBALL_PROMPT/BASKETBALL_PROMPT）
+    2. 如果 intelligence 不为 None，生成情报段插入到prompt中
+    3. 调用对应AI的API
+
+    Args:
+        session: aiohttp.ClientSession
+        ai_name: AI名称（非扣子）
+        match: 比赛信息 dict
+        intelligence: 情报数据 dict（来自扣子搜集），可为 None
+        sem: asyncio.Semaphore
+
+    Returns:
+        (raw_text, error): 与 call_ai_api 返回格式一致
+    """
+    config = AI_CONFIGS[ai_name]
+    base_prompt = build_prompt(match)
+
+    # 如果有情报，插入到prompt中
+    if intelligence is not None:
+        intel_section = format_intelligence_section(intelligence)
+        if intel_section:
+            # 在赔率信息之后、输出格式要求之前插入情报段
+            # 查找 "## 请严格按以下JSON格式输出" 或 "## 请严格按以下JSON格式输出" 的位置
+            insert_marker = "## 请严格按以下JSON格式输出"
+            if insert_marker in base_prompt:
+                idx = base_prompt.index(insert_marker)
+                base_prompt = base_prompt[:idx] + intel_section + "\n" + base_prompt[idx:]
+            else:
+                # 如果找不到标记，追加到末尾
+                base_prompt += "\n" + intel_section
+
+    async with sem:
+        try:
+            timeout_sec = config.get("timeout", 30)
+            timeout = aiohttp.ClientTimeout(total=timeout_sec)
+            headers = {
+                "Authorization": f"Bearer {config['api_key']}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": config["model"],
+                "messages": [{"role": "user", "content": base_prompt}],
+                "max_tokens": config["max_tokens"],
+                "temperature": 0.7,
+            }
+
+            async with session.post(
+                config["base_url"],
+                headers=headers,
+                json=payload,
+                timeout=timeout,
+            ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    print(f"[WARN] {ai_name} API返回 {resp.status}: {text[:200]}")
+                    return None, f"HTTP {resp.status}"
+
+                data = await resp.json()
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                if not content:
+                    print(f"[WARN] {ai_name} 返回空内容 match={match['id']}")
+                    return None, "空响应"
+
+                return content, None
+
+        except asyncio.TimeoutError:
+            print(f"[WARN] {ai_name} 超时 match={match['id']}")
+            return None, "超时"
+        except Exception as e:
+            print(f"[WARN] {ai_name} 异常 match={match['id']}: {e}")
+            return None, str(e)
+
+
 def parse_football_prediction(raw_text, ai_name):
     """解析足球预测JSON"""
     # 预处理：修复常见的JSON格式问题
