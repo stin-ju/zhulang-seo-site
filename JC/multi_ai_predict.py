@@ -211,6 +211,198 @@ BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。一次性给
 
 
 # ============================================================
+# 情报搜集 Prompt 模板（扣子专用）
+# ============================================================
+INTELLIGENCE_PROMPT_FOOTBALL = """你是一个专业的足球比赛情报分析师。请联网搜索以下比赛的最新情报，然后结合情报和赔率给出预测。
+
+## 比赛信息
+- 联赛: {league}
+- 主队: {home_team}
+- 客队: {away_team}
+- 比赛时间: {match_time}
+- 让球: {handicap}球
+- 胜平负赔率: 胜{spf_win} / 平{spf_draw} / 负{spf_lose}
+- 让球赔率: 让胜{hdc_win} / 让平{hdc_draw} / 让负{hdc_lose}
+
+## 情报搜集要求（必须联网搜索）
+
+请依次搜索以下5个维度的情报：
+
+### 1. 双方近况（basic_data）
+- 搜索两队最近5场比赛的战绩（胜平负、进失球）
+- 搜索主队主场战绩、客队客场战绩
+- 搜索两队近期状态趋势（连胜/连败）
+
+### 2. 伤停信息（basic_data）
+- 搜索两队最新伤停名单
+- 重点关注核心球员是否缺阵
+
+### 3. 历史交锋（basic_data）
+- 搜索两队近5次交锋记录
+- 注意主客场因素
+
+### 4. 赔率走势（market_sentiment）
+- 搜索本场比赛赔率变化趋势
+- 是否有异常资金流入
+- 初盘→即时盘的变化方向
+
+### 5. 专家分析（expert_opinions）
+- 搜索主流媒体的赛前分析文章
+- 搜索知名分析师的预测观点
+
+## 请严格按以下JSON格式输出（不要输出其他内容）:
+```json
+{{
+  "intelligence": {{
+    "basic_data": {{
+      "home_form": "主队近5场战绩描述",
+      "away_form": "客队近5场战绩描述",
+      "home_injuries": "主队伤停信息",
+      "away_injuries": "客队伤停信息",
+      "h2h": "历史交锋记录"
+    }},
+    "expert_opinions": {{
+      "consensus": "专家主流观点",
+      "key_points": ["分析要点1", "分析要点2", "分析要点3"]
+    }},
+    "market_sentiment": {{
+      "odds_trend": "赔率变化趋势",
+      "money_flow": "资金流向分析",
+      "anomaly": "是否有异常"
+    }},
+    "summary": "情报总结，100字以内"
+  }},
+  "prediction": {{
+    "spf": "胜"或"平"或"负",
+    "handicap_spf": "让胜"或"让平"或"让负",
+    "score": "比分如2-1",
+    "goals": 总进球数(0-7整数),
+    "half_full": "半全场如胜胜/平胜/负平",
+    "confidence": 把握度(0.3-0.95),
+    "analysis": "50-100字分析理由，需结合情报和赔率"
+  }}
+}}
+```"""
+
+INTELLIGENCE_PROMPT_BASKETBALL = """你是一个专业的篮球比赛情报分析师。请联网搜索以下比赛的最新情报，然后结合情报和赔率给出预测。
+
+## 比赛信息
+- 联赛: {league}
+- 主队: {home_team}
+- 客队: {away_team}
+- 比赛时间: {match_time}
+- 让分: {handicap_line}分（负数=主队让分，正数=客队让分）
+- 总分线: {hilo_line}分
+- 胜负赔率: 主胜{mnl_win} / 客胜{mnl_lose}
+- 让分赔率: 让胜{hdc_win} / 让负{hdc_lose}
+- 大小分赔率: 大{hilo_over} / 小{hilo_under}
+
+## 情报搜集要求（必须联网搜索）
+
+请依次搜索以下5个维度的情报：
+
+### 1. 双方近况（basic_data）
+- 搜索两队最近5场比赛的战绩（胜负、得失分）
+- 搜索主队主场战绩、客队客场战绩
+- 搜索两队近期状态趋势
+
+### 2. 伤停/轮休信息（basic_data）
+- 搜索两队最新伤停和轮休名单
+- 重点关注明星球员是否出战
+
+### 3. 历史交锋（basic_data）
+- 搜索两队近5次交锋记录
+- 注意主客场因素
+
+### 4. 赔率走势（market_sentiment）
+- 搜索本场比赛赔率变化趋势
+- 是否有异常资金流入
+- 初盘→即时盘的变化方向
+
+### 5. 专家分析（expert_opinions）
+- 搜索主流媒体的赛前分析文章
+- 搜索知名分析师的预测观点
+
+## 请严格按以下JSON格式输出（不要输出其他内容）:
+```json
+{{
+  "intelligence": {{
+    "basic_data": {{
+      "home_form": "主队近5场战绩描述",
+      "away_form": "客队近5场战绩描述",
+      "home_injuries": "主队伤停/轮休信息",
+      "away_injuries": "客队伤停/轮休信息",
+      "h2h": "历史交锋记录"
+    }},
+    "expert_opinions": {{
+      "consensus": "专家主流观点",
+      "key_points": ["分析要点1", "分析要点2", "分析要点3"]
+    }},
+    "market_sentiment": {{
+      "odds_trend": "赔率变化趋势",
+      "money_flow": "资金流向分析",
+      "anomaly": "是否有异常"
+    }},
+    "summary": "情报总结，100字以内"
+  }},
+  "prediction": {{
+    "win_loss": "主胜"或"客胜",
+    "handicap_result": "让胜"或"让负",
+    "total_points": "大"或"小",
+    "score_diff": "分差区间如主6-10胜或客1-5负",
+    "confidence": 把握度(0.3-0.95),
+    "analysis": "50-100字分析理由，需结合情报和赔率"
+  }}
+}}
+```"""
+
+# 情报展示模板（用于将已有情报注入到普通预测prompt中）
+INTELLIGENCE_SECTION = """
+## 已搜集的情报
+
+### 基本面数据
+{basic_data}
+
+### 专家观点
+{expert_opinions}
+
+### 市场情绪
+{market_sentiment}
+
+### 情报总结
+{summary}
+
+请结合以上情报和赔率数据，给出你的预测。"""
+
+
+def format_intelligence_section(intelligence):
+    """将intelligence dict格式化为INTELLIGENCE_SECTION文本
+    
+    Args:
+        intelligence: dict，包含 basic_data, expert_opinions, market_sentiment, summary
+    
+    Returns:
+        str: 格式化后的文本，如果intelligence为None返回空字符串
+    """
+    if not intelligence:
+        return ""
+    
+    def format_value(val):
+        if val is None:
+            return "暂无"
+        if isinstance(val, (dict, list)):
+            return json.dumps(val, ensure_ascii=False, indent=2)
+        return str(val)
+    
+    return INTELLIGENCE_SECTION.format(
+        basic_data=format_value(intelligence.get("basic_data")),
+        expert_opinions=format_value(intelligence.get("expert_opinions")),
+        market_sentiment=format_value(intelligence.get("market_sentiment")),
+        summary=format_value(intelligence.get("summary")),
+    )
+
+
+# ============================================================
 # 数据库操作
 # ============================================================
 def get_db_conn():
