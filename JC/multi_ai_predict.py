@@ -632,15 +632,12 @@ async def main():
         if MATCH_IDS_ARG:
             target_match_ids = [m.strip() for m in MATCH_IDS_ARG.split(",") if m.strip()]
         else:
-            target_match_ids = [
-                "20260728_周二001", "20260729_周二002",
-                "20260729_周二301", "20260729_周二302", "20260729_周二303",
-                "20260729_周二304", "20260729_周二305",
-                "20260729_周三001",
-            ]
+            target_match_ids = None
 
-        print(f"[步骤1] 查询 {len(target_match_ids)} 场比赛...")
         matches = fetch_matches(target_match_ids)
+        if target_match_ids is None:
+            target_match_ids = [m["id"] for m in matches]
+        print(f"[步骤1] 查询到 {len(matches)} 场比赛...")
         if not matches:
             actual_mode = RESULT_MODE if RESULT_MODE != "auto" else "display_only"
             await sdk.submit_result(
