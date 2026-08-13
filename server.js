@@ -8,7 +8,11 @@ const { execFile } = require('child_process');
 const { Pool } = require('pg');
 
 // ============ Database Connection ============
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres';
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('[FATAL] DATABASE_URL environment variable is not set');
+  process.exit(1);
+}
 const pgPool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -48,7 +52,8 @@ const CORS_HEADERS = {
 
 // ============ Task Status Tracking ============
 const taskStatus = {
-  discover: { running: false, lastRun: null, lastResult: null },
+  jcDiscover: { running: false, lastRun: null, lastResult: null },
+  ctDiscover: { running: false, lastRun: null, lastResult: null },
   predict: { running: false, lastRun: null, lastResult: null },
   settle: { running: false, lastRun: null, lastResult: null },
   report: { running: false, lastRun: null, lastResult: null },
@@ -885,20 +890,33 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // GET /api/heartbeat - 健康检查端点
+    if (pathname === '/api/heartbeat' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({
+        status: 'ok',
+        serverTime: new Date().toISOString(),
+        uptime: process.uptime(),
+        tasksScheduled: scheduleTimers.length,
+        settleTimers: settleTimers.size
+      }));
+      return;
+    }
+
     // ======== Admin API Routes ========
 
     // POST /api/admin/discover
     if (pathname === '/api/admin/discover' && req.method === 'POST') {
-      if (taskStatus.discover.running) {
+      if (taskStatus.jcDiscover.running) {
         res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
         res.end(JSON.stringify({ error: 'discover task is running' }));
         return;
       }
-      taskStatus.discover.running = true;
+      taskStatus.jcDiscover.running = true;
       try {
         const result = await runPython('discover_matches.py');
-        taskStatus.discover.lastRun = new Date().toISOString();
-        taskStatus.discover.lastResult = result;
+        taskStatus.jcDiscover.lastRun = new Date().toISOString();
+        taskStatus.jcDiscover.lastResult = result;
         
         // 新比赛发现后，重新初始化结算定时器
         await initializeSettleTimers();
@@ -1149,10 +1167,10 @@ const server = http.createServer(async (req, res) => {
           { label: '网站健康巡检', time: '08:30', status: taskStatus.healthCheck, script: 'website_health_check.py' },
           { label: '7AI多模型竞彩预测', time: '08:38', status: taskStatus.multiPredict, script: 'multi_ai_predict.py' },
           { label: '预测覆盖检查', time: '10:20', status: taskStatus.coverage, script: 'check_prediction_coverage.py' },
-          { label: 'JC上午抓取', time: '10:00', status: taskStatus.discover, script: 'discover_matches.py' },
-          { label: 'CT每日抓取', time: '10:30', status: taskStatus.discover, script: 'ct_discover.py' },
+          { label: 'JC上午抓取', time: '10:00', status: taskStatus.jcDiscover, script: 'discover_matches.py' },
+          { label: 'CT每日抓取', time: '10:30', status: taskStatus.ctDiscover, script: 'ct_discover.py' },
           { label: '全局自动结算(中午)', time: '12:00', status: taskStatus.globalSettle, script: 'auto_settle.py' },
-          { label: 'JC下午抓取', time: '18:00', status: taskStatus.discover, script: 'discover_matches.py' },
+          { label: 'JC下午抓取', time: '18:00', status: taskStatus.jcDiscover, script: 'discover_matches.py' },
           { label: '晚间预测复核', time: '23:00', status: taskStatus.nightlyReview, script: 'nightly_prediction_review.py' },
           { label: '全局自动结算(凌晨)', time: '00:00', status: taskStatus.globalSettle, script: 'auto_settle.py' },
         ],
@@ -1431,15 +1449,15 @@ function scheduleDaily(hour, minute, label, taskFn) {
 
 // JC定时抓取 - 每天10:00和18:00
 async function runJcDiscover() {
-  if (taskStatus.discover.running) {
+  if (taskStatus.jcDiscover.running) {
     console.log('[Schedule] JC抓取已在运行，跳过');
     return;
   }
-  taskStatus.discover.running = true;
+  taskStatus.jcDiscover.running = true;
   try {
     const result = await runPython('discover_matches.py');
-    taskStatus.discover.lastRun = new Date().toISOString();
-    taskStatus.discover.lastResult = result;
+    taskStatus.jcDiscover.lastRun = new Date().toISOString();
+    taskStatus.jcDiscover.lastResult = result;
     console.log(`[Schedule] JC抓取完成:`, JSON.stringify(result).slice(0, 200));
     // 发现新比赛后触发预测
     const newCount = result.new || result.new_matches_count || 0;
@@ -1450,26 +1468,25 @@ async function runJcDiscover() {
     // 重新初始化结算定时器
     await initializeSettleTimers();
   } catch (err) {
-    taskStatus.discover.lastRun = new Date().toISOString();
-    taskStatus.discover.lastResult = { error: err.message };
+    taskStatus.jcDiscover.lastRun = new Date().toISOString();
+    taskStatus.jcDiscover.lastResult = { error: err.message };
     console.error(`[Schedule] JC抓取失败:`, err.message);
   } finally {
-    taskStatus.discover.running = false;
+    taskStatus.jcDiscover.running = false;
   }
 }
 
 // CT定时抓取 - 每天10:30
 async function runCtDiscover() {
-  if (taskStatus.discover.running) {
-    console.log('[Schedule] 预测任务正在运行，等待30秒后重试CT');
-    setTimeout(runCtDiscover, 30000);
+  if (taskStatus.ctDiscover.running) {
+    console.log('[Schedule] CT抓取已在运行，跳过');
     return;
   }
-  taskStatus.discover.running = true;
+  taskStatus.ctDiscover.running = true;
   try {
     const result = await runPython('ct_discover.py');
-    taskStatus.discover.lastRun = new Date().toISOString();
-    taskStatus.discover.lastResult = result;
+    taskStatus.ctDiscover.lastRun = new Date().toISOString();
+    taskStatus.ctDiscover.lastResult = result;
     console.log(`[Schedule] CT抓取完成:`, JSON.stringify(result).slice(0, 200));
     // 发现新比赛后触发CT预测（4种玩法）
     const saved = result.saved || 0;
@@ -1487,125 +1504,44 @@ async function runCtDiscover() {
     }
     await initializeSettleTimers();
   } catch (err) {
-    taskStatus.discover.lastRun = new Date().toISOString();
-    taskStatus.discover.lastResult = { error: err.message };
+    taskStatus.ctDiscover.lastRun = new Date().toISOString();
+    taskStatus.ctDiscover.lastResult = { error: err.message };
     console.error(`[Schedule] CT抓取失败:`, err.message);
   } finally {
-    taskStatus.discover.running = false;
+    taskStatus.ctDiscover.running = false;
   }
 }
 
-// === 新增定时任务函数 ===
+// === 新增定时任务函数（工厂函数） ===
 
-// 7AI多模型竞彩预测 - 每天 08:38
-async function runMultiAiPredict() {
-  if (taskStatus.multiPredict.running) {
-    console.log('[Schedule] 7AI预测已在运行，跳过');
-    return;
-  }
-  taskStatus.multiPredict.running = true;
-  try {
-    console.log('[Schedule] 开始执行 7AI多模型竞彩预测...');
-    const result = await runPython('multi_ai_predict.py');
-    taskStatus.multiPredict.lastRun = new Date().toISOString();
-    taskStatus.multiPredict.lastResult = result;
-    console.log('[Schedule] 7AI预测完成:', JSON.stringify(result).slice(0, 200));
-  } catch (err) {
-    taskStatus.multiPredict.lastRun = new Date().toISOString();
-    taskStatus.multiPredict.lastResult = { error: err.message };
-    console.error('[Schedule] 7AI预测失败:', err.message);
-  } finally {
-    taskStatus.multiPredict.running = false;
-  }
+function createTaskRunner(statusKey, scriptName, label) {
+  return async function() {
+    if (taskStatus[statusKey].running) {
+      console.log(`[Schedule] ${label}已在运行，跳过`);
+      return;
+    }
+    taskStatus[statusKey].running = true;
+    try {
+      console.log(`[Schedule] 开始执行 ${label}...`);
+      const result = await runPython(scriptName);
+      taskStatus[statusKey].lastRun = new Date().toISOString();
+      taskStatus[statusKey].lastResult = result;
+      console.log(`[Schedule] ${label}完成:`, JSON.stringify(result).slice(0, 200));
+    } catch (err) {
+      taskStatus[statusKey].lastRun = new Date().toISOString();
+      taskStatus[statusKey].lastResult = { error: err.message };
+      console.error(`[Schedule] ${label}失败:`, err.message);
+    } finally {
+      taskStatus[statusKey].running = false;
+    }
+  };
 }
 
-// 全局自动结算 - 每天 0:00 和 12:00
-async function runGlobalSettle() {
-  if (taskStatus.globalSettle.running) {
-    console.log('[Schedule] 全局结算已在运行，跳过');
-    return;
-  }
-  taskStatus.globalSettle.running = true;
-  try {
-    console.log('[Schedule] 开始执行全局自动结算...');
-    const result = await runPython('auto_settle.py');
-    taskStatus.globalSettle.lastRun = new Date().toISOString();
-    taskStatus.globalSettle.lastResult = result;
-    console.log('[Schedule] 全局结算完成:', JSON.stringify(result).slice(0, 200));
-  } catch (err) {
-    taskStatus.globalSettle.lastRun = new Date().toISOString();
-    taskStatus.globalSettle.lastResult = { error: err.message };
-    console.error('[Schedule] 全局结算失败:', err.message);
-  } finally {
-    taskStatus.globalSettle.running = false;
-  }
-}
-
-// 网站健康巡检 - 每天 08:30
-async function runHealthCheck() {
-  if (taskStatus.healthCheck.running) {
-    console.log('[Schedule] 健康巡检已在运行，跳过');
-    return;
-  }
-  taskStatus.healthCheck.running = true;
-  try {
-    console.log('[Schedule] 开始执行网站健康巡检...');
-    const result = await runPython('website_health_check.py');
-    taskStatus.healthCheck.lastRun = new Date().toISOString();
-    taskStatus.healthCheck.lastResult = result;
-    console.log('[Schedule] 健康巡检完成:', JSON.stringify(result).slice(0, 200));
-  } catch (err) {
-    taskStatus.healthCheck.lastRun = new Date().toISOString();
-    taskStatus.healthCheck.lastResult = { error: err.message };
-    console.error('[Schedule] 健康巡检失败:', err.message);
-  } finally {
-    taskStatus.healthCheck.running = false;
-  }
-}
-
-// 预测覆盖检查 - 每天 10:20
-async function runCoverageCheck() {
-  if (taskStatus.coverage.running) {
-    console.log('[Schedule] 覆盖检查已在运行，跳过');
-    return;
-  }
-  taskStatus.coverage.running = true;
-  try {
-    console.log('[Schedule] 开始执行预测覆盖检查...');
-    const result = await runPython('check_prediction_coverage.py');
-    taskStatus.coverage.lastRun = new Date().toISOString();
-    taskStatus.coverage.lastResult = result;
-    console.log('[Schedule] 覆盖检查完成:', JSON.stringify(result).slice(0, 200));
-  } catch (err) {
-    taskStatus.coverage.lastRun = new Date().toISOString();
-    taskStatus.coverage.lastResult = { error: err.message };
-    console.error('[Schedule] 覆盖检查失败:', err.message);
-  } finally {
-    taskStatus.coverage.running = false;
-  }
-}
-
-// 晚间预测复核 - 每天 23:00
-async function runNightlyReview() {
-  if (taskStatus.nightlyReview.running) {
-    console.log('[Schedule] 晚间复核已在运行，跳过');
-    return;
-  }
-  taskStatus.nightlyReview.running = true;
-  try {
-    console.log('[Schedule] 开始执行晚间预测复核...');
-    const result = await runPython('nightly_prediction_review.py');
-    taskStatus.nightlyReview.lastRun = new Date().toISOString();
-    taskStatus.nightlyReview.lastResult = result;
-    console.log('[Schedule] 晚间复核完成:', JSON.stringify(result).slice(0, 200));
-  } catch (err) {
-    taskStatus.nightlyReview.lastRun = new Date().toISOString();
-    taskStatus.nightlyReview.lastResult = { error: err.message };
-    console.error('[Schedule] 晚间复核失败:', err.message);
-  } finally {
-    taskStatus.nightlyReview.running = false;
-  }
-}
+const runMultiAiPredict = createTaskRunner('multiPredict', 'multi_ai_predict.py', '7AI多模型竞彩预测');
+const runGlobalSettle = createTaskRunner('globalSettle', 'auto_settle.py', '全局自动结算');
+const runHealthCheck = createTaskRunner('healthCheck', 'website_health_check.py', '网站健康巡检');
+const runCoverageCheck = createTaskRunner('coverage', 'check_prediction_coverage.py', '预测覆盖检查');
+const runNightlyReview = createTaskRunner('nightlyReview', 'nightly_prediction_review.py', '晚间预测复核');
 
 // === 注册所有定时任务 ===
 // 原有的
@@ -1620,8 +1556,17 @@ scheduleDaily(10, 20, '预测覆盖检查', runCoverageCheck);
 scheduleDaily(12, 0, '全局自动结算(中午)', runGlobalSettle);
 scheduleDaily(23, 0, '晚间预测复核', runNightlyReview);
 
+// === 全局异常处理 ===
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err.message, err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled rejection:', reason);
+});
+
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
+  console.log(`Startup time: ${new Date().toISOString()}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
   
   // 初始化比赛级别定时结算（不阻塞启动）
