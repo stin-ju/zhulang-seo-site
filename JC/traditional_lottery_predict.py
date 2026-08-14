@@ -453,20 +453,27 @@ async def predict_for_game_type(game_type, matches, force=False):
             print(f"  [WARN] {ai_name} 解析失败")
             continue
         
+        # 任9维度：提取推荐的场次号列表
+        ren9_list = None
+        if game_type == "任9" and predictions:
+            ren9_list = [str(p.get("match", "")).zfill(2) for p in predictions if p.get("match")]
+        
         try:
             cur.execute("""
-                INSERT INTO traditional_predictions (game_type, ai_name, predictions, matches_info, issue, created_at)
-                VALUES (%s, %s, %s, %s, %s, NOW())
+                INSERT INTO traditional_predictions (game_type, ai_name, predictions, matches_info, issue, ren9, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
             """, (
                 game_type,
                 ai_name,
                 json.dumps(predictions, ensure_ascii=False),
                 json.dumps(matches_info, ensure_ascii=False),
                 issue,
+                json.dumps(ren9_list, ensure_ascii=False) if ren9_list else None,
             ))
             conn.commit()
             total_saved += 1
-            print(f"  [OK] {ai_name}: {len(predictions)}条预测")
+            r9_info = f" (任9推荐: {ren9_list})" if ren9_list else ""
+            print(f"  [OK] {ai_name}: {len(predictions)}条预测{r9_info}")
         except Exception as e:
             print(f"  [FAIL] {ai_name}: {e}")
             conn.rollback()
