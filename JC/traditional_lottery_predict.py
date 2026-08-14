@@ -151,7 +151,7 @@ def get_ct_matches(conn, issue=None):
     
     if issue:
         cur.execute("""
-            SELECT id, metadata 
+            SELECT id, home_team, away_team, metadata 
             FROM matches 
             WHERE metadata->>'match_type' = 'ct'
               AND metadata->>'issue' = %s
@@ -160,7 +160,7 @@ def get_ct_matches(conn, issue=None):
     else:
         # 获取最新一期
         cur.execute("""
-            SELECT id, metadata 
+            SELECT id, home_team, away_team, metadata 
             FROM matches 
             WHERE metadata->>'match_type' = 'ct'
               AND metadata->>'status' = 'on_sale'
@@ -174,17 +174,17 @@ def get_ct_matches(conn, issue=None):
         return None, []
     
     # 获取期号
-    first_meta = rows[0][1] if isinstance(rows[0][1], dict) else json.loads(rows[0][1]) if rows[0][1] else {}
+    first_meta = rows[0][3] if isinstance(rows[0][3], dict) else json.loads(rows[0][3]) if rows[0][3] else {}
     current_issue = first_meta.get('issue')
     
     matches = []
     for row in rows:
-        meta = row[1] if isinstance(row[1], dict) else json.loads(row[1]) if row[1] else {}
+        meta = row[3] if isinstance(row[3], dict) else json.loads(row[3]) if row[3] else {}
         matches.append({
             "id": row[0],
             "num": str(meta.get('issue_num', '')).zfill(2),
-            "home": meta.get('home_team', '待定'),
-            "away": meta.get('away_team', '待定'),
+            "home": row[1] or meta.get('home_team', '待定'),
+            "away": row[2] or meta.get('away_team', '待定'),
             "league": meta.get('league', ''),
             "time": meta.get('match_time', ''),
             "issue": current_issue,
@@ -251,6 +251,8 @@ async def call_ai_api(session, ai_name, prompt, sem):
                         return None
                     
                     content_type = resp.headers.get("Content-Type", "")
+                    
+                    # JSON响应
                     if "json" in content_type:
                         data = await resp.json()
                         if isinstance(data, dict):
@@ -259,8 +261,42 @@ async def call_ai_api(session, ai_name, prompt, sem):
                                 for msg in reversed(messages):
                                     if msg.get("role") == "assistant" and msg.get("content"):
                                         return msg["content"]
+                            if "messages" in data:
+                                for msg in reversed(data["messages"]):
+                                    if msg.get("role") == "assistant" and msg.get("content"):
+                                        return msg["content"]
                             if "result" in data:
                                 return str(data["result"])
+                            if "text" in data:
+                                return str(data["text"])
+                        return json.dumps(data, ensure_ascii=False)
+                    
+                    # SSE流式响应
+                    answer_chunks = []
+                    async for line in resp.content:
+                        line_str = line.decode("utf-8").strip()
+                        if not line_str:
+                            continue
+                        if line_str.startswith("data:"):
+                            line_str = line_str[5:].strip()
+                            if not line_str:
+                                continue
+                            try:
+                                evt = json.loads(line_str)
+                                if isinstance(evt, dict):
+                                    if evt.get("type") == "answer":
+                                        content = evt.get("content", {})
+                                        if isinstance(content, dict):
+                                            chunk = content.get("answer")
+                                            if chunk:
+                                                answer_chunks.append(chunk)
+                            except json.JSONDecodeError:
+                                pass
+                    if answer_chunks:
+                        full_answer = "".join(answer_chunks)
+                        return full_answer
+                    
+                    # 回退：返回原始文本
                     return await resp.text()
             
             # 标准OpenAI格式
@@ -304,8 +340,13 @@ def parse_prediction(content, game_type, match_count):
     if not content:
         return None
     
+    # 清理markdown代码块
+    content = re.sub(r'```json\s*', '', content)
+    content = re.sub(r'```\s*', '', content)
+    content = content.strip()
+    
     # 尝试提取JSON数组
-    json_match = re.search(r'\[[\s\S]*\]', content)
+    json_match = re.search(r'\[[\s\S]*?\](?=\s*[^\[\{]|\s*$)', content)
     if json_match:
         try:
             predictions = json.loads(json_match.group())
@@ -315,7 +356,7 @@ def parse_prediction(content, game_type, match_count):
             pass
     
     # 尝试提取JSON对象
-    json_match = re.search(r'\{[\s\S]*\}', content)
+    json_match = re.search(r'\{[\s\S]*?\}(?=\s*[^\[\{]|\s*$)', content)
     if json_match:
         try:
             obj = json.loads(json_match.group())
@@ -324,6 +365,18 @@ def parse_prediction(content, game_type, match_count):
         except json.JSONDecodeError:
             pass
     
+    # 尝试直接解析整个内容
+    try:
+        data = json.loads(content)
+        if isinstance(data, list) and len(data) > 0:
+            return data
+        if isinstance(data, dict):
+            return [data]
+    except json.JSONDecodeError:
+        pass
+    
+    # 调试输出
+    print(f"  [DEBUG] 解析失败，原始内容前200字符: {content[:200]}")
     return None
 
 
@@ -352,6 +405,16 @@ async def predict_for_game_type(game_type, matches, force=False):
         print(f"期号{issue}的{game_type}已有预测: {existing}")
         conn.close()
         return 0
+    
+    # force模式：先删除旧记录
+    if force and existing:
+        cur.execute("""
+            DELETE FROM traditional_predictions 
+            WHERE issue = %s AND game_type = %s
+        """, (issue, game_type))
+        conn.commit()
+        print(f"已删除旧预测记录")
+        existing = set()
     
     # 构建prompt
     matches_text = build_matches_text(matches)
