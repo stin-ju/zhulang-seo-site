@@ -395,16 +395,10 @@ function renderPredictionsTable(predictions, match) {
     // 根据运动类型定义字段映射
     const fieldConfig = isBasketball ? {
         // 篮球字段（4维度，无半场）
-        col1: { key: 'win_loss', hitKey: 'win_loss', label: '胜负' },
-        col2: { key: 'handicap_win_loss', hitKey: 'handicap_win_loss', label: '让分' },
-        col3: { key: 'score_diff_range', hitKey: 'score_diff_range', label: '胜分差',
-            format: (pred) => {
-                const range = pred.score_diff_range || '-';
-                if (range === '-') return '-';
-                return range;
-            }
-        },
-        col4: { key: 'total_points', hitKey: 'total_points', label: '总分' }
+        col1: { key: 'win_loss', fallbackKey: 'win_loss', hitKey: 'win_loss', label: '胜负' },
+        col2: { key: 'handicap_win_loss', fallbackKey: 'handicap_result', hitKey: 'handicap_win_loss', label: '让分' },
+        col3: { key: 'score_diff_range', fallbackKey: 'score_diff', hitKey: 'score_diff_range', label: '胜分差' },
+        col4: { key: 'total_points', fallbackKey: 'total_points', hitKey: 'total_points', label: '总分' }
     } : {
         // 足球字段
         col1: { key: 'win_loss', fallbackKey: 'spf', hitKey: 'spf', label: '胜平负' },
