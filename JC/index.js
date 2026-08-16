@@ -414,12 +414,14 @@ function renderPredictionsTable(predictions, match) {
         col5: { key: 'half_full', hitKey: 'half_full', label: '半全场' }
     };
     
-    // 获取预测值（从prediction JSON字段）
+    // 获取预测值（优先从顶层字段，其次从prediction JSON字段）
     function getPredValue(pred, key, fallbackKey) {
         const prediction = pred.prediction || {};
-        return prediction[key] 
-            || prediction[key + '_pred']  // _pred 后缀 fallback
-            || (fallbackKey && prediction[fallbackKey]) 
+        return pred[key]  // 先检查顶层字段（API返回的规范化字段）
+            || pred[key + '_pred']  // 顶层 _pred 后缀
+            || prediction[key]  // 再检查 prediction JSON
+            || prediction[key + '_pred']  // JSON _pred 后缀
+            || (fallbackKey && (pred[fallbackKey] || prediction[fallbackKey])) 
             || '-';
     }
     
