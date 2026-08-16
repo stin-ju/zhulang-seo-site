@@ -215,12 +215,20 @@ app.get('/api/traditional-lottery/latest', async (req, res) => {
 
 /**
  * GET /api/traditional-lottery/fetch
- * 触发传统彩赛程抓取
+ * 触发传统彩赛程抓取 + 4种玩法预测
  */
 app.get('/api/traditional-lottery/fetch', async (req, res) => {
-  const scriptPath = path.join(__dirname, '..', 'JC', 'traditional_lottery_predict.py');
+  const ctDiscoverPath = path.join(__dirname, '..', 'JC', 'ct_discover.py');
+  const predictPath = path.join(__dirname, '..', 'JC', 'traditional_lottery_predict.py');
   
-  if (!fs.existsSync(scriptPath)) {
+  if (!fs.existsSync(ctDiscoverPath)) {
+    return res.status(501).json({ 
+      error: 'Not Implemented',
+      message: 'ct_discover.py script not found'
+    });
+  }
+
+  if (!fs.existsSync(predictPath)) {
     return res.status(501).json({ 
       error: 'Not Implemented',
       message: 'traditional_lottery_predict.py script not found'
@@ -230,20 +238,58 @@ app.get('/api/traditional-lottery/fetch', async (req, res) => {
   try {
     const { execSync } = require('child_process');
     const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1' };
-    
-    // 执行抓取脚本
-    const result = execSync(
-      `python3 "${scriptPath}" --game '胜负彩' --force`,
-      {
-        cwd: path.join(__dirname, '..', 'JC'),
-        env: pythonEnv,
-        timeout: 300000,
-        maxBuffer: 10 * 1024 * 1024,
-      }
-    );
+    const jcDir = path.join(__dirname, '..', 'JC');
+    const execOptions = {
+      cwd: jcDir,
+      env: pythonEnv,
+      timeout: 300000,
+      maxBuffer: 10 * 1024 * 1024,
+    };
 
-    const data = JSON.parse(result.toString().trim());
-    res.json({ success: true, data });
+    // Step 1: 执行赛程抓取
+    console.log('[TraditionalLottery] Step 1: 执行 ct_discover.py...');
+    const discoverResult = execSync(
+      `python3 "${ctDiscoverPath}"`,
+      execOptions
+    );
+    const discoverData = JSON.parse(discoverResult.toString().trim());
+    const saved = discoverData.saved || 0;
+    console.log(`[TraditionalLottery] ct_discover完成, saved=${saved}`);
+
+    // Step 2: 如果有新比赛，执行4种玩法的预测
+    const predictResults = [];
+    if (saved > 0) {
+      const gameTypes = ['胜负彩', '任9', '半全场', '进球彩'];
+      for (const gameType of gameTypes) {
+        console.log(`[TraditionalLottery] Step 2: 执行 ${gameType} 预测...`);
+        try {
+          const predictResult = execSync(
+            `python3 "${predictPath}" --game '${gameType}' --force`,
+            execOptions
+          );
+          const predictData = JSON.parse(predictResult.toString().trim());
+          predictResults.push({
+            game_type: gameType,
+            success: true,
+            data: predictData
+          });
+          console.log(`[TraditionalLottery] ${gameType} 预测完成`);
+        } catch (err) {
+          console.error(`[TraditionalLottery] ${gameType} 预测失败:`, err.message);
+          predictResults.push({
+            game_type: gameType,
+            success: false,
+            error: err.message
+          });
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      discover: discoverData,
+      predictions: predictResults
+    });
   } catch (err) {
     console.error('[TraditionalLottery] /fetch error:', err.message);
     res.status(500).json({ error: 'Fetch failed', message: err.message });
