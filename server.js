@@ -1,6 +1,3 @@
-// 设置北京时间，确保定时任务按北京时间触发
-process.env.TZ = 'Asia/Shanghai';
-
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -8,11 +5,7 @@ const { execFile } = require('child_process');
 const { Pool } = require('pg');
 
 // ============ Database Connection ============
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error('[FATAL] DATABASE_URL environment variable is not set');
-  process.exit(1);
-}
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres';
 const pgPool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -52,17 +45,10 @@ const CORS_HEADERS = {
 
 // ============ Task Status Tracking ============
 const taskStatus = {
-  jcDiscover: { running: false, lastRun: null, lastResult: null },
-  ctDiscover: { running: false, lastRun: null, lastResult: null },
+  discover: { running: false, lastRun: null, lastResult: null },
   predict: { running: false, lastRun: null, lastResult: null },
   settle: { running: false, lastRun: null, lastResult: null },
-  report: { running: false, lastRun: null, lastResult: null },
-  // === 新增定时任务状态 ===
-  multiPredict: { running: false, lastRun: null, lastResult: null },
-  globalSettle: { running: false, lastRun: null, lastResult: null },
-  healthCheck: { running: false, lastRun: null, lastResult: null },
-  coverage: { running: false, lastRun: null, lastResult: null },
-  nightlyReview: { running: false, lastRun: null, lastResult: null },
+  report: { running: false, lastRun: null, lastResult: null }
 };
 
 const REPORT_PATH = '/tmp/dispatch_report.md';
@@ -82,10 +68,8 @@ function readBody(req) {
 function runPython(scriptName, args = []) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, 'JC', scriptName);
-    const jcDir = path.join(__dirname, 'JC');
-    const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || ''), PYTHONPATH: jcDir + ':' + (process.env.PYTHONPATH || '') };
+    const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
-    console.log('[runPython] PYTHONPATH:', env.PYTHONPATH, 'jcDir:', jcDir, '__dirname:', __dirname);
     
     const child = execFile('/usr/bin/python3', [scriptPath, ...args], {
       cwd: path.join(__dirname, 'JC'),
@@ -890,33 +874,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // GET /api/heartbeat - 健康检查端点
-    if (pathname === '/api/heartbeat' && req.method === 'GET') {
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({
-        status: 'ok',
-        serverTime: new Date().toISOString(),
-        uptime: process.uptime(),
-        tasksScheduled: scheduleTimers.length,
-        settleTimers: settleTimers.size
-      }));
-      return;
-    }
-
     // ======== Admin API Routes ========
 
     // POST /api/admin/discover
     if (pathname === '/api/admin/discover' && req.method === 'POST') {
-      if (taskStatus.jcDiscover.running) {
+      if (taskStatus.discover.running) {
         res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
         res.end(JSON.stringify({ error: 'discover task is running' }));
         return;
       }
-      taskStatus.jcDiscover.running = true;
+      taskStatus.discover.running = true;
       try {
         const result = await runPython('discover_matches.py');
-        taskStatus.jcDiscover.lastRun = new Date().toISOString();
-        taskStatus.jcDiscover.lastResult = result;
+        taskStatus.discover.lastRun = new Date().toISOString();
+        taskStatus.discover.lastResult = result;
         
         // 新比赛发现后，重新初始化结算定时器
         await initializeSettleTimers();
@@ -1093,95 +1064,6 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // ======== 新增管理 API：手动触发定时任务 ========
-
-    // POST /api/admin/multi-predict - 手动触发7AI预测
-    if (pathname === '/api/admin/multi-predict' && req.method === 'POST') {
-      if (taskStatus.multiPredict.running) {
-        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: '7AI predict is running' }));
-        return;
-      }
-      runMultiAiPredict();
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, message: '7AI predict triggered' }));
-      return;
-    }
-
-    // POST /api/admin/global-settle - 手动触发全局结算
-    if (pathname === '/api/admin/global-settle' && req.method === 'POST') {
-      if (taskStatus.globalSettle.running) {
-        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: 'global settle is running' }));
-        return;
-      }
-      runGlobalSettle();
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, message: 'Global settle triggered' }));
-      return;
-    }
-
-    // POST /api/admin/health-check - 手动触发健康巡检
-    if (pathname === '/api/admin/health-check' && req.method === 'POST') {
-      if (taskStatus.healthCheck.running) {
-        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: 'health check is running' }));
-        return;
-      }
-      runHealthCheck();
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, message: 'Health check triggered' }));
-      return;
-    }
-
-    // POST /api/admin/coverage - 手动触发覆盖检查
-    if (pathname === '/api/admin/coverage' && req.method === 'POST') {
-      if (taskStatus.coverage.running) {
-        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: 'coverage check is running' }));
-        return;
-      }
-      runCoverageCheck();
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, message: 'Coverage check triggered' }));
-      return;
-    }
-
-    // POST /api/admin/nightly-review - 手动触发晚间复核
-    if (pathname === '/api/admin/nightly-review' && req.method === 'POST') {
-      if (taskStatus.nightlyReview.running) {
-        res.writeHead(409, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: 'nightly review is running' }));
-        return;
-      }
-      runNightlyReview();
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify({ success: true, message: 'Nightly review triggered' }));
-      return;
-    }
-
-    // GET /api/admin/schedule - 查看所有定时任务状态和调度信息
-    if (pathname === '/api/admin/schedule' && req.method === 'GET') {
-      const schedule = {
-        tasks: [
-          { label: '网站健康巡检', time: '08:30', status: taskStatus.healthCheck, script: 'website_health_check.py' },
-          { label: '7AI多模型竞彩预测', time: '08:38', status: taskStatus.multiPredict, script: 'multi_ai_predict.py' },
-          { label: '预测覆盖检查', time: '10:20', status: taskStatus.coverage, script: 'check_prediction_coverage.py' },
-          { label: 'JC上午抓取', time: '10:00', status: taskStatus.jcDiscover, script: 'discover_matches.py' },
-          { label: 'CT每日抓取', time: '10:30', status: taskStatus.ctDiscover, script: 'ct_discover.py' },
-          { label: '全局自动结算(中午)', time: '12:00', status: taskStatus.globalSettle, script: 'auto_settle.py' },
-          { label: 'JC下午抓取', time: '18:00', status: taskStatus.jcDiscover, script: 'discover_matches.py' },
-          { label: '晚间预测复核', time: '23:00', status: taskStatus.nightlyReview, script: 'nightly_prediction_review.py' },
-          { label: '全局自动结算(凌晨)', time: '00:00', status: taskStatus.globalSettle, script: 'auto_settle.py' },
-        ],
-        matchSettleTimers: settleTimers.size,
-        serverTime: new Date().toISOString()
-      };
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-      res.end(JSON.stringify(schedule));
-      return;
-    }
-
     // POST /api/admin/briefing
     if (pathname === '/api/admin/briefing' && req.method === 'POST') {
       const rawBody = await readBody(req);
@@ -1207,31 +1089,6 @@ const server = http.createServer(async (req, res) => {
       
       res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
       res.end(JSON.stringify({ success: true, message: `Briefing triggered: ${date} (${type})` }));
-      return;
-    }
-
-    // 内部数据库查询接口（供Python脚本通过HTTP访问数据库）
-    if (pathname === '/api/internal/query' && req.method === 'POST') {
-      const remoteAddr = req.socket.remoteAddress;
-      if (remoteAddr !== '127.0.0.1' && remoteAddr !== '::1' && remoteAddr !== '::ffff:127.0.0.1') {
-        res.writeHead(403, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-        res.end(JSON.stringify({ error: 'Forbidden: localhost only' }));
-        return;
-      }
-      let body = '';
-      req.on('data', chunk => body += chunk);
-      req.on('end', async () => {
-        try {
-          const { sql, params } = JSON.parse(body);
-          const result = await pgPool.query(sql, params || []);
-          res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-          res.end(JSON.stringify({ rows: result.rows, rowCount: result.rowCount, fields: result.fields ? result.fields.map(f => ({ name: f.name, dataTypeID: f.dataTypeID })) : [] }));
-        } catch (err) {
-          console.error('[Internal Query] Error:', err.message);
-          res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
-          res.end(JSON.stringify({ error: err.message }));
-        }
-      });
       return;
     }
 
@@ -1367,9 +1224,22 @@ async function scheduleMatchSettle(matchId, matchTime) {
 
 async function triggerMatchSettle(matchId) {
   if (taskStatus.settle.running) {
-    console.log(`[AutoSettle] 结算任务正在运行，等待完成后再处理比赛 ${matchId}`);
-    setTimeout(() => triggerMatchSettle(matchId), 60000); // 1分钟后重试
-    return;
+    // 防止锁卡死：如果运行超过10分钟，强制释放
+    if (taskStatus.settle.lastRun) {
+      const elapsed = Date.now() - new Date(taskStatus.settle.lastRun).getTime();
+      if (elapsed > 10 * 60 * 1000) {
+        console.warn(`[AutoSettle] 结算任务运行超时(${Math.round(elapsed/60000)}分钟)，强制释放锁`);
+        taskStatus.settle.running = false;
+      } else {
+        console.log(`[AutoSettle] 结算任务正在运行，等待完成后再处理比赛 ${matchId}`);
+        setTimeout(() => triggerMatchSettle(matchId), 60000); // 1分钟后重试
+        return;
+      }
+    } else {
+      console.log(`[AutoSettle] 结算任务正在运行，等待完成后再处理比赛 ${matchId}`);
+      setTimeout(() => triggerMatchSettle(matchId), 60000);
+      return;
+    }
   }
   
   taskStatus.settle.running = true;
@@ -1449,15 +1319,15 @@ function scheduleDaily(hour, minute, label, taskFn) {
 
 // JC定时抓取 - 每天10:00和18:00
 async function runJcDiscover() {
-  if (taskStatus.jcDiscover.running) {
+  if (taskStatus.discover.running) {
     console.log('[Schedule] JC抓取已在运行，跳过');
     return;
   }
-  taskStatus.jcDiscover.running = true;
+  taskStatus.discover.running = true;
   try {
     const result = await runPython('discover_matches.py');
-    taskStatus.jcDiscover.lastRun = new Date().toISOString();
-    taskStatus.jcDiscover.lastResult = result;
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = result;
     console.log(`[Schedule] JC抓取完成:`, JSON.stringify(result).slice(0, 200));
     // 发现新比赛后触发预测
     const newCount = result.new || result.new_matches_count || 0;
@@ -1468,25 +1338,26 @@ async function runJcDiscover() {
     // 重新初始化结算定时器
     await initializeSettleTimers();
   } catch (err) {
-    taskStatus.jcDiscover.lastRun = new Date().toISOString();
-    taskStatus.jcDiscover.lastResult = { error: err.message };
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = { error: err.message };
     console.error(`[Schedule] JC抓取失败:`, err.message);
   } finally {
-    taskStatus.jcDiscover.running = false;
+    taskStatus.discover.running = false;
   }
 }
 
 // CT定时抓取 - 每天10:30
 async function runCtDiscover() {
-  if (taskStatus.ctDiscover.running) {
-    console.log('[Schedule] CT抓取已在运行，跳过');
+  if (taskStatus.discover.running) {
+    console.log('[Schedule] 预测任务正在运行，等待30秒后重试CT');
+    setTimeout(runCtDiscover, 30000);
     return;
   }
-  taskStatus.ctDiscover.running = true;
+  taskStatus.discover.running = true;
   try {
     const result = await runPython('ct_discover.py');
-    taskStatus.ctDiscover.lastRun = new Date().toISOString();
-    taskStatus.ctDiscover.lastResult = result;
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = result;
     console.log(`[Schedule] CT抓取完成:`, JSON.stringify(result).slice(0, 200));
     // 发现新比赛后触发CT预测（4种玩法）
     const saved = result.saved || 0;
@@ -1504,69 +1375,79 @@ async function runCtDiscover() {
     }
     await initializeSettleTimers();
   } catch (err) {
-    taskStatus.ctDiscover.lastRun = new Date().toISOString();
-    taskStatus.ctDiscover.lastResult = { error: err.message };
+    taskStatus.discover.lastRun = new Date().toISOString();
+    taskStatus.discover.lastResult = { error: err.message };
     console.error(`[Schedule] CT抓取失败:`, err.message);
   } finally {
-    taskStatus.ctDiscover.running = false;
+    taskStatus.discover.running = false;
   }
 }
 
-// === 新增定时任务函数（工厂函数） ===
+// 每日定时结算（同时处理竞彩和CT彩）
+async function runDailySettle() {
+  // 竞彩结算
+  if (taskStatus.settle.running) {
+    console.log('[Schedule] 竞彩结算已在运行，跳过');
+    return;
+  }
+  taskStatus.settle.running = true;
+  try {
+    console.log('[Schedule] 开始竞彩结算...');
+    const jcResult = await runPython('auto_settle.py');
+    taskStatus.settle.lastRun = new Date().toISOString();
+    taskStatus.settle.lastResult = jcResult;
+    console.log(`[Schedule] 竞彩结算完成:`, JSON.stringify(jcResult).slice(0, 200));
+  } catch (err) {
+    taskStatus.settle.lastRun = new Date().toISOString();
+    taskStatus.settle.lastResult = { error: err.message };
+    console.error(`[Schedule] 竞彩结算失败:`, err.message);
+  } finally {
+    taskStatus.settle.running = false;
+  }
 
-function createTaskRunner(statusKey, scriptName, label) {
-  return async function() {
-    if (taskStatus[statusKey].running) {
-      console.log(`[Schedule] ${label}已在运行，跳过`);
-      return;
-    }
-    taskStatus[statusKey].running = true;
-    try {
-      console.log(`[Schedule] 开始执行 ${label}...`);
-      const result = await runPython(scriptName);
-      taskStatus[statusKey].lastRun = new Date().toISOString();
-      taskStatus[statusKey].lastResult = result;
-      console.log(`[Schedule] ${label}完成:`, JSON.stringify(result).slice(0, 200));
-    } catch (err) {
-      taskStatus[statusKey].lastRun = new Date().toISOString();
-      taskStatus[statusKey].lastResult = { error: err.message };
-      console.error(`[Schedule] ${label}失败:`, err.message);
-    } finally {
-      taskStatus[statusKey].running = false;
-    }
-  };
+  // CT彩结算（使用CT目录下的脚本）
+  try {
+    console.log('[Schedule] 开始CT彩结算...');
+    const ctScriptPath = path.join(__dirname, 'CT', 'ct_auto_settle.py');
+    const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
+    if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
+    
+    const ctResult = await new Promise((resolve, reject) => {
+      execFile('/usr/bin/python3', [ctScriptPath], {
+        cwd: path.join(__dirname, 'CT'),
+        env,
+        timeout: 300000,
+        maxBuffer: 10 * 1024 * 1024
+      }, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`[Python ct_auto_settle.py] Error:`, error.message);
+          if (stderr) console.error(`[Python ct_auto_settle.py] Stderr:`, stderr);
+          reject(new Error(stderr || error.message));
+          return;
+        }
+        if (stderr) console.warn(`[Python ct_auto_settle.py] Stderr:`, stderr);
+        try {
+          resolve(JSON.parse(stdout.trim()));
+        } catch {
+          resolve({ output: stdout.trim() });
+        }
+      });
+    });
+    console.log(`[Schedule] CT彩结算完成:`, JSON.stringify(ctResult).slice(0, 200));
+  } catch (err) {
+    console.error(`[Schedule] CT彩结算失败:`, err.message);
+  }
 }
 
-const runMultiAiPredict = createTaskRunner('multiPredict', 'multi_ai_predict.py', '7AI多模型竞彩预测');
-const runGlobalSettle = createTaskRunner('globalSettle', 'auto_settle.py', '全局自动结算');
-const runHealthCheck = createTaskRunner('healthCheck', 'website_health_check.py', '网站健康巡检');
-const runCoverageCheck = createTaskRunner('coverage', 'check_prediction_coverage.py', '预测覆盖检查');
-const runNightlyReview = createTaskRunner('nightlyReview', 'nightly_prediction_review.py', '晚间预测复核');
-
-// === 注册所有定时任务 ===
-// 原有的
+// 注册定时任务
 scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
 scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
 scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
-// 新增的
-scheduleDaily(8, 30, '网站健康巡检', runHealthCheck);
-scheduleDaily(8, 38, '7AI多模型竞彩预测', runMultiAiPredict);
-scheduleDaily(0, 0, '全局自动结算(凌晨)', runGlobalSettle);
-scheduleDaily(10, 20, '预测覆盖检查', runCoverageCheck);
-scheduleDaily(12, 0, '全局自动结算(中午)', runGlobalSettle);
-scheduleDaily(23, 0, '晚间预测复核', runNightlyReview);
-
-// === 全局异常处理 ===
-process.on('uncaughtException', (err) => {
-  console.error('[FATAL] Uncaught exception:', err.message, err.stack);
-});
-process.on('unhandledRejection', (reason) => {
-  console.error('[FATAL] Unhandled rejection:', reason);
-});
+scheduleDaily(0, 30, '每日凌晨结算', runDailySettle);
+scheduleDaily(12, 30, '每日午间结算', runDailySettle);
 
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
-  console.log(`Startup time: ${new Date().toISOString()}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
   
   // 初始化比赛级别定时结算（不阻塞启动）
