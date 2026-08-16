@@ -417,7 +417,10 @@ function renderPredictionsTable(predictions, match) {
     // 获取预测值（从prediction JSON字段）
     function getPredValue(pred, key, fallbackKey) {
         const prediction = pred.prediction || {};
-        return prediction[key] || (fallbackKey && prediction[fallbackKey]) || '-';
+        return prediction[key] 
+            || prediction[key + '_pred']  // _pred 后缀 fallback
+            || (fallbackKey && prediction[fallbackKey]) 
+            || '-';
     }
     
     // 判断命中状态（从hit_status JSON字段）
