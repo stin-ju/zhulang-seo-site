@@ -222,13 +222,13 @@ def get_ct_matches(conn, issue=None):
             ORDER BY (metadata->>'issue_num')::int
         """, (issue,))
     else:
-        # 获取最新一期
+        # 获取最新一期（不限制状态，所有抓取到的CT彩比赛都跑预测）
         cur.execute("""
             SELECT id, home_team, away_team, metadata 
             FROM matches 
             WHERE metadata->>'match_type' = 'ct'
-              AND metadata->>'status' = 'on_sale'
             ORDER BY metadata->>'issue' DESC, (metadata->>'issue_num')::int
+            LIMIT 14
         """)
     
     rows = cur.fetchall()
