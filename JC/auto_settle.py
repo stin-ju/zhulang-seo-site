@@ -527,6 +527,57 @@ def fill_missing_scores(conn):
     return updated
 
 
+def settle_cancelled_predictions(conn):
+    """处理已取消比赛的预测：标记为已结算，hit_status='cancelled'"""
+    sql = """
+    SELECT p.id, m.id as match_id, p.ai_name, m.home_team, m.away_team
+    FROM predictions p
+    JOIN matches m ON p.match_id = m.id
+    WHERE m.status = '已取消'
+      AND (p.is_settled = false OR p.is_settled IS NULL)
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql)
+        rows = cur.fetchall()
+
+    if not rows:
+        print("[已取消结算] 无已取消比赛的预测需要处理")
+        return 0
+
+    print(f"[已取消结算] 发现 {len(rows)} 条已取消比赛的预测")
+
+    # 构造 cancelled hit_status：所有维度标记为 cancelled
+    cancelled_hit = {
+        "spf": "cancelled",
+        "handicap": "cancelled",
+        "score": "cancelled",
+        "goals": "cancelled",
+        "half_full": "cancelled",
+        "win_loss": "cancelled",
+        "handicap_win_loss": "cancelled",
+        "total_points": "cancelled",
+        "score_diff": "cancelled",
+        "half_win_loss": "cancelled"
+    }
+    hit_json = json.dumps(cancelled_hit, ensure_ascii=False)
+
+    settled_count = 0
+    with conn.cursor() as cur:
+        for pred_id, match_id, ai_name, home_team, away_team in rows:
+            cur.execute("""
+                UPDATE predictions 
+                SET is_settled = true, 
+                    hit_status = %s::jsonb
+                WHERE id = %s
+            """, [hit_json, pred_id])
+            settled_count += 1
+            print(f"  [已取消] {ai_name}: {match_id} {home_team} vs {away_team}")
+
+    conn.commit()
+    print(f"[已取消结算] 完成，标记 {settled_count} 条预测为已取消")
+    return settled_count
+
+
 def get_unsettled(conn, match_id=None):
     """获取所有已完赛但未结算的比赛及其预测
     同时从 prediction jsonb 和顶层列读取，优先 jsonb
@@ -829,6 +880,16 @@ def main():
             print(f"已补全 {filled} 场比赛比分\n")
     except Exception as e:
         print(f"[WARN] 比分补全失败（不影响结算）: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+    
+    # 处理已取消比赛的预测
+    try:
+        cancelled_count = settle_cancelled_predictions(conn)
+        if cancelled_count > 0:
+            print()
+    except Exception as e:
+        print(f"[WARN] 已取消结算失败: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
     
