@@ -218,7 +218,7 @@ app.get('/api/traditional-lottery/latest', async (req, res) => {
  * 触发传统彩赛程抓取
  */
 app.get('/api/traditional-lottery/fetch', async (req, res) => {
-  const scriptPath = path.join(__dirname, 'scripts', 'traditional_lottery_predict.py');
+  const scriptPath = path.join(__dirname, '..', 'JC', 'traditional_lottery_predict.py');
   
   if (!fs.existsSync(scriptPath)) {
     return res.status(501).json({ 
@@ -235,7 +235,7 @@ app.get('/api/traditional-lottery/fetch', async (req, res) => {
     const result = execSync(
       `python3 "${scriptPath}" --game '胜负彩' --force`,
       {
-        cwd: path.join(__dirname, 'scripts'),
+        cwd: path.join(__dirname, '..', 'JC'),
         env: pythonEnv,
         timeout: 120000,
         maxBuffer: 10 * 1024 * 1024,
