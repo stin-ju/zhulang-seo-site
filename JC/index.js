@@ -416,6 +416,7 @@ function renderPredictionsTable(predictions, match) {
     
     // 获取预测值（优先从顶层字段，其次从prediction JSON字段）
     function getPredValue(pred, key, fallbackKey) {
+        console.log('[getPredValue] key=', key, 'pred[key]=', pred[key], 'prediction[key]=', (pred.prediction || {})[key]);
         const prediction = pred.prediction || {};
         return pred[key]  // 先检查顶层字段（API返回的规范化字段）
             || pred[key + '_pred']  // 顶层 _pred 后缀
