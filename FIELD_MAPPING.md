@@ -244,6 +244,7 @@ CT/ct.html 前端渲染
 
 | 日期 | 修改内容 | 相关文件 |
 |:-----|:---------|:---------|
+| 2026-08-16 | getPredValue优先检查顶层字段 | index.js |
 | 2026-08-16 | 添加 `_pred` 后缀 fallback | index.js |
 | 2026-08-16 | 创建此字段映射表 | FIELD_MAPPING.md |
 
