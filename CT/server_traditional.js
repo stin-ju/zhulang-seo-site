@@ -233,7 +233,7 @@ app.get('/api/traditional-lottery/fetch', async (req, res) => {
     
     // 执行抓取脚本
     const result = execSync(
-      `python3 "${scriptPath}" --game '胜负彩' --get`,
+      `python3 "${scriptPath}" --game '胜负彩' --force`,
       {
         cwd: path.join(__dirname, 'scripts'),
         env: pythonEnv,
