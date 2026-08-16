@@ -423,12 +423,11 @@ def fetch_matches(match_ids=None):
                 ORDER BY id ASC
             """, match_ids)
         else:
-            # 查询今天和明天的在售比赛
+            # 查询今天和明天的所有比赛（不限制状态，所有抓取到的比赛都跑预测）
             cur.execute("""
                 SELECT id, sport_type, home_team, away_team, metadata
                 FROM matches
-                WHERE metadata->>'status' = 'on_sale'
-                  AND metadata->>'match_date' >= CURRENT_DATE::text
+                WHERE metadata->>'match_date' >= CURRENT_DATE::text
                   AND metadata->>'match_date' <= (CURRENT_DATE + INTERVAL '1 day')::text
                 ORDER BY id ASC
             """)
