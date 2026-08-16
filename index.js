@@ -365,7 +365,7 @@ function renderMatchCard(match) {
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
             <span class="time">${leaguePrefix}${matchTime}</span>
             ${match.id ? `<a href="/ia2.html?match=${encodeURIComponent(match.id)}" class="match-lottery-id" onclick="event.stopPropagation()">${match.id}</a>` : ''}
-            <span class="teams">${esc(homeTeam)} ${match.status === '已确认' ? '<span class="score-inline">' + match.home_score + ':' + match.away_score + '</span>' : match.status === '已取消' ? '<span class="score-inline" style="color:#9ca3af;">已取消</span>' : 'vs'} ${esc(awayTeam)}${handicapDisplay ? ' <span class="handicap-tag">' + handicapDisplay + '</span>' : ''}</span>
+            <span class="teams">${esc(homeTeam)} ${isDone && match.home_score != null ? '<span class="score-inline">' + match.home_score + ':' + match.away_score + '</span>' : match.status === '已取消' ? '<span class="score-inline" style="color:#9ca3af;">已取消</span>' : 'vs'} ${esc(awayTeam)}${handicapDisplay ? ' <span class="handicap-tag">' + handicapDisplay + '</span>' : ''}</span>
             <div class="badge-group">
                 ${badges}
                 ${predCount > 0 ? `<span class="badge-sm" style="background:rgba(139,92,246,0.1);color:#a78bfa;">${predCount}AI预测</span>` : ''}
@@ -417,13 +417,10 @@ function renderPredictionsTable(predictions, match) {
     // 获取预测值（优先从顶层字段，其次从prediction JSON字段）
     function getPredValue(pred, key, fallbackKey) {
         const prediction = pred.prediction || {};
-        // 标准化字段名 → 原始prediction JSON字段名的映射
-        const rawKeyMap = {'handicap_win_loss':'handicap_result','score_diff_range':'score_diff'};
-        const rawKey = rawKeyMap[key] || key;
         return pred[key]  // 先检查顶层字段（API返回的规范化字段）
             || pred[key + '_pred']  // 顶层 _pred 后缀
-            || prediction[key]  // prediction JSON 同名字段
-            || prediction[rawKey]  // prediction JSON 映射字段（handicap_result/score_diff）
+            || prediction[key]  // 再检查 prediction JSON
+            || prediction[key + '_pred']  // JSON _pred 后缀
             || (fallbackKey && (pred[fallbackKey] || prediction[fallbackKey])) 
             || '-';
     }
@@ -456,7 +453,7 @@ function renderPredictionsTable(predictions, match) {
                             <td>${esc(p.ai_name)}</td>
                             <td class="${cellClass(p, fieldConfig.col1.hitKey)}">${getPredValue(p, fieldConfig.col1.key, fieldConfig.col1.fallbackKey)}</td>
                             <td class="${cellClass(p, fieldConfig.col2.hitKey)}">${getPredValue(p, fieldConfig.col2.key, fieldConfig.col2.fallbackKey)}</td>
-                            <td class="${cellClass(p, fieldConfig.col3.hitKey)}">${getPredValue(p, fieldConfig.col3.key, fieldConfig.col3.fallbackKey)}</td>
+                            <td class="${cellClass(p, fieldConfig.col3.hitKey)}">${fieldConfig.col3.format ? fieldConfig.col3.format(p.prediction || {}) : getPredValue(p, fieldConfig.col3.key)}</td>
                             <td class="${cellClass(p, fieldConfig.col4.hitKey)}">${getPredValue(p, fieldConfig.col4.key)}</td>
                             ${!isBasketball ? '<td class="' + cellClass(p, fieldConfig.col5.hitKey) + '">' + getPredValue(p, fieldConfig.col5.key) + '</td>' : ''}
                             <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
@@ -677,7 +674,7 @@ function renderRanking() {
     // 建立比赛结果映射
     const matchMap = {};
     (state.allMatches || []).forEach(m => {
-        if (m.home_score != null && m.away_score != null && ["已确认","已完成","已结束"].includes(m.status)) {
+        if (m.home_score != null && m.away_score != null && ["已确认","已完成","已结束","已完赛"].includes(m.status)) {
             matchMap[m.id] = m;
         }
     });
