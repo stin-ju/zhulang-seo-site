@@ -1,4 +1,4 @@
-// v=202607150416 cache bust
+// v=202608170032 cache bust
 // ============================================================
 // 首页逻辑 - 使用公共API模块
 // ============================================================
@@ -16,7 +16,6 @@ import {
     querySupabase,
     isMatchDone
 } from './api.js';
-
 // ============================================================
 // 固定AI列表（不再从数据库动态获取）
 // ============================================================
@@ -29,7 +28,6 @@ const AI_NAMES = [
     "智谱清言",
     "MiniMax"
 ];
-
 // ============================================================
 // 日期工具函数（修复时区Bug：用本地时间而非UTC）
 // ============================================================
@@ -39,7 +37,6 @@ function getLocalDateStr(d) {
     const day = String(d.getDate()).padStart(2, '0');
     return year + '-' + month + '-' + day;
 }
-
 // ============================================================
 // 全局状态
 // ============================================================
@@ -54,12 +51,10 @@ const state = {
     expandedLeft: false,
     expandedRight: false
 };
-
 // 增量统计缓存
 let dimStatsCache = null;
 let lastPredictionsLength = -1;
 let lastMatchesLength = -1;
-
 // ============================================================
 // 日期工具函数
 // ============================================================
@@ -67,7 +62,6 @@ function getMatchDate(match) {
     const timeStr = (match.match_time || '').replace(' ', 'T');
     return timeStr.substring(0, 10);
 }
-
 function fmtDateLabel(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr + 'T00:00:00');
@@ -77,7 +71,6 @@ function fmtDateLabel(dateStr) {
     const weekDay = weekDays[d.getDay()];
     return `${month}月${day}日 ${weekDay}`;
 }
-
 // ============================================================
 // 数据加载
 // ============================================================
@@ -120,7 +113,6 @@ async function loadAll() {
         showError('数据加载失败，请刷新页面重试');
     }
 }
-
 // ============================================================
 // 渲染函数
 // ============================================================
@@ -130,7 +122,6 @@ function renderAll() {
     renderStats();
     renderRanking();
 }
-
 // 日期标签：前2日+当日+后4日，其余折叠
 function renderDateTabs() {
     const container = document.getElementById('date-bar');
@@ -211,7 +202,6 @@ function renderDateTabs() {
         });
     });
 }
-
 function renderMatches() {
     const dateMatches = state.allMatches.filter(m => 
         getMatchDate(m) === state.currentDate
@@ -281,7 +271,6 @@ function renderMatches() {
     
     document.getElementById('match-count-label').textContent = `${dateMatches.length}场`;
 }
-
 // 展开/收起更多比赛
 window.expandMoreMatches = function(sport) {
     const moreMatches = document.getElementById(`${sport}-more-matches`);
@@ -300,7 +289,6 @@ window.expandMoreMatches = function(sport) {
         }
     }
 }
-
 // 渲染比赛卡片
 function renderMatchCard(match) {
     const matchPredictions = state.predictions.filter(p => p.match_id === match.id);
@@ -353,14 +341,12 @@ function renderMatchCard(match) {
     // 联赛名称：直接放在time文字前
     const leagueName = (match.metadata && match.metadata.league) || '';
     const leaguePrefix = leagueName ? `[${esc(leagueName)}] ` : '';
-
     // 让球格式化：正数加+号（已有+号则不加）
     const handicapVal = parseFloat(match.handicap);
     const handicapStr = match.handicap || '';
     const handicapDisplay = !isNaN(handicapVal)
         ? (handicapVal > 0 && !handicapStr.startsWith('+') ? '+' + handicapStr : handicapStr)
         : handicapStr;
-
     return `
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
             <span class="time">${leaguePrefix}${matchTime}</span>
@@ -378,13 +364,13 @@ function renderMatchCard(match) {
         </div>
     `;
 }
-
 // 渲染AI预测表格（每个AI一行，列是胜平负/让球/比分/进球数/半全场）
 function renderPredictionsTable(predictions, match) {
     if (!predictions || predictions.length === 0) {
         return '<div style="padding:12px 0;color:#94a3b8;font-size:13px;">暂无AI预测</div>';
     }
     
+
     // 判断运动类型
     const sport = (match && match.sport_type) || (predictions[0] && predictions[0].sport_type) || 'football';
     const isBasketball = sport === 'basketball';
@@ -445,7 +431,7 @@ function renderPredictionsTable(predictions, match) {
                             <td class="${cellClass(p, fieldConfig.col1.hitKey)}">${getPredValue(p, fieldConfig.col1.key, fieldConfig.col1.fallbackKey)}</td>
                             <td class="${cellClass(p, fieldConfig.col2.hitKey)}">${getPredValue(p, fieldConfig.col2.key, fieldConfig.col2.fallbackKey)}</td>
                             <td class="${cellClass(p, fieldConfig.col3.hitKey)}">${getPredValue(p, fieldConfig.col3.key, fieldConfig.col3.fallbackKey)}</td>
-                            <td class="${cellClass(p, fieldConfig.col4.hitKey)}">${getPredValue(p, fieldConfig.col4.key)}</td>
+                            <td class="${cellClass(p, fieldConfig.col4.hitKey)}">${getPredValue(p, fieldConfig.col4.key, fieldConfig.col4.fallbackKey)}</td>
                             ${!isBasketball ? '<td class="' + cellClass(p, fieldConfig.col5.hitKey) + '">' + getPredValue(p, fieldConfig.col5.key) + '</td>' : ''}
                             <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
                         </tr>
@@ -455,7 +441,6 @@ function renderPredictionsTable(predictions, match) {
         </div>
     `;
 }
-
 // 展开/折叠预测
 function toggleMatchPredictions(matchId) {
     const detail = document.getElementById(`detail-${matchId}`);
@@ -469,7 +454,6 @@ function toggleMatchPredictions(matchId) {
         detail.classList.add('open');
     }
 }
-
 // 渲染统计数据
 function renderStats() {
     const total = state.allMatches.length;
@@ -478,12 +462,10 @@ function renderStats() {
     document.getElementById('match-count').textContent = total;
     document.getElementById('done-count').textContent = done;
 }
-
 // 渲染简报列表
 function renderBriefList() {
     // 简报列表已经在HTML中静态生成，这里不需要动态渲染
 }
-
 // ============================================================
 // AI排行渲染（动态从数据库获取）
 // ============================================================
@@ -503,10 +485,8 @@ const DIM_CONFIGS = {
         'goals': { key: 'goals', label: '总分' }
     }
 };
-
 // 初始化运动类型
 if (!state.currentSport) state.currentSport = 'all';
-
 // 渲染维度tab
 function renderDimTabs(sport) {
     const container = document.getElementById('rank-tabs');
@@ -519,7 +499,6 @@ function renderDimTabs(sport) {
     });
     container.innerHTML = html;
 }
-
 // 计算维度命中统计（增量缓存）
 function computeDimStats(predictions, matchMap, activeAIs) {
     // 检查缓存是否有效
@@ -538,7 +517,6 @@ function computeDimStats(predictions, matchMap, activeAIs) {
     activeAIs.forEach(function(ai) {
         dimStats[ai.ai_name] = { matches:0, spf_t:0,spf_h:0, let_t:0,let_h:0, score_t:0,score_h:0, goals_t:0,goals_h:0, half_t:0,half_h:0, sdr_t:0,sdr_h:0 };
     });
-
     predictions.forEach(function(p) {
         const ai = p.ai_name;
         if (!dimStats[ai]) return;
@@ -548,7 +526,6 @@ function computeDimStats(predictions, matchMap, activeAIs) {
         const home = m.home_score, away = m.away_score;
         const sport = m.sport_type || "football";
         const pred = p.prediction || {};
-
         // 1. 胜平负/胜负
         if (sport === "football" && pred.spf) {
             dimStats[ai].spf_t++;
@@ -562,7 +539,6 @@ function computeDimStats(predictions, matchMap, activeAIs) {
             dimStats[ai].spf_t++;
             if ((home>away && pred.win_loss==="胜") || (home<away && pred.win_loss==="负")) dimStats[ai].spf_h++;
         }
-
         // 2. 让球/让分
         if (sport === "football" && pred.handicap_spf) {
             dimStats[ai].let_t++;
@@ -578,13 +554,11 @@ function computeDimStats(predictions, matchMap, activeAIs) {
             const adj = home + sl;
             if ((adj>away && pred.handicap_win_loss==="让胜") || (adj<away && pred.handicap_win_loss==="让负")) dimStats[ai].let_h++;
         }
-
         // 3. 比分
         if (pred.score) {
             dimStats[ai].score_t++;
             if (pred.score === home + "-" + away) dimStats[ai].score_h++;
         }
-
         // 4. 进球数/总分
         if (sport === "football" && pred.goals != null) {
             dimStats[ai].goals_t++;
@@ -594,7 +568,6 @@ function computeDimStats(predictions, matchMap, activeAIs) {
             const tl = parseFloat(m.total_line || 0);
             if (tl && ((home+away>tl && pred.total_points==="大") || (home+away<tl && pred.total_points==="小"))) dimStats[ai].goals_h++;
         }
-
         // 5. 半全场
         if (sport === "football" && pred.half_full) {
             dimStats[ai].half_t++;
@@ -629,7 +602,6 @@ function computeDimStats(predictions, matchMap, activeAIs) {
     
     return dimStats;
 }
-
 function renderRanking() {
     const container = document.getElementById("ranking-list");
     if (!container) return;
@@ -661,7 +633,6 @@ function renderRanking() {
         container.innerHTML = "<div style=\"padding:20px;text-align:center;color:#94a3b8;\">暂无排行数据</div>";
         return;
     }
-
     // 建立比赛结果映射
     const matchMap = {};
     (state.allMatches || []).forEach(m => {
@@ -669,27 +640,22 @@ function renderRanking() {
             matchMap[m.id] = m;
         }
     });
-
     // 按运动类型分组计算（通过match获取sport_type）
     const allPreds = state.predictions || [];
     const getPredSport = function(p) { return (matchMap[p.match_id] || {}).sport_type || p.sport_type || 'football'; };
     const footballPreds = allPreds.filter(p => getPredSport(p) === 'football');
     const basketballPreds = allPreds.filter(p => getPredSport(p) === 'basketball');
-
     window._dimStatsMap = {
         all: computeDimStats(allPreds, matchMap, activeAIs),
         football: computeDimStats(footballPreds, matchMap, activeAIs),
         basketball: computeDimStats(basketballPreds, matchMap, activeAIs)
     };
     window._activeAIs = activeAIs;
-
     // 渲染维度tab
     renderDimTabs(state.currentSport);
-
     // 渲染内容
     renderRankingContent('all');
 }
-
 // 切换运动类型
 window.switchSport = function(sport) {
     state.currentSport = sport;
@@ -699,7 +665,6 @@ window.switchSport = function(sport) {
     renderDimTabs(sport);
     renderRankingContent('all');
 };
-
 // 切换维度tab
 window.switchRankTab = function(dim) {
     document.querySelectorAll('.rank-tab').forEach(function(tab) {
@@ -707,7 +672,6 @@ window.switchRankTab = function(dim) {
     });
     renderRankingContent(dim);
 };
-
 // 渲染排行内容
 function renderRankingContent(dim) {
     const container = document.getElementById("ranking-list");
@@ -716,15 +680,12 @@ function renderRankingContent(dim) {
     const dimStats = (window._dimStatsMap || {})[sport] || (window._dimStatsMap || {}).all;
     const activeAIs = window._activeAIs;
     if (!dimStats || !activeAIs) return;
-
     const medal = function(r) { return r===1?"🥇":r===2?"🥈":r===3?"🥉":r; };
     const th = "padding:5px 3px;font-size:10px;color:#94a3b8;text-align:center;";
     const td = "padding:5px 3px;font-size:12px;text-align:center;";
     const fmtPct = function(h,t) { return t>0 ? (h*100/t).toFixed(0)+"%" : "—"; };
-
     const isFootball = sport !== 'basketball';
     const dimConfig = isFootball ? DIM_CONFIGS.football : DIM_CONFIGS.basketball;
-
     if (dim === 'all') {
         // 总榜：按主维度命中率排序
         const sorted = [...activeAIs].sort(function(a, b) {
@@ -733,7 +694,6 @@ function renderRankingContent(dim) {
             const rb = sb.spf_t ? sb.spf_h/sb.spf_t : 0;
             return rb - ra;
         });
-
         let html = "<table style=\"width:100%;border-collapse:collapse;\">";
         html += "<thead><tr>";
         html += "<th style=\""+th+"text-align:left;\">排名</th>";
@@ -752,7 +712,6 @@ function renderRankingContent(dim) {
             html += "<th style=\""+th+"\">总分</th>";
         }
         html += "</tr></thead><tbody>";
-
         sorted.forEach(function(ai, i) {
             const d = dimStats[ai.ai_name];
             html += "<tr>";
@@ -760,6 +719,7 @@ function renderRankingContent(dim) {
             html += "<td style=\""+td+"text-align:left;font-weight:600;\">"+(ai.ai_name||"")+"</td>";
             html += "<td style=\""+td+"color:#fbbf24;\">"+fmtPct(d.spf_h,d.spf_t)+"</td>";
             if (isFootball) {
+
                 html += "<td style=\""+td+"\">"+fmtPct(d.let_h,d.let_t)+"</td>";
                 html += "<td style=\""+td+"\">"+fmtPct(d.score_h,d.score_t)+"</td>";
                 html += "<td style=\""+td+"\">"+fmtPct(d.goals_h,d.goals_t)+"</td>";
@@ -771,21 +731,18 @@ function renderRankingContent(dim) {
             }
             html += "</tr>";
         });
-
         html += "</tbody></table>";
         container.innerHTML = html;
     } else {
         // 单维度榜
         const cfg = dimConfig[dim];
         if (!cfg) return;
-
         const sorted = [...activeAIs].sort(function(a, b) {
             const sa = dimStats[a.ai_name], sb = dimStats[b.ai_name];
             const ra = sa[cfg.key+'_t'] ? sa[cfg.key+'_h']/sa[cfg.key+'_t'] : 0;
             const rb = sb[cfg.key+'_t'] ? sb[cfg.key+'_h']/sb[cfg.key+'_t'] : 0;
             return rb - ra;
         });
-
         let html = "<table style=\"width:100%;border-collapse:collapse;\">";
         html += "<thead><tr>";
         html += "<th style=\""+th+"text-align:left;\">排名</th>";
@@ -793,14 +750,12 @@ function renderRankingContent(dim) {
         html += "<th style=\""+th+"\">命中场次</th>";
         html += "<th style=\""+th+"\">命中率</th>";
         html += "</tr></thead><tbody>";
-
         sorted.forEach(function(ai, i) {
             const d = dimStats[ai.ai_name];
             const hits = d[cfg.key+'_h'] || 0;
             const total = d[cfg.key+'_t'] || 0;
             const isFirst = i === 0;
             const highlightStyle = isFirst ? "color:#fbbf24;font-weight:700;" : "";
-
             html += "<tr>";
             html += "<td style=\""+td+"text-align:left;\">"+medal(i+1)+"</td>";
             html += "<td style=\""+td+"text-align:left;font-weight:600;\">"+(ai.ai_name||"")+"</td>";
@@ -808,12 +763,10 @@ function renderRankingContent(dim) {
             html += "<td style=\""+td+highlightStyle+"\">"+fmtPct(hits,total)+"</td>";
             html += "</tr>";
         });
-
         html += "</tbody></table>";
         container.innerHTML = html;
     }
 }
-
 // ============================================================
 // AI Logo 渲染（动态从数据库获取，不再硬编码）
 // ============================================================
@@ -842,7 +795,6 @@ function renderAILogos() {
         return '<div class="ai-logo"><div class="dot" style="background:' + color + ';">' + (ai.ai_name || '?')[0] + '</div>' + (ai.ai_name || '未知') + '</div>';
     }).join('');
 }
-
 // ============================================================
 // 初始化（支持bfcache恢复）
 // ============================================================
@@ -856,10 +808,8 @@ async function init() {
     renderAILogos();
     loadAll();
 }
-
 // 首次加载
 document.addEventListener('DOMContentLoaded', init);
-
 // bfcache恢复时重新加载（从其他页面返回时）
 window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
