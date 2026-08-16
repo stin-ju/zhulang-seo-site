@@ -242,8 +242,37 @@ def insert_football_prediction(pred):
     })
 
 
+def normalize_basketball_fields(pred):
+    """规范化篮球预测字段名，处理不同AI返回的字段名差异"""
+    normalized = dict(pred)
+    
+    # 字段名映射：handicap_result → handicap_win_loss
+    if "handicap_result" in normalized and "handicap_win_loss" not in normalized:
+        normalized["handicap_win_loss"] = normalized.pop("handicap_result")
+    
+    # 字段名映射：score_diff → score_diff_range
+    if "score_diff" in normalized and "score_diff_range" not in normalized:
+        score_diff = normalized.pop("score_diff")
+        # 如果只有范围（如"6-10"），需要根据win_loss添加主/客前缀
+        if score_diff and not any(score_diff.startswith(p) for p in ["主", "客"]):
+            win_loss = normalized.get("win_loss", "")
+            if "主胜" in win_loss or win_loss == "胜":
+                normalized["score_diff_range"] = f"主{score_diff}胜"
+            elif "客胜" in win_loss or win_loss == "负":
+                normalized["score_diff_range"] = f"客{score_diff}负"
+            else:
+                normalized["score_diff_range"] = score_diff
+        else:
+            normalized["score_diff_range"] = score_diff
+    
+    return normalized
+
+
 def insert_basketball_prediction(pred):
     """插入篮球预测"""
+    # 规范化字段名
+    pred = normalize_basketball_fields(pred)
+    
     prediction_json = {
         "win_loss": pred.get("win_loss"),
         "handicap_win_loss": pred.get("handicap_win_loss"),
