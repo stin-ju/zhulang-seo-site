@@ -400,9 +400,8 @@ function renderPredictionsTable(predictions, match) {
         col3: { key: 'score_diff_range', hitKey: 'score_diff_range', label: '胜分差',
             format: (pred) => {
                 const range = pred.score_diff_range || '-';
-                const wl = pred.win_loss || '';
                 if (range === '-') return '-';
-                return (wl === '主胜' || wl === '胜') ? '主' + range : (wl === '客胜' || wl === '负') ? '客' + range : range;
+                return range;
             }
         },
         col4: { key: 'total_points', hitKey: 'total_points', label: '总分' }
@@ -415,10 +414,18 @@ function renderPredictionsTable(predictions, match) {
         col5: { key: 'half_full', hitKey: 'half_full', label: '半全场' }
     };
     
-    // 获取预测值（从prediction JSON字段）
+    // 获取预测值（优先从顶层字段，其次从prediction JSON字段）
     function getPredValue(pred, key, fallbackKey) {
         const prediction = pred.prediction || {};
-        return prediction[key] || (fallbackKey && prediction[fallbackKey]) || '-';
+        // 标准化字段名 → 原始prediction JSON字段名的映射
+        const rawKeyMap = {'handicap_win_loss':'handicap_result','score_diff_range':'score_diff'};
+        const rawKey = rawKeyMap[key] || key;
+        return pred[key]  // 先检查顶层字段（API返回的规范化字段）
+            || pred[key + '_pred']  // 顶层 _pred 后缀
+            || prediction[key]  // prediction JSON 同名字段
+            || prediction[rawKey]  // prediction JSON 映射字段（handicap_result/score_diff）
+            || (fallbackKey && (pred[fallbackKey] || prediction[fallbackKey])) 
+            || '-';
     }
     
     // 判断命中状态（从hit_status JSON字段）
@@ -449,7 +456,7 @@ function renderPredictionsTable(predictions, match) {
                             <td>${esc(p.ai_name)}</td>
                             <td class="${cellClass(p, fieldConfig.col1.hitKey)}">${getPredValue(p, fieldConfig.col1.key, fieldConfig.col1.fallbackKey)}</td>
                             <td class="${cellClass(p, fieldConfig.col2.hitKey)}">${getPredValue(p, fieldConfig.col2.key, fieldConfig.col2.fallbackKey)}</td>
-                            <td class="${cellClass(p, fieldConfig.col3.hitKey)}">${fieldConfig.col3.format ? fieldConfig.col3.format(p.prediction || {}) : getPredValue(p, fieldConfig.col3.key)}</td>
+                            <td class="${cellClass(p, fieldConfig.col3.hitKey)}">${getPredValue(p, fieldConfig.col3.key, fieldConfig.col3.fallbackKey)}</td>
                             <td class="${cellClass(p, fieldConfig.col4.hitKey)}">${getPredValue(p, fieldConfig.col4.key)}</td>
                             ${!isBasketball ? '<td class="' + cellClass(p, fieldConfig.col5.hitKey) + '">' + getPredValue(p, fieldConfig.col5.key) + '</td>' : ''}
                             <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
@@ -849,9 +856,9 @@ function renderAILogos() {
 }
 
 // ============================================================
-// 初始化
+// 初始化（支持bfcache恢复）
 // ============================================================
-document.addEventListener('DOMContentLoaded', async () => {
+async function init() {
     // 先加载AI数据，再渲染Logo
     try {
         state.aiStats = await fetchAIStats();
@@ -860,4 +867,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     renderAILogos();
     loadAll();
+}
+
+// 首次加载
+document.addEventListener('DOMContentLoaded', init);
+
+// bfcache恢复时重新加载（从其他页面返回时）
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        // 页面从bfcache恢复，重新初始化
+        console.log('[PageShow] 从bfcache恢复，重新加载数据');
+        init();
+    }
 });
