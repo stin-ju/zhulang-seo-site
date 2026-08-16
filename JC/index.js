@@ -450,7 +450,7 @@ function renderPredictionsTable(predictions, match) {
                             <td>${esc(p.ai_name)}</td>
                             <td class="${cellClass(p, fieldConfig.col1.hitKey)}">${getPredValue(p, fieldConfig.col1.key, fieldConfig.col1.fallbackKey)}</td>
                             <td class="${cellClass(p, fieldConfig.col2.hitKey)}">${getPredValue(p, fieldConfig.col2.key, fieldConfig.col2.fallbackKey)}</td>
-                            <td class="${cellClass(p, fieldConfig.col3.hitKey)}">${getPredValue(p, fieldConfig.col3.key)}</td>
+                            <td class="${cellClass(p, fieldConfig.col3.hitKey)}">${getPredValue(p, fieldConfig.col3.key, fieldConfig.col3.fallbackKey)}</td>
                             <td class="${cellClass(p, fieldConfig.col4.hitKey)}">${getPredValue(p, fieldConfig.col4.key)}</td>
                             ${!isBasketball ? '<td class="' + cellClass(p, fieldConfig.col5.hitKey) + '">' + getPredValue(p, fieldConfig.col5.key) + '</td>' : ''}
                             <td style="color:${(p.total_hits || 0) >= 3 ? '#10b981' : (p.total_hits || 0) >= 1 ? '#a78bfa' : '#6b7280'};font-weight:600;">${p.total_hits || 0}</td>
