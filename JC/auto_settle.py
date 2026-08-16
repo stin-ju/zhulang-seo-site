@@ -282,7 +282,7 @@ def fill_missing_scores(conn):
     sql = """
     SELECT m.id, m.sport_type, m.home_team, m.away_team, m.status, m.metadata
     FROM matches m
-    WHERE (m.status = '已完赛' OR m.status = 'on_sale')
+    WHERE (m.status = '已完赛' OR m.status = 'on_sale' OR m.status = '未开赛')
       AND m.metadata->>'status' != '已取消'
     """
     with conn.cursor() as cur:
@@ -304,8 +304,8 @@ def fill_missing_scores(conn):
                 missing.append({"id": match_id, "sport_type": sport_type,
                               "home_team": home_team, "away_team": away_team, "metadata": md,
                               "top_status": top_status})
-        elif top_status == 'on_sale':
-            # on_sale 但可能已完赛（比赛时间已过3小时以上）
+        elif top_status in ('on_sale', '未开赛'):
+            # on_sale 或 未开赛 但可能已完赛（比赛时间已过3小时以上）
             mt = md.get("match_time", "")
             if mt:
                 try:
