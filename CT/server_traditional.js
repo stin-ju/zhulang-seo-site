@@ -237,7 +237,7 @@ app.get('/api/traditional-lottery/fetch', async (req, res) => {
       {
         cwd: path.join(__dirname, '..', 'JC'),
         env: pythonEnv,
-        timeout: 120000,
+        timeout: 300000,
         maxBuffer: 10 * 1024 * 1024,
       }
     );
