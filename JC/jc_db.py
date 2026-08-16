@@ -1,122 +1,94 @@
-import os, json, urllib.request, urllib.error
-SERVER_PORT = os.environ.get('DEPLOY_RUN_PORT', '5000')
-SERVER_URL = f'http://127.0.0.1:{SERVER_PORT}/api/internal/query'
+#!/usr/bin/env python3
+"""
+jc_db.py - 数据库访问层（直连 PostgreSQL via psycopg2）
 
-def _convert_value(v):
-    """将HTTP代理返回的字符串值转换为正确的Python类型"""
-    if v is None:
-        return None
-    if isinstance(v, str):
-        # None/null
-        if v in ('None', 'null', 'NULL'):
-            return None
-        # bool
-        if v.lower() == 'true':
-            return True
-        if v.lower() == 'false':
-            return False
-        # int (纯数字，可能带负号)
-        if v and (v.isdigit() or (v[0] in '+-' and v[1:].isdigit())):
-            return int(v)
-        # float
-        try:
-            if '.' in v:
-                return float(v)
-        except (ValueError, TypeError):
-            pass
-    return v
+替代原先通过 HTTP 代理 Node.js /api/internal/query 的方式，
+直接使用 psycopg2 连接数据库，消除 HTTP 代理单点故障。
 
-def _convert_row(row):
-    """转换一行数据中所有值的类型"""
-    if isinstance(row, dict):
-        return tuple(_convert_value(v) for v in row.values())
-    elif isinstance(row, (list, tuple)):
-        return tuple(_convert_value(v) for v in row)
-    return row
+保持与原接口完全兼容：connect() / cursor() / execute(sql, params) / fetchall / fetchone
+"""
+import os
+import json
+import psycopg2
+import psycopg2.extras
+
+DEFAULT_DB_URL = "postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres"
+
 
 class Cursor:
-    def __init__(self, conn):
-        self.conn = conn
-        self.description = None
-        self._rows = []
-        self._rowcount = 0
-        self._index = 0
+    """psycopg2 cursor 的薄封装，保持与旧 jc_db.Cursor 接口一致"""
+
+    def __init__(self, pg_cursor):
+        self._cur = pg_cursor
+
     @property
-    def rowcount(self): return self._rowcount
+    def description(self):
+        return self._cur.description
+
+    @property
+    def rowcount(self):
+        return self._cur.rowcount
+
     def execute(self, sql, params=None):
-        converted_sql = sql
-        converted_params = []
-        if params:
-            param_idx = 0
-            parts = []
-            i = 0
-            while i < len(sql):
-                if sql[i] == '%':
-                    if i+1 < len(sql) and sql[i+1] == 's':
-                        param_idx += 1
-                        parts.append(f'${param_idx}')
-                        converted_params.append(params[param_idx-1])
-                        i += 2
-                        continue
-                    elif i+1 < len(sql) and sql[i+1] == '%':
-                        parts.append('%')
-                        i += 2
-                        continue
-                parts.append(sql[i])
-                i += 1
-            converted_sql = ''.join(parts)
-        payload = json.dumps({'sql': converted_sql, 'params': converted_params}).encode('utf-8')
-        req = urllib.request.Request(SERVER_URL, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                result = json.loads(resp.read().decode('utf-8'))
-        except urllib.error.HTTPError as e:
-            raise Exception(f'DB proxy error ({e.code}): {e.read().decode()}')
-        except urllib.error.URLError as e:
-            raise Exception(f'DB proxy connection error: {e.reason}')
-        self._rows = result.get('rows', [])
-        self._rowcount = result.get('rowCount', len(self._rows))
-        self._index = 0
-        fields = result.get('fields', [])
-        if fields and self._rows:
-            self.description = [(f, None, None, None, None, None, None) for f in fields]
+        self._cur.execute(sql, params)
+
     def fetchall(self):
-        result = []
-        for row in self._rows:
-            result.append(_convert_row(row))
-        self._rows = []
-        return result
+        return self._cur.fetchall()
+
     def fetchone(self):
-        if self._index < len(self._rows):
-            row = self._rows[self._index]
-            self._index += 1
-            return _convert_row(row)
-        return None
+        return self._cur.fetchone()
+
     def fetchmany(self, size=None):
-        if size is None: size = len(self._rows) - self._index
-        result = []
-        for _ in range(min(size, len(self._rows) - self._index)):
-            row = self._rows[self._index]
-            self._index += 1
-            result.append(_convert_row(row))
-        return result
-    def close(self): pass
-    def __iter__(self): return iter(self.fetchall())
-    def __enter__(self): return self
-    def __exit__(self, *a): self.close()
+        if size is None:
+            return self._cur.fetchall()
+        return self._cur.fetchmany(size)
+
+    def close(self):
+        self._cur.close()
+
+    def __iter__(self):
+        return iter(self._cur)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        self.close()
+
 
 class Connection:
-    def __init__(self, url=None):
-        self.url = url
-        self._closed = False
-    def cursor(self): return Cursor(self)
-    def commit(self): pass
-    def rollback(self): pass
-    def set_client_encoding(self, encoding): pass
-    def close(self): self._closed = True
-    def __enter__(self): return self
-    def __exit__(self, *a): self.close()
+    """psycopg2 connection 的薄封装"""
+
+    def __init__(self, pg_conn):
+        self._conn = pg_conn
+
+    def cursor(self):
+        return Cursor(self._conn.cursor())
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def set_client_encoding(self, encoding):
+        self._conn.set_client_encoding(encoding)
+
+    def close(self):
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        self.close()
+
 
 def connect(url=None):
-    if url is None: url = os.environ.get('DATABASE_URL', '')
-    return Connection(url)
+    """连接数据库，返回 Connection 对象"""
+    db_url = url or os.environ.get('DATABASE_URL', '') or DEFAULT_DB_URL
+    pg_conn = psycopg2.connect(db_url)
+    return Connection(pg_conn)
