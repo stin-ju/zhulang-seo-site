@@ -417,20 +417,9 @@ function renderPredictionsTable(predictions, match) {
     // 获取预测值（优先从顶层字段，其次从prediction JSON字段）
     function getPredValue(pred, key, fallbackKey) {
         const prediction = pred.prediction || {};
-        // 标准化字段名到原始JSON字段名的映射
-        const rawKeyMap = {
-            'handicap_win_loss': 'handicap_result',
-            'score_diff_range': 'score_diff',
-            'win_loss': 'win_loss',
-            'total_points': 'total_points'
-        };
+        const rawKeyMap = {'handicap_win_loss':'handicap_result','score_diff_range':'score_diff'};
         const rawKey = rawKeyMap[key] || key;
-        return pred[key]  // 先检查顶层字段
-            || pred[key + '_pred']  // 顶层 _pred 后缀
-            || prediction[key]  // prediction JSON 同名字段
-            || prediction[rawKey]  // prediction JSON 映射字段（handicap_result, score_diff等）
-            || (fallbackKey && (pred[fallbackKey] || prediction[fallbackKey])) 
-            || '-';
+        return pred[key] || pred[key+'_pred'] || prediction[key] || prediction[rawKey] || (fallbackKey && (pred[fallbackKey]||prediction[fallbackKey])) || '-';
     }
     
     // 判断命中状态（从hit_status JSON字段）
