@@ -10,7 +10,7 @@ jc_db.py - 数据库访问层（直连 PostgreSQL via psycopg2）
 import os
 import json
 import psycopg2
-import psycopg2.extras
+# import psycopg2.extras  # 不需要，避免与本地 psycopg2.py 冲突
 
 DEFAULT_DB_URL = "postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres"
 
