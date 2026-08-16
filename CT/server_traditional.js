@@ -215,7 +215,7 @@ app.get('/api/traditional-lottery/latest', async (req, res) => {
 
 /**
  * GET /api/traditional-lottery/fetch
- * 触发传统彩赛程抓取 + 4种玩法预测
+ * 触发传统彩赛程抓取 + 4种玩法预测（异步模式）
  */
 app.get('/api/traditional-lottery/fetch', async (req, res) => {
   const ctDiscoverPath = path.join(__dirname, '..', 'JC', 'ct_discover.py');
@@ -235,65 +235,87 @@ app.get('/api/traditional-lottery/fetch', async (req, res) => {
     });
   }
 
-  try {
-    const { execSync } = require('child_process');
-    const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1' };
-    const jcDir = path.join(__dirname, '..', 'JC');
-    const execOptions = {
-      cwd: jcDir,
-      env: pythonEnv,
-      timeout: 300000,
-      maxBuffer: 10 * 1024 * 1024,
-    };
+  // 立即返回，后台异步执行
+  res.json({ 
+    success: true, 
+    message: 'fetch started',
+    timestamp: new Date().toISOString()
+  });
 
-    // Step 1: 执行赛程抓取
-    console.log('[TraditionalLottery] Step 1: 执行 ct_discover.py...');
-    const discoverResult = execSync(
-      `python3 "${ctDiscoverPath}"`,
-      execOptions
-    );
-    const discoverData = JSON.parse(discoverResult.toString().trim());
-    const saved = discoverData.saved || 0;
-    console.log(`[TraditionalLottery] ct_discover完成, saved=${saved}`);
+  // 后台异步执行
+  const { spawn } = require('child_process');
+  const pythonEnv = { ...process.env, PYTHONUNBUFFERED: '1' };
+  const jcDir = path.join(__dirname, '..', 'JC');
 
-    // Step 2: 如果有新比赛，执行4种玩法的预测
-    const predictResults = [];
-    if (saved > 0) {
-      const gameTypes = ['胜负彩', '任9', '半全场', '进球彩'];
-      for (const gameType of gameTypes) {
-        console.log(`[TraditionalLottery] Step 2: 执行 ${gameType} 预测...`);
-        try {
-          const predictResult = execSync(
-            `python3 "${predictPath}" --game '${gameType}' --force`,
-            execOptions
-          );
-          const predictData = JSON.parse(predictResult.toString().trim());
-          predictResults.push({
-            game_type: gameType,
-            success: true,
-            data: predictData
-          });
-          console.log(`[TraditionalLottery] ${gameType} 预测完成`);
-        } catch (err) {
-          console.error(`[TraditionalLottery] ${gameType} 预测失败:`, err.message);
-          predictResults.push({
-            game_type: gameType,
-            success: false,
-            error: err.message
-          });
-        }
-      }
+  // Step 1: 执行赛程抓取
+  console.log('[TraditionalLottery] Step 1: 执行 ct_discover.py...');
+  const discoverProc = spawn('python3', [ctDiscoverPath], {
+    cwd: jcDir,
+    env: pythonEnv,
+  });
+
+  let discoverOutput = '';
+  discoverProc.stdout.on('data', (data) => {
+    discoverOutput += data.toString();
+  });
+  discoverProc.stderr.on('data', (data) => {
+    console.error(`[TraditionalLottery] ct_discover stderr: ${data}`);
+  });
+
+  discoverProc.on('exit', (code) => {
+    if (code !== 0) {
+      console.error(`[TraditionalLottery] ct_discover.py 退出码: ${code}`);
+      return;
     }
 
-    res.json({ 
-      success: true, 
-      discover: discoverData,
-      predictions: predictResults
-    });
-  } catch (err) {
-    console.error('[TraditionalLottery] /fetch error:', err.message);
-    res.status(500).json({ error: 'Fetch failed', message: err.message });
-  }
+    try {
+      const discoverData = JSON.parse(discoverOutput.trim());
+      const saved = discoverData.saved || 0;
+      console.log(`[TraditionalLottery] ct_discover完成, saved=${saved}`);
+
+      // Step 2: 如果有新比赛，依次执行4种玩法的预测
+      if (saved > 0) {
+        const gameTypes = ['胜负彩', '任9', '半全场', '进球彩'];
+        let gameIndex = 0;
+
+        const runNextGame = () => {
+          if (gameIndex >= gameTypes.length) {
+            console.log('[TraditionalLottery] 所有玩法预测完成');
+            return;
+          }
+
+          const gameType = gameTypes[gameIndex++];
+          console.log(`[TraditionalLottery] Step 2: 执行 ${gameType} 预测...`);
+
+          const predictProc = spawn('python3', [predictPath, '--game', gameType, '--force'], {
+            cwd: jcDir,
+            env: pythonEnv,
+          });
+
+          predictProc.stdout.on('data', (data) => {
+            // 可选：记录输出
+          });
+          predictProc.stderr.on('data', (data) => {
+            console.error(`[TraditionalLottery] ${gameType} stderr: ${data}`);
+          });
+
+          predictProc.on('exit', (exitCode) => {
+            if (exitCode === 0) {
+              console.log(`[TraditionalLottery] ${gameType} 预测完成`);
+            } else {
+              console.error(`[TraditionalLottery] ${gameType} 预测失败, 退出码: ${exitCode}`);
+            }
+            // 继续执行下一个玩法
+            runNextGame();
+          });
+        };
+
+        runNextGame();
+      }
+    } catch (err) {
+      console.error(`[TraditionalLottery] 解析ct_discover输出失败:`, err.message);
+    }
+  });
 });
 
 /**
