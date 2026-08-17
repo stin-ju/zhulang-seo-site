@@ -1104,6 +1104,35 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // ======== 内部查询路由 - 供Python脚本使用 ========
+    if (pathname === '/api/internal/query' && req.method === 'POST') {
+      const rawBody = await readBody(req);
+      let body = {};
+      try { body = JSON.parse(rawBody); } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        return;
+      }
+      
+      const { sql, params } = body;
+      if (!sql) {
+        res.writeHead(400, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'Missing sql parameter' }));
+        return;
+      }
+      
+      try {
+        const result = await pgPool.query(sql, params || []);
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ rows: result.rows, rowCount: result.rowCount }));
+      } catch (err) {
+        console.error('[Internal Query] Error:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
     // ======== 传统彩路由 - 代理转发到CT服务 (端口5001) ========
     if (pathname.startsWith('/api/traditional-lottery/')) {
       const http = require('http');
