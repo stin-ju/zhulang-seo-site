@@ -314,15 +314,9 @@ def insert_prediction(pred_data):
 
 
 def upsert_prediction(pred_data, on_conflict="match_id,ai_name"):
-    """插入或更新预测（先尝试更新，失败则插入）"""
+    """插入或更新预测（使用原子性 UPSERT）"""
     match_id = pred_data.get("match_id")
     ai_name = pred_data.get("ai_name")
-    
-    # 检查是否存在
-    existing = _execute_query(
-        "SELECT id FROM predictions WHERE match_id = %s AND ai_name = %s",
-        [match_id, ai_name]
-    )
     
     # 处理 JSON 字段
     prediction = pred_data.get("prediction")
@@ -333,21 +327,17 @@ def upsert_prediction(pred_data, on_conflict="match_id,ai_name"):
     if isinstance(hit_status, dict):
         hit_status = json.dumps(hit_status, ensure_ascii=False)
     
-    if existing:
-        # 更新
-        _execute_query(
-            """UPDATE predictions SET prediction = %s::jsonb, hit_status = %s::jsonb, is_settled = %s
-               WHERE match_id = %s AND ai_name = %s""",
-            [prediction, hit_status, pred_data.get("is_settled", False), match_id, ai_name]
-        )
-    else:
-        # 插入
-        _execute_query(
-            """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled) 
-               VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s)""",
-            [match_id, ai_name, pred_data.get("sport_type"), prediction, hit_status, 
-             pred_data.get("is_settled", False)]
-        )
+    # 使用 INSERT ... ON CONFLICT 实现原子性 UPSERT
+    _execute_query(
+        """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled) 
+           VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s)
+           ON CONFLICT (match_id, ai_name) 
+           DO UPDATE SET prediction = EXCLUDED.prediction, 
+                         hit_status = EXCLUDED.hit_status, 
+                         is_settled = EXCLUDED.is_settled""",
+        [match_id, ai_name, pred_data.get("sport_type"), prediction, hit_status, 
+         pred_data.get("is_settled", False)]
+    )
     return [pred_data]
 
 

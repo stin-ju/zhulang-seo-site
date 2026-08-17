@@ -216,7 +216,9 @@ def get_pending_matches(sport="football", include_settled=False):
     """获取待预测比赛（新schema适配）"""
     from supabase_db import get_matches_by_sport
     # 获取在售和待处理的比赛
-    return get_matches_by_sport(sport, statuses=["on_sale", "pending"])
+    matches = get_matches_by_sport(sport, statuses=["on_sale", "pending"])
+    # 过滤掉CT（传统彩）比赛，它们由 traditional_lottery_predict.py 处理
+    return [m for m in matches if not m.get("id", "").startswith("CT")]
 
 
 def get_existing_predictions(match_id):
