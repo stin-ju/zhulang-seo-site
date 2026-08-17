@@ -964,6 +964,9 @@ def main():
             print(f"  备选源共补全: {filled}场")
 
         print(f"\n  赔率更新完成")
+        # 输出 JSON 摘要供 server.js 解析
+        result_summary = {"new": 0, "new_matches_count": 0, "status": "ok", "message": "仅赔率更新模式"}
+        print(json.dumps(result_summary, ensure_ascii=False))
         return 0
 
     # ========== 第二步: 发现比赛 ==========
@@ -1059,6 +1062,15 @@ def main():
         print(f"  📈 {sport}: 共{total}场, 在售{on_sale}场")
     cur.close()
     conn.close()
+
+    # 输出 JSON 摘要供 server.js 解析（关键：确保 runJcDiscover 能正确识别新比赛数）
+    result_summary = {
+        "new": new_count if not verify_only else 0,
+        "new_matches_count": new_count if not verify_only else 0,
+        "status": "ok",
+        "message": f"发现{new_count if not verify_only else 0}场新比赛"
+    }
+    print(json.dumps(result_summary, ensure_ascii=False))
 
     return 0
 
