@@ -84,11 +84,16 @@ function runPython(scriptName, args = []) {
         return;
       }
       if (stderr) console.warn(`[Python ${scriptName}] Stderr:`, stderr);
-      try {
-        resolve(JSON.parse(stdout.trim()));
-      } catch {
-        resolve({ output: stdout.trim() });
+      const trimmed = stdout.trim();
+      const lines = trimmed.split('\n');
+      let parsed = null;
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (line.startsWith('{')) {
+          try { parsed = JSON.parse(line); break; } catch {}
+        }
       }
+      resolve(parsed || { output: trimmed });
     });
   });
 }
