@@ -897,6 +897,17 @@ const server = http.createServer(async (req, res) => {
         // 新比赛发现后，重新初始化结算定时器
         await initializeSettleTimers();
         
+        // 发现新比赛后触发预测
+        const newCount = result.new || result.new_matches_count || 0;
+        if (newCount > 0) {
+          console.log(`[Discover] 发现${newCount}场新比赛，触发AI预测`);
+          try {
+            await runPython('auto_predict.py', ['football']);
+          } catch (predErr) {
+            console.error(`[Discover] AI预测失败:`, predErr.message);
+          }
+        }
+        
         res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
         res.end(JSON.stringify({ success: true, data: result }));
       } catch (err) {
@@ -1118,6 +1129,34 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: 'CT service unavailable', message: err.message }));
       });
       req.pipe(proxyReq);
+      return;
+    }
+
+    // ======== 内部查询接口 - 供Python脚本使用 ========
+    if (pathname === '/api/internal/query' && req.method === 'POST') {
+      const body = await readBody(req);
+      const { sql, params } = JSON.parse(body);
+      
+      if (!sql) {
+        res.writeHead(400, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'SQL is required' }));
+        return;
+      }
+      
+      try {
+        const client = await pgPool.connect();
+        try {
+          const result = await client.query(sql, params || []);
+          res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+          res.end(JSON.stringify({ rows: result.rows, rowCount: result.rowCount }));
+        } finally {
+          client.release();
+        }
+      } catch (err) {
+        console.error('[Internal Query] Error:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: err.message }));
+      }
       return;
     }
 
