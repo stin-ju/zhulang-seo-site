@@ -3,10 +3,19 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 """
-auto_predict.py - 7AI预测调度
-为待预测比赛调用7个AI生成预测，写入predictions表。
-每个AI独立调用，某个AI挂了不影响其他AI。
+auto_predict.py - 两阶段AI预测调度
+
+Phase 1 - 情报搜集：
+  对每场待预测比赛，调用扣子预测智能体搜集情报数据
+  （球队近况、交锋记录、赔率分析等），存入情报库
+
+Phase 2 - 逐AI逐场预测：
+  一场比赛一场比赛跑，每场比赛内逐个AI调用
+  每完成一个AI的预测就立即入库，不等待全部完成
+  AI调用顺序：DeepSeek→MiniMax→扣子→文心→智谱清言→混元→豆包
+
 支持 --sport football|basketball 参数。
+支持 --phase 1|2|all 参数（默认all，跑全部阶段）。
 """
 import os
 import sys
@@ -16,23 +25,24 @@ import time
 import traceback
 import requests
 import math
+from datetime import datetime
 from supabase_db import (
     get_matches_by_sport, get_existing_ai_names, upsert_prediction,
-    get_predictions_count
+    get_predictions_count, execute_query
 )
 
 # ============ 配置 ============
 
-# 设置API Keys (从环境变量读取，实际值在 .env 文件中)
-# os.environ.setdefault("DOUBAO_API_KEY", "...")
-# os.environ.setdefault("WENXIN_API_KEY", "...")
-# os.environ.setdefault("HUNYUAN_API_KEY", "...")
-# os.environ.setdefault("DEEPSEEK_API_KEY", "...")
-# os.environ.setdefault("ZHIPU_API_KEY", "...")
-# os.environ.setdefault("MINIMAX_API_KEY", "...")
-# os.environ.setdefault("DATABASE_URL", "...")
+# AI调用间隔（秒），避免频率限制
+AI_CALL_INTERVAL = 2
 
-# 7个活跃AI及其API配置
+# 单个AI调用超时（秒）
+AI_CALL_TIMEOUT = 90
+
+# 情报搜集超时（秒）
+INTEL_TIMEOUT = 180
+
+# 7个活跃AI及其API配置（按调用顺序排列）
 AI_CONFIGS = {
     "AI-DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
@@ -48,6 +58,35 @@ AI_CONFIGS = {
         "format": "minimax",
         "fallback_models": ["abab6.5s-chat", "abab6.5-chat", "MiniMax-Text-01"],
     },
+    "AI-扣子": {
+        "url": "https://7hsjv6c4cn.coze.site/stream_run",
+        "key_env": "COZE_PROJECT_API_TOKEN",
+        "key_default": "REMOVED",
+        "model": None,
+        "format": "coze_code",
+        "project_id": 7667164681706078217,
+    },
+    "AI-文心": {
+        "url": "https://qianfan.baidubce.com/v2/chat/completions",
+        "key_env": "WENXIN_API_KEY",
+        "model": "ernie-4.0-8k-latest",
+        "format": "openai",
+        "fallback_models": ["ernie-4.0-turbo-8k", "ernie-3.5-8k", "ernie-speed-128k"],
+    },
+    "AI-智谱清言": {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "key_env": "ZHIPU_API_KEY",
+        "model": "glm-4-flash",
+        "format": "openai",
+        "fallback_models": ["glm-4-plus", "glm-4-air", "glm-4-flashx"],
+    },
+    "AI-混元": {
+        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
+        "key_env": "HUNYUAN_API_KEY",
+        "key_default": "REMOVED",
+        "model": "hy-mt2-lite",
+        "format": "openai",
+    },
     "AI-豆包": {
         "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         "key_env": "DOUBAO_API_KEY",
@@ -59,40 +98,106 @@ AI_CONFIGS = {
             "doubao-seed-2-0-pro-260215",
         ],
     },
-    "AI-智谱清言": {
-        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        "key_env": "ZHIPU_API_KEY",
-        "model": "glm-4-flash",
-        "format": "openai",
-        "fallback_models": ["glm-4-plus", "glm-4-air", "glm-4-flashx"],
-    },
-    "AI-文心": {
-        "url": "https://qianfan.baidubce.com/v2/chat/completions",
-        "key_env": "WENXIN_API_KEY",
-        "model": "ernie-4.0-8k-latest",
-        "format": "openai",
-        "fallback_models": ["ernie-4.0-turbo-8k", "ernie-3.5-8k", "ernie-speed-128k"],
-    },
-    "AI-混元": {
-        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
-        "key_env": "HUNYUAN_API_KEY",
-        "key_default": "REMOVED",
-        "model": "hy-mt2-lite",
-        "format": "openai",
-    },
-    "AI-扣子": {
-        "url": "https://7hsjv6c4cn.coze.site/stream_run",
-        "key_env": "COZE_PROJECT_API_TOKEN",
-        "key_default": "REMOVED",
-        "model": None,
-        "format": "coze_code",
-        "project_id": 7667164681706078217,
-    },
 }
+
+# AI调用顺序（Phase 2使用）
+AI_CALL_ORDER = [
+    "AI-DeepSeek",
+    "AI-MiniMax", 
+    "AI-扣子",
+    "AI-文心",
+    "AI-智谱清言",
+    "AI-混元",
+    "AI-豆包",
+]
 
 # ============ Prompt模板 ============
 
-PREDICTION_PROMPT = """你是一个专业的足球比赛预测分析师。请根据以下比赛信息做出预测。
+# Phase 1: 情报搜集Prompt
+INTEL_PROMPT_FOOTBALL = """你是足球比赛情报分析师。请搜集以下比赛的详细情报数据。
+
+## 比赛信息
+- 联赛: {league}
+- 主队: {home_team}
+- 客队: {away_team}
+- 比赛时间: {match_time}
+- 让球: {handicap}
+- 胜平负赔率: 胜{win_odds} / 平{draw_odds} / 负{lose_odds}
+
+## 需要搜集的情报
+
+1. **球队近况**（近10场）
+   - 主队近10场战绩（胜/平/负）
+   - 客队近10场战绩
+   - 双方近期进失球数据
+
+2. **交锋记录**（近5次）
+   - 历史交锋战绩
+   - 主客场交锋特点
+
+3. **赔率分析**
+   - 搜索相同/相似赔率的历史场次（至少30场）
+   - 相同让球盘口的历史赢盘率
+   - 相同大小球盘口的历史概率
+
+4. **其他情报**
+   - 伤停信息（如有）
+   - 主客场战绩差异
+   - 赛季目标/动力分析
+
+## 输出格式（JSON）
+```json
+{{
+  "home_form": "主队近况描述",
+  "away_form": "客队近况描述",
+  "h2h": "交锋记录描述",
+  "odds_analysis": "赔率分析结论",
+  "key_factors": ["关键因素1", "关键因素2", "关键因素3"],
+  "intel_summary": "100字以内的情报总结"
+}}
+```"""
+
+INTEL_PROMPT_BASKETBALL = """你是篮球比赛情报分析师。请搜集以下比赛的详细情报数据。
+
+## 比赛信息
+- 联赛: {league}
+- 主队: {home_team}
+- 客队: {away_team}
+- 比赛时间: {match_time}
+- 让分: {spread_desc}（盘口{spread_line}）
+- 总分线: {total_line}
+
+## 需要搜集的情报
+
+1. **球队近况**（近10场）
+   - 主队近10场战绩和得失分
+   - 客队近10场战绩和得失分
+
+2. **交锋记录**（近5次）
+   - 历史交锋战绩和分差
+
+3. **赔率分析**
+   - 相同让分盘口的历史赢盘率
+   - 相同大小分盘口的历史概率
+
+4. **其他情报**
+   - 伤停信息（如有）
+   - 背靠背/赛程密度
+
+## 输出格式（JSON）
+```json
+{{
+  "home_form": "主队近况描述",
+  "away_form": "客队近况描述",
+  "h2h": "交锋记录描述",
+  "odds_analysis": "赔率分析结论",
+  "key_factors": ["关键因素1", "关键因素2"],
+  "intel_summary": "100字以内的情报总结"
+}}
+```"""
+
+# Phase 2: 预测Prompt（带情报）
+PREDICTION_PROMPT = """你是一个专业的足球比赛预测分析师。请根据比赛信息和情报数据做出预测。
 
 ## 比赛信息
 - 联赛: {league}
@@ -103,35 +208,10 @@ PREDICTION_PROMPT = """你是一个专业的足球比赛预测分析师。请根
 - 胜平负赔率: 胜{win_odds} / 平{draw_odds} / 负{lose_odds}
 - 让球赔率: 让胜{hw_odds} / 让平{hd_odds} / 让负{hl_odds}
 
-注意：如果赔率显示"暂无"，请根据球队实力、历史交锋等因素进行预测，不要受赔率缺失影响。
+## 情报数据
+{intel_data}
 
-## 历史赔率分析要求
-
-在预测前，请先联网搜索历史数据：
-
-1. 搜索当前比赛双方相同/相似赔率的历史场次（至少30场）
-   - 数据源：oddsportal.com、betexplorer.com、flashscore.com
-   - 重点关注主胜赔率±0.1区间的历史场次
-
-2. 搜索当前大小球盘口的历史概率数据（至少50场）
-   - 如2.5球盘口的历史大/小球概率
-
-3. 搜索当前让球盘口的历史赢盘率（至少30场）
-   - 如主让0.5的历史赢盘/输盘概率
-
-4. 搜索相同半全场赔率结构的历史概率（如有）
-
-5. 搜索相似比分赔率的历史数据（如有）
-
-统计这些历史场次中各结果的实际出现概率。
-
-## 历史数据应用规则
-
-- 历史概率与赔率隐含概率一致时，按赔率预测
-- 历史概率明显偏离赔率时（如历史主胜70%，赔率暗示50%），优先参考历史数据（说明有信息差）
-- 在analysis字段中简要说明历史数据分析结论
-
-## 请严格按以下JSON格式输出预测结果（不要输出其他内容）:
+## 请严格按以下JSON格式输出预测结果:
 ```json
 {{
   "spf": "胜"或"平"或"负",
@@ -139,54 +219,30 @@ PREDICTION_PROMPT = """你是一个专业的足球比赛预测分析师。请根
   "score": "比分如2-1",
   "goals": 总进球数(整数),
   "half_full": "半全场如胜胜/平胜/负平",
-  "analysis": "50-100字的分析理由，需包含历史赔率分析结论"
+  "analysis": "50-100字的分析理由"
 }}
 ```"""
 
-BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。一次性给出所有维度的预测，必须逻辑自洽。
+BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。根据比赛信息和情报数据做出预测，必须逻辑自洽。
 
 ## 比赛信息
 - 联赛: {league}
 - 主队: {home_team}
 - 客队: {away_team}
 - 比赛时间: {match_time}
-- 让分: {spread_desc}（盘口{spread_line}，负数=主队让分，正数=客队让分）
+- 让分: {spread_desc}（盘口{spread_line}）
 - 总分线: {total_line}
 
 ## 赔率数据
 - 胜负: 主胜{win_odds} / 客胜{lose_odds}
-- 让分: 让胜(主队覆盖){spread_win_odds} / 让负(客队覆盖){spread_lose_odds}
-- 大小分: 大{total_over_odds} / 小{total_under_odds}（盘口{total_line}）
-- 胜分差赔率（不分主客，分差区间统一）:
-  1-5分: {sdr_1_5} | 6-10分: {sdr_6_10} | 11-15分: {sdr_11_15} | 16-20分: {sdr_16_20} | 21-25分: {sdr_21_25} | 26+分: {sdr_26}
+- 让分: 让胜{spread_win_odds} / 让负{spread_lose_odds}
+- 大小分: 大{total_over_odds} / 小{total_under_odds}
+- 胜分差: 1-5分:{sdr_1_5} | 6-10分:{sdr_6_10} | 11-15分:{sdr_11_15} | 16-20分:{sdr_16_20} | 21-25分:{sdr_21_25} | 26+分:{sdr_26}
 
-注意：如果赔率显示"暂无"，请根据球队实力、近期状态等因素进行预测，不要受赔率缺失影响。
+## 情报数据
+{intel_data}
 
-## 历史赔率分析要求
-
-在预测前，请先联网搜索历史数据：
-
-1. 搜索当前比赛双方相同/相似赔率的历史场次（至少30场）
-   - 数据源：oddsportal.com、betexplorer.com、flashscore.com
-   - 重点关注主胜赔率±0.1区间的历史场次
-
-2. 搜索当前让分盘口的历史赢盘率（至少30场）
-   - 如主队让5.5分的历史赢盘/输盘概率
-
-3. 搜索当前大小分盘口的历史概率数据（至少50场）
-   - 如总分210.5的历史大/小概率
-
-4. 搜索相同胜分差赔率结构的历史概率（如有）
-
-统计这些历史场次中各结果的实际出现概率。
-
-## 历史数据应用规则
-
-- 历史概率与赔率隐含概率一致时，按赔率预测
-- 历史概率明显偏离赔率时（如历史主胜70%，赔率暗示50%），优先参考历史数据（说明有信息差）
-- 在analysis字段中简要说明历史数据分析结论
-
-## 请严格按以下JSON格式输出（不要输出其他内容）:
+## 请严格按以下JSON格式输出:
 ```json
 {{
   "win_loss": "胜"或"负",
@@ -194,40 +250,63 @@ BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。一次性给
   "total_points": "大"或"小",
   "score_diff_range": "如主6-10胜或客1-5负",
   "half_win_loss": "胜"或"负",
-  "analysis": "50-100字分析理由，需包含历史赔率分析结论"
+  "analysis": "50-100字分析理由"
 }}
 ```
 
-## ⚠️ 逻辑自洽规则（违反等于预测无效）:
-1. **让分↔胜分差（最重要）**：
-   - 让分盘口={spread_line}（{spread_desc}）
-   - 选"让胜"=看好主队赢超过盘口绝对值。如盘口-5.5选让胜→主队至少赢6分→胜分差只能选"主6-10胜""主11-15胜""主16-20胜""主21+胜"之一
-   - 选"让负"=看好客队覆盖。如盘口-5.5选让负→客队赢或主队赢不到6分→胜分差应选"客x负"或"主1-5胜"
-2. **让分↔胜负**：选"让胜"→胜负应选"胜"；大让分盘口选"让负"→胜负倾向"负"
-3. **胜分差↔大小分**：大胜分差（11+）→总分倾向"大"；小胜分差（1-5）→总分倾向看情况
+## 逻辑自洽规则:
+1. 让分↔胜分差：选"让胜"→胜分差应为"主x胜"且分差>盘口
+2. 让分↔胜负：选"让胜"→胜负应选"胜"
+3. 胜分差格式: 主1-5胜/主6-10胜/主11-15胜/主16-20胜/主21+胜/客1-5负/客6-10负/客11-15负/客16-20负/客21+负"""
 
-## 胜分差格式:
-- "主x-y胜"=主队赢x到y分，"客x-y负"=客队赢x到y分
-- 可选值: 主1-5胜/主6-10胜/主11-15胜/主16-20胜/主21+胜/客1-5负/客6-10负/客11-15负/客16-20负/客21+负"""
+# ============ 数据库操作 ============
 
-# ============ 数据库（Supabase） ============
-
-def get_pending_matches(sport="football", include_settled=False):
-    """获取待预测比赛（新schema适配）"""
-    from supabase_db import get_matches_by_sport
-    # 获取在售和待处理的比赛
+def get_pending_matches(sport="football"):
+    """获取待预测比赛"""
     matches = get_matches_by_sport(sport, statuses=["on_sale", "pending"])
-    # 过滤掉CT（传统彩）比赛，它们由 traditional_lottery_predict.py 处理
     return [m for m in matches if not m.get("id", "").startswith("CT")]
 
 
 def get_existing_predictions(match_id):
-    """获取某场比赛已有的AI预测，返回标准化后的AI名称集合"""
+    """获取某场比赛已有的AI预测"""
     return get_existing_ai_names(match_id)
 
 
+def save_intel(match_id, intel_data):
+    """保存情报到数据库（matches表的metadata字段）"""
+    try:
+        intel_json = json.dumps(intel_data, ensure_ascii=False)
+        # 使用参数化查询避免SQL注入
+        sql = """
+            UPDATE matches 
+            SET metadata = jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{intel}',
+                %s::jsonb
+            )
+            WHERE id = %s
+        """
+        execute_query(sql, (intel_json, match_id), fetch=False)
+        return True
+    except Exception as e:
+        print(f"  [ERROR] 保存情报失败: {e}")
+        return False
+
+
+def get_intel(match_id):
+    """从数据库获取比赛情报"""
+    try:
+        sql = "SELECT metadata->>'intel' as intel FROM matches WHERE id = %s"
+        result = execute_query(sql, (match_id,), fetch=True)
+        if result and result[0].get('intel'):
+            return json.loads(result[0]['intel'])
+    except Exception as e:
+        print(f"  [WARN] 获取情报失败: {e}")
+    return None
+
+
 def insert_football_prediction(pred):
-    """插入足球预测"""
+    """插入足球预测（立即入库）"""
     prediction_json = {
         "spf": pred.get("spf"),
         "handicap_spf": pred.get("handicap_spf"),
@@ -245,17 +324,14 @@ def insert_football_prediction(pred):
 
 
 def normalize_basketball_fields(pred):
-    """规范化篮球预测字段名，处理不同AI返回的字段名差异"""
+    """规范化篮球预测字段名"""
     normalized = dict(pred)
     
-    # 字段名映射：handicap_result → handicap_win_loss
     if "handicap_result" in normalized and "handicap_win_loss" not in normalized:
         normalized["handicap_win_loss"] = normalized.pop("handicap_result")
     
-    # 字段名映射：score_diff → score_diff_range
     if "score_diff" in normalized and "score_diff_range" not in normalized:
         score_diff = normalized.pop("score_diff")
-        # 如果只有范围（如"6-10"），需要根据win_loss添加主/客前缀
         if score_diff and not any(score_diff.startswith(p) for p in ["主", "客"]):
             win_loss = normalized.get("win_loss", "")
             if "主胜" in win_loss or win_loss == "胜":
@@ -271,8 +347,7 @@ def normalize_basketball_fields(pred):
 
 
 def insert_basketball_prediction(pred):
-    """插入篮球预测"""
-    # 规范化字段名
+    """插入篮球预测（立即入库）"""
     pred = normalize_basketball_fields(pred)
     
     prediction_json = {
@@ -292,7 +367,8 @@ def insert_basketball_prediction(pred):
 
 # ============ AI API调用 ============
 
-def call_openai_compatible(url, key, model, prompt, timeout=60):
+def call_openai_compatible(url, key, model, prompt, timeout=AI_CALL_TIMEOUT):
+    """调用OpenAI兼容API"""
     headers = {
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
@@ -301,7 +377,7 @@ def call_openai_compatible(url, key, model, prompt, timeout=60):
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 500,
+        "max_tokens": 800,
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
@@ -309,7 +385,8 @@ def call_openai_compatible(url, key, model, prompt, timeout=60):
     return data["choices"][0]["message"]["content"]
 
 
-def call_minimax(url, key, model, prompt, timeout=60):
+def call_minimax(url, key, model, prompt, timeout=AI_CALL_TIMEOUT):
+    """调用MiniMax API"""
     headers = {
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
@@ -318,25 +395,7 @@ def call_minimax(url, key, model, prompt, timeout=60):
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 500,
-    }
-    resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
-    resp.raise_for_status()
-    data = resp.json()
-    return data["choices"][0]["message"]["content"]
-
-
-def call_wenxin(url, key, model, prompt, timeout=60):
-    """文心一言 - v2 OpenAI兼容格式"""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {key}"
-    }
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 500,
+        "max_tokens": 800,
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
@@ -346,6 +405,9 @@ def call_wenxin(url, key, model, prompt, timeout=60):
 
 def parse_ai_response(text, sport="football"):
     """从AI回复中提取JSON预测结果"""
+    if not text:
+        return None
+    
     # 方法1: 提取```json代码块
     json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
     if json_match:
@@ -354,7 +416,7 @@ def parse_ai_response(text, sport="football"):
         except json.JSONDecodeError:
             pass
     
-    # 方法2: 尝试提取所有JSON对象（处理嵌套花括号）
+    # 方法2: 尝试提取所有JSON对象
     json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
     json_matches = re.findall(json_pattern, text, re.DOTALL)
     
@@ -365,14 +427,20 @@ def parse_ai_response(text, sport="football"):
                 return data
             elif sport == "football" and "spf" in data:
                 return data
+            # 情报格式
+            if "intel_summary" in data or "home_form" in data:
+                return data
         except json.JSONDecodeError:
             continue
     
-    # 方法3: 宽松匹配，提取包含关键字段的JSON
+    # 方法3: 宽松匹配
     if sport == "basketball":
         json_match = re.search(r'\{[^}]*"win_loss"[^}]*\}', text, re.DOTALL)
     else:
         json_match = re.search(r'\{[^}]*"spf"[^}]*\}', text, re.DOTALL)
+        if not json_match:
+            # 尝试匹配情报格式
+            json_match = re.search(r'\{[^}]*"intel_summary"[^}]*\}', text, re.DOTALL)
     
     if json_match:
         try:
@@ -380,23 +448,12 @@ def parse_ai_response(text, sport="football"):
         except json.JSONDecodeError:
             pass
     
-    # 全部解析失败
-    print(f"  WARNING: AI回复无法解析为JSON，原始内容: {(text or '')[:500]}")
+    print(f"  WARNING: AI回复无法解析为JSON，原始内容: {(text or '')[:300]}")
     return None
 
 
-def call_coze_code(url, token, prompt, project_id=None):
-    """
-    调用扣子编程（Coze Code）项目部署的API端点
-    官方文档: https://docs.coze.cn/dev_how_to_guides_qeesmmos
-    请求格式:
-    {
-      "content": {"query": {"prompt": [{"type": "text", "content": {"text": "..."}}]}},
-      "type": "query",
-      "session_id": "...",
-      "project_id": 7667164681706078217
-    }
-    """
+def call_coze_code(url, token, prompt, project_id=None, timeout=INTEL_TIMEOUT):
+    """调用扣子编程API"""
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -404,14 +461,7 @@ def call_coze_code(url, token, prompt, project_id=None):
     payload = {
         "content": {
             "query": {
-                "prompt": [
-                    {
-                        "type": "text",
-                        "content": {
-                            "text": prompt,
-                        },
-                    }
-                ],
+                "prompt": [{"type": "text", "content": {"text": prompt}}],
             },
         },
         "type": "query",
@@ -420,33 +470,21 @@ def call_coze_code(url, token, prompt, project_id=None):
     if project_id:
         payload["project_id"] = project_id
 
-    print(f"  [扣子API] 请求URL: {url}")
-    print(f"  [扣子API] project_id: {project_id}")
+    resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     
-    resp = requests.post(url, headers=headers, json=payload, timeout=120)
-    
-    # 详细记录错误信息
     if resp.status_code != 200:
-        error_body = resp.text[:500]
-        print(f"  [扣子API] HTTP {resp.status_code}: {error_body}")
+        print(f"  [扣子API] HTTP {resp.status_code}: {resp.text[:300]}")
         resp.raise_for_status()
 
     content_type = resp.headers.get("Content-Type", "")
-    print(f"  [扣子API] 响应Content-Type: {content_type}")
 
-    # 尝试JSON响应
+    # JSON响应
     if "json" in content_type:
         data = resp.json()
-        print(f"  [扣子API] JSON响应keys: {list(data.keys()) if isinstance(data, dict) else 'not dict'}")
-        # 兼容多种返回结构
         if isinstance(data, dict):
             if "data" in data and isinstance(data["data"], dict):
                 messages = data["data"].get("messages", [])
                 for msg in reversed(messages):
-                    if msg.get("role") == "assistant" and msg.get("content"):
-                        return msg["content"]
-            if "messages" in data:
-                for msg in reversed(data["messages"]):
                     if msg.get("role") == "assistant" and msg.get("content"):
                         return msg["content"]
             if "result" in data:
@@ -455,8 +493,7 @@ def call_coze_code(url, token, prompt, project_id=None):
                 return str(data["text"])
         return json.dumps(data, ensure_ascii=False)
 
-    # SSE流式响应：收集所有answer分片并拼接
-    # 官方格式：每个event的data中有 {"type": "answer", "content": {"answer": "片段文字"}}
+    # SSE流式响应
     answer_chunks = []
     for line in resp.iter_lines(decode_unicode=True):
         if not line:
@@ -467,28 +504,21 @@ def call_coze_code(url, token, prompt, project_id=None):
                 continue
             try:
                 evt = json.loads(line)
-                if isinstance(evt, dict):
-                    evt_type = evt.get("type", "")
-                    if evt_type == "answer":
-                        content = evt.get("content", {})
-                        if isinstance(content, dict):
-                            chunk = content.get("answer")
-                            if chunk:
-                                answer_chunks.append(chunk)
+                if isinstance(evt, dict) and evt.get("type") == "answer":
+                    chunk = evt.get("content", {}).get("answer")
+                    if chunk:
+                        answer_chunks.append(chunk)
             except json.JSONDecodeError:
                 pass
+    
     if answer_chunks:
-        full_answer = "".join(answer_chunks)
-        print(f"  [扣子API] SSE拼接完成，回答长度: {len(full_answer)}")
-        return full_answer
+        return "".join(answer_chunks)
 
-    # 回退：直接返回原始文本
-    print(f"  [扣子API] 回退返回原始文本，长度: {len(resp.text)}")
     return resp.text
 
 
 def call_ai(ai_name, prompt, sport="football"):
-    """调用指定AI生成预测，支持fallback模型自动降级"""
+    """调用指定AI，支持fallback模型"""
     config = AI_CONFIGS.get(ai_name)
     if not config:
         raise Exception(f"未知AI: {ai_name}")
@@ -498,23 +528,21 @@ def call_ai(ai_name, prompt, sport="football"):
     if fmt == "coze_code":
         token = os.environ.get(config.get("key_env", ""), "") or config.get("key_default", "")
         if not token:
-            raise Exception(f"{ai_name} 的API Token未配置")
+            raise Exception(f"{ai_name} Token未配置")
         raw = call_coze_code(config["url"], token, prompt, config.get("project_id"))
         return parse_ai_response(raw, sport)
     
     key = os.environ.get(config["key_env"], "")
     if not key:
-        raise Exception(f"{ai_name} 的API Key未配置 ({config['key_env']})")
+        raise Exception(f"{ai_name} API Key未配置")
     
-    # 限流/额度相关错误关键词
     rate_limit_keywords = [
         "Arrearage", "Overdue", "quota", "QuotaExceeded", "insufficient",
         "SetLimitExceeded", "LimitExceeded", "ServerOverloaded", 
         "RequestBurstTooFast", "RateLimitExceeded", "TooManyRequests", "429",
-        "402", "balance", "Payment Required", "quota exceeded", "no quota",
+        "402", "balance", "Payment Required",
     ]
     
-    # 构建模型列表（主模型 + fallback模型）
     models_to_try = [config["model"]]
     if config.get("fallback_models"):
         models_to_try.extend(config["fallback_models"])
@@ -526,41 +554,32 @@ def call_ai(ai_name, prompt, sport="football"):
                 raw = call_openai_compatible(config["url"], key, model, prompt)
             elif fmt == "minimax":
                 raw = call_minimax(config["url"], key, model, prompt)
-            elif fmt == "wenxin":
-                raw = call_wenxin(config["url"], key, model, prompt)
             else:
                 raise Exception(f"未知格式: {fmt}")
             
             if i > 0:
-                print(f"  [fallback] {ai_name} 主模型额度耗尽/限流，自动切换到 {model}")
+                print(f"    [fallback] 切换到 {model}")
             return parse_ai_response(raw, sport)
             
         except Exception as e:
             error_str = str(e)
-            # 检查是否是限流错误
             is_rate_limit = any(kw in error_str for kw in rate_limit_keywords)
             
             if is_rate_limit and i < len(models_to_try) - 1:
-                print(f"  [fallback] {ai_name} 模型 {model} 额度耗尽或限流，尝试备用模型...")
+                print(f"    [fallback] {model} 限流，尝试备用...")
                 last_error = e
                 continue
             else:
-                # 非限流错误或已是最后一个模型，直接抛出
                 raise e
     
     if last_error:
         raise last_error
-    
-    return parse_ai_response(raw, sport)
 
 
 # ============ 逻辑校验 ============
 
 def validate_basketball_consistency(pred, spread_line):
-    """校验篮球预测的逻辑一致性，返回修正后的预测。
-    spread_line规则：负数=主队让分，正数=客队让分。
-    让胜=主队覆盖，让负=客队覆盖。
-    """
+    """校验篮球预测的逻辑一致性"""
     try:
         spread = float(spread_line) if spread_line else 0
     except (ValueError, TypeError):
@@ -570,7 +589,6 @@ def validate_basketball_consistency(pred, spread_line):
     sdr = pred.get("score_diff_range", "")
     wl = pred.get("win_loss", "胜")
     
-    # 解析胜分差
     sdr_match = re.match(r'(主|客)(\d+)[-](\d+)(胜|负)', sdr)
     if not sdr_match:
         sdr_match2 = re.match(r'(主|客)(\d+)\+(胜|负)', sdr)
@@ -578,111 +596,108 @@ def validate_basketball_consistency(pred, spread_line):
             team = sdr_match2.group(1)
             low = int(sdr_match2.group(2))
             high = 99
-            direction = sdr_match2.group(3)
         else:
             return pred
     else:
         team = sdr_match.group(1)
         low = int(sdr_match.group(2))
         high = int(sdr_match.group(3))
-        direction = sdr_match.group(4)
     
     abs_spread = abs(spread)
-    min_cover = math.floor(abs_spread) + 1  # 覆盖所需最小净胜分
+    min_cover = math.floor(abs_spread) + 1
     
     corrected = dict(pred)
-    fix_reason = ""
-    
-    # 确定让胜/让负的含义
-    if spread < 0:
-        # 主队让分：让胜=主队赢min_cover+分
-        home_covers_margin = min_cover
-    else:
-        # 客队让分：让胜=主队赢或输不到min_cover分
-        home_covers_margin = min_cover
-    
-    if hw == "让胜":
-        if spread < 0:
-            # 主队让分，让胜=主队赢超过|让分值|
-            if team == "客":
-                fix_reason = f"让胜(主让{abs_spread})但胜分差={sdr}(客赢)"
-                if home_covers_margin <= 5:
-                    corrected["score_diff_range"] = "主6-10胜"
-                elif home_covers_margin <= 10:
-                    corrected["score_diff_range"] = "主11-15胜"
-                elif home_covers_margin <= 15:
-                    corrected["score_diff_range"] = "主16-20胜"
-                else:
-                    corrected["score_diff_range"] = "主21+胜"
-            elif team == "主" and high < min_cover:
-                fix_reason = f"让胜(需赢{min_cover}+)但胜分差={sdr}(最多赢{high})"
-                if min_cover <= 5:
-                    corrected["score_diff_range"] = "主6-10胜"
-                elif min_cover <= 10:
-                    corrected["score_diff_range"] = "主11-15胜"
-                elif min_cover <= 15:
-                    corrected["score_diff_range"] = "主16-20胜"
-                else:
-                    corrected["score_diff_range"] = "主21+胜"
-        else:
-            # 客队让分，让胜=主队赢或输不到|让分值|
-            if team == "客" and low >= min_cover:
-                fix_reason = f"让胜(客让{abs_spread},主不能输{min_cover}+)但胜分差={sdr}(客赢{low}+)"
-                corrected["score_diff_range"] = "客1-5负" if min_cover > 5 else "主1-5胜"
-    
-    elif hw == "让负":
-        if spread < 0:
-            # 主队让分，让负=客队覆盖（客赢或主赢不到|让分值|）
-            if team == "主" and low >= min_cover:
-                fix_reason = f"让负(主让{abs_spread},主不能赢{min_cover}+)但胜分差={sdr}(主赢{low}+)"
-                corrected["score_diff_range"] = "主1-5胜"
-        else:
-            # 客队让分，让负=客队赢超过|让分值|
-            if team == "主":
-                fix_reason = f"让负(客让{abs_spread})但胜分差={sdr}(主赢)"
-                corrected["score_diff_range"] = "客6-10负" if min_cover <= 5 else "客11-15负"
-            elif team == "客" and high < min_cover:
-                fix_reason = f"让负(客需赢{min_cover}+)但胜分差={sdr}(最多赢{high})"
-                if min_cover <= 5:
-                    corrected["score_diff_range"] = "客6-10负"
-                elif min_cover <= 10:
-                    corrected["score_diff_range"] = "客11-15负"
-                else:
-                    corrected["score_diff_range"] = "客16-20负"
     
     # 让分↔胜负一致性
-    if hw == "让胜" and wl == "负":
-        if spread < 0:
-            # 主队让分选让胜，但选客队赢？矛盾
-            corrected["win_loss"] = "胜"
-            fix_reason += "；让胜→胜负修正为胜"
-    elif hw == "让负" and wl == "胜":
-        if spread < 0 and abs_spread >= 8:
-            # 大让分选让负，但选主队赢？矛盾
-            corrected["win_loss"] = "负"
-            fix_reason += "；大让分让负→胜负修正为负"
-    
-    if fix_reason:
-        print(f"  校验修正: {fix_reason}")
+    if hw == "让胜" and wl == "负" and spread < 0:
+        corrected["win_loss"] = "胜"
+    elif hw == "让负" and wl == "胜" and spread < 0 and abs_spread >= 8:
+        corrected["win_loss"] = "负"
     
     return corrected
 
+
 # ============ Prompt构建 ============
 
-def build_football_prompt(match):
-    """构建足球预测prompt"""
-    # 从新结构读取数据
+def build_intel_prompt(match, sport="football"):
+    """构建情报搜集Prompt"""
+    home_team = match.get("home_team") or "主队"
+    away_team = match.get("away_team") or "客队"
+    odds = match.get("odds") or {}
+    
+    def fmt_odds(val):
+        if val is None or val == 0 or val == "":
+            return "暂无"
+        return str(val)
+    
+    if sport == "basketball":
+        spread_line = match.get("spread_line") or 0
+        try:
+            spread_line = float(spread_line)
+        except:
+            spread_line = 0
+        
+        if spread_line < 0:
+            spread_desc = f"主队让{-spread_line}分"
+        elif spread_line > 0:
+            spread_desc = f"客队让{spread_line}分"
+        else:
+            spread_desc = "平手盘"
+        
+        return INTEL_PROMPT_BASKETBALL.format(
+            league=match.get("league") or "未知联赛",
+            home_team=home_team,
+            away_team=away_team,
+            match_time=match.get("match_time") or "",
+            spread_line=spread_line,
+            spread_desc=spread_desc,
+            total_line=match.get("total_line") or 0,
+        )
+    else:
+        spf_odds = odds.get("spf") or {}
+        return INTEL_PROMPT_FOOTBALL.format(
+            league=match.get("league") or "未知联赛",
+            home_team=home_team,
+            away_team=away_team,
+            match_time=match.get("match_time") or "",
+            handicap=match.get("handicap") or "暂无",
+            win_odds=fmt_odds(spf_odds.get("win")),
+            draw_odds=fmt_odds(spf_odds.get("draw")),
+            lose_odds=fmt_odds(spf_odds.get("lose")),
+        )
+
+
+def build_football_prompt(match, intel_data=None):
+    """构建足球预测Prompt"""
     home_team = match.get("home_team") or "主队"
     away_team = match.get("away_team") or "客队"
     odds = match.get("odds") or {}
     spf_odds = odds.get("spf") or {}
     handicap_spf_odds = odds.get("handicap_spf") or {}
     
-    # 处理赔率：无赔率时显示"暂无"
     def fmt_odds(val):
         if val is None or val == 0 or val == "":
             return "暂无"
         return str(val)
+    
+    # 格式化情报数据
+    intel_text = "暂无情报数据"
+    if intel_data:
+        parts = []
+        if intel_data.get("home_form"):
+            parts.append(f"- 主队近况: {intel_data['home_form']}")
+        if intel_data.get("away_form"):
+            parts.append(f"- 客队近况: {intel_data['away_form']}")
+        if intel_data.get("h2h"):
+            parts.append(f"- 交锋记录: {intel_data['h2h']}")
+        if intel_data.get("odds_analysis"):
+            parts.append(f"- 赔率分析: {intel_data['odds_analysis']}")
+        if intel_data.get("key_factors"):
+            parts.append(f"- 关键因素: {', '.join(intel_data['key_factors'])}")
+        if intel_data.get("intel_summary"):
+            parts.append(f"- 情报总结: {intel_data['intel_summary']}")
+        if parts:
+            intel_text = "\n".join(parts)
     
     return PREDICTION_PROMPT.format(
         league=match.get("league") or "未知联赛",
@@ -696,17 +711,16 @@ def build_football_prompt(match):
         hw_odds=fmt_odds(handicap_spf_odds.get("win")),
         hd_odds=fmt_odds(handicap_spf_odds.get("draw")),
         hl_odds=fmt_odds(handicap_spf_odds.get("lose")),
+        intel_data=intel_text,
     )
 
 
-def build_basketball_prompt(match):
-    """构建篮球预测prompt"""
-    # 从新结构读取数据
+def build_basketball_prompt(match, intel_data=None):
+    """构建篮球预测Prompt"""
     home_team = match.get("home_team") or "主队"
     away_team = match.get("away_team") or "客队"
     odds = match.get("odds") or {}
     
-    # 解析让分赔率
     spread_odds = odds.get("spread") or {}
     if isinstance(spread_odds, str):
         try:
@@ -714,16 +728,13 @@ def build_basketball_prompt(match):
         except:
             spread_odds = {}
     
-    # 解析大小分赔率
     total_odds = odds.get("total_points") or {}
     if isinstance(total_odds, str):
         try:
             total_odds = json.loads(total_odds)
         except:
-            # 可能是纯数字（线值），不是赔率
             total_odds = {}
     
-    # 解析胜分差赔率
     sdr_odds = odds.get("score_diff") or {}
     if isinstance(sdr_odds, str):
         try:
@@ -731,7 +742,6 @@ def build_basketball_prompt(match):
         except:
             sdr_odds = {}
     
-    # 让分线值（负数=主队让分，正数=客队让分）
     spread_line = match.get("spread_line") or 0
     try:
         spread_line = float(spread_line)
@@ -744,42 +754,50 @@ def build_basketball_prompt(match):
     except:
         total_line = 0
     
-    # 让分赔率映射（支持 home/away 和 胜/负 key）
     spread_win = spread_odds.get("home", spread_odds.get("胜", spread_odds.get("win", "-")))
     spread_lose = spread_odds.get("away", spread_odds.get("负", spread_odds.get("lose", "-")))
-    
-    # 大小分赔率映射
     total_over = total_odds.get("over", total_odds.get("大", "-"))
     total_under = total_odds.get("under", total_odds.get("小", "-"))
     
-    # 胜分差赔率映射（支持两种格式）
-    # 格式1: l1-l6（无方向）
-    # 格式2: 主胜_1~主胜_6 + 主负_1~主负_6（有方向）
     sdr_ranges = ["1-5", "6-10", "11-15", "16-20", "21-25", "26+"]
     sdr_vals = {}
     for i, rng in enumerate(sdr_ranges):
         idx = str(i + 1)
-        # 尝试 l1-l6 格式
         val = sdr_odds.get(f"l{idx}", None)
         if val is None:
-            # 尝试 主胜_1 / 主负_1 格式（取两者中赔率更低的 = 更可能的方向）
             home_val = sdr_odds.get(f"主胜_{idx}", None)
             away_val = sdr_odds.get(f"主负_{idx}", None)
             if home_val is not None and away_val is not None:
-                val = min(home_val, away_val)  # 取概率更高的
+                val = min(home_val, away_val)
             elif home_val is not None:
                 val = home_val
             elif away_val is not None:
                 val = away_val
         sdr_vals[rng] = val if val is not None else "-"
     
-    # 让分描述
     if spread_line < 0:
         spread_desc = f"主队让{-spread_line}分"
     elif spread_line > 0:
         spread_desc = f"客队让{spread_line}分"
     else:
         spread_desc = "平手盘"
+    
+    # 格式化情报数据
+    intel_text = "暂无情报数据"
+    if intel_data:
+        parts = []
+        if intel_data.get("home_form"):
+            parts.append(f"- 主队近况: {intel_data['home_form']}")
+        if intel_data.get("away_form"):
+            parts.append(f"- 客队近况: {intel_data['away_form']}")
+        if intel_data.get("h2h"):
+            parts.append(f"- 交锋记录: {intel_data['h2h']}")
+        if intel_data.get("odds_analysis"):
+            parts.append(f"- 赔率分析: {intel_data['odds_analysis']}")
+        if intel_data.get("intel_summary"):
+            parts.append(f"- 情报总结: {intel_data['intel_summary']}")
+        if parts:
+            intel_text = "\n".join(parts)
     
     return BASKETBALL_PROMPT.format(
         league=match.get("league") or "未知联赛",
@@ -794,181 +812,265 @@ def build_basketball_prompt(match):
         spread_win_odds=spread_win or "暂无",
         spread_lose_odds=spread_lose or "暂无",
         total_over_odds=total_over or "暂无",
-        total_under_odds=total_under,
+        total_under_odds=total_under or "-",
         sdr_1_5=sdr_vals["1-5"],
         sdr_6_10=sdr_vals["6-10"],
         sdr_11_15=sdr_vals["11-15"],
         sdr_16_20=sdr_vals["16-20"],
         sdr_21_25=sdr_vals["21-25"],
         sdr_26=sdr_vals["26+"],
+        intel_data=intel_text,
     )
-def run_predict(sport="football"):
-    """主入口：为所有待预测比赛生成AI预测"""
-    matches = get_pending_matches(sport)
+
+
+# ============ Phase 1: 情报搜集 ============
+
+def phase1_collect_intel(sport="football"):
+    """Phase 1: 为所有待预测比赛搜集情报"""
+    print(f"\n{'='*50}")
+    print(f"Phase 1: 情报搜集 ({sport})")
+    print(f"{'='*50}")
     
+    matches = get_pending_matches(sport)
     if not matches:
-        print(json.dumps({"message": f"没有待预测的{('篮球' if sport=='basketball' else '足球')}比赛", "matches": 0, "predictions": 0}))
-        return
+        print(f"没有待预测的{sport}比赛")
+        return {"collected": 0, "failed": 0}
+    
+    collected = 0
+    failed = 0
+    
+    for i, match in enumerate(matches):
+        match_id = match["id"]
+        home = match.get("home_team", "?")
+        away = match.get("away_team", "?")
+        
+        print(f"\n[{i+1}/{len(matches)}] {home} vs {away}")
+        
+        # 检查是否已有情报
+        existing_intel = get_intel(match_id)
+        if existing_intel:
+            print(f"  已有情报，跳过")
+            collected += 1
+            continue
+        
+        # 构建情报搜集Prompt
+        prompt = build_intel_prompt(match, sport)
+        
+        # 调用扣子智能体搜集情报
+        try:
+            print(f"  调用扣子情报智能体...")
+            result = call_coze_code(
+                AI_CONFIGS["AI-扣子"]["url"],
+                os.environ.get("COZE_PROJECT_API_TOKEN", "") or AI_CONFIGS["AI-扣子"]["key_default"],
+                prompt,
+                AI_CONFIGS["AI-扣子"].get("project_id"),
+                timeout=INTEL_TIMEOUT
+            )
+            
+            intel_data = parse_ai_response(result, "intel")
+            if intel_data and (intel_data.get("intel_summary") or intel_data.get("home_form")):
+                save_intel(match_id, intel_data)
+                print(f"  情报已保存: {intel_data.get('intel_summary', '')[:50]}...")
+                collected += 1
+            else:
+                print(f"  情报解析失败")
+                failed += 1
+                
+        except Exception as e:
+            print(f"  情报搜集失败: {str(e)[:100]}")
+            failed += 1
+        
+        # 间隔避免限流
+        time.sleep(AI_CALL_INTERVAL)
+    
+    print(f"\nPhase 1 完成: 成功{collected}, 失败{failed}")
+    return {"collected": collected, "failed": failed}
+
+
+# ============ Phase 2: 逐AI逐场预测 ============
+
+def phase2_predict(sport="football"):
+    """Phase 2: 逐场比赛、逐AI预测，每个预测立即入库"""
+    print(f"\n{'='*50}")
+    print(f"Phase 2: AI预测 ({sport})")
+    print(f"{'='*50}")
+    
+    matches = get_pending_matches(sport)
+    if not matches:
+        print(f"没有待预测的{sport}比赛")
+        return {"matches": 0, "predictions": 0, "errors": 0}
     
     total_predictions = 0
     total_errors = 0
-    total_corrections = 0
     match_results = []
     
-    for match in matches:
+    for i, match in enumerate(matches):
         match_id = match["id"]
+        home = match.get("home_team", "?")
+        away = match.get("away_team", "?")
+        
+        # 获取已有预测
         existing = get_existing_predictions(match_id)
         
-        if sport == "basketball":
-            prompt = build_basketball_prompt(match)
-        else:
-            prompt = build_football_prompt(match)
-        
-        missing_ais = [ai for ai in AI_CONFIGS if ai not in existing]
+        # 按顺序找出需要预测的AI
+        missing_ais = [ai for ai in AI_CALL_ORDER if ai not in existing]
         if not missing_ais:
+            print(f"\n[{i+1}/{len(matches)}] {home} vs {away} - 全部AI已完成")
             continue
         
-        match_pred_count = 0
-        match_errors = []
+        print(f"\n[{i+1}/{len(matches)}] {home} vs {away}")
+        print(f"  待预测AI: {', '.join(missing_ais)}")
         
+        # 获取情报数据
+        intel_data = get_intel(match_id)
+        if intel_data:
+            print(f"  情报: {intel_data.get('intel_summary', '')[:50]}...")
+        else:
+            print(f"  无情报数据")
+        
+        # 构建Prompt
+        if sport == "basketball":
+            prompt = build_basketball_prompt(match, intel_data)
+        else:
+            prompt = build_football_prompt(match, intel_data)
+        
+        match_pred_count = 0
+        match_errors = 0
+        
+        # 逐个AI调用
         for ai_name in missing_ais:
             try:
+                print(f"  调用 {ai_name}...", end=" ", flush=True)
                 result = call_ai(ai_name, prompt, sport)
                 
-                # 检查AI返回是否可解析
                 if result is None:
-                    print(f"  FAIL: {match_id} {ai_name} - AI返回无法解析，跳过")
-                    match_errors.append(f"{ai_name}: 返回无法解析")
+                    print("返回无法解析")
+                    match_errors += 1
                     continue
                 
+                # 处理预测结果
+                ai_short_name = ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name
+                
                 if sport == "basketball":
-                    # 校验逻辑一致性
-                    spread_line = match.get("spread_line") or match.get("handicap") or 0
-                    result = validate_basketball_consistency(result, spread_line)
+                    # 篮球处理
+                    result = validate_basketball_consistency(result, match.get("spread_line") or 0)
                     
-                    # 验证字段
                     wl_raw = result.get("win_loss", "")
                     wl_map = {"主胜": "胜", "客胜": "负", "home": "胜", "away": "负"}
-                    wl = wl_map.get(wl_raw, wl_raw) if wl_raw else ""
+                    wl = wl_map.get(wl_raw, wl_raw)
                     if wl not in ("胜", "负"):
-                        print(f"  [WARN] {ai_name} win_loss非法值: '{wl_raw}'，跳过")
-                        match_errors.append(f"{ai_name}: win_loss非法值 '{wl_raw}'")
+                        print(f"win_loss非法")
+                        match_errors += 1
                         continue
                     
                     hwl_raw = result.get("handicap_win_loss", "")
                     hwl_map = {"让球胜": "让胜", "让球负": "让负"}
-                    hwl = hwl_map.get(hwl_raw, hwl_raw) if hwl_raw else ""
+                    hwl = hwl_map.get(hwl_raw, hwl_raw)
                     if hwl not in ("让胜", "让负"):
-                        print(f"  [WARN] {ai_name} handicap_win_loss非法值: '{hwl_raw}'，跳过")
-                        match_errors.append(f"{ai_name}: handicap_win_loss非法值 '{hwl_raw}'")
+                        print(f"handicap非法")
+                        match_errors += 1
                         continue
                     
                     tp_raw = result.get("total_points", "")
                     tp_map = {"大分": "大", "小分": "小", "over": "大", "under": "小"}
-                    tp = tp_map.get(tp_raw, tp_raw) if tp_raw else ""
+                    tp = tp_map.get(tp_raw, tp_raw)
                     if tp not in ("大", "小"):
-                        print(f"  [WARN] {ai_name} total_points非法值: '{tp_raw}'，跳过")
-                        match_errors.append(f"{ai_name}: total_points非法值 '{tp_raw}'")
+                        print(f"total非法")
+                        match_errors += 1
                         continue
                     
                     sdr = result.get("score_diff_range", "")
-                    sdr_valid = re.match(r'^(主|客)\d+[-+]\d*(胜|负)$', str(sdr)) if sdr else None
-                    if not sdr_valid:
-                        print(f"  [WARN] {ai_name} score_diff_range非法值: '{sdr}'，跳过")
-                        match_errors.append(f"{ai_name}: score_diff_range非法值 '{sdr}'")
+                    if not re.match(r'^(主|客)\d+[-+]\d*(胜|负)$', str(sdr)):
+                        print(f"score_diff非法")
+                        match_errors += 1
                         continue
                     
-                    hwl_half_raw = result.get("half_win_loss", "")
-                    hwl_half = wl_map.get(hwl_half_raw, hwl_half_raw) if hwl_half_raw else ""
+                    hwl_half = wl_map.get(result.get("half_win_loss", ""), result.get("half_win_loss", ""))
                     if hwl_half not in ("胜", "负"):
-                        print(f"  [WARN] {ai_name} half_win_loss非法值: '{hwl_half_raw}'，跳过")
-                        match_errors.append(f"{ai_name}: half_win_loss非法值 '{hwl_half_raw}'")
+                        print(f"half非法")
+                        match_errors += 1
                         continue
-                    
-                    analysis = result.get("analysis", "")[:500]
                     
                     pred = {
                         "match_id": match_id,
-                        "match_uid": match.get("match_uid", match_id),
-                        "ai_name": ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name,
+                        "ai_name": ai_short_name,
                         "win_loss": wl,
                         "handicap_win_loss": hwl,
                         "total_points": tp,
                         "score_diff_range": sdr,
                         "half_win_loss": hwl_half,
-                        "analysis": analysis,
+                        "analysis": result.get("analysis", "")[:500],
                     }
                     
+                    # 立即入库
                     insert_basketball_prediction(pred)
                     match_pred_count += 1
-                    print(f"  OK: {match_id} {ai_name} -> {wl}/{hwl}/{tp}/{sdr}")
+                    print(f"OK -> {wl}/{hwl}/{tp}")
                     
                 else:
                     # 足球处理
                     spf_raw = result.get("spf", "")
-                    # 映射常见变体
-                    spf_map = {"主胜": "胜", "主平": "平", "主负": "负", "平局": "平", "home": "胜", "draw": "平", "away": "负"}
-                    spf = spf_map.get(spf_raw, spf_raw) if spf_raw else ""
+                    spf_map = {"主胜": "胜", "主平": "平", "主负": "负", "平局": "平"}
+                    spf = spf_map.get(spf_raw, spf_raw)
                     if spf not in ("胜", "平", "负"):
-                        print(f"  [WARN] {ai_name} spf非法值: '{spf_raw}'，跳过该预测")
-                        match_errors.append(f"{ai_name}: spf非法值 '{spf_raw}'")
-                        continue  # 宁可不写也不写错数据
-                    spf = spf
+                        print(f"spf非法")
+                        match_errors += 1
+                        continue
                     
                     handicap_spf_raw = result.get("handicap_spf", "")
                     handicap_map = {"让球胜": "让胜", "让球平": "让平", "让球负": "让负"}
-                    handicap_spf = handicap_map.get(handicap_spf_raw, handicap_spf_raw) if handicap_spf_raw else ""
+                    handicap_spf = handicap_map.get(handicap_spf_raw, handicap_spf_raw)
                     if handicap_spf not in ("让胜", "让平", "让负"):
-                        print(f"  [WARN] {ai_name} handicap_spf非法值: '{handicap_spf_raw}'，跳过该预测")
-                        match_errors.append(f"{ai_name}: handicap_spf非法值 '{handicap_spf_raw}'")
+                        print(f"handicap非法")
+                        match_errors += 1
                         continue
                     
                     score = result.get("score", "")
                     if not re.match(r'^\d+-\d+$', str(score)):
-                        print(f"  [WARN] {ai_name} score非法值: '{score}'，跳过该预测")
-                        match_errors.append(f"{ai_name}: score非法值 '{score}'")
+                        print(f"score非法")
+                        match_errors += 1
                         continue
                     
                     goals = int(result.get("goals", 1))
                     half_full_raw = result.get("half_full", "")
                     half_full_map = {"主主": "胜胜", "主平": "胜平", "主负": "胜负", "平主": "平胜", "平平": "平平", "平负": "平负", "负主": "负胜", "负平": "负平", "负负": "负负"}
-                    half_full = half_full_map.get(half_full_raw, half_full_raw) if half_full_raw else ""
+                    half_full = half_full_map.get(half_full_raw, half_full_raw)
                     if half_full not in ("胜胜", "胜平", "胜负", "平胜", "平平", "平负", "负胜", "负平", "负负"):
-                        print(f"  [WARN] {ai_name} half_full非法值: '{half_full_raw}'，跳过该预测")
-                        match_errors.append(f"{ai_name}: half_full非法值 '{half_full_raw}'")
+                        print(f"half_full非法")
+                        match_errors += 1
                         continue
-                    
-                    analysis = result.get("analysis", "")[:500]
                     
                     pred = {
                         "match_id": match_id,
-                        "match_uid": match.get("match_uid", match_id),
-                        "ai_name": ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name,
+                        "ai_name": ai_short_name,
                         "spf": spf,
                         "handicap_spf": handicap_spf,
                         "score": score,
                         "goals": goals,
                         "half_full": half_full,
-                        "analysis": analysis,
+                        "analysis": result.get("analysis", "")[:500],
                     }
                     
+                    # 立即入库
                     insert_football_prediction(pred)
                     match_pred_count += 1
-                    print(f"  OK: {match_id} {ai_name} -> {spf}/{handicap_spf}/{score}")
+                    print(f"OK -> {spf}/{handicap_spf}/{score}")
                 
             except Exception as e:
-                error_msg = f"{ai_name}: {str(e)[:100]}"
-                match_errors.append(error_msg)
-                print(f"  FAIL: {match_id} {ai_name} - {e}")
-                total_errors += 1
+                print(f"失败: {str(e)[:50]}")
+                match_errors += 1
             
-            time.sleep(1)
+            # AI调用间隔
+            time.sleep(AI_CALL_INTERVAL)
         
         total_predictions += match_pred_count
+        total_errors += match_errors
         match_results.append({
             "match_id": match_id,
+            "home": home,
+            "away": away,
             "predicted": match_pred_count,
-            "errors": len(match_errors),
+            "errors": match_errors,
         })
     
     result = {
@@ -978,20 +1080,76 @@ def run_predict(sport="football"):
         "errors": total_errors,
         "details": match_results,
     }
-    print(json.dumps(result, ensure_ascii=False))
+    
+    print(f"\n{'='*50}")
+    print(f"Phase 2 完成")
+    print(f"比赛: {len(match_results)}, 预测: {total_predictions}, 错误: {total_errors}")
+    print(f"{'='*50}")
+    
+    return result
+
+
+# ============ 主入口 ============
+
+def run_predict(sport="football", phase="all"):
+    """主入口：两阶段预测
+    
+    Args:
+        sport: football 或 basketball
+        phase: "1"=只跑情报搜集, "2"=只跑预测, "all"=全部
+    """
+    start_time = time.time()
+    
+    print(f"\n{'#'*60}")
+    print(f"# 两阶段AI预测系统")
+    print(f"# 运动: {sport}, 阶段: {phase}")
+    print(f"# 时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'#'*60}")
+    
+    result = {
+        "sport": sport,
+        "phase": phase,
+        "start_time": datetime.now().isoformat(),
+    }
+    
+    if phase in ("1", "all"):
+        result["phase1"] = phase1_collect_intel(sport)
+    
+    if phase in ("2", "all"):
+        result["phase2"] = phase2_predict(sport)
+    
+    elapsed = time.time() - start_time
+    result["elapsed_seconds"] = round(elapsed, 1)
+    result["end_time"] = datetime.now().isoformat()
+    
+    print(f"\n总耗时: {elapsed:.1f}秒")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    
     return result
 
 
 if __name__ == "__main__":
     sport = "football"
-    if len(sys.argv) > 1:
-        if sys.argv[1] in ("football", "basketball"):
-            sport = sys.argv[1]
-        elif sys.argv[1] == "--sport" and len(sys.argv) > 2:
-            sport = sys.argv[2]
+    phase = "all"
+    
+    # 解析参数
+    i = 1
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+        if arg in ("football", "basketball"):
+            sport = arg
+        elif arg == "--sport" and i + 1 < len(sys.argv):
+            sport = sys.argv[i + 1]
+            i += 1
+        elif arg == "--phase" and i + 1 < len(sys.argv):
+            phase = sys.argv[i + 1]
+            i += 1
+        elif arg in ("1", "2", "all"):
+            phase = arg
+        i += 1
     
     try:
-        run_predict(sport)
+        run_predict(sport, phase)
     except Exception as e:
         print(f"FATAL: {e}")
         traceback.print_exc()
