@@ -1,124 +1,72 @@
-#!/usr/bin/env python3
 """
-supabase_db.py - 数据库接口（HTTP代理版本）
-适配5字段表结构: id, sport_type, home_team, away_team, metadata(jsonb)
-metadata 内包含: match_time, match_date, status, handicap, odds, home_score, away_score,
-                 selling_status, league, source, original_id 等所有业务字段。
-
-使用 HTTP 代理访问数据库，通过 POST http://127.0.0.1:5000/api/internal/query 执行 SQL。
+数据库接口 - 使用 psycopg2 直连 PostgreSQL
 """
 import os
 import json
-import urllib.request
-import urllib.error
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-SERVER_PORT = os.environ.get('DEPLOY_RUN_PORT', '5000')
-SERVER_URL = f'http://127.0.0.1:{SERVER_PORT}/api/internal/query'
-
-
-def _convert_value(v):
-    """将HTTP代理返回的字符串值转换为正确的Python类型"""
-    if v is None:
-        return None
-    if isinstance(v, str):
-        # None/null
-        if v in ('None', 'null', 'NULL'):
-            return None
-        # bool
-        if v.lower() == 'true':
-            return True
-        if v.lower() == 'false':
-            return False
-        # int (纯数字，可能带负号)
-        if v and (v.isdigit() or (v[0] in '+-' and v[1:].isdigit())):
-            return int(v)
-        # float
-        try:
-            if '.' in v:
-                return float(v)
-        except (ValueError, TypeError):
-            pass
-    return v
+# 数据库连接配置
+DATABASE_URL = os.environ.get('DATABASE_URL', 
+    'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres')
 
 
-def _convert_placeholders(sql, params):
-    """将 %s 占位符转为 $1, $2 格式"""
-    if not params:
-        return sql, params
-    idx = 0
-    result = []
-    new_params = []
-    i = 0
-    while i < len(sql):
-        if sql[i] == "%" and i + 1 < len(sql) and sql[i+1] == "s":
-            idx += 1
-            result.append(f"${idx}")
-            new_params.append(params[idx - 1])
-            i += 2
-        else:
-            result.append(sql[i])
-            i += 1
-    return "".join(result), new_params
+def get_connection():
+    """获取数据库连接"""
+    return psycopg2.connect(DATABASE_URL)
 
 
-def _execute_query(sql, params=None):
-    """执行 SQL 查询并返回结果"""
-    # 将 %s 占位符转为 $1, $2 格式
-    sql, params = _convert_placeholders(sql, params)
-    payload = json.dumps({'sql': sql, 'params': params or []}).encode('utf-8')
-    req = urllib.request.Request(
-        SERVER_URL,
-        data=payload,
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
+def execute_query(sql, params=None, fetch=True):
+    """执行 SQL 查询并返回结果（字典列表格式）"""
+    conn = get_connection()
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode('utf-8'))
-            rows = result.get('rows', [])
-            # 转换类型
-            converted_rows = []
-            for row in rows:
-                if isinstance(row, dict):
-                    converted_rows.append({k: _convert_value(v) for k, v in row.items()})
-                else:
-                    converted_rows.append(row)
-            return converted_rows
-    except urllib.error.HTTPError as e:
-        raise Exception(f'DB proxy error ({e.code}): {e.read().decode()}')
-    except urllib.error.URLError as e:
-        raise Exception(f'DB proxy connection error: {e.reason}')
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, params)
+            if fetch:
+                rows = cur.fetchall()
+                # 将 RealDictRow 转为普通 dict
+                return [dict(row) for row in rows]
+            else:
+                conn.commit()
+                return []
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
 
 
-def _get_metadata(match: dict) -> dict:
-    """安全获取 match 的 metadata 字段，兼容字符串和 dict"""
-    md = match.get("metadata") or {}
+def _get_metadata(match):
+    """从比赛记录中获取 metadata（兼容 dict 和 str）"""
+    md = match.get("metadata")
     if isinstance(md, str):
         try:
             md = json.loads(md)
-        except (json.JSONDecodeError, TypeError):
+        except:
             md = {}
+    if not isinstance(md, dict):
+        md = {}
     return md
 
 
 # ============ 兼容层 ============
 
 def get_client():
-    """获取数据库客户端（HTTP代理版本返回 None）"""
-    return None
+    """获取数据库客户端（返回连接对象）"""
+    return get_connection()
 
 
 # ============ Matches 表操作 ============
 
 def get_all_matches():
     """获取所有比赛"""
-    rows = _execute_query("SELECT id, sport_type, home_team, away_team, metadata FROM matches")
+    rows = execute_query("SELECT id, sport_type, home_team, away_team, metadata FROM matches")
     return rows
 
 
 def get_matches_by_status(statuses):
     """按状态获取比赛（status 在 metadata 中，Python 端过滤）"""
-    rows = _execute_query("SELECT id, sport_type, home_team, away_team, metadata FROM matches")
+    rows = execute_query("SELECT id, sport_type, home_team, away_team, metadata FROM matches")
     status_set = set(statuses)
     filtered = [
         m for m in rows
@@ -131,7 +79,7 @@ def get_matches_by_status(statuses):
 
 def get_matches_by_sport(sport, statuses=None):
     """按运动类型获取比赛（sport_type 仍是独立列，status 在 metadata 中过滤）"""
-    rows = _execute_query(
+    rows = execute_query(
         "SELECT id, sport_type, home_team, away_team, metadata FROM matches WHERE sport_type = %s",
         [sport]
     )
@@ -151,7 +99,7 @@ def get_matches_by_sport(sport, statuses=None):
 
 def get_match_by_id(match_id):
     """按ID获取比赛"""
-    rows = _execute_query(
+    rows = execute_query(
         "SELECT id, sport_type, home_team, away_team, metadata FROM matches WHERE id = %s",
         [match_id]
     )
@@ -160,7 +108,7 @@ def get_match_by_id(match_id):
 
 def get_existing_match_ids():
     """获取所有已存在的比赛ID"""
-    rows = _execute_query("SELECT id FROM matches")
+    rows = execute_query("SELECT id FROM matches")
     return {row["id"] for row in rows}
 
 
@@ -174,11 +122,12 @@ def insert_match(match_data):
     if isinstance(metadata, dict):
         metadata = json.dumps(metadata, ensure_ascii=False)
     
-    _execute_query(
+    execute_query(
         """INSERT INTO matches (id, sport_type, home_team, away_team, metadata) 
            VALUES (%s, %s, %s, %s, %s::jsonb)""",
         [match_data["id"], match_data["sport_type"], match_data["home_team"], 
-         match_data["away_team"], metadata]
+         match_data["away_team"], metadata],
+        fetch=False
     )
     return [match_data]
 
@@ -222,7 +171,7 @@ def update_match(match_id, update_data):
         
         params.append(match_id)
         sql = f"UPDATE matches SET {', '.join(set_clauses)} WHERE id = %s"
-        _execute_query(sql, params)
+        execute_query(sql, params, fetch=False)
         return [update_data]
     return []
 
@@ -252,14 +201,15 @@ def upsert_match(match_data, on_conflict="id"):
             params.append(value)
         params.append(match_data["id"])
         sql = f"UPDATE matches SET {', '.join(set_clauses)} WHERE id = %s"
-        _execute_query(sql, params)
+        execute_query(sql, params, fetch=False)
     else:
         # 插入
-        _execute_query(
+        execute_query(
             """INSERT INTO matches (id, sport_type, home_team, away_team, metadata) 
                VALUES (%s, %s, %s, %s, %s::jsonb)""",
             [match_data["id"], match_data["sport_type"], match_data["home_team"],
-             match_data["away_team"], metadata]
+             match_data["away_team"], metadata],
+            fetch=False
         )
     return [match_data]
 
@@ -268,7 +218,7 @@ def upsert_match(match_data, on_conflict="id"):
 
 def get_predictions_by_match(match_id):
     """获取某场比赛的所有预测"""
-    rows = _execute_query(
+    rows = execute_query(
         "SELECT * FROM predictions WHERE match_id = %s",
         [match_id]
     )
@@ -277,7 +227,7 @@ def get_predictions_by_match(match_id):
 
 def get_existing_ai_names(match_id):
     """获取某场比赛已有的AI预测名称集合（返回AI_CONFIGS格式，即带AI-前缀）"""
-    rows = _execute_query(
+    rows = execute_query(
         "SELECT ai_name FROM predictions WHERE match_id = %s",
         [match_id]
     )
@@ -304,11 +254,12 @@ def insert_prediction(pred_data):
     if isinstance(hit_status, dict):
         hit_status = json.dumps(hit_status, ensure_ascii=False)
     
-    _execute_query(
+    execute_query(
         """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled) 
            VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s)""",
         [pred_data["match_id"], pred_data["ai_name"], pred_data.get("sport_type"),
-         prediction, hit_status, pred_data.get("is_settled", False)]
+         prediction, hit_status, pred_data.get("is_settled", False)],
+        fetch=False
     )
     return [pred_data]
 
@@ -328,7 +279,7 @@ def upsert_prediction(pred_data, on_conflict="match_id,ai_name"):
         hit_status = json.dumps(hit_status, ensure_ascii=False)
     
     # 使用 INSERT ... ON CONFLICT 实现原子性 UPSERT
-    _execute_query(
+    execute_query(
         """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled) 
            VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s)
            ON CONFLICT (match_id, ai_name) 
@@ -336,20 +287,21 @@ def upsert_prediction(pred_data, on_conflict="match_id,ai_name"):
                          hit_status = EXCLUDED.hit_status, 
                          is_settled = EXCLUDED.is_settled""",
         [match_id, ai_name, pred_data.get("sport_type"), prediction, hit_status, 
-         pred_data.get("is_settled", False)]
+         pred_data.get("is_settled", False)],
+        fetch=False
     )
     return [pred_data]
 
 
 def get_all_predictions():
     """获取所有预测"""
-    rows = _execute_query("SELECT * FROM predictions")
+    rows = execute_query("SELECT * FROM predictions")
     return rows
 
 
 def get_predictions_count():
     """获取预测总数"""
-    rows = _execute_query("SELECT COUNT(*) as count FROM predictions")
+    rows = execute_query("SELECT COUNT(*) as count FROM predictions")
     if rows:
         return rows[0].get("count", 0)
     return 0
