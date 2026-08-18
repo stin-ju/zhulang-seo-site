@@ -83,8 +83,6 @@ AI_CONFIGS = {
         "format": "openai",
         "fallback_models": [
             "ernie-4.5-turbo-128k",           # 128K上下文版
-            "ernie-5.0",                      # 旗舰版
-            "ernie-5.1",                      # 最新旗舰
         ],
     },
     "AI-智谱清言": {
@@ -573,7 +571,7 @@ def call_ai(ai_name, prompt, sport="football"):
             else:
                 raise Exception(f"未知格式: {fmt}")
             
-            # 检查返回内容是否为空
+            # 检查返回内容是否为空或明显异常
             if not raw or len(raw.strip()) < 1:
                 raise Exception(f"模型 {model} 返回空内容")
             
