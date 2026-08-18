@@ -43,20 +43,29 @@ AI_CALL_TIMEOUT = 90
 INTEL_TIMEOUT = 180
 
 # 7个活跃AI及其API配置（按调用顺序排列）
+# 每个AI配置多个免费/低成本模型轮换，主模型失败自动切换备用
 AI_CONFIGS = {
     "AI-DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
         "key_env": "DEEPSEEK_API_KEY",
-        "model": "deepseek-v4-flash",
+        "model": "deepseek-chat",            # DeepSeek-V3，最便宜稳定
         "format": "openai",
-        "fallback_models": ["deepseek-v4-pro", "deepseek-v3", "deepseek-chat"],
+        "fallback_models": [
+            "deepseek-v4-flash",              # V4 Flash 轻量版
+            "deepseek-v3",                    # V3 备用
+            "deepseek-reasoner",              # R1 推理版（较慢）
+        ],
     },
     "AI-MiniMax": {
         "url": "https://api.minimax.chat/v1/text/chatcompletion_v2",
         "key_env": "MINIMAX_API_KEY",
-        "model": "MiniMax-Text-01",
+        "model": "abab6.5s-chat",            # 性价比高，输入输出同价
         "format": "minimax",
-        "fallback_models": ["abab6.5s-chat", "abab6.5-chat", "MiniMax-Text-01"],
+        "fallback_models": [
+            "abab6.5-chat",                   # 标准版
+            "MiniMax-Text-01",                # Text-01
+            "abab5.5s-chat",                  # 旧版兜底
+        ],
     },
     "AI-扣子": {
         "url": "https://7hsjv6c4cn.coze.site/stream_run",
@@ -69,33 +78,48 @@ AI_CONFIGS = {
     "AI-文心": {
         "url": "https://qianfan.baidubce.com/v2/chat/completions",
         "key_env": "WENXIN_API_KEY",
-        "model": "ernie-4.0-8k-latest",
+        "model": "ernie-speed-128k",          # ✅ 永久免费不限量，QPS=300
         "format": "openai",
-        "fallback_models": ["ernie-4.0-turbo-8k", "ernie-3.5-8k", "ernie-speed-128k"],
+        "fallback_models": [
+            "ernie-3.5-8k",                   # ✅ 永久免费（0.8元/百万token，有免费额度）
+            "ernie-lite-8k",                  # ✅ 永久免费
+            "ernie-tiny-8k",                  # ✅ 永久免费
+            "ernie-4.0-turbo-8k",             # 付费兜底（能力强）
+        ],
     },
     "AI-智谱清言": {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "key_env": "ZHIPU_API_KEY",
-        "model": "glm-4-flash",
+        "model": "glm-4-flash",              # ✅ 永久免费，128K上下文
         "format": "openai",
-        "fallback_models": ["glm-4-plus", "glm-4-air", "glm-4-flashx"],
+        "fallback_models": [
+            "glm-4.7-flash",                 # ✅ 永久免费，200K上下文，编程SOTA
+            "glm-4-air",                     # 每月100万token免费
+            "glm-4-flashx",                  # Flash加速版
+        ],
     },
     "AI-混元": {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "REMOVED",
-        "model": "hy-mt2-lite",
+        "model": "hunyuan-lite",             # ✅ 永久免费不限量
         "format": "openai",
+        "fallback_models": [
+            "hy-mt2-lite",                   # 轻量版
+            "hy3-preview",                   # Hy3 预览版
+            "hunyuan-7b",                    # 7B小模型
+        ],
     },
     "AI-豆包": {
         "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         "key_env": "DOUBAO_API_KEY",
-        "model": "doubao-seed-2-0-mini-260428",
+        "model": "doubao-lite-32k",          # ✅ 永久免费
         "format": "openai",
         "fallback_models": [
-            "doubao-seed-2-1-turbo-260628",
-            "doubao-seed-2-0-mini-260215",
-            "doubao-seed-2-0-pro-260215",
+            "doubao-1.5-lite-32k",           # 1.5 Lite 版
+            "doubao-seed-2-0-mini-260428",   # Seed 2.0 Mini
+            "doubao-seed-2-0-lite-260515",   # Seed 2.0 Lite
+            "doubao-seed-2-1-turbo-260628",  # Seed 2.1 Turbo
         ],
     },
 }
@@ -536,13 +560,6 @@ def call_ai(ai_name, prompt, sport="football"):
     if not key:
         raise Exception(f"{ai_name} API Key未配置")
     
-    rate_limit_keywords = [
-        "Arrearage", "Overdue", "quota", "QuotaExceeded", "insufficient",
-        "SetLimitExceeded", "LimitExceeded", "ServerOverloaded", 
-        "RequestBurstTooFast", "RateLimitExceeded", "TooManyRequests", "429",
-        "402", "balance", "Payment Required",
-    ]
-    
     models_to_try = [config["model"]]
     if config.get("fallback_models"):
         models_to_try.extend(config["fallback_models"])
@@ -557,19 +574,31 @@ def call_ai(ai_name, prompt, sport="football"):
             else:
                 raise Exception(f"未知格式: {fmt}")
             
+            # 检查返回内容是否为空或明显异常
+            if not raw or len(raw.strip()) < 5:
+                raise Exception(f"模型 {model} 返回空内容")
+            
+            result = parse_ai_response(raw, sport)
+            if result is None and i < len(models_to_try) - 1:
+                # 解析失败也算失败，触发fallback
+                print(f"    [fallback] {model} 返回内容无法解析为有效JSON，尝试备用...")
+                last_error = Exception(f"{model} 返回内容无法解析")
+                continue
+            
             if i > 0:
-                print(f"    [fallback] 切换到 {model}")
-            return parse_ai_response(raw, sport)
+                print(f"    [fallback] 已切换到 {model}")
+            return result
             
         except Exception as e:
             error_str = str(e)
-            is_rate_limit = any(kw in error_str for kw in rate_limit_keywords)
+            last_error = e
             
-            if is_rate_limit and i < len(models_to_try) - 1:
-                print(f"    [fallback] {model} 限流，尝试备用...")
-                last_error = e
+            if i < len(models_to_try) - 1:
+                # 任何错误都触发fallback：403/限流/超时/解析失败等
+                print(f"    [fallback] {model} 失败({error_str[:60]})，尝试备用...")
                 continue
             else:
+                # 最后一个模型也失败了
                 raise e
     
     if last_error:
