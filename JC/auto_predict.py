@@ -573,8 +573,8 @@ def call_ai(ai_name, prompt, sport="football"):
             else:
                 raise Exception(f"未知格式: {fmt}")
             
-            # 检查返回内容是否为空或明显异常
-            if not raw or len(raw.strip()) < 5:
+            # 检查返回内容是否为空
+            if not raw or len(raw.strip()) < 1:
                 raise Exception(f"模型 {model} 返回空内容")
             
             result = parse_ai_response(raw, sport)
