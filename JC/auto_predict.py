@@ -83,6 +83,9 @@ AI_CONFIGS = {
         "format": "openai",
         "fallback_models": [
             "ernie-4.5-turbo-128k",           # 128K上下文版
+            "ernie-5.0-thinking-preview",     # 思考模式，248K上下文
+            "ernie-x1.1",                     # 121K上下文
+            "ernie-4.5-turbo-20260402",       # 指定版本，138K上下文
         ],
     },
     "AI-智谱清言": {
