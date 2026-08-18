@@ -77,9 +77,10 @@ AI_CONFIGS = {
     },
     "AI-文心": {
         "url": "https://qianfan.baidubce.com/v2/chat/completions",
-        "key_env": "WENXIN_API_KEY",
+        "ak_env": "WENXIN_AK",                # IAM Access Key
+        "sk_env": "WENXIN_SK",                # IAM Secret Key
         "model": "ernie-speed-128k",          # ✅ 永久免费不限量，QPS=300
-        "format": "openai",
+        "format": "wenxin_iam",
         "fallback_models": [
             "ernie-3.5-8k",                   # ✅ 永久免费（0.8元/百万token，有免费额度）
             "ernie-lite-8k",                  # ✅ 永久免费
@@ -102,10 +103,9 @@ AI_CONFIGS = {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "REMOVED",
-        "model": "hunyuan-lite",             # ✅ 永久免费不限量
+        "model": "hy-mt2-lite",              # ✅ TokenHub可用，已验证
         "format": "openai",
         "fallback_models": [
-            "hy-mt2-lite",                   # 轻量版
             "hy3-preview",                   # Hy3 预览版
             "hunyuan-7b",                    # 7B小模型
         ],
@@ -391,6 +391,56 @@ def insert_basketball_prediction(pred):
 
 # ============ AI API调用 ============
 
+# ============ 文心IAM认证 ============
+
+# access_token缓存（全局，模块级）
+_wenxin_token_cache = {"token": None, "expires_at": 0}
+
+def _get_wenxin_access_token(ak, sk):
+    """获取文心IAM access_token，带缓存（有效期30分钟，提前5分钟刷新）"""
+    now = time.time()
+    if _wenxin_token_cache["token"] and _wenxin_token_cache["expires_at"] > now + 300:
+        return _wenxin_token_cache["token"]
+    
+    url = "https://aip.baidubce.com/oauth/2.0/token"
+    params = {
+        "grant_type": "client_credentials",
+        "client_id": ak,
+        "client_secret": sk,
+    }
+    resp = requests.post(url, params=params, timeout=15)
+    resp.raise_for_status()
+    data = resp.json()
+    
+    if "access_token" not in data:
+        raise Exception(f"获取access_token失败: {data}")
+    
+    token = data["access_token"]
+    expires_in = data.get("expires_in", 1800)
+    _wenxin_token_cache["token"] = token
+    _wenxin_token_cache["expires_at"] = now + expires_in
+    return token
+
+
+def call_wenxin_iam(url, ak, sk, model, prompt, timeout=AI_CALL_TIMEOUT):
+    """调用文心千帆API（IAM认证方式）"""
+    access_token = _get_wenxin_access_token(ak, sk)
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 800,
+    }
+    resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]
+
+
 def call_openai_compatible(url, key, model, prompt, timeout=AI_CALL_TIMEOUT):
     """调用OpenAI兼容API"""
     headers = {
@@ -555,6 +605,40 @@ def call_ai(ai_name, prompt, sport="football"):
             raise Exception(f"{ai_name} Token未配置")
         raw = call_coze_code(config["url"], token, prompt, config.get("project_id"))
         return parse_ai_response(raw, sport)
+    
+    if fmt == "wenxin_iam":
+        ak = os.environ.get(config.get("ak_env", ""), "")
+        sk = os.environ.get(config.get("sk_env", ""), "")
+        if not ak or not sk:
+            raise Exception(f"{ai_name} IAM凭证未配置（需要 {config.get('ak_env')} 和 {config.get('sk_env')} 环境变量）")
+        
+        models_to_try = [config["model"]]
+        if config.get("fallback_models"):
+            models_to_try.extend(config["fallback_models"])
+        
+        last_error = None
+        for i, model in enumerate(models_to_try):
+            try:
+                raw = call_wenxin_iam(config["url"], ak, sk, model, prompt)
+                if not raw or len(raw.strip()) < 5:
+                    raise Exception(f"模型 {model} 返回空内容")
+                result = parse_ai_response(raw, sport)
+                if result is None and i < len(models_to_try) - 1:
+                    print(f"    [fallback] {model} 返回内容无法解析为有效JSON，尝试备用...")
+                    last_error = Exception(f"{model} 返回内容无法解析")
+                    continue
+                if i > 0:
+                    print(f"    [fallback] 已切换到 {model}")
+                return result
+            except Exception as e:
+                last_error = e
+                if i < len(models_to_try) - 1:
+                    print(f"    [fallback] {model} 失败({str(e)[:60]})，尝试备用...")
+                    continue
+                else:
+                    raise e
+        if last_error:
+            raise last_error
     
     key = os.environ.get(config["key_env"], "")
     if not key:
