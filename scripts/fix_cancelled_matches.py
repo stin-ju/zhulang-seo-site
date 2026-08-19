@@ -59,8 +59,7 @@ def reset_predictions_for_match(conn, match_id):
         goals_hit = NULL,
         score_hit = NULL,
         half_full_hit = NULL,
-        win_loss = NULL,
-        handicap_result = NULL
+        win_loss = NULL
     WHERE match_id = %s
     """
     with conn.cursor() as cur:
