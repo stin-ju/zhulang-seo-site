@@ -578,6 +578,56 @@ def settle_cancelled_predictions(conn):
     return settled_count
 
 
+def settle_score_unavailable_predictions(conn):
+    """处理无法获取比分的比赛：将预测标记为已结算，hit_status='score_unavailable'
+    这些比赛被标记为 score_unavailable=true，无法从数据源获取比分，
+    因此无法判断预测是否正确，统一标记为已结算但不计入命中。
+    """
+    cur = conn.cursor()
+    
+    # 查找 score_unavailable=true 且有未结算预测的比赛
+    cur.execute("""
+        SELECT DISTINCT m.id, m.home_team, m.away_team, m.sport_type
+        FROM matches m
+        JOIN predictions p ON m.id = p.match_id
+        WHERE (m.metadata->>'score_unavailable')::boolean = true
+          AND p.is_settled = false
+    """)
+    matches = cur.fetchall()
+    
+    if not matches:
+        print("[无法比分结算] 无 score_unavailable 比赛的预测需要处理")
+        return 0
+    
+    print(f"[无法比分结算] 找到 {len(matches)} 场 score_unavailable 比赛")
+    
+    settled_count = 0
+    hit_json = json.dumps({"reason": "score_unavailable"}, ensure_ascii=False)
+    
+    for match_id, home_team, away_team, sport_type in matches:
+        # 获取该比赛所有未结算的预测
+        cur.execute("""
+            SELECT id, ai_name 
+            FROM predictions 
+            WHERE match_id = %s AND is_settled = false
+        """, [match_id])
+        predictions = cur.fetchall()
+        
+        for pred_id, ai_name in predictions:
+            cur.execute("""
+                UPDATE predictions 
+                SET is_settled = true,
+                    hit_status = %s::jsonb
+                WHERE id = %s
+            """, [hit_json, pred_id])
+            settled_count += 1
+            print(f"  [无法比分] {ai_name}: {match_id} {home_team} vs {away_team}")
+    
+    conn.commit()
+    print(f"[无法比分结算] 完成，标记 {settled_count} 条预测为已结算(score_unavailable)")
+    return settled_count
+
+
 def get_unsettled(conn, match_id=None):
     """获取所有已完赛但未结算的比赛及其预测
     同时从 prediction jsonb 和顶层列读取，优先 jsonb
@@ -890,6 +940,15 @@ def main():
             print()
     except Exception as e:
         print(f"[WARN] 已取消结算失败: {e}", file=sys.stderr)
+        import traceback
+    
+    # 处理无法获取比分的比赛（score_unavailable）
+    try:
+        unavailable_count = settle_score_unavailable_predictions(conn)
+        if unavailable_count > 0:
+            print()
+    except Exception as e:
+        print(f"[WARN] 无法比分结算失败: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
     
