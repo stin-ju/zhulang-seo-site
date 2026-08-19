@@ -1480,12 +1480,39 @@ async function runDailySettle() {
   }
 }
 
+// 每日数据备份 (凌晨2点)
+async function runDailyBackup() {
+  const { execFile } = require('child_process');
+  const scriptPath = path.join(__dirname, 'scripts', 'daily_backup.py');
+  const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
+  if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
+
+  return new Promise((resolve, reject) => {
+    execFile('/usr/bin/python3', [scriptPath], {
+      cwd: __dirname,
+      env,
+      timeout: 300000,
+      maxBuffer: 10 * 1024 * 1024
+    }, (error, stdout, stderr) => {
+      if (error) {
+        console.error('[Backup] Error:', error.message);
+        if (stderr) console.error('[Backup] Stderr:', stderr);
+        reject(error);
+        return;
+      }
+      console.log('[Backup] Output:', stdout.slice(0, 500));
+      resolve(stdout);
+    });
+  });
+}
+
 // 注册定时任务
 scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
 scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
 scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
 scheduleDaily(0, 30, '每日凌晨结算', runDailySettle);
 scheduleDaily(12, 30, '每日午间结算', runDailySettle);
+scheduleDaily(2, 0, '每日数据备份', runDailyBackup);
 
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
