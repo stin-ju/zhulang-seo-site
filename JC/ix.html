@@ -338,6 +338,74 @@ window.apmPlus("init",{
 });
 window.apmPlus("start");
 </script>
+<!-- Coze Coding Analytics -->
+<script>
+(function(){
+  function randomUUID(){
+    if(typeof crypto!=="undefined"&&typeof crypto.randomUUID==="function"){
+      return crypto.randomUUID();
+    }
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g,function(c){
+      return(+c^(crypto.getRandomValues(new Uint8Array(1))[0]&(15>>(+c/4)))).toString(16);
+    });
+  }
+
+  function encode(obj){return btoa(JSON.stringify(obj))}
+  function decode(str){try{return JSON.parse(atob(str))}catch(e){return null}}
+
+  function getDeviceId(){
+    var storageKey="__coze_coding_device_info";
+    try{
+      var info=decode(localStorage.getItem(storageKey));
+      if(info&&typeof info.did==="string"){return info.did}
+    }catch(e){}
+    var newInfo={did:randomUUID()};
+    try{localStorage.setItem(storageKey,encode(newInfo))}catch(e){}
+    return newInfo.did;
+  }
+
+  function sendPageViewEvent(){
+    var deviceId=getDeviceId();
+    var projectId="7652750153115320372";
+    var reportURL="https://code.coze.cn/api/coding/deployment/analytics/report?project_id="+encodeURIComponent(projectId)+"&did="+encodeURIComponent(deviceId);
+    try{
+      fetch(reportURL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          events:[{
+            type:"page_view",
+            url:window.location.href,
+            path:window.location.pathname,
+            referrer:document.referrer,
+            timestamp:Date.now()
+          }]
+        })
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  if(document.readyState==="complete"){
+    sendPageViewEvent();
+  }else{
+    document.addEventListener("readystatechange",function(){
+      if(document.readyState==="complete"){sendPageViewEvent()}
+    });
+  }
+})();
+</script>
+<!-- WebPro SDK -->
+<script>
+(function(n,e,r,t,a,o,s,i,c,l,f,m,p,u){o="precollect";s="getAttribute";i="addEventListener";c="PerformanceObserver";l=function(e){f=[].slice.call(arguments);f.push(Date.now(),location.href);(e==o?l.p.a:l.q).push(f)};l.q=[];l.p={a:[]};n[a]=l;m=document.createElement("script");m.src=r+"?aid="+t+"&globalName="+a;m.crossOrigin="anonymous";e.getElementsByTagName("head")[0].appendChild(m);if(i in n){l.pcErr=function(e){e=e||n.event;p=e.target||e.srcElement;if(p instanceof Element||p instanceof HTMLElement){n[a](o,"st",{tagName:p.tagName,url:p[s]("href")||p[s]("src")})}else{n[a](o,"err",e.error||e.message)}};l.pcRej=function(e){e=e||n.event;n[a](o,"reject",e.reason||e.detail&&e.detail.reason)};n[i]("error",l.pcErr,true);n[i]("unhandledrejection",l.pcRej,true)}if("PerformanceLongTaskTiming"in n){u=l.pp={entries:[]};u.observer=new PerformanceObserver(function(e){u.entries=u.entries.concat(e.getEntries())});u.observer.observe({entryTypes:["longtask"]})}})(window,document,"https://apm.volccdn.com/mars-web/apmplus/web/browser.cn.js",1001891,"apmPlus");
+</script>
+<script>
+window.apmPlus("context.set", "project_id", "7652750153115320372");
+window.apmPlus("init",{
+  aid: 1001891,
+  token: '26a8704bd4d34b1698085c787d0c95d0'
+});
+window.apmPlus("start");
+</script>
 
 <script>
 // 清除旧缓存
@@ -559,7 +627,7 @@ if ("serviceWorker" in navigator) {
         .badge-sm.status-done { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
         .badge-sm.status-pending { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
         .score-inline { color: #fbbf24; font-weight: bold; margin: 0 8px; }
-        .handicap-tag { color: #60a5fa; font-size: 12px; margin-left: 6px; background: rgba(96,165,250,0.15); padding: 1px 6px; border-radius: 3px; }
+        .handicap-tag { color: #f59e0b; font-size: 12px; margin-left: 6px; background: rgba(245,158,11,0.12); padding: 1px 6px; border-radius: 3px; font-weight: 500; }
         .match-lottery-id { font-size: 12px; color: #94a3b8; background: rgba(148,163,184,0.1); padding: 2px 8px; border-radius: 4px; margin-right: 6px; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; }
         .match-lottery-id:hover { background: rgba(139,92,246,0.2); color: #a78bfa; }
         .odds-row { font-size: 11px; color: #94a3b8; margin-top: 2px; }
@@ -697,10 +765,10 @@ if ("serviceWorker" in navigator) {
         .pred-table .ai-col { text-align: left; font-weight: 500; color: #e8eef7; white-space: nowrap; min-width: 70px; }
         .pred-table .hits-col { min-width: 50px; }
         .pred-val { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
-        .pred-val.hit { color: #10b981; }
-        .pred-val.miss { color: #94a3b8; }
+        .pred-val.hit { color: #10b981; font-weight: 700; background: rgba(16,185,129,0.12); border-radius: 4px; }
+        .pred-val.miss { color: #64748b; }
         .hit-mark { color: #10b981; font-weight: 700; margin-left: 2px; }
-        .miss-mark { color: #6b7280; font-weight: 400; margin-left: 2px; }
+        .miss-mark { color: #64748b; font-weight: 400; margin-left: 2px; }
         .hits-num { font-weight: 600; color: #a78bfa; font-size: 12px; }
 
         /* 内联预测 - 表格形式 */
@@ -714,8 +782,8 @@ if ("serviceWorker" in navigator) {
         .inline-predictions-table th:first-child { text-align: left; }
         .inline-predictions-table td { padding: 8px 6px; text-align: center; color: #e2e8f0; }
         .inline-predictions-table td:first-child { text-align: left; color: #a78bfa; font-weight: 500; }
-        .inline-predictions-table td.hit { color: #10b981; }
-        .inline-predictions-table td.miss { color: #94a3b8; }
+        .inline-predictions-table td.hit { color: #10b981; font-weight: 700; background: rgba(16,185,129,0.12); }
+        .inline-predictions-table td.miss { color: #64748b; }
         .inline-predictions-table .tabular { font-variant-numeric: tabular-nums; }
 
         /* 响应式 */

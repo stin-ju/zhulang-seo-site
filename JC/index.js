@@ -341,12 +341,20 @@ function renderMatchCard(match) {
     // 联赛名称：直接放在time文字前
     const leagueName = (match.metadata && match.metadata.league) || '';
     const leaguePrefix = leagueName ? `[${esc(leagueName)}] ` : '';
-    // 让球格式化：正数加+号（已有+号则不加）
+    // 让球格式化：主让显示负号，主受让显示正号
     const handicapVal = parseFloat(match.handicap);
     const handicapStr = match.handicap || '';
-    const handicapDisplay = !isNaN(handicapVal)
-        ? (handicapVal > 0 && !handicapStr.startsWith('+') ? '+' + handicapStr : handicapStr)
-        : handicapStr;
+    let handicapDisplay = '';
+    if (!isNaN(handicapVal)) {
+        const absVal = Math.abs(handicapVal);
+        if (handicapVal < 0) {
+            handicapDisplay = '让' + absVal;
+        } else if (handicapVal > 0) {
+            handicapDisplay = '受' + absVal;
+        }
+    } else if (handicapStr) {
+        handicapDisplay = handicapStr;
+    }
     return `
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
             <span class="time">${leaguePrefix}${matchTime}</span>
