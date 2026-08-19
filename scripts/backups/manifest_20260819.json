@@ -1,0 +1,71 @@
+{
+  "date": "20260819",
+  "timestamp": "2026-08-19T22:58:25.579082",
+  "tables": [
+    {
+      "table": "predictions",
+      "rows": 2456,
+      "file": "/workspace/projects/scripts/backups/predictions_20260819.csv.gz",
+      "size": 426001
+    },
+    {
+      "table": "matches",
+      "rows": 849,
+      "file": "/workspace/projects/scripts/backups/matches_20260819.csv.gz",
+      "size": 194920
+    },
+    {
+      "table": "betting_daily",
+      "rows": 269,
+      "file": "/workspace/projects/scripts/backups/betting_daily_20260819.csv.gz",
+      "size": 3270
+    },
+    {
+      "table": "betting_summary",
+      "rows": 14,
+      "file": "/workspace/projects/scripts/backups/betting_summary_20260819.csv.gz",
+      "size": 760
+    },
+    {
+      "table": "match_intelligence",
+      "rows": 90,
+      "file": "/workspace/projects/scripts/backups/match_intelligence_20260819.csv.gz",
+      "size": 47185
+    },
+    {
+      "table": "chain_bets",
+      "rows": 405,
+      "file": "/workspace/projects/scripts/backups/chain_bets_20260819.csv.gz",
+      "size": 11582
+    },
+    {
+      "table": "chain_bet_selections",
+      "rows": 1095,
+      "file": "/workspace/projects/scripts/backups/chain_bet_selections_20260819.csv.gz",
+      "size": 8977
+    },
+    {
+      "table": "poisson_predictions",
+      "rows": 1769,
+      "file": "/workspace/projects/scripts/backups/poisson_predictions_20260819.csv.gz",
+      "size": 82510
+    },
+    {
+      "table": "traditional_predictions",
+      "rows": 262,
+      "file": "/workspace/projects/scripts/backups/traditional_predictions_20260819.csv.gz",
+      "size": 142590
+    },
+    {
+      "table": "ai_stats",
+      "rows": 14,
+      "file": "/workspace/projects/scripts/backups/ai_stats_20260819.csv.gz",
+      "size": 515
+    }
+  ],
+  "schema_issues": [
+    "表 predictions 的主键名异常: predictions_new_pkey（疑似表被重建）",
+    "表 matches 的主键名异常: matches_new_pkey（疑似表被重建）"
+  ],
+  "total_rows": 7223
+}
