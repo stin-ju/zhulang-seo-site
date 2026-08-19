@@ -202,29 +202,54 @@ def fill_missing_scores(conn):
         return 0
 
     # 查询近期比赛的 titan007 数据
+    # 支持时区日期偏移：体彩日期和titan007可能差1天，查前后各1天合并
     titan_data = {}
     for ds in dates_needed:
-        parts = ds.split("-")
-        titan_date = f"{parts[0]}-{int(parts[1])}-{int(parts[2])}"
-        matches = fetch_scores("football", titan_date)
-        if matches:
-            titan_data[ds] = matches
-            # Debug: 打印 titan007 返回的队伍名
-            print(f"  [titan007] {ds} 共{len(matches)}场完场:")
-            for tm in matches:
-                print(f"    {tm['home_team']}({tm.get('home_team_official','')}) vs {tm['away_team']}({tm.get('away_team_official','')}) {tm['home_score']}-{tm['away_score']}")
+        combined = []
+        seen_ids = set()
+        for offset in [0, -1, 1]:
+            dt = datetime.strptime(ds, "%Y-%m-%d")
+            target = dt + timedelta(days=offset)
+            titan_date = f"{target.year}-{target.month}-{target.day}"
+            matches = fetch_scores("football", titan_date)
+            if matches:
+                for tm in matches:
+                    tm_id = f"{tm['home_team']}_{tm['away_team']}_{tm.get('match_time','')}"
+                    if tm_id not in seen_ids:
+                        seen_ids.add(tm_id)
+                        combined.append(tm)
+                if offset == 0:
+                    print(f"  [titan007] {ds} 共{len(matches)}场完场")
+                elif matches:
+                    print(f"  [titan007] {ds} 偏移{offset:+d}天({titan_date}) 补充{len(matches)}场")
+        if combined:
+            titan_data[ds] = combined
+            print(f"  [titan007] {ds} 合并后共{len(combined)}场(含前后1天偏移)")
 
-    # 也查篮球的 titan007 数据
+    # 也查篮球的 titan007 数据（同样支持日期偏移）
     basketball_titan_data = {}
     if basketball_missing:
+        bk_dates_needed = set()
         for m in basketball_missing:
             date_str = _derive_date_from_id(m["id"])
-            if date_str and date_str not in basketball_titan_data:
-                parts = date_str.split("-")
-                titan_date = f"{parts[0]}-{int(parts[1])}-{int(parts[2])}"
+            if date_str:
+                bk_dates_needed.add(date_str)
+        for ds in bk_dates_needed:
+            combined = []
+            seen_ids = set()
+            for offset in [0, -1, 1]:
+                dt = datetime.strptime(ds, "%Y-%m-%d")
+                target = dt + timedelta(days=offset)
+                titan_date = f"{target.year}-{target.month}-{target.day}"
                 bmatches = fetch_scores("basketball", titan_date)
                 if bmatches:
-                    basketball_titan_data[date_str] = bmatches
+                    for tm in bmatches:
+                        tm_id = f"{tm['home_team']}_{tm['away_team']}_{tm.get('match_time','')}"
+                        if tm_id not in seen_ids:
+                            seen_ids.add(tm_id)
+                            combined.append(tm)
+            if combined:
+                basketball_titan_data[ds] = combined
 
     updated = 0
     for m in recent_matches:
