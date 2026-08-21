@@ -143,7 +143,39 @@ def fetch_over_scores(sport, date_str):
     if sport == 'football':
         url = 'https://bf.titan007.com/football/Over_' + date_fmt + '.htm'
     elif sport == 'basketball':
-        url = 'https://bf.titan007.com/basketball/Over_' + date_fmt + '.htm'
+        # 篮球用 nba_date.aspx 接口（basketball/Over_*.htm 页面无数据）
+        date_with_dash = date_str[:4] + '-' + date_str[4:6] + '-' + date_str[6:8] if len(date_fmt) == 8 else date_str
+        url = f'https://bf.titan007.com/nba_date.aspx?date={date_with_dash}&h=0&m=0&s=0'
+        
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': 'https://bf.titan007.com/NBA_SC.aspx',
+            }
+            resp = requests.get(url, headers=headers, timeout=15)
+            resp.encoding = 'gbk'
+            xml_text = resp.text
+        except Exception as e:
+            print('  [bf_titan007] basketball request failed:', e)
+            return {}
+        
+        # 使用 _parse_basketball_xml 解析 XML
+        all_matches = _parse_basketball_xml(xml_text)
+        # 只返回完场的比赛 (status_code == "4")
+        completed = [m for m in all_matches if m.get("status_code") == "4"]
+        
+        # 转换为和足球相同的格式: {home_name: (home_score, away_name, away_score)}
+        results = {}
+        for m in completed:
+            home_name = m.get("home_team", "")
+            away_name = m.get("away_team", "")
+            home_score = m.get("home_score")
+            away_score = m.get("away_score")
+            if home_name and away_name and home_score is not None and away_score is not None:
+                results[home_name] = (home_score, away_name, away_score)
+        
+        print('  [bf_titan007] basketball', date_str + ': got', len(results), 'matches')
+        return results
     else:
         return {}
     
