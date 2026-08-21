@@ -258,7 +258,7 @@ function normalizeMatch(match) {
     league_name: (match.metadata && match.metadata.league) || '',
     home_score: meta.home_score != null ? meta.home_score : (match.home_score != null ? match.home_score : null),
     away_score: meta.away_score != null ? meta.away_score : (match.away_score != null ? match.away_score : null),
-    handicap: meta.handicap || match.handicap || null,
+    handicap: meta.handicap || handicapSpf.handicap || match.handicap || null,
     selling_status: meta.selling_status || null
   };
 }

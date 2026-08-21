@@ -56,6 +56,7 @@ export function normalizeMatch(m) {
         if (m.handicap_win_odds === undefined) m.handicap_win_odds = odds.handicap_spf.win;
         if (m.handicap_draw_odds === undefined) m.handicap_draw_odds = odds.handicap_spf.draw;
         if (m.handicap_lose_odds === undefined) m.handicap_lose_odds = odds.handicap_spf.lose;
+        if (m.handicap === undefined || m.handicap === null) m.handicap = odds.handicap_spf.handicap;
     }
     
     // 从 odds 展开其他赔率
