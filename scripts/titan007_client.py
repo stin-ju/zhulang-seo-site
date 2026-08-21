@@ -108,7 +108,8 @@ def _parse_basketball_xml(xml_text):
         try:
             home_score = int(parts[11])
             away_score = int(parts[12])
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as e:
+            print(f"  [警告] 比分解析失败, 跳过该比赛: {e}")
             continue
         
         # 每节得分 → 半场得分
@@ -120,8 +121,8 @@ def _parse_basketball_xml(xml_text):
                 q2h = int(parts[15]); q2a = int(parts[16])
                 half_home = q1h + q2h
                 half_away = q1a + q2a
-            except (ValueError, IndexError):
-                pass
+            except (ValueError, IndexError) as e:
+                print(f"  [警告] 半场得分解析失败: {e}")
         
         results.append({
             "status_code": status_code,

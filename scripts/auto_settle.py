@@ -121,8 +121,8 @@ def fill_missing_scores(conn):
                         on_sale_candidates.append({"id": match_id, "sport_type": sport_type,
                                                    "home_team": home_team, "away_team": away_team,
                                                    "metadata": md, "top_status": top_status})
-                except (ValueError, TypeError):
-                    pass
+                except (ValueError, TypeError) as e:
+                    print(f"  [警告] {match_id} on_sale时间解析失败: {mt}, 错误: {e}")
         elif top_status == '未开赛':
             # 未开赛但比赛时间已过3小时以上，可能已完赛但未更新状态
             mt = md.get("match_time", "")
@@ -142,8 +142,8 @@ def fill_missing_scores(conn):
                         on_sale_candidates.append({"id": match_id, "sport_type": sport_type,
                                                    "home_team": home_team, "away_team": away_team,
                                                    "metadata": md, "top_status": top_status})
-                except (ValueError, TypeError):
-                    pass
+                except (ValueError, TypeError) as e:
+                    print(f"  [警告] {match_id} 未开赛时间解析失败: {mt}, 错误: {e}")
 
     all_to_fill = missing + on_sale_candidates
     if not all_to_fill:
@@ -173,8 +173,8 @@ def fill_missing_scores(conn):
             try:
                 if " " in mt:
                     date_str = mt.split(" ")[0]
-            except ValueError:
-                pass
+            except ValueError as e:
+                print(f"  [警告] 日期推导失败: {e}")
 
         if not date_str:
             date_str = _derive_date_from_id(m["id"])
@@ -320,8 +320,8 @@ def fill_missing_scores(conn):
                     if handicap is not None:
                         md['handicap'] = handicap
                         print(f"  [让球提取] {m['id']}: handicap={handicap}")
-                except (TypeError, ValueError):
-                    pass
+                except (TypeError, ValueError) as e:
+                    print(f"  [警告] {m['id']} 让球提取失败: {e}")
             # 同时更新顶层 status
             with conn.cursor() as cur:
                 cur.execute("UPDATE matches SET metadata = %s::jsonb, status = '已完赛' WHERE id = %s",
@@ -378,8 +378,8 @@ def fill_missing_scores(conn):
                     if line is not None:
                         md['handicap'] = line
                         print(f"  [让球提取] {m['id']}: handicap={line}")
-                except (TypeError, ValueError):
-                    pass
+                except (TypeError, ValueError) as e:
+                    print(f"  [警告] {m['id']} 让球提取失败: {e}")
             with conn.cursor() as cur:
                 cur.execute("UPDATE matches SET metadata = %s::jsonb, status = '已完赛' WHERE id = %s",
                            [json.dumps(md, ensure_ascii=False), m["id"]])
@@ -603,8 +603,8 @@ def settle_basketball(row):
             is_hit = (hc_norm == actual)
             hit["handicap_win_loss"] = is_hit
             hit_cols["handicap_spf_hit"] = is_hit
-        except (ValueError, TypeError):
-            pass
+        except (ValueError, TypeError) as e:
+            print(f"  [警告] {match_id} handicap_spf计算失败: {e}")
 
     # 3. total_points 大小分 -> 大/小
     if total_points is not None:
