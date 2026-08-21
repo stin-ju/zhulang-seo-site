@@ -1,0 +1,1 @@
+{"url": "https://webapi.sporttery.cn/gateway/uniform/football/getMatchResultV1.qry?matchPage=1&matchBeginDate=2026-08-19&matchEndDate=2026-08-19", "timestamp": "2026-08-21T17:37:12.838955", "data": {"dataFrom": "", "emptyFlag": false, "errorCode": "0", "errorMessage": "处理成功", "success": true, "value": {}}}
