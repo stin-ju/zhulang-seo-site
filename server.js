@@ -9,9 +9,9 @@ const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:1538PQKp
 const pgPool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  max: 5,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 10,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 15000,
 });
 pgPool.on('error', (err) => {
   console.error('[PG Pool] Unexpected error on idle client', err.message);
@@ -52,6 +52,46 @@ const taskStatus = {
 };
 
 const REPORT_PATH = '/tmp/dispatch_report.md';
+
+// ============ 防崩溃全局错误处理 ============
+// 根因：容器休眠唤醒后PG连接池失效，查询抛未捕获异常导致进程崩溃
+process.on('uncaughtException', (err) => {
+  console.error('[Server] 未捕获异常（进程保持运行）:', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] 未处理的Promise拒绝（进程保持运行）:', reason);
+});
+
+// ============ 数据库连接池自愈 ============
+let dbHealthy = true;
+
+async function checkAndRecoverDB() {
+  try {
+    const client = await pgPool.connect();
+    try {
+      await client.query('SELECT 1');
+      if (!dbHealthy) {
+        console.log('[DB] 数据库连接已恢复');
+        dbHealthy = true;
+      }
+    } finally { client.release(); }
+  } catch (err) {
+    dbHealthy = false;
+    console.error('[DB] 连接检查失败，重建连接池:', err.message);
+    try {
+      await pgPool.end().catch(() => {});
+      pgPool.options.connectionString = DATABASE_URL;
+      console.log('[DB] 连接池已重建');
+    } catch (e) {
+      console.error('[DB] 重建失败:', e.message);
+    }
+  }
+}
+
+// 每5分钟ping数据库，防止容器唤醒后连接全部失效
+setInterval(() => {
+  checkAndRecoverDB();
+}, 5 * 60 * 1000);
 
 // ============ Helper Functions ============
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1164,6 +1204,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+    // ======== GET /api/heartbeat ========
+    if (pathname === '/api/heartbeat' && req.method === 'GET') {
+      let dbOk = false;
+      try {
+        const client = await pgPool.connect();
+        try { await client.query('SELECT 1'); dbOk = true; } finally { client.release(); }
+      } catch(e) { dbOk = false; }
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString(), database: dbOk ? 'connected' : 'disconnected' }));
+      return;
+    }
+
   // ============ Static File Routes ============
   let urlPath = pathname;
   if (urlPath === '/') urlPath = '/index.html';
@@ -1514,9 +1566,25 @@ scheduleDaily(0, 30, '每日凌晨结算', runDailySettle);
 scheduleDaily(12, 30, '每日午间结算', runDailySettle);
 scheduleDaily(2, 0, '每日数据备份', runDailyBackup);
 
+// ============ 自监控看门狗 ============
+// 每3分钟自检，确保server.js在容器唤醒后能自动恢复
+setInterval(async () => {
+  try {
+    const client = await pgPool.connect();
+    try { await client.query('SELECT 1'); } finally { client.release(); }
+    console.log(`[Watchdog] OK - ${new Date().toISOString()} - settle_running=${taskStatus.settle.running} discover_running=${taskStatus.discover.running}`);
+  } catch (err) {
+    console.error('[Watchdog] 数据库异常，尝试恢复...');
+    await checkAndRecoverDB();
+  }
+}, 3 * 60 * 1000);
+
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
+  
+  // 启动时检查数据库连接（容器唤醒后连接可能已失效）
+  checkAndRecoverDB().catch(e => console.error('[Server] 启动DB检查失败:', e.message));
   
   // 初始化比赛级别定时结算（不阻塞启动）
   initializeSettleTimers().catch(err => console.error('[AutoSettle] 启动初始化失败:', err.message));
