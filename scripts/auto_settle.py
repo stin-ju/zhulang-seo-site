@@ -107,12 +107,13 @@ def fill_missing_scores(conn):
                 try:
                     # match_time 可能是 "18:30:00" 或 "2026-07-19 18:30:00"
                     if " " in mt:
-                        match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
+                        match_dt = ((datetime.strptime(mt, "%Y-%m-%d %H:%M:%S") if len(mt.strip().split(":")) == 3 else datetime.strptime(mt, "%Y-%m-%d %H:%M")) if len(mt.strip().split(":")) == 3 else datetime.strptime(mt, "%Y-%m-%d %H:%M"))
                     else:
                         # 仅有时间，需要从 ID 推导日期
                         date_str = _derive_date_from_id(match_id)
                         if date_str:
-                            match_dt = datetime.strptime(f"{date_str} {mt}", "%Y-%m-%d %H:%M:%S")
+                            combined = f"{date_str} {mt}"
+                            match_dt = (datetime.strptime(combined, "%Y-%m-%d %H:%M:%S") if len(mt.strip().split(":")) == 3 else datetime.strptime(combined, "%Y-%m-%d %H:%M"))
                         else:
                             continue
                     now = datetime.now()
@@ -128,11 +129,12 @@ def fill_missing_scores(conn):
             if mt:
                 try:
                     if " " in mt:
-                        match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
+                        match_dt = ((datetime.strptime(mt, "%Y-%m-%d %H:%M:%S") if len(mt.strip().split(":")) == 3 else datetime.strptime(mt, "%Y-%m-%d %H:%M")) if len(mt.strip().split(":")) == 3 else datetime.strptime(mt, "%Y-%m-%d %H:%M"))
                     else:
                         date_str = _derive_date_from_id(match_id)
                         if date_str:
-                            match_dt = datetime.strptime(f"{date_str} {mt}", "%Y-%m-%d %H:%M:%S")
+                            combined = f"{date_str} {mt}"
+                            match_dt = (datetime.strptime(combined, "%Y-%m-%d %H:%M:%S") if len(mt.strip().split(":")) == 3 else datetime.strptime(combined, "%Y-%m-%d %H:%M"))
                         else:
                             continue
                     now = datetime.now()
@@ -248,6 +250,23 @@ def fill_missing_scores(conn):
                     bmatches = fetch_scores("basketball", titan_date)
                 
                 if bmatches:
+                    # fetch_over_scores returns dict for basketball: {home_team: (home_score, away_team, away_score)}
+                    # fetch_scores returns list of dicts
+                    if isinstance(bmatches, dict):
+                        # Convert dict to list of match objects
+                        bmatches_list = []
+                        for home_team, (home_score, away_team, away_score) in bmatches.items():
+                            bmatches_list.append({
+                                'home_team': home_team,
+                                'home_team_trad': home_team,  # Required by find_match_in_titan_data
+                                'home_team_official': '',
+                                'away_team': away_team,
+                                'away_team_trad': away_team,  # Required by find_match_in_titan_data
+                                'away_team_official': '',
+                                'home_score': home_score,
+                                'away_score': away_score,
+                            })
+                        bmatches = bmatches_list
                     for tm in bmatches:
                         tm_id = f"{tm['home_team']}_{tm['away_team']}_{tm.get('match_time','')}"
                         if tm_id not in seen_ids:
