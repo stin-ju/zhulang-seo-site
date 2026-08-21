@@ -18,8 +18,10 @@ from datetime import datetime, timedelta
 # 添加脚本目录到path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
+SCRIPTS_DIR = os.path.join(PROJECT_DIR, 'scripts')  # titan007_client.py 所在位置
 sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, PROJECT_DIR)
+sys.path.insert(0, SCRIPTS_DIR)  # 添加 scripts 目录
 
 DB_URL = 'postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres'
 
