@@ -371,7 +371,7 @@ def normalize_basketball_fields(pred):
 
 
 def insert_basketball_prediction(pred):
-    """插入篮球预测（立即入库）"""
+    """插入篮球预测（立即入库，同时更新单独列）"""
     pred = normalize_basketball_fields(pred)
     
     prediction_json = {
@@ -388,6 +388,28 @@ def insert_basketball_prediction(pred):
         "prediction": prediction_json,
         "analysis": pred.get("analysis", "")
     })
+    
+    # 同时更新单独的篮球列（upsert_prediction只更新prediction JSONB）
+    try:
+        execute_query("""
+            UPDATE predictions 
+            SET win_loss = %s,
+                handicap_win_loss = %s,
+                total_points = %s,
+                score_diff_range = %s,
+                half_win_loss = %s
+            WHERE match_id = %s AND ai_name = %s
+        """, (
+            pred.get("win_loss"),
+            pred.get("handicap_win_loss"),
+            pred.get("total_points"),
+            pred.get("score_diff_range"),
+            pred.get("half_win_loss"),
+            pred["match_id"],
+            pred["ai_name"]
+        ))
+    except Exception as e:
+        print(f"[WARN] 更新篮球单独列失败: {e}")
 
 
 # ============ AI API调用 ============
