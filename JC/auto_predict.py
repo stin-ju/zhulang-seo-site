@@ -384,6 +384,7 @@ def insert_basketball_prediction(pred):
     upsert_prediction({
         "match_id": pred["match_id"],
         "ai_name": pred["ai_name"],
+        "sport_type": "basketball",
         "prediction": prediction_json,
         "analysis": pred.get("analysis", "")
     })
