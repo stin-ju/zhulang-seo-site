@@ -582,6 +582,19 @@ def convert_odds_to_new_format(old_odds, sport_type='football'):
     return new_odds
 
 
+def _extract_handicap(odds_dict):
+    """从 odds 中提取让球数（足球: handicap_spf.handicap / 篮球: hdc.line）"""
+    if not odds_dict:
+        return None
+    h = odds_dict.get('handicap_spf', {}).get('handicap')
+    if h is not None:
+        return h
+    h = odds_dict.get('hdc', {}).get('line')
+    if h is not None:
+        return h
+    return None
+
+
 def upsert_match(match_data, odds=None):
     """
     插入或更新比赛（含赔率）——适配新schema。
@@ -640,6 +653,10 @@ def upsert_match(match_data, odds=None):
                     old_odds[k] = v
             
             old_meta['odds'] = old_odds
+            # 提取让球到顶层
+            _hdc = _extract_handicap(old_odds)
+            if _hdc is not None:
+                old_meta['handicap'] = _hdc
             old_meta['status'] = selling_status
             old_meta['source'] = match_data.get('source', old_meta.get('source', 'unknown'))
             old_meta['lastOddsUpdate'] = datetime.now().strftime('%Y-%m-%d %H:%M') if new_format_odds else old_meta.get('lastOddsUpdate')
@@ -683,6 +700,10 @@ def upsert_match(match_data, odds=None):
             'original_id': db_id,
             'lastOddsUpdate': datetime.now().strftime('%Y-%m-%d %H:%M') if new_format_odds else None
         }
+        # 提取让球到顶层（确保 metadata.handicap 有值）
+        _hdc = _extract_handicap(new_format_odds)
+        if _hdc is not None:
+            metadata['handicap'] = _hdc
         
         cur.execute("""
             INSERT INTO matches (id, sport_type, home_team, away_team, metadata, status)
@@ -733,6 +754,10 @@ def update_odds_for_uids(odds_map, target_uids=None, sport_type_hint='football')
                 old_odds[k] = v
             meta['odds'] = old_odds
             meta['lastOddsUpdate'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+            # 提取让球到顶层
+            _hdc = _extract_handicap(old_odds)
+            if _hdc is not None:
+                meta['handicap'] = _hdc
             if meta.get('status') not in ('on_sale', 'pending'):
                 meta['status'] = 'on_sale'
             
