@@ -75,7 +75,7 @@ def fill_missing_scores(conn):
     sql = """
     SELECT m.id, m.sport_type, m.home_team, m.away_team, m.status, m.metadata
     FROM matches m
-    WHERE m.status = '已完赛' OR m.status = 'on_sale' OR m.status = '已取消'
+    WHERE m.status = '已完赛' OR m.status = 'on_sale' OR m.status = '已取消' OR m.status = '未开赛'
     """
     with conn.cursor() as cur:
         cur.execute(sql)
@@ -110,6 +110,26 @@ def fill_missing_scores(conn):
                         match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
                     else:
                         # 仅有时间，需要从 ID 推导日期
+                        date_str = _derive_date_from_id(match_id)
+                        if date_str:
+                            match_dt = datetime.strptime(f"{date_str} {mt}", "%Y-%m-%d %H:%M:%S")
+                        else:
+                            continue
+                    now = datetime.now()
+                    if (now - match_dt).total_seconds() > 3 * 3600:  # 开赛3小时后
+                        on_sale_candidates.append({"id": match_id, "sport_type": sport_type,
+                                                   "home_team": home_team, "away_team": away_team,
+                                                   "metadata": md, "top_status": top_status})
+                except (ValueError, TypeError):
+                    pass
+        elif top_status == '未开赛':
+            # 未开赛但比赛时间已过3小时以上，可能已完赛但未更新状态
+            mt = md.get("match_time", "")
+            if mt:
+                try:
+                    if " " in mt:
+                        match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
+                    else:
                         date_str = _derive_date_from_id(match_id)
                         if date_str:
                             match_dt = datetime.strptime(f"{date_str} {mt}", "%Y-%m-%d %H:%M:%S")
