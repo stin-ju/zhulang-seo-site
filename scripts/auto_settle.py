@@ -306,6 +306,22 @@ def fill_missing_scores(conn):
                 md["half_home_score"] = found["home_half"]
             if found.get("away_half") is not None:
                 md["half_away_score"] = found["away_half"]
+            # Auto-extract handicap from odds if missing
+            if md.get('handicap') is None:
+                try:
+                    odds = md.get('odds', {})
+                    # Try handicap_spf.handicap first (football)
+                    handicap_spf = odds.get('handicap_spf', {})
+                    handicap = handicap_spf.get('handicap')
+                    if handicap is None:
+                        # Try hdc.line (basketball)
+                        hdc = odds.get('hdc', {})
+                        handicap = hdc.get('line')
+                    if handicap is not None:
+                        md['handicap'] = handicap
+                        print(f"  [让球提取] {m['id']}: handicap={handicap}")
+                except (TypeError, ValueError):
+                    pass
             # 同时更新顶层 status
             with conn.cursor() as cur:
                 cur.execute("UPDATE matches SET metadata = %s::jsonb, status = '已完赛' WHERE id = %s",
@@ -353,6 +369,17 @@ def fill_missing_scores(conn):
                 md["half_home_score"] = found["home_half"]
             if found.get("away_half") is not None:
                 md["half_away_score"] = found["away_half"]
+            # Auto-extract handicap from odds.hdc.line if missing
+            if md.get('handicap') is None:
+                try:
+                    odds = md.get('odds', {})
+                    hdc = odds.get('hdc', {})
+                    line = hdc.get('line')
+                    if line is not None:
+                        md['handicap'] = line
+                        print(f"  [让球提取] {m['id']}: handicap={line}")
+                except (TypeError, ValueError):
+                    pass
             with conn.cursor() as cur:
                 cur.execute("UPDATE matches SET metadata = %s::jsonb, status = '已完赛' WHERE id = %s",
                            [json.dumps(md, ensure_ascii=False), m["id"]])
