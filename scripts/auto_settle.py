@@ -17,7 +17,7 @@ import sys
 import re
 from datetime import datetime, timedelta
 try:
-    from titan007_client import fetch_scores, fetch_scores_range, find_match_in_titan_data
+    from titan007_client import fetch_scores, fetch_scores_range, fetch_over_scores, find_match_in_titan_data
     HAS_TITAN007 = True
 except ImportError:
     HAS_TITAN007 = False
@@ -87,8 +87,6 @@ def fill_missing_scores(conn):
         match_id, sport_type, home_team, away_team, top_status, metadata = row
         md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
         # 修改1: 不再跳过 score_unavailable 的比赛，允许重试获取比分
-        # if md.get("score_unavailable"):
-        #     continue
 
         if top_status == '已完赛':
             # 已完赛但缺比分
@@ -141,11 +139,10 @@ def fill_missing_scores(conn):
     if not football_missing and not basketball_missing:
         return 0
 
-    # 检查比赛日期，超过7天的老比赛 titan007 可能没有数据
+    # 修改2: 不再区分新旧比赛，统一处理所有比赛
     now = datetime.now()
     dates_needed = set()
-    old_matches = []
-    recent_matches = []
+    matches_to_process = []  # 所有需要处理的足球比赛
 
     for m in football_missing:
         mt = m["metadata"].get("match_time", "")
@@ -154,7 +151,6 @@ def fill_missing_scores(conn):
             try:
                 if " " in mt:
                     date_str = mt.split(" ")[0]
-                # else: 仅有时间，从 ID 推导
             except ValueError:
                 pass
 
@@ -162,46 +158,20 @@ def fill_missing_scores(conn):
             date_str = _derive_date_from_id(m["id"])
 
         if date_str:
-            try:
-                match_date = datetime.strptime(date_str, "%Y-%m-%d")
-                days_ago = (now - match_date).days
-                if days_ago > 7:
-                    old_matches.append(m)
-                else:
-                    recent_matches.append(m)
-                    dates_needed.add(date_str)
-            except ValueError:
-                recent_matches.append(m)
-                dates_needed.add(date_str)
+            matches_to_process.append(m)
+            dates_needed.add(date_str)
+            # 将日期存入 metadata 供后续使用
+            m["_date_str"] = date_str
         else:
-            # 无法确定日期，标记跳过
-            print(f"  [标记跳过] {m['id']}: 无法确定比赛日期")
-            md = m["metadata"]
-            md["score_unavailable"] = True
-            md["score_unavailable_reason"] = "no_date"
-            with conn.cursor() as cur:
-                cur.execute("UPDATE matches SET metadata = %s::jsonb WHERE id = %s",
-                           [json.dumps(md, ensure_ascii=False), m["id"]])
-            conn.commit()
+            # 无法确定日期，也加入处理列表，后续用 ID 推导
+            matches_to_process.append(m)
+            m["_date_str"] = None
 
-    # 修改2: 不再标记超过7天的比赛为无法补全，允许重试获取比分
-    # if old_matches:
-    #     print(f"[比分补全] {len(old_matches)} 场比赛超过7天，titan007 可能无数据")
-    #     for m in old_matches:
-    #         md = m["metadata"]
-    #         md["score_unavailable"] = True
-    #         md["score_unavailable_reason"] = "match_too_old"
-    #         with conn.cursor() as cur:
-    #             cur.execute("UPDATE matches SET metadata = %s::jsonb WHERE id = %s",
-    #                        [json.dumps(md, ensure_ascii=False), m["id"]])
-    #         print(f"  [标记跳过] {m['id']}: {m['home_team']} vs {m['away_team']} (超过7天)")
-    #     conn.commit()
-
-    if not recent_matches and not basketball_missing:
+    if not matches_to_process and not basketball_missing:
         print(f"[比分补全] 完成，补全 0 场")
         return 0
 
-    # 查询近期比赛的 titan007 数据
+    # 修改3: 查询 titan007 数据，优先使用 fetch_over_scores，fallback 到 fetch_scores
     # 支持时区日期偏移：体彩日期和titan007可能差1天，查前后各1天合并
     titan_data = {}
     for ds in dates_needed:
@@ -211,7 +181,16 @@ def fill_missing_scores(conn):
             dt = datetime.strptime(ds, "%Y-%m-%d")
             target = dt + timedelta(days=offset)
             titan_date = f"{target.year}-{target.month}-{target.day}"
-            matches = fetch_scores("football", titan_date)
+            
+            # 优先调用 fetch_over_scores
+            matches = fetch_over_scores("football", titan_date)
+            source = "over"
+            
+            # 如果 fetch_over_scores 返回为空，fallback 到 fetch_scores
+            if not matches:
+                matches = fetch_scores("football", titan_date)
+                source = "cp"
+            
             if matches:
                 for tm in matches:
                     tm_id = f"{tm['home_team']}_{tm['away_team']}_{tm.get('match_time','')}"
@@ -219,14 +198,14 @@ def fill_missing_scores(conn):
                         seen_ids.add(tm_id)
                         combined.append(tm)
                 if offset == 0:
-                    print(f"  [titan007] {ds} 共{len(matches)}场完场")
+                    print(f"  [titan007-{source}] {ds} 共{len(matches)}场完场")
                 elif matches:
-                    print(f"  [titan007] {ds} 偏移{offset:+d}天({titan_date}) 补充{len(matches)}场")
+                    print(f"  [titan007-{source}] {ds} 偏移{offset:+d}天({titan_date}) 补充{len(matches)}场")
         if combined:
             titan_data[ds] = combined
             print(f"  [titan007] {ds} 合并后共{len(combined)}场(含前后1天偏移)")
 
-    # 也查篮球的 titan007 数据（同样支持日期偏移）
+    # 也查篮球的 titan007 数据（同样支持日期偏移，优先 fetch_over_scores）
     basketball_titan_data = {}
     if basketball_missing:
         bk_dates_needed = set()
@@ -241,7 +220,13 @@ def fill_missing_scores(conn):
                 dt = datetime.strptime(ds, "%Y-%m-%d")
                 target = dt + timedelta(days=offset)
                 titan_date = f"{target.year}-{target.month}-{target.day}"
-                bmatches = fetch_scores("basketball", titan_date)
+                
+                # 优先调用 fetch_over_scores
+                bmatches = fetch_over_scores("basketball", titan_date)
+                # fallback 到 fetch_scores
+                if not bmatches:
+                    bmatches = fetch_scores("basketball", titan_date)
+                
                 if bmatches:
                     for tm in bmatches:
                         tm_id = f"{tm['home_team']}_{tm['away_team']}_{tm.get('match_time','')}"
@@ -252,7 +237,7 @@ def fill_missing_scores(conn):
                 basketball_titan_data[ds] = combined
 
     updated = 0
-    for m in recent_matches:
+    for m in matches_to_process:
         mt = m["metadata"].get("match_time", "")
         if mt and " " in mt:
             ds = mt.split(" ")[0]
