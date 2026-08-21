@@ -51,12 +51,19 @@ export function normalizeMatch(m) {
         if (m.lose_odds === undefined) m.lose_odds = odds.spf.lose;
     }
     
-    // 从 odds.handicap_spf 展开让球赔率
+    // 从 odds.handicap_spf 展开让球赔率（足球）
     if (odds.handicap_spf) {
         if (m.handicap_win_odds === undefined) m.handicap_win_odds = odds.handicap_spf.win;
         if (m.handicap_draw_odds === undefined) m.handicap_draw_odds = odds.handicap_spf.draw;
         if (m.handicap_lose_odds === undefined) m.handicap_lose_odds = odds.handicap_spf.lose;
         if (m.handicap === undefined || m.handicap === null) m.handicap = odds.handicap_spf.handicap;
+    }
+    
+    // 从 odds.hdc 展开让分赔率（篮球）
+    if (odds.hdc) {
+        if (m.handicap_win_odds === undefined) m.handicap_win_odds = odds.hdc.win;
+        if (m.handicap_lose_odds === undefined) m.handicap_lose_odds = odds.hdc.lose;
+        if (m.handicap === undefined || m.handicap === null) m.handicap = odds.hdc.line;
     }
     
     // 从 odds 展开其他赔率
