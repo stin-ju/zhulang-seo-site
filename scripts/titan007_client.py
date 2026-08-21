@@ -134,6 +134,58 @@ def _parse_basketball_xml(xml_text):
         })
     return results
 
+
+def fetch_over_scores(sport, date_str):
+    """从 bf.titan007.com 获取完场比分（覆盖全部比赛，不限于竞彩）"""
+    import re
+    date_fmt = date_str.replace('-', '')
+    
+    if sport == 'football':
+        url = 'https://bf.titan007.com/football/Over_' + date_fmt + '.htm'
+    elif sport == 'basketball':
+        url = 'https://bf.titan007.com/basketball/Over_' + date_fmt + '.htm'
+    else:
+        return {}
+    
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://bf.titan007.com/',
+        }
+        resp = requests.get(url, headers=headers, timeout=15)
+        resp.encoding = 'gb2312'
+        html = resp.text
+    except Exception as e:
+        print('  [bf_titan007] request failed:', e)
+        return {}
+    
+    results = {}
+    rows = re.findall(r'<tr[^>]*>.*?</tr>', html, re.DOTALL)
+    for row in rows:
+        cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)
+        if len(cells) < 6:
+            continue
+        
+        score_text = re.sub(r'<[^>]+>', '', cells[4]).strip()
+        score_match = re.match(r'(\d+)\s*[-:]\s*(\d+)', score_text)
+        if not score_match:
+            continue
+        
+        home_score = int(score_match.group(1))
+        away_score = int(score_match.group(2))
+        
+        home_raw = re.sub(r'<[^>]+>', '', cells[3]).strip()
+        home_name = re.sub(r'\[[^\]]*\]', '', home_raw).strip()
+        
+        away_raw = re.sub(r'<[^>]+>', '', cells[5]).strip()
+        away_name = re.sub(r'\[[^\]]*\]', '', away_raw).strip()
+        
+        if home_name and away_name:
+            results[home_name] = (home_score, away_name, away_score)
+    
+    print('  [bf_titan007]', sport, date_str + ': got', len(results), 'matches')
+    return results
+
 def fetch_scores(sport="football", date_str=None):
     """获取指定日期和运动类型的完场比分
     sport: "football" 或 "basketball"
