@@ -86,9 +86,9 @@ def fill_missing_scores(conn):
     for row in rows:
         match_id, sport_type, home_team, away_team, top_status, metadata = row
         md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
-        # 跳过已标记为无法补全的比赛
-        if md.get("score_unavailable"):
-            continue
+        # 修改1: 不再跳过 score_unavailable 的比赛，允许重试获取比分
+        # if md.get("score_unavailable"):
+        #     continue
 
         if top_status == '已完赛':
             # 已完赛但缺比分
@@ -184,18 +184,18 @@ def fill_missing_scores(conn):
                            [json.dumps(md, ensure_ascii=False), m["id"]])
             conn.commit()
 
-    # 处理超过7天的老比赛：标记为无法补全
-    if old_matches:
-        print(f"[比分补全] {len(old_matches)} 场比赛超过7天，titan007 可能无数据")
-        for m in old_matches:
-            md = m["metadata"]
-            md["score_unavailable"] = True
-            md["score_unavailable_reason"] = "match_too_old"
-            with conn.cursor() as cur:
-                cur.execute("UPDATE matches SET metadata = %s::jsonb WHERE id = %s",
-                           [json.dumps(md, ensure_ascii=False), m["id"]])
-            print(f"  [标记跳过] {m['id']}: {m['home_team']} vs {m['away_team']} (超过7天)")
-        conn.commit()
+    # 修改2: 不再标记超过7天的比赛为无法补全，允许重试获取比分
+    # if old_matches:
+    #     print(f"[比分补全] {len(old_matches)} 场比赛超过7天，titan007 可能无数据")
+    #     for m in old_matches:
+    #         md = m["metadata"]
+    #         md["score_unavailable"] = True
+    #         md["score_unavailable_reason"] = "match_too_old"
+    #         with conn.cursor() as cur:
+    #             cur.execute("UPDATE matches SET metadata = %s::jsonb WHERE id = %s",
+    #                        [json.dumps(md, ensure_ascii=False), m["id"]])
+    #         print(f"  [标记跳过] {m['id']}: {m['home_team']} vs {m['away_team']} (超过7天)")
+    #     conn.commit()
 
     if not recent_matches and not basketball_missing:
         print(f"[比分补全] 完成，补全 0 场")
