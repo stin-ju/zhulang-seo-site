@@ -309,9 +309,13 @@ def fill_missing_scores(conn):
             mt = md.get("match_time", "")
             if mt:
                 try:
-                    # match_time 可能是 "18:30:00" 或 "2026-07-19 18:30:00"
+                    # match_time 可能是 "18:30:00" 或 "2026-07-19 18:30:00" 或 "2026-07-19 18:30"
                     if " " in mt:
-                        match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
+                        # 支持带秒和不带秒两种格式
+                        try:
+                            match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M")
                     else:
                         # 仅有时间，需要从 ID 推导日期
                         date_str = _derive_date_from_id(match_id)
