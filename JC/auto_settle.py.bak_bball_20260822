@@ -167,40 +167,26 @@ def _fetch_football_scores(date_str):
     return completed
 
 def _fetch_basketball_scores(date_str):
-    """
-    抓取篮球比分。titan007 的 nba_date.aspx 按美东时间分日期，
-    北京时间早上的WNBA比赛在前一天的接口里。因此查目标日期+前一天，合并去重。
-    编码用 gb18030 兼容繁体中文（gb2312 解不了繁体，会截断数据）。
-    """
-    from datetime import datetime as _dt, timedelta as _td
-    try:
-        base = _dt.strptime(date_str, "%Y-%m-%d")
-    except Exception:
-        base = _dt.strptime(date_str, "%Y-%m-%d")
-    prev = base - _td(days=1)
-    dates_to_try = [base.strftime("%Y-%m-%d"), prev.strftime("%Y-%m-%d")]
-
+    if len(date_str) == 9 and date_str[5] == '0':
+        parts = date_str.split('-')
+        if len(parts) == 3:
+            date_str = f"{parts[0]}-{int(parts[1]):02d}-{int(parts[2]):02d}"
+    url = f"https://bf.titan007.com/nba_date.aspx?date={date_str}&h=0&m=0&s=1"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept": "*/*",
         "Referer": "https://bf.titan007.com/NBA_SC.aspx",
     }
-    all_by_id = {}
-    for ds in dates_to_try:
-        url = f"https://bf.titan007.com/nba_date.aspx?date={ds}&h=0&m=0&s=1"
-        try:
-            resp = requests.get(url, headers=headers, timeout=15)
-            resp.encoding = "gb18030"
-            matches = _parse_basketball_xml(resp.text)
-            for m in matches:
-                key = (m.get("home_team_official", ""), m.get("away_team_official", ""))
-                all_by_id[key] = m
-        except Exception as e:
-            print(f"[titan007] 篮球请求失败 date={ds}: {e}", file=sys.stderr)
-    completed = [m for m in all_by_id.values() if m["status_code"] == "4"]
-    print(f"[titan007] basketball {date_str}: {len(all_by_id)}场, 完场{len(completed)}场 (含前一日兜底)", file=sys.stderr)
+    try:
+        resp = requests.get(url, headers=headers, timeout=15)
+        resp.encoding = "gb2312"
+    except requests.RequestException as e:
+        print(f"[titan007] 篮球请求失败: {e}", file=sys.stderr)
+        return []
+    all_matches = _parse_basketball_xml(resp.text)
+    completed = [m for m in all_matches if m["status_code"] == "4"]
+    print(f"[titan007] basketball {date_str}: {len(all_matches)}场, 完场{len(completed)}场", file=sys.stderr)
     return completed
-
 
 def fetch_scores_range(sport, days_back=7, days_forward=1):
     now = datetime.utcnow() + timedelta(hours=8)
