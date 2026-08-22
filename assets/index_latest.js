@@ -348,9 +348,9 @@ function renderMatchCard(match) {
     if (!isNaN(handicapVal)) {
         const absVal = Math.abs(handicapVal);
         if (handicapVal < 0) {
-            handicapDisplay = '让' + absVal;
+            handicapDisplay = '-' + absVal;
         } else if (handicapVal > 0) {
-            handicapDisplay = '受' + absVal;
+            handicapDisplay = '+' + absVal;
         }
     } else if (handicapStr) {
         handicapDisplay = handicapStr;
