@@ -308,8 +308,8 @@ def fill_missing_scores(conn):
     for row in rows:
         match_id, sport_type, home_team, away_team, top_status, metadata = row
         md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
-        # 即使之前标记了score_unavailable，如果已有比分则不跳过
-        if md.get("score_unavailable") and not (md.get("home_score") and md.get("away_score")):
+        # 跳过已标记为无法补全的比赛
+        if md.get("score_unavailable"):
             continue
 
         if top_status == '已完赛':
@@ -783,9 +783,8 @@ def parse_score_diff_range(sdr):
 def settle_basketball(row):
     """
     结算篮球预测，返回 (hit_dict, hit_cols_dict)
-    兼容多种 win_loss 格式：胜/负、主胜/客胜/主负/客负
+    兼容多种 win_loss 格式："胜"/"负"、"主胜"/"客胜"/"主负"/"客负"
     兼容 handicap_result（旧key）和 handicap_win_loss
-    预测格式统一：让胜/让负（兼容旧格式 让分主胜/让分主负）
     """
     (match_id, sport_type, home_team, away_team, metadata,
      pred_id, ai_name, p_sport,
@@ -796,6 +795,7 @@ def settle_basketball(row):
     md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
     home_score = md.get("home_score")
     away_score = md.get("away_score")
+    # 适配新schema: handicap 可能在 metadata->odds->handicap_spf->handicap 或 metadata->odds->hdc->line
     _odds = md.get("odds", {}) or {}
     handicap = md.get("handicap") or _odds.get("handicap_spf", {}).get("handicap") or _odds.get("hdc", {}).get("line")
 
@@ -809,14 +809,21 @@ def settle_basketball(row):
     hit = {}
     hit_cols = {}
 
-    # 1. win_loss 胜负
+    # 1. win_loss 胜负 - 归一化多种格式
     if win_loss is not None:
         wl = str(win_loss).strip()
-        predicted_home_wins = None
-        if wl in ("主胜", "胜", "客负"):
-            predicted_home_wins = True
-        elif wl in ("客胜", "负", "主负"):
+        if wl in ("主胜", "客负"):
+            # 主队赢 = away_team(第二队)赢
             predicted_home_wins = False
+        elif wl in ("客胜", "主负"):
+            # 客队赢 = home_team(第一队)赢
+            predicted_home_wins = True
+        elif wl == "胜":
+            predicted_home_wins = True  # home_team 胜
+        elif wl == "负":
+            predicted_home_wins = False  # home_team 负
+        else:
+            predicted_home_wins = None
 
         if predicted_home_wins is not None:
             actual_home_wins = home_score > away_score
@@ -825,40 +832,39 @@ def settle_basketball(row):
             hit_cols["spf_hit"] = is_hit
 
     # 2. handicap_win_loss / handicap_result 让分胜负
-    # 让分=主队+handicap后比较，正数=主队受让，负数=主队让分
-    # adjusted = home_score + handicap - away_score
-    # adjusted > 0 = 让胜（主队赢盘），adjusted < 0 = 让负（客队赢盘）
-    hc_pred = handicap_win_loss or handicap_result
-    if hc_pred is not None and handicap is not None:
+    # 优先用 handicap_win_loss，fallback 到 handicap_result
+    hc_val = handicap_win_loss or handicap_result
+    if hc_val is not None and handicap is not None:
         try:
-            hc_str = str(hc_pred).strip()
+            hc = str(hc_val).strip()
             hc_float = float(handicap)
-            adjusted = home_score + hc_float - away_score
-            if adjusted > 0:
-                actual_hc = "让胜"
+            adjusted = home_score - away_score - hc_float
+            if adjusted < 0:
+                actual = "让分主胜"  # 主队(第二队)赢盘
             else:
-                actual_hc = "让负"
+                actual = "让分主负"  # 客队(第一队)赢盘
 
             # 归一化预测值
-            hc_norm = hc_str
-            if hc_norm in ("让分主胜",):
-                hc_norm = "让胜"
-            elif hc_norm in ("让分主负",):
-                hc_norm = "让负"
+            hc_norm = hc
+            if hc == "让胜":
+                hc_norm = "让分主胜"
+            elif hc == "让负":
+                hc_norm = "让分主负"
 
-            is_hit = (hc_norm == actual_hc)
+            is_hit = (hc_norm == actual)
             hit["handicap_win_loss"] = is_hit
             hit_cols["handicap_spf_hit"] = is_hit
         except (ValueError, TypeError):
             pass
 
-    # 3. total_points 大小分
+    # 3. total_points 大小分 -> 大/小
     if total_points is not None:
         total = home_score + away_score
         tp_str = str(total_points).strip()
         if tp_str in ("大", "小", "大分", "小分"):
-            tp_short = tp_str[0]
+            tp_short = tp_str[0]  # 大/小
             line = md.get("total_points_line")
+            # 适配新schema: total_line 可能在 metadata->odds->hilo->line
             if line is None:
                 _odds2 = md.get("odds", {}) or {}
                 line = _odds2.get("hilo", {}).get("line")
@@ -868,7 +874,18 @@ def settle_basketball(row):
                 is_hit = (tp_short == actual)
                 hit["total_points"] = is_hit
                 hit_cols["goals_hit"] = is_hit
+            else:
+                # 没有分界线，尝试从metadata的odds中找
+                odds = md.get("odds", {}) or {}
+                line = odds.get("total_points_line") or odds.get("total_line") or odds.get("hilo", {}).get("line")
+                if line is not None:
+                    line = float(line)
+                    actual = "大" if total > line else "小"
+                    is_hit = (tp_short == actual)
+                    hit["total_points"] = is_hit
+                    hit_cols["goals_hit"] = is_hit
         else:
+            # 带数字的格式如 "210.5大"
             nums = re.findall(r'[\d.]+', tp_str)
             if nums:
                 line = float(nums[0])
@@ -878,46 +895,28 @@ def settle_basketball(row):
                 hit["total_points"] = is_hit
                 hit_cols["goals_hit"] = is_hit
 
-    # 4. score_diff_range 胜分差 - 支持多种格式
+    # 4. score_diff_range 胜分差 -> "主6-10胜" 格式
     if score_diff_range is not None:
-        sdr = str(score_diff_range).strip()
-        side = None
-        winner = None
-        low = high = None
-
-        m1 = re.match(r'([主客])(\d+)-(\d+)(胜|负)', sdr)
-        if m1:
-            side = m1.group(1)
-            low = int(m1.group(2))
-            high = int(m1.group(3))
-            winner = m1.group(4)
-        else:
-            m2 = re.match(r'([主客])(胜|负)(\d+)-(\d+)', sdr)
-            if m2:
-                side = m2.group(1)
-                winner = m2.group(2)
-                low = int(m2.group(3))
-                high = int(m2.group(4))
+        parsed = parse_score_diff_range(score_diff_range)
+        if parsed:
+            side, low, high, winner = parsed
+            actual_winner = "主" if home_score > away_score else "客"
+            if side == actual_winner and low <= diff <= high:
+                is_hit = True
             else:
-                m3 = re.match(r'(\d+)-(\d+)', sdr)
-                if m3:
-                    low = int(m3.group(1))
-                    high = int(m3.group(2))
-                    side = "主" if home_score > away_score else "客"
-                    winner = "胜" if home_score > away_score else "负"
-
-        actual_winner = "主" if home_score > away_score else "客"
-        actual_win_str = "胜" if home_score > away_score else "负"
-
-        if low is not None:
-            if side is not None and winner is not None:
-                is_hit = (side == actual_winner and winner == actual_win_str and low <= diff <= high)
-            else:
-                is_hit = (low <= diff <= high)
+                is_hit = False
             hit["score_diff_range"] = is_hit
             hit_cols["score_hit"] = is_hit
+        else:
+            # 尝试简单格式如 "1-5"
+            nums = re.findall(r'\d+', score_diff_range)
+            if len(nums) >= 2:
+                low, high = int(nums[0]), int(nums[1])
+                is_hit = (low <= diff <= high)
+                hit["score_diff_range"] = is_hit
+                hit_cols["score_hit"] = is_hit
 
-    # 5. half_win_loss 半场胜负
+    # 5. half_win_loss 半场胜负 -> 胜/负
     if half_win_loss is not None:
         half_home = md.get("half_home_score")
         half_away = md.get("half_away_score")
@@ -925,7 +924,7 @@ def settle_basketball(row):
             half_home = int(half_home)
             half_away = int(half_away)
             actual = "胜" if half_home > half_away else "负"
-            is_hit = (str(half_win_loss).strip() == actual)
+            is_hit = (half_win_loss == actual)
             hit["half_win_loss"] = is_hit
             hit_cols["half_full_hit"] = is_hit
 
