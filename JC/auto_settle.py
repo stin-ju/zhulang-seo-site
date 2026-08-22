@@ -905,6 +905,26 @@ def settle_basketball(row):
                     high = int(m3.group(2))
                     side = "主" if home_score > away_score else "客"
                     winner = "胜" if home_score > away_score else "负"
+                # 格式4: "26+" 或 "主26+胜" / "主负26+"
+                if low is None:
+                    m4a = re.match(r'([主客])(\d+)\+(胜|负)', sdr)
+                    m4b = re.match(r'([主客])(胜|负)(\d+)\+', sdr)
+                    m4c = re.match(r'(\d+)\+', sdr)
+                    if m4a:
+                        side = m4a.group(1)
+                        low = int(m4a.group(2))
+                        high = 999
+                        winner = m4a.group(3)
+                    elif m4b:
+                        side = m4b.group(1)
+                        winner = m4b.group(2)
+                        low = int(m4b.group(3))
+                        high = 999
+                    elif m4c:
+                        low = int(m4c.group(1))
+                        high = 999
+                        side = "主" if home_score > away_score else "客"
+                        winner = "胜" if home_score > away_score else "负"
 
         actual_winner = "主" if home_score > away_score else "客"
         actual_win_str = "胜" if home_score > away_score else "负"
