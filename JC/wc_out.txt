@@ -1,0 +1,43 @@
+1045 /workspace/projects/JC/auto_settle.py
+25:# ==================== titan007 比分抓取（原 titan007_client.py）====================
+33:# 竞彩简称 → titan007全名 别名映射
+100:def _parse_basketball_xml(xml_text):
+101:    """解析篮球 bf.titan007.com 的XML数据"""
+149:    if sport == "basketball":
+150:        return _fetch_basketball_scores(date_str)
+156:    url = f"https://cp.titan007.com/buy/JingCai.aspx?typeID={type_id}&oddstype=2&date={date_str}"
+162:        print(f"[titan007] 足球请求失败: {e}", file=sys.stderr)
+166:    print(f"[titan007] football {date_str}: {len(all_matches)}场, 完场{len(completed)}场", file=sys.stderr)
+169:def _fetch_basketball_scores(date_str):
+174:    url = f"https://bf.titan007.com/nba_date.aspx?date={date_str}&h=0&m=0&s=1"
+178:        "Referer": "https://bf.titan007.com/NBA_SC.aspx",
+184:        print(f"[titan007] 篮球请求失败: {e}", file=sys.stderr)
+186:    all_matches = _parse_basketball_xml(resp.text)
+188:    print(f"[titan007] basketball {date_str}: {len(all_matches)}场, 完场{len(completed)}场", file=sys.stderr)
+279:    """从 titan007 补全已完赛但缺少比分的比赛，同时检查 on_sale 但可能已完赛的比赛"""
+345:    basketball_missing = [m for m in all_to_fill if m["sport_type"] == "basketball"]
+347:    if not football_missing and not basketball_missing:
+350:    # 检查比赛日期，超过7天的老比赛 titan007 可能没有数据
+395:        print(f"[比分补全] {len(old_matches)} 场比赛超过7天，titan007 可能无数据")
+406:    if not recent_matches and not basketball_missing:
+410:    # 查询近期比赛的 titan007 数据
+418:            # Debug: 打印 titan007 返回的队伍名
+419:            print(f"  [titan007] {ds} 共{len(matches)}场完场:")
+423:    # 也查篮球的 titan007 数据
+424:    basketball_titan_data = {}
+425:    if basketball_missing:
+426:        for m in basketball_missing:
+428:            if date_str and date_str not in basketball_titan_data:
+431:                bmatches = fetch_scores("basketball", titan_date)
+433:                    basketball_titan_data[date_str] = bmatches
+452:            print(f"  [标记跳过] {m['id']}: 无titan007数据({ds})")
+475:            print(f"  [DEBUG] titan007 候选({ds}):")
+490:    for m in basketball_missing:
+492:        titan_matches = basketball_titan_data.get(date_str, [])
+769:def settle_basketball(row):
+930:    # 先从 titan007 补全缺失比分
+967:    stats = {"football": {}, "basketball": {}}
+981:        if st == "basketball":
+982:            hit_dict, hit_cols = settle_basketball(row)
+983:            stat_key = "basketball"
+1029:    for st in ["football", "basketball"]:
