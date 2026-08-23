@@ -423,7 +423,7 @@ def call_ai_api(ai_name, prompt, timeout=120):
         "model": config["model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 4096,
+        "max_tokens": 1000,
     }
 
     try:
@@ -441,11 +441,11 @@ def call_ai_api(ai_name, prompt, timeout=120):
 
 
 def parse_ct_response(text, game_type):
-    """解析AI返回的传统彩预测JSON，支持截断修复"""
+    """解析AI返回的传统彩预测JSON"""
     if not text:
         return None
 
-    # 尝试提取```json [...]```代码块
+    # 尝试提取JSON数组
     json_match = re.search(r'```json\s*(\[.*?\])\s*```', text, re.DOTALL)
     if json_match:
         try:
@@ -453,28 +453,12 @@ def parse_ct_response(text, game_type):
         except:
             pass
 
-    # 尝试纯数组 [...]（贪婪匹配到最后一个]）
-    json_match = re.search(r'\[\s*\{.*\}\s*\]', text, re.DOTALL)
+    json_match = re.search(r'\[\s*\{.*?\}\s*\]', text, re.DOTALL)
     if json_match:
         try:
             return json.loads(json_match.group(0))
         except:
             pass
-
-    # 截断修复：找到第一个[，尝试补全
-    start = text.find('[')
-    if start >= 0:
-        # 找到最后一个完整的}位置
-        last_brace = text.rfind('}')
-        if last_brace > start:
-            candidate = text[start:last_brace+1] + ']'
-            try:
-                result = json.loads(candidate)
-                if isinstance(result, list) and len(result) > 0:
-                    print(f" [解析修复] 截断JSON已修复，恢复{len(result)}场")
-                    return result
-            except:
-                pass
 
     return None
 
@@ -539,12 +523,11 @@ def save_predictions(issue, game_type, matches, ai_name, predictions):
             'league': m['league'],
         })
 
-    # 生成任9推荐（仅胜负彩），同时保存为独立的任9记录
+    # 生成任9推荐（仅胜负彩）
     ren9_json = None
-    ren9_picks_data = None
     if game_type == '胜负彩':
-        ren9_picks_data = generate_ren9(predictions)
-        ren9_json = json.dumps(ren9_picks_data, ensure_ascii=False)
+        ren9_picks = generate_ren9(predictions)
+        ren9_json = json.dumps(ren9_picks, ensure_ascii=False)
 
     # 检查是否已存在
     cur.execute(
@@ -589,32 +572,6 @@ def save_predictions(issue, game_type, matches, ai_name, predictions):
                   json.dumps(matches_info, ensure_ascii=False)))
 
     conn.commit()
-
-    # 胜负彩保存成功后，同步保存独立的任9记录
-    if game_type == '胜负彩' and ren9_picks_data:
-        ren9_matches_info = [mi for mi in matches_info if mi['num'] in [p.get('match','') for p in ren9_picks_data]]
-        cur.execute(
-            "SELECT id FROM traditional_predictions WHERE issue = %s AND game_type = %s AND ai_name = %s",
-            (issue, '任9', ai_name)
-        )
-        if cur.fetchone():
-            cur.execute("""
-                UPDATE traditional_predictions
-                SET predictions = %s::jsonb, matches_info = %s::jsonb, created_at = NOW()
-                WHERE issue = %s AND game_type = %s AND ai_name = %s
-            """, (json.dumps(ren9_picks_data, ensure_ascii=False),
-                  json.dumps(ren9_matches_info, ensure_ascii=False),
-                  issue, '任9', ai_name))
-        else:
-            cur.execute("""
-                INSERT INTO traditional_predictions (game_type, ai_name, issue, predictions, matches_info, created_at)
-                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, NOW())
-            """, ('任9', ai_name, issue,
-                  json.dumps(ren9_picks_data, ensure_ascii=False),
-                  json.dumps(ren9_matches_info, ensure_ascii=False)))
-        conn.commit()
-        print(f"  [{ai_name}] 任9已保存({len(ren9_picks_data)}场)")
-
     conn.close()
 
 
@@ -788,8 +745,7 @@ def predict_issue(issue_data, game_types, force=False):
                     save_predictions(issue, game_type, matches, ai_name, parsed)
                     print(f"完成 ({len(parsed)}场)")
                 else:
-                    raw_preview = raw[:300].replace('\n', ' ') if raw else ''
-                    print(f"解析失败 (got {len(parsed) if parsed else 0} fields) raw前300字: {raw_preview}")
+                    print(f"解析失败 (got {len(parsed) if parsed else 0} fields)")
             else:
                 print("无响应")
 
