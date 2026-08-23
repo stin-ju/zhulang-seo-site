@@ -95,6 +95,27 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
     const predFieldMap = { 'sfc': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
     const responseData = { sfc: [], htf: [], jqc: [] };
 
+    // >>> PATCH_R9_START 预收集所有任9记录的推荐场次
+    const ren9Map = new Map();
+    for (const row of rows) {
+      if (row.game_type !== '任9') continue;
+      const ri = row.issue;
+      if (!ren9Map.has(ri)) ren9Map.set(ri, new Map());
+      const am = ren9Map.get(ri);
+      if (!am.has(row.ai_name)) am.set(row.ai_name, new Set());
+      const ms = am.get(row.ai_name);
+      let pp = row.predictions;
+      if (typeof pp === 'string') {
+        try { pp = JSON.parse(pp); } catch(e) { pp = []; }
+      }
+      if (Array.isArray(pp)) {
+        pp.forEach(p => {
+          if (p.match) ms.add(String(p.match).replace(/^0+/, '') || '0');
+        });
+      }
+    }
+    // <<< PATCH_R9_END
+
     for (const row of rows) {
       const frontendKey = typeMap[row.game_type];
       if (!frontendKey) continue;
@@ -149,6 +170,14 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         }
 
         // 判断该场是否在任9推荐中
+        // >>> PATCH_R9_MERGe
+        if (ren9Set.size === 0 && ren9Map.has(issue)) {
+          const arm = ren9Map.get(issue);
+          if (arm && arm.has(row.ai_name)) {
+            arm.get(row.ai_name).forEach(n => ren9Set.add(n));
+          }
+        }
+        // <<< PATCH_R9_MERGE
         const isR9 = ren9Set.size > 0 ? ren9Set.has(matchNumStripped) : false;
 
         responseData[frontendKey].push({
