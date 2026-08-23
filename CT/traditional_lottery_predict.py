@@ -246,7 +246,7 @@ def build_ct_prompt(matches, game_type="胜负彩"):
 ## 输出格式（严格JSON数组，不要输出其他内容）:
 ```json
 [
-  {{"match": "01", "spf": "3", "analysis": "简要分析", "intelligence": {{"home_recent_form": "主队近况", "away_recent_form": "客队近况", "head_to_head": "交锋记录", "home_injuries": "主队伤停", "away_injuries": "客队伤停", "league_position": "联赛排名", "key_factors": "关键因素"}}}},
+  {{"match": "01", "spf": "3", "intelligence": {{"home_recent_form": "主队近况", "away_recent_form": "客队近况", "head_to_head": "交锋记录", "home_injuries": "主队伤停", "away_injuries": "客队伤停", "league_position": "联赛排名", "key_factors": "关键因素"}}}},
   ...
 ]
 ```
@@ -266,7 +266,7 @@ def build_ct_prompt(matches, game_type="胜负彩"):
 ## 输出格式（严格JSON数组）:
 ```json
 [
-  {{"match": "01", "bqc": "31", "analysis": "简要分析"}},
+  {{"match": "01", "bqc": "31"}},
   ...
 ]
 ```
@@ -286,7 +286,7 @@ def build_ct_prompt(matches, game_type="胜负彩"):
 ## 输出格式（严格JSON数组）:
 ```json
 [
-  {{"match": "01", "zjq": "2", "analysis": "简要分析"}},
+  {{"match": "01", "zjq": "2"}},
   ...
 ]
 ```
@@ -646,11 +646,11 @@ def build_simple_prompt(matches, game_type="胜负彩"):
 ## 输出格式（严格JSON数组，不要输出其他内容）:
 ```json
 [
-  {{"match": "01", "spf": "3", "analysis": "简要分析"}},
+  {{"match": "01", "spf": "3"}},
   ...
 ]
 ```
-其中 spf: "3"=胜, "1"=平, "0"=负。每场只输出match、spf、analysis三个字段，analysis写详细分析。"""
+其中 spf: "3"=胜, "1"=平, "0"=负。每场只输出match、spf两个字段。"""
 
     elif game_type == "半全场":
         return f"""你是专业足球预测分析师。请预测以下{len(matches)}场比赛的半全场结果。
@@ -661,11 +661,11 @@ def build_simple_prompt(matches, game_type="胜负彩"):
 ## 输出格式（严格JSON数组）:
 ```json
 [
-  {{"match": "01", "bqc": "31", "analysis": "简要分析"}},
+  {{"match": "01", "bqc": "31"}},
   ...
 ]
 ```
-其中 bqc: 两位数，第一位=半场结果(3胜/1平/0负)，第二位=全场结果(3胜/1平/0负)。每场只输出match、bqc、analysis三个字段，analysis写详细分析。"""
+其中 bqc: 两位数，第一位=半场结果(3胜/1平/0负)，第二位=全场结果(3胜/1平/0负)。每场只输出match、bqc两个字段。"""
 
     elif game_type == "进球彩":
         return f"""你是专业足球预测分析师。请预测以下{len(matches)}场比赛的进球数。
@@ -676,11 +676,11 @@ def build_simple_prompt(matches, game_type="胜负彩"):
 ## 输出格式（严格JSON数组）:
 ```json
 [
-  {{"match": "01", "zjq": "2", "analysis": "简要分析"}},
+  {{"match": "01", "zjq": "2"}},
   ...
 ]
 ```
-其中 zjq: 总进球数，"0"=0球, "1"=1球, "2"=2球, "3"=3球及以上。每场只输出match、zjq、analysis三个字段，analysis写详细分析。"""
+其中 zjq: 总进球数，"0"=0球, "1"=1球, "2"=2球, "3"=3球及以上。每场只输出match、zjq两个字段。"""
 
     return ""
 
