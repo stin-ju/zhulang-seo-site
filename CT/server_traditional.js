@@ -95,6 +95,33 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
     const predFieldMap = { 'sfc': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
     const responseData = { sfc: [], htf: [], jqc: [] };
 
+    // 预收集任9记录，用于胜负彩的is_r9标记
+    const ren9Map = new Map(); // key: issue, value: { ai_name: Set(match_numbers) }
+    for (const row of rows) {
+      if (row.game_type === '任9') {
+        const issue = row.issue;
+        const aiName = row.ai_name;
+        if (!ren9Map.has(issue)) {
+          ren9Map.set(issue, {});
+        }
+        const issueMap = ren9Map.get(issue);
+        if (!issueMap[aiName]) {
+          issueMap[aiName] = new Set();
+        }
+        // 解析predictions获取场次
+        let predsArr = row.predictions;
+        if (typeof predsArr === 'string') {
+          try { predsArr = JSON.parse(predsArr); } catch (e) { predsArr = []; }
+        }
+        if (Array.isArray(predsArr)) {
+          predsArr.forEach(p => {
+            const matchNum = String(p.match).replace(/^0+/, '') || '0';
+            issueMap[aiName].add(matchNum);
+          });
+        }
+      }
+    }
+
     for (const row of rows) {
       const frontendKey = typeMap[row.game_type];
       if (!frontendKey) continue;
@@ -146,6 +173,14 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
             return pMatch === matchNumStripped;
           });
           if (pred) prediction = pred[predField] !== undefined ? pred[predField] : null;
+        }
+
+        // 从ren9Map补充任9数据（如果当前row的ren9为空，则从任9记录中查找）
+        if (frontendKey === 'sfc' && ren9Set.size === 0) {
+          const issueRen9 = ren9Map.get(row.issue);
+          if (issueRen9 && issueRen9[row.ai_name]) {
+            ren9Set = issueRen9[row.ai_name];
+          }
         }
 
         // 判断该场是否在任9推荐中
