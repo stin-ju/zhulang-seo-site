@@ -419,12 +419,21 @@ def call_ai_api(ai_name, prompt, timeout=120):
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": config["model"],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 4096,
-    }
+    # 文心API使用max_completion_tokens，范围[1, 2048]
+    if ai_name == "文心":
+        payload = {
+            "model": config["model"],
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_completion_tokens": 2048,
+        }
+    else:
+        payload = {
+            "model": config["model"],
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_tokens": 4096,
+        }
 
     try:
         resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
