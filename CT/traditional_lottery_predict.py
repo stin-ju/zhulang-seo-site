@@ -627,6 +627,63 @@ def save_predictions(issue, game_type, matches, ai_name, predictions):
     conn.close()
 
 
+
+
+def build_simple_prompt(matches, game_type="胜负彩"):
+    """构建简化prompt（不含intelligence字段），用于非扣子AI"""
+    match_lines = []
+    for m in matches:
+        match_time = m.get('time', m.get('date', ''))
+        match_lines.append(f"  {m['num']}. [{m['league']}] {m['home']} vs {m['away']} ({match_time})")
+    match_text = "\n".join(match_lines)
+
+    if game_type == "胜负彩":
+        return f"""你是专业足球预测分析师。请预测以下{len(matches)}场胜负彩比赛的胜平负结果。
+
+## 比赛列表
+{match_text}
+
+## 输出格式（严格JSON数组，不要输出其他内容）:
+```json
+[
+  {{"match": "01", "spf": "3", "analysis": "简要分析（30字以内）"}},
+  ...
+]
+```
+其中 spf: "3"=胜, "1"=平, "0"=负。每场只输出match、spf、analysis三个字段。"""
+
+    elif game_type == "半全场":
+        return f"""你是专业足球预测分析师。请预测以下{len(matches)}场比赛的半全场结果。
+
+## 比赛列表
+{match_text}
+
+## 输出格式（严格JSON数组）:
+```json
+[
+  {{"match": "01", "bqc": "31", "analysis": "简要分析（30字以内）"}},
+  ...
+]
+```
+其中 bqc: 两位数，第一位=半场结果(3胜/1平/0负)，第二位=全场结果(3胜/1平/0负)。每场只输出match、bqc、analysis三个字段。"""
+
+    elif game_type == "进球彩":
+        return f"""你是专业足球预测分析师。请预测以下{len(matches)}场比赛的进球数。
+
+## 比赛列表
+{match_text}
+
+## 输出格式（严格JSON数组）:
+```json
+[
+  {{"match": "01", "zjq": "2", "analysis": "简要分析（30字以内）"}},
+  ...
+]
+```
+其中 zjq: 总进球数，"0"=0球, "1"=1球, "2"=2球, "3"=3球及以上。每场只输出match、zjq、analysis三个字段。"""
+
+    return ""
+
 # ============ 情报库函数 ============
 
 def save_ct_intelligence(issue, match_num, match_data, intelligence_json):
@@ -769,11 +826,12 @@ def predict_issue(issue_data, game_types, force=False):
             else:
                 print("无响应")
         
-        # 构建带情报的prompt给其他AI
+        # 构建带情报的简化prompt给其他AI（不需要intelligence字段）
         intel_text = format_ct_intelligence_for_prompt(matches, issue)
-        prompt = base_prompt + intel_text if intel_text else base_prompt
+        simple_base = build_simple_prompt(matches, game_type)
+        prompt = simple_base + intel_text if intel_text else simple_base
         if intel_text:
-            print(f"  [情报库] 情报已注入其他AI的prompt")
+            print(f"  [情报库] 情报已注入其他AI的prompt（简化版）")
 
         for ai_name in AI_NAMES:
             if ai_name in existing:
