@@ -543,10 +543,19 @@ const server = http.createServer(async (req, res) => {
       const sport = parsedUrl.searchParams.get('sport'); // null means all sports
       const includePredictions = parsedUrl.searchParams.get('include_predictions') === 'true';
 
+      const days = parseInt(parsedUrl.searchParams.get('days')) || 30;
       let query = `SELECT * FROM matches`;
       const params = [];
       let paramIdx = 1;
       let hasWhere = false;
+
+      // Default: only return recent N days to avoid massive payloads
+      if (!date) {
+        query += ` WHERE (metadata->>'match_time')::date >= CURRENT_DATE - $${paramIdx}::integer`;
+        params.push(days);
+        paramIdx++;
+        hasWhere = true;
+      }
 
       if (sport) {
         query += ` WHERE sport_type = $${paramIdx}`;
@@ -678,15 +687,17 @@ const server = http.createServer(async (req, res) => {
     // ======== GET /api/predictions ========
     if (pathname === '/api/predictions' && req.method === 'GET') {
       const sport = parsedUrl.searchParams.get('sport') || 'football';
+      const days = parseInt(parsedUrl.searchParams.get('days')) || 30;
 
-      // Get all predictions joined with matches for sport_type
+      // Get predictions joined with matches, only recent N days
       const { rows } = await pgPool.query(
         `SELECT p.*, m.sport_type, m.metadata->>'match_time' as match_time
          FROM predictions p
          JOIN matches m ON m.id = p.match_id
          WHERE m.sport_type = $1
+           AND (m.metadata->>'match_time')::date >= CURRENT_DATE - $2::integer
          ORDER BY p.id DESC`,
-        [sport]
+        [sport, days]
       );
 
       // Build match map for normalization
