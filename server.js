@@ -558,10 +558,14 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (sport) {
-        query += ` WHERE sport_type = $${paramIdx}`;
+        if (hasWhere) {
+          query += ` AND sport_type = $${paramIdx}`;
+        } else {
+          query += ` WHERE sport_type = $${paramIdx}`;
+          hasWhere = true;
+        }
         params.push(sport);
         paramIdx++;
-        hasWhere = true;
       }
 
       if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
