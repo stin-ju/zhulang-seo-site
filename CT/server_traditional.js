@@ -185,13 +185,14 @@ app.get('/api/traditional-lottery/latest', async (req, res) => {
       SELECT 
         game_type,
         ai_name,
+        issue,
         predictions,
         matches_info,
         created_at
       FROM traditional_predictions
       WHERE game_type IN ('胜负彩', '半全场', '进球彩', '任9')
-      ORDER BY created_at DESC
-      LIMIT 7
+        AND issue = (SELECT MAX(issue) FROM traditional_predictions WHERE issue ~ '^[0-9]+$')
+      ORDER BY game_type, ai_name
     `);
 
     const latest = result.rows.map(row => ({
