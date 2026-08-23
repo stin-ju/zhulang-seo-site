@@ -89,8 +89,8 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
     const result = await pool.query(query, params);
     const rows = result.rows;
 
-    // game_type 到前端key的映射
-    const typeMap = { '胜负彩': 'sfc', '任9': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
+    // game_type 到前端key的映射（任9不单独映射，作为胜负彩的标记）
+    const typeMap = { '胜负彩': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
     // 前端key到预测字段的映射
     const predFieldMap = { 'sfc': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
     const responseData = { sfc: [], htf: [], jqc: [] };
