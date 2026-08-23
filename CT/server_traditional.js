@@ -195,6 +195,86 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
       }
     }
 
+    // 预收集所有任9记录的推荐场次
+    const ren9Map = new Map();
+    for (const row of rows) {
+      if (row.game_type !== '任9') continue;
+      const issue = row.issue;
+      if (!ren9Map.has(issue)) ren9Map.set(issue, new Map());
+      const aiMap = ren9Map.get(issue);
+      if (!aiMap.has(row.ai_name)) aiMap.set(row.ai_name, new Set());
+      const matchSet = aiMap.get(row.ai_name);
+      let preds = row.predictions;
+      if (typeof preds === 'string') {
+        try { preds = JSON.parse(preds); } catch(e) { preds = []; }
+      }
+      if (Array.isArray(preds)) {
+        preds.forEach(p => {
+          if (p.match) matchSet.add(String(p.match).replace(/^0+/, '') || '0');
+        });
+      }
+    }
+
+    // 预收集所有任9记录的推荐场次
+    const ren9Map = new Map();
+    for (const row of rows) {
+      if (row.game_type !== '任9') continue;
+      const issue = row.issue;
+      if (!ren9Map.has(issue)) ren9Map.set(issue, new Map());
+      const aiMap = ren9Map.get(issue);
+      if (!aiMap.has(row.ai_name)) aiMap.set(row.ai_name, new Set());
+      const matchSet = aiMap.get(row.ai_name);
+      let preds = row.predictions;
+      if (typeof preds === 'string') {
+        try { preds = JSON.parse(preds); } catch(e) { preds = []; }
+      }
+      if (Array.isArray(preds)) {
+        preds.forEach(p => {
+          if (p.match) matchSet.add(String(p.match).replace(/^0+/, '') || '0');
+        });
+      }
+    }
+
+    // 预收集所有任9记录的推荐场次
+    const ren9Map = new Map();
+    for (const row of rows) {
+      if (row.game_type !== '任9') continue;
+      const issue = row.issue;
+      if (!ren9Map.has(issue)) ren9Map.set(issue, new Map());
+      const aiMap = ren9Map.get(issue);
+      if (!aiMap.has(row.ai_name)) aiMap.set(row.ai_name, new Set());
+      const matchSet = aiMap.get(row.ai_name);
+      let preds = row.predictions;
+      if (typeof preds === 'string') {
+        try { preds = JSON.parse(preds); } catch(e) { preds = []; }
+      }
+      if (Array.isArray(preds)) {
+        preds.forEach(p => {
+          if (p.match) matchSet.add(String(p.match).replace(/^0+/, '') || '0');
+        });
+      }
+    }
+
+    // 预收集所有任9记录的推荐场次
+    const ren9Map = new Map();
+    for (const row of rows) {
+      if (row.game_type !== '任9') continue;
+      const issue = row.issue;
+      if (!ren9Map.has(issue)) ren9Map.set(issue, new Map());
+      const aiMap = ren9Map.get(issue);
+      if (!aiMap.has(row.ai_name)) aiMap.set(row.ai_name, new Set());
+      const matchSet = aiMap.get(row.ai_name);
+      let preds = row.predictions;
+      if (typeof preds === 'string') {
+        try { preds = JSON.parse(preds); } catch(e) { preds = []; }
+      }
+      if (Array.isArray(preds)) {
+        preds.forEach(p => {
+          if (p.match) matchSet.add(String(p.match).replace(/^0+/, '') || '0');
+        });
+      }
+    }
+
     // 预收集任9记录，用于胜负彩的is_r9标记
     const ren9Map = new Map(); // key: issue, value: { ai_name: Set(match_numbers) }
     for (const row of rows) {
@@ -309,6 +389,30 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
           }
         }
                 if (ren9Set.size === 0 && ren9Map.has(issue)) {
+          const aiRen9Map = ren9Map.get(issue);
+          if (aiRen9Map && aiRen9Map.has(row.ai_name)) {
+            aiRen9Map.get(row.ai_name).forEach(n => ren9Set.add(n));
+          }
+        }
+        if (ren9Set.size === 0 && ren9Map.has(issue)) {
+          const aiRen9Map = ren9Map.get(issue);
+          if (aiRen9Map && aiRen9Map.has(row.ai_name)) {
+            aiRen9Map.get(row.ai_name).forEach(n => ren9Set.add(n));
+          }
+        }
+        if (ren9Set.size === 0 && ren9Map.has(issue)) {
+          const aiRen9Map = ren9Map.get(issue);
+          if (aiRen9Map && aiRen9Map.has(row.ai_name)) {
+            aiRen9Map.get(row.ai_name).forEach(n => ren9Set.add(n));
+          }
+        }
+        if (ren9Set.size === 0 && ren9Map.has(issue)) {
+          const aiRen9Map = ren9Map.get(issue);
+          if (aiRen9Map && aiRen9Map.has(row.ai_name)) {
+            aiRen9Map.get(row.ai_name).forEach(n => ren9Set.add(n));
+          }
+        }
+        if (ren9Set.size === 0 && ren9Map.has(issue)) {
           const aiRen9Map = ren9Map.get(issue);
           if (aiRen9Map && aiRen9Map.has(row.ai_name)) {
             aiRen9Map.get(row.ai_name).forEach(n => ren9Set.add(n));
