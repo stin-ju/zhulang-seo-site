@@ -162,7 +162,7 @@ def _fetch_football_scores(date_str):
         print(f"[titan007] 足球请求失败: {e}", file=sys.stderr)
         return []
     all_matches = _parse_m_array(resp.text)
-    completed = [m for m in all_matches if m["status_code"] != 0]
+    completed = [m for m in all_matches if m["status_code"] == 4]
     print(f"[titan007] football {date_str}: {len(all_matches)}场, 完场{len(completed)}场", file=sys.stderr)
     return completed
 
