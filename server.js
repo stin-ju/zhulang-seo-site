@@ -551,7 +551,7 @@ const server = http.createServer(async (req, res) => {
 
       // Default: only return recent N days to avoid massive payloads
       if (!date) {
-        query += ` WHERE COALESCE(match_date, LEFT(metadata->>'match_time', 10))::date >= CURRENT_DATE - $${paramIdx}::integer`;
+        query += ` WHERE LEFT(COALESCE(metadata->>'match_date', metadata->>'match_time'), 10)::date >= CURRENT_DATE - $${paramIdx}::integer`;
         params.push(days);
         paramIdx++;
         hasWhere = true;
@@ -695,7 +695,7 @@ const server = http.createServer(async (req, res) => {
          FROM predictions p
          JOIN matches m ON m.id = p.match_id
          WHERE m.sport_type = $1
-           AND COALESCE(m.match_date, LEFT(m.metadata->>'match_time', 10))::date >= CURRENT_DATE - $2::integer
+           AND LEFT(COALESCE(m.metadata->>'match_date', m.metadata->>'match_time'), 10)::date >= CURRENT_DATE - $2::integer
          ORDER BY p.id DESC`,
         [sport, days]
       );
