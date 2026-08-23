@@ -501,17 +501,17 @@ def get_existing_predictions(issue, game_type):
 def generate_ren9(predictions):
     """根据预测结果生成任9推荐（选9场最有把握的）
     策略：优先选非平局场次（主胜/客胜更有把握），不足9场再用平局补齐
+    返回完整的预测字典列表
     """
-    non_draws = []  # 非平局场次 (spf=0或2)
+    non_draws = []  # 非平局场次 (spf=0或2或3)
     draws = []      # 平局场次 (spf=1)
     
     for p in predictions:
         spf = str(p.get('spf', ''))
-        match_num = str(p.get('match', '')).lstrip('0') or '0'
         if spf in ('0', '2', '3'):  # 客胜或主胜
-            non_draws.append(match_num)
+            non_draws.append(p)
         else:
-            draws.append(match_num)
+            draws.append(p)
     
     # 优先选非平局，不足9场用平局补齐
     ren9 = non_draws[:9]
