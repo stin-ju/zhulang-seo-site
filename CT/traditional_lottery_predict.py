@@ -227,7 +227,8 @@ def build_ct_prompt(matches, game_type="胜负彩"):
     """构建传统彩预测prompt"""
     match_lines = []
     for m in matches:
-        match_lines.append(f"  {m['num']}. [{m['league']}] {m['home']} vs {m['away']} ({m['date']})")
+        match_time = m.get('time', m.get('date', ''))
+        match_lines.append(f"  {m['num']}. [{m['league']}] {m['home']} vs {m['away']} ({match_time})")
 
     match_text = "\n".join(match_lines)
 
