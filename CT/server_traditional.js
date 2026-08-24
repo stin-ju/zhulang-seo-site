@@ -148,7 +148,7 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         }
         if (Array.isArray(ren9Arr)) {
           ren9Arr.forEach(item => {
-    if (item && item.match) {
+    if (item && typeof item === 'object' && item.match) {
       ren9Set.add(String(item.match).replace(/^0+/, '') || '0');
     } else if (typeof item === 'string' || typeof item === 'number') {
       ren9Set.add(String(item).replace(/^0+/, '') || '0');
