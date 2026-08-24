@@ -406,11 +406,17 @@ async function loadData(){
 
 function buildMatches(items, issueFilter){
   const map = new Map();
+  const aiKeys = ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
   items.forEach(it => {
     if(issueFilter && it.issue !== issueFilter) return;
     const mid = it.match_id;
     if(!map.has(mid)){
       const num = parseInt(mid.split("_")[1]) || 0;
+      // 从第一个AI的预测中获取is_r9
+      let isR9 = false;
+      for(const ai of aiKeys){
+        if(it[ai] && it[ai].is_r9 === true){ isR9 = true; break; }
+      }
       map.set(mid, {
         match_id: mid,
         num: num,
@@ -418,7 +424,7 @@ function buildMatches(items, issueFilter){
         away: it.away_team,
         league: it.league,
         time: it.match_time,
-        is_r9: it.is_r9 || false
+        is_r9: isR9
       });
     }
   });
@@ -462,20 +468,25 @@ function buildMatchesAll(items, maxMatches){
 
 function buildPreds(items, keyFn, issueFilter){
   const preds = {};
+  const aiKeys = ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
   
   items.forEach(it => {
     if(issueFilter && it.issue !== issueFilter) return;
-    if(it.ai_name === "system") return;
     const key = keyFn(it.match_id);
     if(!preds[key]) preds[key] = {};
-    if(it.prediction) {
-      preds[key][it.ai_name] = it.prediction;
-      // 只有实际有任9推荐数据时才记录
-      if(it.is_r9 === true) {
-        if(!preds[key]._r9) preds[key]._r9 = {};
-        preds[key]._r9[it.ai_name] = true;
+    
+    // 遍历所有AI的预测
+    aiKeys.forEach(aiName => {
+      const aiData = it[aiName];
+      if(aiData && aiData.prediction !== undefined && aiData.prediction !== null) {
+        preds[key][aiName] = aiData.prediction;
+        // 只有实际有任9推荐数据时才记录
+        if(aiData.is_r9 === true) {
+          if(!preds[key]._r9) preds[key]._r9 = {};
+          preds[key]._r9[aiName] = true;
+        }
       }
-    }
+    });
   });
   return preds;
 }
@@ -483,19 +494,25 @@ function buildPreds(items, keyFn, issueFilter){
 // 不按期号过滤，全部返回
 function buildPredsAll(items, keyFn){
   const preds = {};
+  const aiKeys = ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
+  
   items.forEach(it => {
-    if(it.ai_name === "system") return;
     const key = it.issue + "_" + keyFn(it.match_id);
     if(!preds[key]) preds[key] = {};
-    if(it.prediction) {
-      preds[key][it.ai_name] = it.prediction;
-    }
+    
+    // 遍历所有AI的预测
+    aiKeys.forEach(aiName => {
+      const aiData = it[aiName];
+      if(aiData && aiData.prediction !== undefined && aiData.prediction !== null) {
+        preds[key][aiName] = aiData.prediction;
+      }
+    });
   });
   return preds;
 }
 
 function uniqueAIs(items){
-  // 固定显示7个AI，没有数据显示"暂无"
+  // 固定显示7个AI（新数据结构下不需要从items中提取）
   return ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
 }
 
