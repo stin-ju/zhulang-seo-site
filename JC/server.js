@@ -1366,20 +1366,31 @@ async function triggerMatchSettle(matchId) {
 
 async function initializeSettleTimers() {
   try {
-    // 查询所有未结算的比赛
+    // 只查询未来24小时内需要结算的足球比赛（排除CT比赛，CT有独立结算逻辑）
+    const now = new Date();
+    const future24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    
     const result = await pgPool.query(`
       SELECT id, metadata->>'match_time' as match_time
       FROM matches
-      WHERE (metadata->>'status' != '已取消' OR status != '已取消')
+      WHERE id NOT LIKE 'CT%'
+        AND (metadata->>'status' != '已取消' OR status != '已取消')
         AND (metadata->>'selling_status' IS DISTINCT FROM 'settled')
         AND (metadata->>'match_time') IS NOT NULL
+        AND (metadata->>'match_time') ~ '^\d{4}-\d{2}-\d{2}'
       ORDER BY (metadata->>'match_time') ASC
     `);
     
-    console.log(`[AutoSettle] 初始化定时器，找到 ${result.rows.length} 场未结算比赛`);
+    // 过滤出24小时内的比赛
+    const upcomingMatches = result.rows.filter(row => {
+      const matchTime = new Date(row.match_time);
+      return matchTime <= future24h && matchTime >= now;
+    });
+    
+    console.log(`[AutoSettle] 初始化定时器，找到 ${upcomingMatches.length} 场24小时内需结算的比赛（共 ${result.rows.length} 场未结算）`);
     
     // 使用 setImmediate 避免阻塞事件循环
-    for (const row of result.rows) {
+    for (const row of upcomingMatches) {
       const matchId = row.id;
       const matchTime = row.match_time;
       if (matchTime) {
