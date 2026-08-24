@@ -216,6 +216,11 @@ a:hover{text-decoration:underline}
   .bet-item b{font-size:14px}
   .bet-sep{display:none}
 }
+
+/* 半全场组合码样式 */
+.col-bqc { padding: 2px 3px; text-align: center; background: rgba(20,20,40,0.5); }
+.bqc-opt { display: inline-block; font-size: 10px; color: #778; background: #1a1a30; border: 1px solid #2a2a50; border-radius: 3px; padding: 2px 4px; }
+.bqc-val { display: inline-block; padding: 3px 8px; background: rgba(90,184,240,0.15); border: 1px solid #5ab8f0; border-radius: 4px; color: #5ab8f0; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
 </style>
 </head>
 <body>
@@ -575,34 +580,33 @@ function renderHTF(){
   }
   const allPreds = aiPreds.htf || {};
   const ans = aiNames.htf;
+  const combos = ['33','31','30','13','11','10','03','01','00'];
+  const comboLabels = ['胜胜','胜平','胜负','平胜','平平','平负','负胜','负平','负负'];
 
   const tbl = document.getElementById("t-htf");
-  // thead
+  // thead: 单行表头
   let th1 = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th>";
-  th1 += `<th style='font-size:11px;color:#666'>半/全</th>`;
-  th1 += `<th>胜(3)</th><th>平(1)</th><th>负(0)</th>`;
+  th1 += `<th style='font-size:10px;color:#666' colspan="9">半全场 (半场/全场)</th>`;
   ans.forEach(n => { th1 += `<th>${shortAI(n)}</th>`; });
   th1 += "</tr>";
-  tbl.querySelector("thead").innerHTML = th1;
+  // 第二行：9个组合选项标签
+  let th2 = "<tr><th></th><th></th><th></th><th></th><th></th><th></th>";
+  combos.forEach((c,i) => { th2 += `<th style="font-size:10px;padding:2px;color:#99a;background:#12122a">${comboLabels[i]}<br><small style="color:#667">${c}</small></th>`; });
+  ans.forEach(n => { th2 += "<th></th>"; });
+  th2 += "</tr>";
+  tbl.querySelector("thead").innerHTML = th1 + th2;
 
   let html = "";
-  // 按期号分组渲染
   const sortedIssues = Object.keys(groups).sort().reverse().slice(0, 3);
   sortedIssues.forEach((issue, idx) => {
     const ms = groups[issue];
     if(!ms || !ms.length) return;
-    // 期号分组标题
     html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${10+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
     
     ms.forEach(m => {
-      const keyH = issue + "_htf_" + m.num + "_h";
-      const keyF = issue + "_htf_" + m.num + "_f";
-      const sH = sel.htf[keyH] || new Set();
-      const sF = sel.htf[keyF] || new Set();
       const predKey = issue + "_htf_" + m.num;
       const p = allPreds[predKey] || {};
       
-      // 第一行：半场
       html += `<tr>`;
       html += `<td class="col-num">${m.num}</td>`;
       html += `<td class="col-league">${m.league}</td>`;
@@ -610,33 +614,21 @@ function renderHTF(){
       html += `<td class="col-home">${m.home}</td>`;
       html += `<td class="col-vs">VS</td>`;
       html += `<td class="col-away">${m.away}</td>`;
-      html += `<td style="font-size:11px;color:#888;text-align:center">半</td>`;
-      ["3","1","0"].forEach((v,i) => {
-        const cls = ["w","d","l"][i];
-        html += `<td class="col-htf"><span class="ob ${cls} ${sH.has(v)?"sel":""}" onclick="togOpt('htf','${keyH}','${v}',this)">${v}</span></td>`;
-      });
-      // AI列：拆分半全场预测
-      ans.forEach(n => {
-        const v = p[n] || "";
-        const half = v.length >= 2 ? v[0] : ""; // 第一个字符是半场
-        html += `<td class="col-ai${half?" has":""}">${half||"暂无"}</td>`;
-      });
-      html += "</tr>";
       
-      // 第二行：全场
-      html += `<tr>`;
-      html += `<td style="font-size:11px;color:#888;text-align:center">全</td>`;
-      ["3","1","0"].forEach((v,i) => {
-        const cls = ["w","d","l"][i];
-        html += `<td class="col-htf"><span class="ob ${cls} ${sF.has(v)?"sel":""}" onclick="togOpt('htf','${keyF}','${v}',this)">${v}</span></td>`;
+      // 9个组合选项（展示用）
+      combos.forEach(c => {
+        html += `<td class="col-bqc"><span class="bqc-opt">${c}</span></td>`;
       });
-      // AI列：全场预测
+      
+      // AI预测：直接显示2字符组合码
       ans.forEach(n => {
         const v = p[n] || "";
-        const full = v.length >= 2 ? v[1] : ""; // 第二个字符是全场
-        html += `<td class="col-ai${full?" has":""}">${full||"暂无"}</td>`;
+        const hasVal = v && v.length >= 2;
+        html += `<td class="col-ai${hasVal?' has':''}">`;
+        html += hasVal ? `<span class="bqc-val">${v}</span>` : '<span style="color:#556">-</span>';
+        html += `</td>`;
       });
-      html += "</tr>";
+      html += `</tr>`;
     });
   });
   tbl.querySelector("tbody").innerHTML = html;
