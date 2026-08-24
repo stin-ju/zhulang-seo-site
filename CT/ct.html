@@ -221,6 +221,11 @@ a:hover{text-decoration:underline}
 .col-bqc { padding: 2px 3px; text-align: center; background: rgba(20,20,40,0.5); }
 .bqc-opt { display: inline-block; font-size: 10px; color: #778; background: #1a1a30; border: 1px solid #2a2a50; border-radius: 3px; padding: 2px 4px; }
 .bqc-val { display: inline-block; padding: 3px 8px; background: rgba(90,184,240,0.15); border: 1px solid #5ab8f0; border-radius: 4px; color: #5ab8f0; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
+
+/* 进球彩预测值样式 */
+.jqc-val { display: inline-block; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 12px; min-width: 20px; text-align: center; }
+.jqc-val.home { background: rgba(76,175,80,0.15); border: 1px solid #4caf50; color: #4caf50; }
+.jqc-val.away { background: rgba(244,67,54,0.15); border: 1px solid #f44336; color: #f44336; }
 </style>
 </head>
 <body>
@@ -641,66 +646,75 @@ function renderJQC(){
   const groups = matches.jqc;
   if(!groups || Object.keys(groups).length === 0){
     const tbl = document.getElementById("t-jqc");
-    if(tbl) tbl.querySelector("tbody").innerHTML = '<tr><td colspan="18" style="padding:30px;color:#556">暂无赛程数据，请先抓取赛程</td></tr>';
+    if(tbl) tbl.querySelector("tbody").innerHTML = '<tr><td colspan="15" style="padding:30px;color:#556">暂无赛程数据，请先抓取赛程</td></tr>';
     return;
   }
   const allPreds = aiPreds.jqc || {};
   const ans = aiNames.jqc;
+  const GOAL = ['0','1','2','3+'];
 
   const tbl = document.getElementById("t-jqc");
-  // thead - 两行格式：主/客 + 4个进球按钮
+  // thead
   let th1 = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th>";
-  th1 += `<th style='font-size:11px;color:#666'>主/客</th>`;
-  th1 += `<th>0</th><th>1</th><th>2</th><th>3+</th>`;
+  th1 += `<th style='font-size:10px;color:#666' colspan="4">进球数 (0/1/2/3+)</th>`;
   ans.forEach(n => { th1 += `<th>${shortAI(n)}</th>`; });
   th1 += "</tr>";
   tbl.querySelector("thead").innerHTML = th1;
 
   let html = "";
-  // 按期号分组渲染
   const sortedIssues = Object.keys(groups).sort().reverse().slice(0, 3);
   sortedIssues.forEach((issue, idx) => {
     const ms = groups[issue];
     if(!ms || !ms.length) return;
-    // 期号分组标题
-    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${11+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
+    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${9+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
     
     ms.forEach(m => {
-      const kH = issue + "_jqc_" + m.num + "_h";
-      const kA = issue + "_jqc_" + m.num + "_a";
-      const sH = sel.jqc[kH] || new Set();
-      const sA = sel.jqc[kA] || new Set();
       const predKey = issue + "_jqc_" + m.num;
       const p = allPreds[predKey] || {};
       
-      // 第一行：主队进球
+      // 主队行
       html += `<tr>`;
-      html += `<td class="col-num">${m.num}</td>`;
-      html += `<td class="col-league">${m.league}</td>`;
-      html += `<td class="col-time">${fmtDate(m.time)}</td>`;
-      html += `<td class="col-home">${m.home}</td>`;
-      html += `<td class="col-vs">VS</td>`;
-      html += `<td class="col-away">${m.away}</td>`;
+      html += `<td class="col-num" rowspan="2">${m.num}</td>`;
+      html += `<td class="col-league" rowspan="2">${m.league}</td>`;
+      html += `<td class="col-time" rowspan="2">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-home" rowspan="2">${m.home}</td>`;
+      html += `<td class="col-vs" rowspan="2">VS</td>`;
+      html += `<td class="col-away" rowspan="2">${m.away}</td>`;
       html += `<td style="font-size:11px;color:#888;text-align:center">主</td>`;
-      GOAL_OPTS.forEach(g => {
-        html += `<td class="col-htf"><span class="ob gs ${sH.has(g)?"sel":""}" onclick="togOpt('jqc','${kH}','${g}',this)">${g}</span></td>`;
+      GOAL.forEach(g => {
+        html += `<td class="col-htf"><span class="ob gs">${g}</span></td>`;
       });
-      // AI列：显示总进球预测
+      // AI预测：主队进球
       ans.forEach(n => {
-        const v = p[n] || "";
-        html += `<td class="col-ai${v?" has":""}">${v||"暂无"}</td>`;
+        const pred = p[n] || {};
+        let v = '';
+        if(typeof pred === 'object' && pred !== null) {
+          v = pred.zjq_home || pred.zjq || '';
+        } else {
+          v = pred || '';
+        }
+        html += `<td class="col-ai${v?' has':''}">`;
+        html += v ? `<span class="jqc-val home">${v}</span>` : '<span style="color:#556">-</span>';
+        html += `</td>`;
       });
       html += `</tr>`;
       
-      // 第二行：客队进球
+      // 客队行
       html += `<tr>`;
       html += `<td style="font-size:11px;color:#888;text-align:center">客</td>`;
-      GOAL_OPTS.forEach(g => {
-        html += `<td class="col-htf"><span class="ob gs ${sA.has(g)?"sel":""}" onclick="togOpt('jqc','${kA}','${g}',this)">${g}</span></td>`;
+      GOAL.forEach(g => {
+        html += `<td class="col-htf"><span class="ob gs">${g}</span></td>`;
       });
-      // AI列：客行不重复显示预测
+      // AI预测：客队进球
       ans.forEach(n => {
-        html += `<td class="col-ai" style="color:#445">—</td>`;
+        const pred = p[n] || {};
+        let v = '';
+        if(typeof pred === 'object' && pred !== null) {
+          v = pred.zjq_away || '';
+        }
+        html += `<td class="col-ai${v?' has':''}">`;
+        html += v ? `<span class="jqc-val away">${v}</span>` : '<span style="color:#556">-</span>';
+        html += `</td>`;
       });
       html += `</tr>`;
     });
