@@ -196,9 +196,10 @@ def parse_prediction(raw_text, ai_name):
     except: goals = 2
     score = data.get("score", "1-1")
     if not re.match(r'\d+-\d+', str(score)): score = "1-1"
-    half_full = data.get("half_full", "平平")
+    half_full = data.get("half_full")
     valid_hf = ["胜胜","胜平","胜负","平胜","平平","平负","负胜","负平","负负"]
-    if half_full not in valid_hf: half_full = "平平"
+    if half_full is None or half_full not in valid_hf:
+        half_full = "平平"
     confidence = data.get("confidence", 0.5)
     try: confidence = max(0.3, min(0.95, float(confidence)))
     except: confidence = 0.5
