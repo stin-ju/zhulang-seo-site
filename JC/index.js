@@ -341,13 +341,12 @@ function renderMatchCard(match) {
     // 联赛名称：直接放在time文字前
     const leagueName = (match.metadata && match.metadata.league) || '';
     const leaguePrefix = leagueName ? `[${esc(leagueName)}] ` : '';
-    // 让球显示：只在有体彩让球赔率时才显示
+    // 让球显示：只在有体彩让球赔率时才显示，不做四舍五入
     let handicapDisplay = '';
-    if (match.handicap_win_odds && match.handicap_lose_odds && match.handicap != null && match.handicap !== '') {
+    if (match.handicap_win_odds && match.handicap != null && match.handicap !== '') {
       const hVal = parseFloat(match.handicap);
-      if (!isNaN(hVal) && Number.isInteger(hVal)) {
-        const sign = hVal > 0 ? '+' : '';
-        handicapDisplay = sign + hVal;
+      if (!isNaN(hVal)) {
+        handicapDisplay = (hVal > 0 ? '+' : '') + hVal;
       }
     }
     return `
