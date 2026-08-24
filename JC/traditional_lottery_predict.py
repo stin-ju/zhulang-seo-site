@@ -124,7 +124,7 @@ PROMPTS = {
 ## 输出格式
 输出JSON数组：
 [{{"match": "01", "zjq_home": "1", "zjq_away": "2", "analysis": "..."}}, ...]
-必须包含所有14场比赛。"""
+必须包含所有14场比赛。""",
 
     "任9": """你是专业传统足彩分析师，请从以下14场比赛中选出9场最有把握的比赛，生成任9预测。
 
@@ -575,6 +575,48 @@ async def call_ai_api(session, ai_name, prompt, sem):
             return None
 
 
+def normalize_bqc(value):
+    """标准化半全场bqc字段，将混合格式转为两位数字代码
+    
+    混元可能返回 "1平"、"0负"、"3胜" 等混合格式，需要转为 "11"、"00"、"33"
+    
+    规则：第一位是半场结果(3=胜,1=平,0=负)，第二位是全场结果(3=胜,1=平,0=负)
+    """
+    if not value:
+        return value
+    
+    value = str(value).strip()
+    
+    # 如果已经是两位数字，直接返回
+    if re.match(r'^[013][013]$', value):
+        return value
+    
+    # 结果映射
+    result_map = {'胜': '3', '平': '1', '负': '0'}
+    
+    # 处理混合格式：如 "1平"、"3胜"、"0负"
+    match = re.match(r'^([013])([胜平负])$', value)
+    if match:
+        first = match.group(1)
+        second_char = match.group(2)
+        second = result_map.get(second_char, '')
+        if second:
+            return first + second
+    
+    # 处理中文格式：如 "平胜"、"平平"、"负负"
+    match = re.match(r'^([胜平负])([胜平负])$', value)
+    if match:
+        first_char = match.group(1)
+        second_char = match.group(2)
+        first = result_map.get(first_char, '')
+        second = result_map.get(second_char, '')
+        if first and second:
+            return first + second
+    
+    # 无法识别，返回原值
+    return value
+
+
 def parse_prediction(content, game_type, match_count):
     """解析AI返回的预测"""
     if not content:
@@ -692,6 +734,12 @@ async def predict_for_game_type(game_type, matches, force=False):
         if not predictions:
             print(f"  [WARN] {ai_name} 解析失败")
             continue
+        
+        # 半全场维度：标准化bqc字段（修复混元返回的混合格式如"1平"、"0负"）
+        if game_type == "半全场" and predictions:
+            for pred in predictions:
+                if 'bqc' in pred:
+                    pred['bqc'] = normalize_bqc(pred['bqc'])
         
         # 任9维度：提取推荐的场次号列表
         ren9_list = None
