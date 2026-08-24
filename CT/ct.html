@@ -437,7 +437,7 @@ function buildMatchesAll(items, maxMatches){
   const groups = {};
   const issueSet = new Set();
   items.forEach(it => { if(it.issue) issueSet.add(it.issue); });
-  const sortedIssues = [...issueSet].sort().reverse().slice(0, 3); // 最近3期
+  const sortedIssues = [...issueSet].sort().reverse().slice(0, 1); // 只显示最新1期
   
   sortedIssues.forEach(issue => {
     const map = new Map();
