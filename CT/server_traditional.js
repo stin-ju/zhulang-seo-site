@@ -172,7 +172,17 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
             const pMatch = String(p.match).replace(/^0+/, '') || '0';
             return pMatch === matchNumStripped;
           });
-          if (pred) prediction = pred[predField] !== undefined ? pred[predField] : null;
+          if (pred) {
+            // JQC特殊处理：返回完整对象（包含zjq_home和zjq_away）
+            if (frontendKey === 'jqc') {
+              prediction = {
+                zjq_home: pred.zjq_home || pred.zjq || '',
+                zjq_away: pred.zjq_away || ''
+              };
+            } else {
+              prediction = pred[predField] !== undefined ? pred[predField] : null;
+            }
+          }
         }
 
         // 判断该场是否在任9推荐中
