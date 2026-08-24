@@ -341,14 +341,14 @@ function renderMatchCard(match) {
     // 联赛名称：直接放在time文字前
     const leagueName = (match.metadata && match.metadata.league) || '';
     const leaguePrefix = leagueName ? `[${esc(leagueName)}] ` : '';
-    // 让球格式化：主让显示负号，主受让显示正号（-1/+1格式）
-    const handicapVal = parseFloat(match.handicap);
+    // 让球显示：只在有体彩让球赔率时才显示
     let handicapDisplay = '';
-    if (!isNaN(handicapVal) && handicapVal !== 0) {
-        const sign = handicapVal < 0 ? '-' : '+';
-        const absVal = Math.abs(handicapVal);
-        const absStr = absVal % 1 === 0 ? absVal.toString() : absVal.toFixed(1);
-        handicapDisplay = sign + absStr;
+    if (match.handicap_win_odds && match.handicap_lose_odds && match.handicap != null && match.handicap !== '') {
+      const hVal = parseFloat(match.handicap);
+      if (!isNaN(hVal) && Number.isInteger(hVal)) {
+        const sign = hVal > 0 ? '+' : '';
+        handicapDisplay = sign + hVal;
+      }
     }
     return `
         <div class="view-item match-card-clickable" data-match-id="${match.id}">
