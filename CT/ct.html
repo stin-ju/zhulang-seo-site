@@ -706,7 +706,8 @@ function renderJQC(){
         const pred = p[n] || {};
         let v = '';
         if(typeof pred === 'object' && pred !== null) {
-          v = pred.zjq_home || pred.zjq || '';
+          // 只显示主队独立预测，如果没有则显示"-"（总进球数不应显示在单队列）
+          v = pred.zjq_home || '';
         } else {
           v = pred || '';
         }
