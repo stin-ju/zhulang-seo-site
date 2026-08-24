@@ -58,33 +58,36 @@ def get_matches_missing_ai(ai_name):
     } for r in rows]
 
 def build_prompt(match):
-    """构建足球预测prompt"""
+    """构建足球预测prompt - 对齐主预测脚本"""
     odds = match.get("odds", {})
     spf = odds.get("spf", {})
     hdc = odds.get("hdc", {})
     handicap = match.get("handicap", "未知")
     
-    prompt = f"""你是一位专业的足球分析师。请分析以下比赛并给出预测。
+    prompt = f"""你是一个专业的足球比赛预测分析师。请根据比赛信息做出预测。
 
-比赛信息：
-- 联赛：{match.get('league', '未知')}
-- 主队：{match['home_team']}
-- 客队：{match['away_team']}
-- 时间：{match.get('match_time', '未知')}
-- 让球盘口：{handicap}
-- 胜平负赔率：胜{spf.get('win','?')} / 平{spf.get('draw','?')} / 负{spf.get('lose','?')}
-- 让球赔率：让胜{hdc.get('win','?')} / 让平{hdc.get('draw','?')} / 让负{hdc.get('lose','?')}
+## 比赛信息
+- 联赛: {match.get('league', '未知')}
+- 主队: {match['home_team']}
+- 客队: {match['away_team']}
+- 比赛时间: {match.get('match_time', '未知')}
+- 让球: {handicap}
+- 胜平负赔率: 胜{spf.get('win','?')} / 平{spf.get('draw','?')} / 负{spf.get('lose','?')}
+- 让球赔率: 让胜{hdc.get('win','?')} / 让平{hdc.get('draw','?')} / 让负{hdc.get('lose','?')}
 
-请以JSON格式输出预测：
+## 请严格按以下JSON格式输出预测结果:
 {{
-    "spf": "胜/平/负",
-    "handicap_spf": "让胜/让平/让负",
-    "goals": 进球数(整数),
-    "score": "比分如2-1",
-    "half_full": "半全场如胜胜/平平/胜负等",
-    "confidence": 置信度(0.3-0.95),
-    "analysis": "简要分析"
+  "spf": "胜"或"平"或"负",
+  "handicap_spf": "让胜"或"让平"或"让负",
+  "score": "比分如2-1",
+  "goals": 总进球数(整数),
+  "half_full": "半全场(必填)",
+  "analysis": "50-100字的分析理由"
 }}
+
+## 重要：half_full字段必须填写，可选值为：
+胜胜/胜平/胜负/平胜/平平/平负/负胜/负平/负负
+
 只输出JSON，不要其他内容。"""
     return prompt
 
