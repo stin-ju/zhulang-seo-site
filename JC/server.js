@@ -107,12 +107,12 @@ function readBody(req) {
 
 function runPython(scriptName, args = []) {
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, 'JC', scriptName);
+    const scriptPath = path.join(__dirname, scriptName);
     const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
     const child = execFile('/usr/bin/python3', [scriptPath, ...args], {
-      cwd: path.join(__dirname, 'JC'),
+      cwd: __dirname,
       env,
       timeout: 300000,
       maxBuffer: 10 * 1024 * 1024
@@ -1141,9 +1141,9 @@ const server = http.createServer(async (req, res) => {
       
       console.log(`[Briefing] Triggering: date=${date}, type=${type}`);
       
-      const scriptPath = path.join(process.cwd(), 'JC', 'generate_brief.py');
+      const scriptPath = path.join(process.cwd(), 'generate_brief.py');
       execFile('/usr/bin/python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
-        cwd: path.join(process.cwd(), 'JC'),
+        cwd: process.cwd(),
         env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL }
       }, (error, stdout, stderr) => {
         if (error) {
@@ -1234,28 +1234,26 @@ const server = http.createServer(async (req, res) => {
   // ============ Static File Routes ============
   let urlPath = pathname;
   if (urlPath === '/') urlPath = '/index.html';
-  // URL别名：旧路径 → 新目录路径（文件已归类到JC/和CT/目录）
+  // URL别名（JC服务现在运行在JC/目录下，文件在同级目录）
   const URL_ALIASES = {
-    '/ix.html': '/JC/ix.html',
-    '/api.js': '/JC/api.js',
-    '/index.js': '/JC/index.js',
-    '/styles.css': '/JC/styles.css',
-    '/basketball.html': '/JC/basketball.html',
-    '/basketball.js': '/JC/basketball.js',
-    '/ai-analysis.html': '/JC/ai-analysis.html',
-    '/ai-analysis.js': '/JC/ai-analysis.js',
-    '/ai-hub.html': '/JC/ai-hub.html',
-    '/ia2.html': '/JC/ia2.html',
-    '/bb2.html': '/JC/bb2.html',
-    '/br2.html': '/JC/br2.html',
-    '/ca2.html': '/JC/ca2.html',
-    '/ca.html': '/JC/ca.html',
-    '/calculator.html': '/JC/calculator.html',
-    '/calculator.js': '/JC/calculator.js',
-    '/briefs.html': '/JC/briefs.html',
-    '/briefs.js': '/JC/briefs.js',
-    '/ct.html': '/CT/ct.html',
-    '/calculator_template.html': '/CT/calculator_template.html',
+    '/ix.html': '/ix.html',
+    '/api.js': '/api.js',
+    '/index.js': '/index.js',
+    '/styles.css': '/styles.css',
+    '/basketball.html': '/basketball.html',
+    '/basketball.js': '/basketball.js',
+    '/ai-analysis.html': '/ai-analysis.html',
+    '/ai-analysis.js': '/ai-analysis.js',
+    '/ai-hub.html': '/ai-hub.html',
+    '/ia2.html': '/ia2.html',
+    '/bb2.html': '/bb2.html',
+    '/br2.html': '/br2.html',
+    '/ca2.html': '/ca2.html',
+    '/ca.html': '/ca.html',
+    '/calculator.html': '/calculator.html',
+    '/calculator.js': '/calculator.js',
+    '/briefs.html': '/briefs.html',
+    '/briefs.js': '/briefs.js',
   };
   if (URL_ALIASES[urlPath]) urlPath = URL_ALIASES[urlPath];
 
@@ -1516,13 +1514,13 @@ async function runDailySettle() {
   // CT彩结算（使用CT目录下的脚本）
   try {
     console.log('[Schedule] 开始CT彩结算...');
-    const ctScriptPath = path.join(__dirname, 'CT', 'ct_auto_settle.py');
+    const ctScriptPath = path.join(__dirname, '..', 'CT', 'ct_auto_settle.py');
     const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
     const ctResult = await new Promise((resolve, reject) => {
       execFile('/usr/bin/python3', [ctScriptPath], {
-        cwd: path.join(__dirname, 'CT'),
+        cwd: path.join(__dirname, '..', 'CT'),
         env,
         timeout: 300000,
         maxBuffer: 10 * 1024 * 1024
@@ -1550,7 +1548,7 @@ async function runDailySettle() {
 // 每日数据备份 (凌晨2点)
 async function runDailyBackup() {
   const { execFile } = require('child_process');
-  const scriptPath = path.join(__dirname, 'scripts', 'daily_backup.py');
+  const scriptPath = path.join(__dirname, '..', 'scripts', 'daily_backup.py');
   const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
   if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
 
