@@ -91,8 +91,8 @@ def _parse_m_array(html):
             "home_team": home, "away_team": away,
             "home_team_trad": d.get(18, ""), "away_team_trad": d.get(21, ""),
             "home_team_official": d.get(19, ""), "away_team_official": d.get(22, ""),
-            "home_score": _safe_int(d.get(7)), "away_score": _safe_int(d.get(8)),
-            "home_half": _safe_int(d.get(11)), "away_half": _safe_int(d.get(12)),
+            "home_score": _safe_int(d.get(5)), "away_score": _safe_int(d.get(6)),
+            "home_half": _safe_int(d.get(7)), "away_half": _safe_int(d.get(8)),
             "match_time": d.get(1, "").strip(),
         })
     return results
