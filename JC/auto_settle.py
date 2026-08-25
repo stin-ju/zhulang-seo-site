@@ -162,7 +162,9 @@ def _fetch_football_scores(date_str):
         print(f"[titan007] 足球请求失败: {e}", file=sys.stderr)
         return []
     all_matches = _parse_m_array(resp.text)
-    completed = [m for m in all_matches if m["status_code"] == 4]
+    # 完场条件：状态码为4，或者状态码为-1但有比分数据
+    completed = [m for m in all_matches if m["status_code"] == 4 or 
+                 (m["status_code"] == -1 and m.get("home_score") is not None and m.get("away_score") is not None)]
     print(f"[titan007] football {date_str}: {len(all_matches)}场, 完场{len(completed)}场", file=sys.stderr)
     return completed
 
@@ -309,8 +311,32 @@ def fill_missing_scores(conn):
         match_id, sport_type, home_team, away_team, top_status, metadata = row
         md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
         # 即使之前标记了score_unavailable，如果已有比分则不跳过
+        # 但如果标记原因是 match_too_old，则永久跳过
         if md.get("score_unavailable") and not (md.get("home_score") and md.get("away_score")):
-            continue
+            reason = md.get("score_unavailable_reason", "")
+            if reason == "match_too_old":
+                continue  # 永久跳过太老的比赛
+            # 其他原因（no_titan_data, match_not_found, no_date）允许重试
+            # 但需要检查比赛是否在7天内
+            mt = md.get("match_time", "")
+            if mt:
+                try:
+                    if " " in mt:
+                        try:
+                            match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            match_dt = datetime.strptime(mt, "%Y-%m-%d %H:%M")
+                    else:
+                        date_str = _derive_date_from_id(match_id)
+                        if date_str:
+                            match_dt = datetime.strptime(f"{date_str} {mt}", "%Y-%m-%d %H:%M:%S")
+                        else:
+                            continue
+                    now = datetime.now()
+                    if (now - match_dt).days > 7:
+                        continue  # 超过7天的比赛不再重试
+                except (ValueError, TypeError):
+                    continue
 
         if top_status == '已完赛':
             # 已完赛但缺比分
