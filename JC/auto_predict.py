@@ -345,6 +345,30 @@ def insert_football_prediction(pred):
         "analysis": pred.get("analysis", ""),
         "sport_type": "football"
     })
+    
+    # 同时更新单独的足球列（upsert_prediction只更新prediction JSONB）
+    try:
+        execute_query("""
+            UPDATE predictions 
+            SET spf = %s,
+                handicap_spf = %s,
+                score = %s,
+                goals = %s,
+                half_full = %s,
+                raw_response = %s
+            WHERE match_id = %s AND ai_name = %s
+        """, (
+            pred.get("spf"),
+            pred.get("handicap_spf"),
+            pred.get("score"),
+            pred.get("goals"),
+            pred.get("half_full"),
+            json.dumps(prediction_json, ensure_ascii=False),
+            pred["match_id"],
+            pred["ai_name"]
+        ), fetch=False)
+    except Exception as e:
+        print(f"  [WARN] 更新足球顶层列失败: {e}")
 
 
 def normalize_basketball_fields(pred):
