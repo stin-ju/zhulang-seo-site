@@ -590,7 +590,9 @@ function computeDimStats(predictions, matchMap, activeAIs) {
             else if (diff >= 21 && diff <= 25) actualRange = "21-25";
             else if (diff >= 26) actualRange = "26+";
             
-            let predRange = (pred.score_diff_range || "").replace("21-25", "21+").replace("21+", "21+");
+            let predRange = (pred.score_diff_range || "")
+                .replace(/^(主|客)(胜|负)?/, '')  // 移除主/客/胜/负前缀
+                .replace("21-25", "21+").replace("21+", "21+");
             if (actualRange === "21-25") actualRange = "21+";
             
             if (actualRange === predRange) dimStats[ai].sdr_h++;

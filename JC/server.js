@@ -163,16 +163,20 @@ async function generateReport() {
 // ============ Data Normalization ============
 // Expand JSONB fields into flat fields for frontend compatibility
 
-// 统一胜分差格式为: 主胜1-5 / 主负1-5 / 客胜1-5 / 客负1-5
+// 统一胜分差格式为: 主胜1-5 / 客胜1-5 (统一使用"胜"表述)
 function normalizeScoreDiff(sdr) {
   if (!sdr || typeof sdr !== 'string') return sdr;
   sdr = sdr.trim();
   
-  // 已经是标准格式
-  if (/^(主|客)(胜|负)\d/.test(sdr)) return sdr;
+  // 已经是标准格式 (统一使用"胜")
+  if (/^(主|客)胜\d/.test(sdr)) return sdr;
+  
+  // 如果是旧格式(含"负")，转换为"胜"
+  if (/^(主|客)负\d/.test(sdr)) {
+    return sdr.replace(/负/, '胜');
+  }
   
   let side = '主';  // 默认主队
-  let result = '胜'; // 默认胜
   let range = sdr;
   
   // 提取主/客
@@ -182,14 +186,12 @@ function normalizeScoreDiff(sdr) {
     range = sdr.substring(1);
   }
   
-  // 提取胜/负（可能在开头或结尾）
+  // 提取胜/负（可能在开头或结尾）并移除
   const resultStart = range.match(/^(胜|负)/);
   const resultEnd = range.match(/(胜|负)$/);
   if (resultStart) {
-    result = resultStart[1];
     range = range.substring(1);
   } else if (resultEnd) {
-    result = resultEnd[1];
     range = range.substring(0, range.length - 1);
   }
   
@@ -197,7 +199,8 @@ function normalizeScoreDiff(sdr) {
   range = range.trim();
   if (!range) return sdr; // 无法解析，返回原值
   
-  return `${side}${result}${range}`;
+  // 统一使用"胜"表述
+  return `${side}胜${range}`;
 }
 
 function cleanAnalysis(text) {

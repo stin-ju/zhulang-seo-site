@@ -272,7 +272,7 @@ BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。根据比赛
   "win_loss": "胜"或"负",
   "handicap_win_loss": "让胜"或"让负",
   "total_points": "大"或"小",
-  "score_diff_range": "如主6-10胜或客1-5负",
+  "score_diff_range": "如主6-10胜或客1-5胜",
   "half_win_loss": "胜"或"负",
   "analysis": "50-100字分析理由"
 }}
@@ -281,7 +281,7 @@ BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。根据比赛
 ## 逻辑自洽规则:
 1. 让分↔胜分差：选"让胜"→胜分差应为"主x胜"且分差>盘口
 2. 让分↔胜负：选"让胜"→胜负应选"胜"
-3. 胜分差格式: 主1-5胜/主6-10胜/主11-15胜/主16-20胜/主21+胜/客1-5负/客6-10负/客11-15负/客16-20负/客21+负"""
+3. 胜分差格式: 主1-5胜/主6-10胜/主11-15胜/主16-20胜/主21+胜/客1-5胜/客6-10胜/客11-15胜/客16-20胜/客21+胜"""
 
 # ============ 数据库操作 ============
 
@@ -385,7 +385,7 @@ def normalize_basketball_fields(pred):
             if "主胜" in win_loss or win_loss == "胜":
                 normalized["score_diff_range"] = f"主{score_diff}胜"
             elif "客胜" in win_loss or win_loss == "负":
-                normalized["score_diff_range"] = f"客{score_diff}负"
+                normalized["score_diff_range"] = f"客{score_diff}胜"
             else:
                 normalized["score_diff_range"] = score_diff
         else:
@@ -1056,7 +1056,7 @@ def phase2_predict(sport="football"):
                         continue
                     
                     sdr = result.get("score_diff_range", "")
-                    if not re.match(r'^(主|客)\d+[-+]\d*(胜|负)$', str(sdr)):
+                    if not re.match(r'^(主|客)\d+[-+]\d*胜$', str(sdr)):
                         print(f"score_diff非法")
                         match_errors += 1
                         continue
