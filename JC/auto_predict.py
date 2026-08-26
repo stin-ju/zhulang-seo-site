@@ -103,11 +103,10 @@ AI_CONFIGS = {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "REMOVED",
-        "model": "hunyuan-lite",             # ✅ 免费版
+        "model": "hy3",                      # ✅ Hy3正式版(有额度)
         "format": "openai",
         "fallback_models": [
-            "hunyuan-turbo",                 # Turbo版
-            "hunyuan-7b",                    # 7B小模型
+            "hy3-preview",                   # Hy3 预览版
         ],
     },
     "AI-豆包": {
