@@ -103,11 +103,11 @@ AI_CONFIGS = {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "REMOVED",
-        "model": "hy-mt2-plus",                # ✅ MT2 Plus(可用)
+        "model": "hy3",                        # ✅ Hy3(主模型)
         "format": "openai",
         "fallback_models": [
+            "hy-mt2-plus",                   # MT2 Plus
             "hy-mt2-pro",                    # MT2 Pro
-            "hy3",                           # Hy3(返回reasoning_content)
         ],
     },
     "AI-豆包": {
