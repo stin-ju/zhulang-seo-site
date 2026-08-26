@@ -1220,19 +1220,307 @@ def phase2_predict(sport="football"):
     return result
 
 
-# ============ 主入口 ============
+# ============ Phase 3: 质量检查与补预测 ============
 
-def run_predict(sport="football", phase="all"):
-    """主入口：两阶段预测
+def check_prediction_completeness(match_id, sport="football"):
+    """检查单场比赛的预测完整性
+    
+    Returns:
+        dict: {ai_name: {"complete": bool, "missing_fields": list}}
+    """
+    rows = execute_query("""
+        SELECT ai_name, prediction
+        FROM predictions
+        WHERE match_id = %s
+    """, (match_id,), fetch=True) or []
+    
+    # 定义关键字段
+    if sport == "basketball":
+        key_fields = ["win_loss", "handicap_win_loss", "total_points", "score_diff_range"]
+    else:
+        key_fields = ["spf", "handicap_spf", "score", "goals", "half_full"]
+    
+    result = {}
+    existing_ais = set()
+    
+    for row in rows:
+        ai_name = row.get("ai_name")
+        prediction = row.get("prediction") or {}
+        existing_ais.add(ai_name)
+        missing = []
+        
+        for field in key_fields:
+            val = prediction.get(field)
+            if val is None or val == "" or val == []:
+                missing.append(field)
+        
+        result[ai_name] = {
+            "complete": len(missing) == 0,
+            "missing_fields": missing,
+        }
+    
+    # 检查缺失的AI
+    for ai in AI_CALL_ORDER:
+        if ai not in existing_ais:
+            result[ai] = {
+                "complete": False,
+                "missing_fields": ["ALL"],
+            }
+    
+    return result
+
+
+def phase3_quality_check(sport="football", max_retries=1):
+    """Phase 3: 质量检查与补预测
+    
+    检查每场比赛的预测完整性，对缺失字段进行补预测
     
     Args:
         sport: football 或 basketball
-        phase: "1"=只跑情报搜集, "2"=只跑预测, "all"=全部
+        max_retries: 每个AI每场比赛最多补跑次数
+    
+    Returns:
+        dict: 检查结果统计
+    """
+    print(f"\n{'='*50}")
+    print(f"Phase 3: 质量检查与补预测 ({sport})")
+    print(f"{'='*50}")
+    
+    # 获取最近7天内有预测的比赛
+    rows = execute_query("""
+        SELECT m.id, m.home_team, m.away_team, m.sport_type
+        FROM matches m
+        WHERE m.sport_type = %s
+          AND m.id NOT LIKE 'CT%%'
+          AND EXISTS (SELECT 1 FROM predictions p WHERE p.match_id = m.id)
+          AND (m.metadata->>'match_time')::timestamp >= NOW() - INTERVAL '7 days'
+        ORDER BY (m.metadata->>'match_time')::timestamp DESC
+    """, (sport,), fetch=True) or []
+    
+    matches = [{"id": row["id"], "home_team": row["home_team"], "away_team": row["away_team"]} 
+               for row in rows]
+    
+    if not matches:
+        print(f"没有需要检查的比赛")
+        return {"matches_checked": 0, "retries": 0, "still_missing": 0}
+    
+    total_retries = 0
+    total_still_missing = 0
+    retry_log = []
+    
+    for i, match in enumerate(matches):
+        match_id = match["id"]
+        home = match.get("home_team", "?")
+        away = match.get("away_team", "?")
+        
+        # 检查预测完整性
+        completeness = check_prediction_completeness(match_id, sport)
+        
+        # 找出需要补预测的AI
+        need_retry = []
+        for ai_name, status in completeness.items():
+            if not status["complete"]:
+                need_retry.append((ai_name, status["missing_fields"]))
+        
+        if not need_retry:
+            continue
+        
+        print(f"\n[{i+1}/{len(matches)}] {home} vs {away}")
+        print(f"  需要补预测: {len(need_retry)}个AI")
+        
+        # 获取情报数据
+        intel_data = get_intel(match_id)
+        
+        # 构建Prompt
+        if sport == "basketball":
+            prompt = build_basketball_prompt(match, intel_data)
+        else:
+            prompt = build_football_prompt(match, intel_data)
+        
+        # 逐个AI补预测
+        for ai_name, missing_fields in need_retry:
+            try:
+                print(f"  补预测 {ai_name} (缺失: {', '.join(missing_fields)})...", end=" ", flush=True)
+                
+                result = call_ai(ai_name, prompt, sport)
+                
+                if result is None:
+                    print("返回无法解析")
+                    total_still_missing += 1
+                    retry_log.append({
+                        "match_id": match_id,
+                        "ai_name": ai_name,
+                        "status": "parse_failed",
+                    })
+                    continue
+                
+                # 处理预测结果（与Phase 2相同的逻辑）
+                ai_short_name = ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name
+                
+                if sport == "basketball":
+                    result = validate_basketball_consistency(result, match.get("spread_line") or 0)
+                    
+                    wl_raw = result.get("win_loss", "")
+                    wl_map = {"主胜": "胜", "客胜": "负", "home": "胜", "away": "负"}
+                    wl = wl_map.get(wl_raw, wl_raw)
+                    if wl not in ("胜", "负"):
+                        print(f"win_loss非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    hwl_raw = result.get("handicap_win_loss", "")
+                    hwl_map = {"让球胜": "让胜", "让球负": "让负"}
+                    hwl = hwl_map.get(hwl_raw, hwl_raw)
+                    if hwl not in ("让胜", "让负"):
+                        print(f"handicap非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    tp_raw = result.get("total_points", "")
+                    tp_map = {"大分": "大", "小分": "小", "over": "大", "under": "小"}
+                    tp = tp_map.get(tp_raw, tp_raw)
+                    if tp not in ("大", "小"):
+                        print(f"total非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    sdr = result.get("score_diff_range", "")
+                    if not re.match(r'^(主|客)\d+[-+]\d*胜$', str(sdr)):
+                        print(f"score_diff非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    hwl_half = wl_map.get(result.get("half_win_loss", ""), result.get("half_win_loss", ""))
+                    if hwl_half not in ("胜", "负"):
+                        print(f"half非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    pred = {
+                        "match_id": match_id,
+                        "ai_name": ai_short_name,
+                        "win_loss": wl,
+                        "handicap_win_loss": hwl,
+                        "total_points": tp,
+                        "score_diff_range": sdr,
+                        "half_win_loss": hwl_half,
+                        "analysis": result.get("analysis", "")[:500],
+                    }
+                    
+                    insert_basketball_prediction(pred)
+                    total_retries += 1
+                    print(f"OK -> {wl}/{hwl}/{tp}")
+                    
+                else:
+                    # 足球处理
+                    spf_raw = result.get("spf", "")
+                    spf_map = {"主胜": "胜", "主平": "平", "主负": "负", "平局": "平"}
+                    spf = spf_map.get(spf_raw, spf_raw)
+                    if spf not in ("胜", "平", "负"):
+                        print(f"spf非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    handicap_spf_raw = result.get("handicap_spf", "")
+                    handicap_map = {"让球胜": "让胜", "让球平": "让平", "让球负": "让负"}
+                    handicap_spf = handicap_map.get(handicap_spf_raw, handicap_spf_raw)
+                    if handicap_spf not in ("让胜", "让平", "让负"):
+                        print(f"handicap非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    score = result.get("score", "")
+                    if not re.match(r'^\d+-\d+$', str(score)):
+                        print(f"score非法")
+                        total_still_missing += 1
+                        continue
+                    
+                    goals = int(result.get("goals", 1))
+                    half_full_raw = result.get("half_full", "")
+                    
+                    # 半全场值规范化
+                    def normalize_half_full(raw):
+                        if not raw:
+                            return None
+                        raw = str(raw).strip()
+                        half_full_map = {
+                            "主主": "胜胜", "主平": "胜平", "主负": "胜负",
+                            "平主": "平胜", "平平": "平平", "平负": "平负",
+                            "负主": "负胜", "负平": "负平", "负负": "负负",
+                            "胜胜": "胜胜", "胜平": "胜平", "胜负": "胜负",
+                            "平胜": "平胜", "平平": "平平", "平负": "平负",
+                            "负胜": "负胜", "负平": "负平", "负负": "负负",
+                        }
+                        if raw in half_full_map:
+                            return half_full_map[raw]
+                        for val in ("胜胜", "胜平", "胜负", "平胜", "平平", "平负", "负胜", "负平", "负负"):
+                            if val in raw:
+                                return val
+                        return None
+                    
+                    half_full = normalize_half_full(half_full_raw)
+                    
+                    pred = {
+                        "match_id": match_id,
+                        "ai_name": ai_short_name,
+                        "spf": spf,
+                        "handicap_spf": handicap_spf,
+                        "score": score,
+                        "goals": goals,
+                        "half_full": half_full,
+                        "analysis": result.get("analysis", "")[:500],
+                    }
+                    
+                    insert_football_prediction(pred)
+                    total_retries += 1
+                    print(f"OK -> {spf}/{handicap_spf}/{score}")
+                
+            except Exception as e:
+                print(f"失败: {str(e)[:50]}")
+                total_still_missing += 1
+                retry_log.append({
+                    "match_id": match_id,
+                    "ai_name": ai_name,
+                    "status": "error",
+                    "error": str(e)[:100],
+                })
+            
+            time.sleep(AI_CALL_INTERVAL)
+    
+    result = {
+        "sport": sport,
+        "matches_checked": len(matches),
+        "retries": total_retries,
+        "still_missing": total_still_missing,
+        "retry_log": retry_log,
+    }
+    
+    print(f"\n{'='*50}")
+    print(f"Phase 3 完成")
+    print(f"检查比赛: {len(matches)}, 补预测: {total_retries}, 仍缺失: {total_still_missing}")
+    print(f"{'='*50}")
+    
+    if retry_log:
+        print(f"\n⚠️ 以下补预测失败，需人工检查:")
+        for log in retry_log:
+            print(f"  - {log['match_id']} / {log['ai_name']}: {log['status']}")
+    
+    return result
+
+
+# ============ 主入口 ============
+
+def run_predict(sport="football", phase="all"):
+    """主入口：三阶段预测
+    
+    Args:
+        sport: football 或 basketball
+        phase: "1"=只跑情报搜集, "2"=只跑预测, "3"=只跑质量检查, "all"=全部
     """
     start_time = time.time()
     
     print(f"\n{'#'*60}")
-    print(f"# 两阶段AI预测系统")
+    print(f"# 三阶段AI预测系统")
     print(f"# 运动: {sport}, 阶段: {phase}")
     print(f"# 时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'#'*60}")
@@ -1248,6 +1536,9 @@ def run_predict(sport="football", phase="all"):
     
     if phase in ("2", "all"):
         result["phase2"] = phase2_predict(sport)
+    
+    if phase in ("3", "all"):
+        result["phase3"] = phase3_quality_check(sport)
     
     elapsed = time.time() - start_time
     result["elapsed_seconds"] = round(elapsed, 1)
@@ -1275,7 +1566,7 @@ if __name__ == "__main__":
         elif arg == "--phase" and i + 1 < len(sys.argv):
             phase = sys.argv[i + 1]
             i += 1
-        elif arg in ("1", "2", "all"):
+        elif arg in ("1", "2", "3", "all"):
             phase = arg
         i += 1
     
