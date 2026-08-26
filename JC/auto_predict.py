@@ -106,7 +106,8 @@ AI_CONFIGS = {
         "model": "hy3",                      # ✅ Hy3正式版(有额度)
         "format": "openai",
         "fallback_models": [
-            "hy3-preview",                   # Hy3 预览版
+            "hy-mt2-lite",                   # MT2 Lite(额度耗尽)
+            "hy3-preview",                   # Hy3 预览版(额度耗尽)
         ],
     },
     "AI-豆包": {
