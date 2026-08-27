@@ -1236,7 +1236,12 @@ const server = http.createServer(async (req, res) => {
 
   // ============ Static File Routes ============
   let urlPath = pathname;
-  if (urlPath === '/') urlPath = '/index.html';
+  // 根路径直接302重定向到ix.html（比JS跳转更可靠，CDN/代理友好）
+  if (urlPath === '/') {
+    res.writeHead(302, { 'Location': '/ix.html', 'Cache-Control': 'no-cache' });
+    res.end();
+    return;
+  }
   // URL别名（JC服务现在运行在JC/目录下，文件在同级目录）
   const URL_ALIASES = {
     '/ix.html': '/ix.html',

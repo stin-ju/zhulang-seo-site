@@ -64,6 +64,24 @@ function proxy(req, res, targetPort) {
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
 
+  // 根路径直接返回ix.html内容（不代理不重定向，避免CDN/代理层404或缓存问题）
+  if (url === '/') {
+    const ixPath = path.join(__dirname, 'JC', 'ix.html');
+    fs.readFile(ixPath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('ix.html not found');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      });
+      res.end(data);
+    });
+    return;
+  }
+
   // CT传统彩路由 → 5001端口
   if (url.startsWith('/api/traditional-lottery/') || url === '/ct.html' || url === '/CT/ct.html') {
     return proxy(req, res, CT_PORT);
