@@ -1269,9 +1269,10 @@ def check_prediction_completeness(match_id, sport="football"):
             "missing_fields": missing,
         }
     
-    # 检查缺失的AI
+    # 检查缺失的AI（数据库存的是短名如"DeepSeek"，AI_CALL_ORDER是"AI-DeepSeek"）
     for ai in AI_CALL_ORDER:
-        if ai not in existing_ais:
+        ai_short = ai.replace("AI-", "", 1) if ai.startswith("AI-") else ai
+        if ai_short not in existing_ais and ai not in existing_ais:
             result[ai] = {
                 "complete": False,
                 "missing_fields": ["ALL"],
@@ -1354,9 +1355,11 @@ def phase3_quality_check(sport="football", max_retries=1):
         # 逐个AI补预测
         for ai_name, missing_fields in need_retry:
             try:
-                print(f"  补预测 {ai_name} (缺失: {', '.join(missing_fields)})...", end=" ", flush=True)
+                # 规范化AI名称（数据库存短名如"混元"，call_ai需要"AI-混元"）
+                full_ai_name = ai_name if ai_name.startswith("AI-") else f"AI-{ai_name}"
+                print(f"  补预测 {full_ai_name} (缺失: {', '.join(missing_fields)})...", end=" ", flush=True)
                 
-                result = call_ai(ai_name, prompt, sport)
+                result = call_ai(full_ai_name, prompt, sport)
                 
                 if result is None:
                     print("返回无法解析")
