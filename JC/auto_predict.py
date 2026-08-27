@@ -397,6 +397,9 @@ def normalize_basketball_fields(pred):
         sdr = sdr.strip()
         # "主1-5负" → "主1-5胜", "客6-10负" → "客6-10胜"
         sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', sdr)
+        # "主负1-5" → "客胜1-5", "客负6-10" → "主胜6-10"
+        sdr = re.sub(r'^主负(\d+[-+]\d*|\d+\+?)$', r'客胜\1', sdr)
+        sdr = re.sub(r'^客负(\d+[-+]\d*|\d+\+?)$', r'主胜\1', sdr)
         normalized["score_diff_range"] = sdr
     
     return normalized
