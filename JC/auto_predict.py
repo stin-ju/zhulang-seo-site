@@ -391,6 +391,14 @@ def normalize_basketball_fields(pred):
         else:
             normalized["score_diff_range"] = score_diff
     
+    # 统一胜分差格式：将"主负/客负"转换为"主胜/客胜"
+    sdr = normalized.get("score_diff_range", "")
+    if sdr and isinstance(sdr, str):
+        sdr = sdr.strip()
+        # "主1-5负" → "主1-5胜", "客6-10负" → "客6-10胜"
+        sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', sdr)
+        normalized["score_diff_range"] = sdr
+    
     return normalized
 
 
@@ -1056,6 +1064,8 @@ def phase2_predict(sport="football"):
                         continue
                     
                     sdr = result.get("score_diff_range", "")
+                    # 统一格式：将"主负/客负"转换为"主胜/客胜"
+                    sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', str(sdr).strip())
                     if not re.match(r'^(主|客)\d+[-+]\d*胜$', str(sdr)):
                         print(f"score_diff非法")
                         match_errors += 1
@@ -1286,15 +1296,15 @@ def phase3_quality_check(sport="football", max_retries=1):
     print(f"Phase 3: 质量检查与补预测 ({sport})")
     print(f"{'='*50}")
     
-    # 获取最近7天内有预测的比赛
+    # 获取今天及最近7天的比赛（优先检查今天的）
     rows = execute_query("""
-        SELECT m.id, m.home_team, m.away_team, m.sport_type
+        SELECT m.id, m.home_team, m.away_team, m.sport_type,
+               CASE WHEN (m.metadata->>'match_time')::date = CURRENT_DATE THEN 1 ELSE 0 END as is_today
         FROM matches m
         WHERE m.sport_type = %s
           AND m.id NOT LIKE 'CT%%'
-          AND EXISTS (SELECT 1 FROM predictions p WHERE p.match_id = m.id)
           AND (m.metadata->>'match_time')::timestamp >= NOW() - INTERVAL '7 days'
-        ORDER BY (m.metadata->>'match_time')::timestamp DESC
+        ORDER BY is_today DESC, (m.metadata->>'match_time')::timestamp DESC
     """, (sport,), fetch=True) or []
     
     matches = [{"id": row["id"], "home_team": row["home_team"], "away_team": row["away_team"]} 
@@ -1303,6 +1313,10 @@ def phase3_quality_check(sport="football", max_retries=1):
     if not matches:
         print(f"没有需要检查的比赛")
         return {"matches_checked": 0, "retries": 0, "still_missing": 0}
+    
+    # 统计今天比赛数量
+    today_count = sum(1 for r in rows if r.get("is_today") == 1)
+    print(f"检查范围: {len(matches)}场比赛 (今天{today_count}场)")
     
     total_retries = 0
     total_still_missing = 0
@@ -1385,6 +1399,8 @@ def phase3_quality_check(sport="football", max_retries=1):
                         continue
                     
                     sdr = result.get("score_diff_range", "")
+                    # 统一格式：将"主负/客负"转换为"主胜/客胜"
+                    sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', str(sdr).strip())
                     if not re.match(r'^(主|客)\d+[-+]\d*胜$', str(sdr)):
                         print(f"score_diff非法")
                         total_still_missing += 1
@@ -1490,6 +1506,7 @@ def phase3_quality_check(sport="football", max_retries=1):
     result = {
         "sport": sport,
         "matches_checked": len(matches),
+        "today_matches": today_count,
         "retries": total_retries,
         "still_missing": total_still_missing,
         "retry_log": retry_log,
@@ -1497,7 +1514,22 @@ def phase3_quality_check(sport="football", max_retries=1):
     
     print(f"\n{'='*50}")
     print(f"Phase 3 完成")
-    print(f"检查比赛: {len(matches)}, 补预测: {total_retries}, 仍缺失: {total_still_missing}")
+    print(f"检查比赛: {len(matches)} (今天{today_count}场)")
+    print(f"补预测成功: {total_retries}")
+    print(f"仍缺失: {total_still_missing}")
+    
+    # 输出完整性摘要
+    complete_count = 0
+    incomplete_count = 0
+    for match in matches:
+        completeness = check_prediction_completeness(match["id"], sport)
+        all_complete = all(status["complete"] for status in completeness.values())
+        if all_complete:
+            complete_count += 1
+        else:
+            incomplete_count += 1
+    
+    print(f"完整预测: {complete_count}场, 不完整: {incomplete_count}场")
     print(f"{'='*50}")
     
     if retry_log:
