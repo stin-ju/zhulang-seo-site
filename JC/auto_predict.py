@@ -400,6 +400,8 @@ def normalize_basketball_fields(pred):
         # "主负1-5" → "客胜1-5", "客负6-10" → "主胜6-10"
         sdr = re.sub(r'^主负(\d+[-+]\d*|\d+\+?)$', r'客胜\1', sdr)
         sdr = re.sub(r'^客负(\d+[-+]\d*|\d+\+?)$', r'主胜\1', sdr)
+        # 统一为"主X-Y胜"格式：将"主胜X-Y"转换为"主X-Y胜"
+        sdr = re.sub(r'^(主|客)胜(\d+[-+]\d*|\d+\+?)$', r'\1\2胜', sdr)
         normalized["score_diff_range"] = sdr
     
     return normalized
@@ -1039,6 +1041,8 @@ def phase2_predict(sport="football"):
                 ai_short_name = ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name
                 
                 if sport == "basketball":
+                    # 先规范化字段名（AI可能返回handicap_result/score_diff而非handicap_win_loss/score_diff_range）
+                    result = normalize_basketball_fields(result)
                     # 篮球处理
                     result = validate_basketball_consistency(result, match.get("spread_line") or 0)
                     
@@ -1067,10 +1071,16 @@ def phase2_predict(sport="football"):
                         continue
                     
                     sdr = result.get("score_diff_range", "")
+                    sdr = str(sdr).strip()
                     # 统一格式：将"主负/客负"转换为"主胜/客胜"
-                    sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', str(sdr).strip())
-                    if not re.match(r'^(主|客)\d+[-+]\d*胜$', str(sdr)):
-                        print(f"score_diff非法")
+                    sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', sdr)
+                    sdr = re.sub(r'^主负(\d+[-+]\d*|\d+\+?)$', r'客胜\1', sdr)
+                    sdr = re.sub(r'^客负(\d+[-+]\d*|\d+\+?)$', r'主胜\1', sdr)
+                    # 统一为"主X-Y胜"格式：将"主胜X-Y"转换为"主X-Y胜"
+                    sdr = re.sub(r'^(主|客)胜(\d+[-+]\d*|\d+\+?)$', r'\1\2胜', sdr)
+                    # 验证：必须是"主X-Y胜"或"客X-Y胜"格式
+                    if not re.match(r'^(主|客)(\d+[-+]\d*|\d+\+?)胜$', sdr):
+                        print(f"score_diff非法: {sdr}")
                         match_errors += 1
                         continue
                     
@@ -1378,6 +1388,8 @@ def phase3_quality_check(sport="football", max_retries=1):
                 ai_short_name = ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name
                 
                 if sport == "basketball":
+                    # 先规范化字段名
+                    result = normalize_basketball_fields(result)
                     result = validate_basketball_consistency(result, match.get("spread_line") or 0)
                     
                     wl_raw = result.get("win_loss", "")
@@ -1405,10 +1417,16 @@ def phase3_quality_check(sport="football", max_retries=1):
                         continue
                     
                     sdr = result.get("score_diff_range", "")
+                    sdr = str(sdr).strip()
                     # 统一格式：将"主负/客负"转换为"主胜/客胜"
-                    sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', str(sdr).strip())
-                    if not re.match(r'^(主|客)\d+[-+]\d*胜$', str(sdr)):
-                        print(f"score_diff非法")
+                    sdr = re.sub(r'^(主|客)(\d+[-+]\d*)负$', r'\1\2胜', sdr)
+                    sdr = re.sub(r'^主负(\d+[-+]\d*|\d+\+?)$', r'客胜\1', sdr)
+                    sdr = re.sub(r'^客负(\d+[-+]\d*|\d+\+?)$', r'主胜\1', sdr)
+                    # 统一为"主X-Y胜"格式：将"主胜X-Y"转换为"主X-Y胜"
+                    sdr = re.sub(r'^(主|客)胜(\d+[-+]\d*|\d+\+?)$', r'\1\2胜', sdr)
+                    # 验证：必须是"主X-Y胜"或"客X-Y胜"格式
+                    if not re.match(r'^(主|客)(\d+[-+]\d*|\d+\+?)胜$', sdr):
+                        print(f"score_diff非法: {sdr}")
                         total_still_missing += 1
                         continue
                     
