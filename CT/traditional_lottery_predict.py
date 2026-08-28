@@ -423,7 +423,7 @@ def call_ai_api(ai_name, prompt, timeout=120):
         "model": config["model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 1000,
+        "max_tokens": 4000,
     }
 
     try:
