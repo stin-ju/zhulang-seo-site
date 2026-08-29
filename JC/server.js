@@ -1097,6 +1097,34 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // GET /api/ct-review/:file - 提供审阅文件内容
+    if (pathname.startsWith('/api/ct-review/') && req.method === 'GET') {
+      const fileKey = pathname.split('/').pop();
+      const fileMap = {
+        'a': 'ct_review_0830a.json',
+        'b': 'ct_review_0830b.txt',
+        'c': 'ct_review_0830c.json'
+      };
+      const fileName = fileMap[fileKey];
+      if (!fileName) {
+        res.writeHead(404, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: 'File not found. Available: a, b, c' }));
+        return;
+      }
+      const filePath = path.join(process.cwd(), fileName);
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const ext = path.extname(filePath).toLowerCase();
+        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': contentType, ...CORS_HEADERS });
+        res.end(content);
+      } catch (err) {
+        res.writeHead(404, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: `File ${fileName} not found` }));
+      }
+      return;
+    }
+
     // POST /api/admin/report
     if (pathname === '/api/admin/report' && req.method === 'POST') {
       const result = await generateReport();
