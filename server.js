@@ -31,13 +31,16 @@ function startService(name, scriptPath, cwd, extraEnv = {}) {
   proc.stdout.on('data', d => console.log(`[${name}]`, d.toString().trim()));
   proc.stderr.on('data', d => console.error(`[${name}]`, d.toString().trim()));
   proc.on('exit', (code) => {
-    if (serviceRegistry[name]) serviceRegistry[name].starting = false;
+    if (serviceRegistry[name]) {
+      serviceRegistry[name].starting = false;
+      serviceRegistry[name].exited = true;  // 标记进程已退出，供ensureServiceAlive判断
+    }
     console.error(`[Router] ${name} 退出 (code=${code}), 5秒后重启`);
     setTimeout(() => startService(name, scriptPath, cwd, extraEnv), 5000);
   });
 
   // 注册服务信息
-  serviceRegistry[name] = { proc, scriptPath, cwd, extraEnv, port, starting: true };
+  serviceRegistry[name] = { proc, scriptPath, cwd, extraEnv, port, starting: true, exited: false };
 
   // 监听端口就绪
   waitForPort(port, 30000).then(ok => {
@@ -95,8 +98,8 @@ function ensureServiceAlive(name) {
   if (healCooldowns[name] && Date.now() - healCooldowns[name] < 30000) return;
   healCooldowns[name] = Date.now();
 
-  // 检查进程是否还在
-  if (svc.proc && !svc.proc.killed) {
+  // 检查进程是否还在（进程自崩时proc.killed不置位，用exited标志兜底）
+  if (svc.proc && !svc.proc.killed && !svc.exited) {
     // 进程在但端口没起来，可能还在启动中，不干预
     return;
   }
@@ -214,28 +217,6 @@ const server = http.createServer((req, res) => {
     return proxy(req, res, CT_PORT);
   }
 
-  // 审阅文件直接由根路由提供（绕过外网代理白名单限制）
-  const reviewFiles = {
-    '/ct_review_0830a.json': 'ct_review_0830a.json',
-    '/ct_review_0830b.txt': 'ct_review_0830b.txt',
-    '/ct_review_0830c.json': 'ct_review_0830c.json'
-  };
-  if (reviewFiles[url]) {
-    const filePath = path.join(__dirname, 'JC', reviewFiles[url]);
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('File not found');
-        return;
-      }
-      const ext = path.extname(filePath).toLowerCase();
-      const contentType = ext === '.json' ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8';
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(data);
-    });
-    return;
-  }
-
   // 其他所有请求 → JC竞彩 5002端口
   proxy(req, res, JC_PORT);
 });
@@ -243,5 +224,5 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Router] 路由分发服务运行: http://0.0.0.0:${PORT}`);
   console.log(`[Router]   CT(传统彩) → 127.0.0.1:${CT_PORT}`);
-  console.log(`[Router]   JC竞彩) → 127.0.0.1:${JC_PORT}`);
+  console.log(`[Router]   JC竞彩 → 127.0.0.1:${JC_PORT}`);
 });

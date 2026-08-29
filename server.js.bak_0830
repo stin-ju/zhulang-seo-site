@@ -214,6 +214,28 @@ const server = http.createServer((req, res) => {
     return proxy(req, res, CT_PORT);
   }
 
+  // 审阅文件直接由根路由提供（绕过外网代理白名单限制）
+  const reviewFiles = {
+    '/ct_review_0830a.json': 'ct_review_0830a.json',
+    '/ct_review_0830b.txt': 'ct_review_0830b.txt',
+    '/ct_review_0830c.json': 'ct_review_0830c.json'
+  };
+  if (reviewFiles[url]) {
+    const filePath = path.join(__dirname, 'JC', reviewFiles[url]);
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('File not found');
+        return;
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = ext === '.json' ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8';
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    });
+    return;
+  }
+
   // 其他所有请求 → JC竞彩 5002端口
   proxy(req, res, JC_PORT);
 });
