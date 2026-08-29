@@ -181,6 +181,27 @@ INTEL_PROMPT_FOOTBALL = """你是足球比赛情报分析师。请搜集以下�
 }}
 ```"""
 
+# 混元专用Prompt（避免spf主客视角bug，改用winner队名+比分）
+HUNYUAN_SYSTEM_PROMPT = """你是资深足球赛事分析师，基于赔率数据独立预测比赛结果。
+赔率含义（严格遵守）：
+- "胜"=主队赢，"平"=打平，"负"=客队赢。赔率数字越小=该结果概率越高。
+- 让球数为负数（如-1）=主队让球（主队强）；正数（如+1）=主队受让（主队弱）。
+- 让球后主队仍赢=让胜，打平=让平，主队输=让负。
+你会收到主胜/平局/客胜的隐含概率（已由赔率换算好的客观数据）。请：
+1. 结合概率与让球盘独立判断，可认同热门也可判冷门或平局，分析要具体。
+2. 比分反映判断场面：实力悬殊可大比分，势均力敌可能1球小胜或平局。
+3. 半场结果合理：强队可能半场领先，势均力敌半场平局常见。
+4. 禁止套模板，每场分析针对这场比赛。
+只输出JSON：
+{"analysis":"具体分析40字以上","winner":"主队队名或客队队名或平局","home_goals":整数,"away_goals":整数,"half_leader":"半场领先队名或平局"}
+比分必须与winner一致。"""
+
+HUNYUAN_USER_TEMPLATE = """比赛：{league} {home}（主场） vs {away}（客场）
+隐含概率：主胜{pw}% 平局{pd}% 客胜{pl}%
+让球：{handicap_desc}
+让球胜平负赔率：让胜{hw} 让平{hd} 让负{hl}
+请独立分析并预测。"""
+
 INTEL_PROMPT_BASKETBALL = """你是篮球比赛情报分析师。请搜集以下比赛的详细情报数据。
 
 ## 比赛信息
@@ -790,6 +811,120 @@ def build_intel_prompt(match, sport="football"):
         )
 
 
+def normalize_hunyuan_football(raw_pred, home_team, away_team, handicap_line):
+    """
+    混元足球预测归一化：将winner/home_goals/away_goals/half_leader转换为标准格式
+    返回标准化后的prediction dict，如果无法归一化则返回None
+    """
+    if not raw_pred:
+        return None
+    
+    try:
+        winner = str(raw_pred.get("winner", "")).strip()
+        home_goals = raw_pred.get("home_goals")
+        away_goals = raw_pred.get("away_goals")
+        half_leader = str(raw_pred.get("half_leader", "")).strip()
+        analysis = str(raw_pred.get("analysis", "")).strip()
+        
+        # 1. 确定spf（胜平负）
+        if not winner:
+            return None
+        
+        # 判断winner是主队、客队还是平局
+        home_keywords = [home_team, "主", "home"]
+        away_keywords = [away_team, "客", "away"]
+        draw_keywords = ["平", "draw", "平局"]
+        
+        winner_lower = winner.lower()
+        if any(kw in winner for kw in home_keywords) or any(kw in winner_lower for kw in [k.lower() for k in home_keywords]):
+            spf = "胜"
+        elif any(kw in winner for kw in away_keywords) or any(kw in winner_lower for kw in [k.lower() for k in away_keywords]):
+            spf = "负"
+        elif any(kw in winner for kw in draw_keywords):
+            spf = "平"
+        else:
+            # 无法判断，返回None
+            return None
+        
+        # 2. 归一化比分
+        try:
+            hg = int(home_goals) if home_goals is not None else None
+            ag = int(away_goals) if away_goals is not None else None
+        except (ValueError, TypeError):
+            return None
+        
+        if hg is None or ag is None:
+            return None
+        
+        # 比分方向必须与winner一致
+        if spf == "胜" and hg <= ag:
+            # 修正：主队赢但比分不对，交换或调整
+            if ag > hg:
+                hg, ag = ag, hg  # 交换
+            else:
+                hg = ag + 1  # 调整
+        elif spf == "负" and ag <= hg:
+            if hg > ag:
+                hg, ag = ag, hg
+            else:
+                ag = hg + 1
+        elif spf == "平" and hg != ag:
+            # 平局但比分不等，取平均
+            avg = (hg + ag) // 2
+            hg = ag = avg
+        
+        # 3. 计算goals和score
+        goals = hg + ag
+        score = f"{hg}-{ag}"
+        
+        # 4. 归一化half_leader为半场字（胜/平/负）
+        if not half_leader:
+            half_char = "平"  # 默认
+        elif any(kw in half_leader for kw in home_keywords) or any(kw in half_leader.lower() for kw in [k.lower() for k in home_keywords]):
+            half_char = "胜"
+        elif any(kw in half_leader for kw in away_keywords) or any(kw in half_leader.lower() for kw in [k.lower() for k in away_keywords]):
+            half_char = "负"
+        elif any(kw in half_leader for kw in draw_keywords):
+            half_char = "平"
+        else:
+            half_char = "平"
+        
+        # 5. 计算half_full = 半场字 + spf末字
+        spf_char = spf  # 胜/平/负
+        half_full = half_char + spf_char
+        
+        # 6. 计算让球胜平负
+        try:
+            handicap = float(handicap_line) if handicap_line else 0
+        except (ValueError, TypeError):
+            handicap = 0
+        
+        # 虚拟主队进球 = hg + handicap（handicap为负数表示主让）
+        virtual_hg = hg + handicap
+        if virtual_hg > ag + 0.01:
+            handicap_spf = "让胜"
+        elif abs(virtual_hg - ag) <= 0.01:
+            handicap_spf = "让平"
+        else:
+            handicap_spf = "让负"
+        
+        # 7. 构建标准化结果
+        result = {
+            "spf": spf,
+            "handicap_spf": handicap_spf,
+            "score": score,
+            "goals": goals,
+            "half_full": half_full,
+            "analysis": analysis[:500] if analysis else ""
+        }
+        
+        return result
+        
+    except Exception as e:
+        print(f"    [混元归一化失败] {e}")
+        return None
+
+
 def build_football_prompt(match, intel_data=None):
     """构建足球预测Prompt"""
     home_team = match.get("home_team") or "主队"
@@ -1012,6 +1147,94 @@ def phase1_collect_intel(sport="football"):
 
 # ============ Phase 2: 逐AI逐场预测 ============
 
+def call_hunyuan_with_retry(match, intel_data, max_retries=3, retry_interval=5):
+    """
+    混元专用调用函数：使用特殊prompt + 归一化 + 重试机制
+    返回标准化后的prediction dict，如果失败则返回None
+    """
+    home_team = match.get("home_team") or "主队"
+    away_team = match.get("away_team") or "客队"
+    odds = match.get("odds") or {}
+    spf_odds = odds.get("spf") or {}
+    handicap_spf_odds = odds.get("handicap_spf") or {}
+    
+    # 计算隐含概率
+    try:
+        w = float(spf_odds.get("win", 0))
+        d = float(spf_odds.get("draw", 0))
+        l = float(spf_odds.get("lose", 0))
+        if w > 0 and d > 0 and l > 0:
+            total = 1/w + 1/d + 1/l
+            pw = round((1/w) / total * 100, 1)
+            pd = round((1/d) / total * 100, 1)
+            pl = round((1/l) / total * 100, 1)
+        else:
+            pw, pd, pl = 33.3, 33.3, 33.4
+    except:
+        pw, pd, pl = 33.3, 33.3, 33.4
+    
+    # 让球描述
+    handicap_line = match.get("handicap") or "0"
+    try:
+        handicap_val = float(handicap_line)
+        if handicap_val < 0:
+            handicap_desc = f"主队让{-handicap_val}球"
+        elif handicap_val > 0:
+            handicap_desc = f"主队受让{handicap_val}球"
+        else:
+            handicap_desc = "平手盘"
+    except:
+        handicap_desc = "平手盘"
+        handicap_val = 0
+    
+    # 构建混元专用prompt
+    system_prompt = HUNYUAN_SYSTEM_PROMPT
+    user_prompt = HUNYUAN_USER_TEMPLATE.format(
+        league=match.get("league") or "未知联赛",
+        home=home_team,
+        away=away_team,
+        pw=pw,
+        pd=pd,
+        pl=pl,
+        handicap_desc=handicap_desc,
+        hw=handicap_spf_odds.get("win", "暂无"),
+        hd=handicap_spf_odds.get("draw", "暂无"),
+        hl=handicap_spf_odds.get("lose", "暂无"),
+    )
+    
+    # 组合prompt（system + user）
+    full_prompt = f"{system_prompt}\n\n{user_prompt}"
+    
+    # 重试机制
+    for attempt in range(max_retries):
+        try:
+            if attempt > 0:
+                print(f"[重试{attempt}/{max_retries}] ", end="", flush=True)
+                time.sleep(retry_interval)
+            
+            # 调用混元API
+            raw_result = call_ai("AI-混元", full_prompt, "football")
+            
+            if raw_result is None:
+                continue
+            
+            # 归一化
+            normalized = normalize_hunyuan_football(raw_result, home_team, away_team, handicap_val)
+            
+            if normalized:
+                return normalized
+            else:
+                print(f"[归一化失败] ", end="", flush=True)
+                continue
+                
+        except Exception as e:
+            print(f"[异常: {str(e)[:30]}] ", end="", flush=True)
+            continue
+    
+    # 所有重试都失败
+    return None
+
+
 def phase2_predict(sport="football"):
     """Phase 2: 逐场比赛、逐AI预测，每个预测立即入库"""
     print(f"\n{'='*50}")
@@ -1064,7 +1287,12 @@ def phase2_predict(sport="football"):
         for ai_name in missing_ais:
             try:
                 print(f"  调用 {ai_name}...", end=" ", flush=True)
-                result = call_ai(ai_name, prompt, sport)
+                
+                # 混元专用逻辑：使用特殊prompt和归一化
+                if ai_name == "AI-混元" and sport == "football":
+                    result = call_hunyuan_with_retry(match, intel_data)
+                else:
+                    result = call_ai(ai_name, prompt, sport)
                 
                 if result is None:
                     print("返回无法解析")
