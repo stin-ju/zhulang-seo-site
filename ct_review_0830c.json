@@ -1,0 +1,13 @@
+{
+  "handicap_filled": 0,
+  "missing_scores": 30,
+  "unsettled": 0,
+  "football_pred_added": 76,
+  "basketball_pred_added": 0,
+  "football_phase3_supplement": 0,
+  "basketball_phase3_supplement": 1,
+  "incomplete_predictions": 254,
+  "upcoming_no_handicap": 127,
+  "errors": "none",
+  "ai_fallback_notes": "hy3->402->hy-mt2-plus; doubao-lite->404->doubao-seed-2-0-mini-260428"
+}
