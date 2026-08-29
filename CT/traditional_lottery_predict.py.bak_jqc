@@ -301,20 +301,16 @@ def build_ct_prompt(matches, game_type="胜负彩", ai_name=None):
 
 ## 预测要求
 1. 请联网搜索每场比赛的球队近期进攻/防守数据
-2. 分别预测每场比赛【主队进球数】和【客队进球数】（注意是两个独立数字，不是总进球）
-3. 进球档位：0=0球，1=1球，2=2球，3=3球或以上（含3+）
+2. 预测每场比赛主队和客队的进球数
 
 ## 输出格式（严格JSON数组）:
 ```json
 [
-  {{"match": "01", "zjq_home": "2", "zjq_away": "1", "analysis": "简要分析主队进2球客队进1球"}},
+  {{"match": "01", "zjq": "2", "analysis": "简要分析"}},
   ...
 ]
 ```
-字段说明:
-- zjq_home: 主队进球档位，只能是 "0"/"1"/"2"/"3"
-- zjq_away: 客队进球档位，只能是 "0"/"1"/"2"/"3"
-- 14场比赛全部要给，禁止缺场，禁止输出总进球数"""
+其中 zjq: 总进球数，"0"=0球, "1"=1球, "2"=2球, "3"=3球及以上"""
 
     return ""
 
@@ -466,36 +462,6 @@ def call_ai_api(ai_name, prompt, timeout=120):
         return None
 
 
-
-def normalize_jqc_items(items):
-    """进球彩归一：保证每场有 zjq_home/zjq_away 且为合法档位 "0"~"3"。
-    旧数据只有 zjq(总进球) 时不猜测拆分（合规：禁止反拆主客），
-    新数据缺字段则丢弃该场（上游会按缺失处理）。"""
-    def _gear(v):
-        s = str(v).strip() if v is not None else ''
-        if s.startswith('3'):
-            return '3'
-        if s in ('0', '1', '2'):
-            return s
-        return None
-    out = []
-    for it in items:
-        if not isinstance(it, dict):
-            continue
-        num = it.get('match') or it.get('num')
-        h = _gear(it.get('zjq_home'))
-        a = _gear(it.get('zjq_away'))
-        if num is None or h is None or a is None:
-            continue
-        out.append({
-            'match': str(num).zfill(2),
-            'zjq_home': h,
-            'zjq_away': a,
-            'analysis': it.get('analysis', '') or ''
-        })
-    return out
-
-
 def parse_ct_response(text, game_type):
     """解析AI返回的传统彩预测JSON"""
     if not text:
@@ -503,28 +469,20 @@ def parse_ct_response(text, game_type):
 
     # 尝试提取JSON数组
     json_match = re.search(r'```json\s*(\[.*?\])\s*```', text, re.DOTALL)
-    parsed = None
     if json_match:
         try:
-            parsed = json.loads(json_match.group(1))
+            return json.loads(json_match.group(1))
         except:
             pass
 
-    if parsed is None:
-        json_match = re.search(r'\[\s*\{.*?\}\s*\]', text, re.DOTALL)
-        if json_match:
-            try:
-                parsed = json.loads(json_match.group(0))
-            except:
-                pass
+    json_match = re.search(r'\[\s*\{.*?\}\s*\]', text, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(0))
+        except:
+            pass
 
-    if parsed is None:
-        return None
-
-    # 进球彩主客分开归一
-    if game_type == "进球彩":
-        return normalize_jqc_items(parsed)
-    return parsed
+    return None
 
 
 # ============ 数据库操作 ============
