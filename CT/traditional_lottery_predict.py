@@ -70,7 +70,7 @@ AI_CONFIGS = {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "REMOVED",
-        "model": "hy-mt2-lite",
+        "model": "hy-mt2-plus",
     },
     "扣子": {
         "url": "https://7hsjv6c4cn.coze.site/stream_run",
@@ -223,7 +223,7 @@ def fetch_schedules():
 
 # ============ AI调用 ============
 
-def build_ct_prompt(matches, game_type="胜负彩"):
+def build_ct_prompt(matches, game_type="胜负彩", ai_name=None):
     """构建传统彩预测prompt"""
     match_lines = []
     for m in matches:
@@ -233,7 +233,27 @@ def build_ct_prompt(matches, game_type="胜负彩"):
     match_text = "\n".join(match_lines)
 
     if game_type == "胜负彩":
-        return f"""你是专业足球预测分析师。请预测以下14场胜负彩比赛的胜平负结果。
+        # 文心API max_tokens限制2048，需要简化输出格式
+        if ai_name == "文心":
+            return f"""你是专业足球预测分析师。请预测以下14场胜负彩比赛的胜平负结果。
+
+## 比赛列表
+{match_text}
+
+## 预测要求
+1. 综合考虑球队实力、状态、主客场等因素
+2. 每场给出最可能的单一结果（胜/平/负）
+
+## 输出格式（严格JSON数组，不要输出其他内容）:
+```json
+[
+  {{"match": "01", "spf": "3", "analysis": "50字内"}},
+  ...
+]
+```
+其中 spf: "3"=胜, "1"=平, "0"=负"""
+        else:
+            return f"""你是专业足球预测分析师。请预测以下14场胜负彩比赛的胜平负结果。
 
 ## 比赛列表
 {match_text}
@@ -419,11 +439,13 @@ def call_ai_api(ai_name, prompt, timeout=120):
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
+    # 文心API max_tokens最大2048，其他AI用4000
+    max_tok = 2048 if ai_name == "文心" else 4000
     payload = {
         "model": config["model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 4000,
+        "max_tokens": max_tok,
     }
 
     try:
@@ -730,11 +752,18 @@ def predict_issue(issue_data, game_types, force=False):
 
             print(f"  [{ai_name}] 预测中...", end=' ', flush=True)
             
+            # 为文心构建简化的prompt（max_tokens限制2048）
+            if ai_name == "文心" and game_type == "胜负彩":
+                ai_base_prompt = build_ct_prompt(matches, game_type, ai_name="文心")
+                ai_prompt = ai_base_prompt + intel_text if intel_text else ai_base_prompt
+            else:
+                ai_prompt = prompt
+            
             # 扣子已经预跑过，直接用预跑结果
             if ai_name == "扣子" and coze_pre_raw:
                 raw = coze_pre_raw
             else:
-                raw = call_ai_api(ai_name, prompt)
+                raw = call_ai_api(ai_name, ai_prompt)
 
             if raw:
                 parsed = parse_ct_response(raw, game_type)

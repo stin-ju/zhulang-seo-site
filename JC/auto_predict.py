@@ -281,7 +281,8 @@ BASKETBALL_PROMPT = """你是专业的篮球比赛预测分析师。根据比赛
 ## 逻辑自洽规则:
 1. 让分↔胜分差：选"让胜"→胜分差应为"主x胜"且分差>盘口
 2. 让分↔胜负：选"让胜"→胜负应选"胜"
-3. 胜分差格式: 主1-5胜/主6-10胜/主11-15胜/主16-20胜/主21+胜/客1-5胜/客6-10胜/客11-15胜/客16-20胜/客21+胜"""
+3. 胜分差格式: 主1-5胜/主6-10胜/主11-15胜/主16-20胜/主21+胜/客1-5胜/客6-10胜/客11-15胜/客16-20胜/客21+胜
+4. **方向一致**: win_loss="胜"表示主队赢→score_diff_range必须是"主X胜"；win_loss="负"表示主队输→score_diff_range必须是"客X胜"。主/客前缀必须与win_loss同方向。"""
 
 # ============ 数据库操作 ============
 
@@ -390,6 +391,19 @@ def normalize_basketball_fields(pred):
                 normalized["score_diff_range"] = score_diff
         else:
             normalized["score_diff_range"] = score_diff
+    
+    # === 解析容错：win_loss字段 ===
+    # '客胜'→'负'、'主胜'→'胜'、'客负'→'胜'、'主负'→'负'
+    wl = normalized.get("win_loss", "")
+    wl_fix_map = {"客胜": "负", "主胜": "胜", "客负": "胜", "主负": "负"}
+    if wl in wl_fix_map:
+        normalized["win_loss"] = wl_fix_map[wl]
+    
+    # === 解析容错：handicap_win_loss字段 ===
+    hwl = normalized.get("handicap_win_loss", "")
+    hwl_fix_map = {"客胜": "让负", "主胜": "让胜", "客负": "让胜", "主负": "让负"}
+    if hwl in hwl_fix_map:
+        normalized["handicap_win_loss"] = hwl_fix_map[hwl]
     
     # 统一胜分差格式：将"主负/客负"转换为"主胜/客胜"
     sdr = normalized.get("score_diff_range", "")
@@ -702,6 +716,26 @@ def validate_basketball_consistency(pred, spread_line):
         corrected["win_loss"] = "胜"
     elif hw == "让负" and wl == "胜" and spread < 0 and abs_spread >= 8:
         corrected["win_loss"] = "负"
+    
+    # === 新增：win_loss ↔ score_diff_range方向一致性 ===
+    # win_loss=胜 → sdr必须是"主X胜"；win_loss=负 → sdr必须是"客X胜"
+    wl_fixed = corrected.get("win_loss", wl)
+    sdr_fixed = corrected.get("score_diff_range", sdr)
+    sdr_team_match = re.match(r'^(主|客)', sdr_fixed)
+    if sdr_team_match:
+        sdr_team = sdr_team_match.group(1)
+        if wl_fixed == "胜" and sdr_team == "客":
+            # win_loss=胜但sdr是客→以handicap方向为准修正sdr
+            if hw == "让胜":
+                corrected["score_diff_range"] = re.sub(r'^客', '主', sdr_fixed)
+            else:
+                corrected["win_loss"] = "负"
+        elif wl_fixed == "负" and sdr_team == "主":
+            # win_loss=负但sdr是主→以handicap方向为准修正sdr
+            if hw == "让负":
+                corrected["score_diff_range"] = re.sub(r'^主', '客', sdr_fixed)
+            else:
+                corrected["win_loss"] = "胜"
     
     return corrected
 
