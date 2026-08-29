@@ -1,4 +1,5 @@
 const http = require('http');
+const net = require('net');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -8,10 +9,20 @@ const JC_PORT = 5002;
 const CT_PORT = 5001;
 
 // ============================
+// 子服务注册表（名称→脚本路径/端口/启动状态）
+// ============================
+const serviceRegistry = {};
+
+// ============================
 // 启动子服务
 // ============================
 function startService(name, scriptPath, cwd, extraEnv = {}) {
+  const port = extraEnv.PORT || extraEnv.DEPLOY_RUN_PORT || (name === 'CT' ? CT_PORT : JC_PORT);
   console.log(`[Router] 启动 ${name}: ${scriptPath}`);
+
+  // 标记为启动中
+  if (serviceRegistry[name]) serviceRegistry[name].starting = true;
+
   const proc = spawn('node', [scriptPath], {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -20,9 +31,20 @@ function startService(name, scriptPath, cwd, extraEnv = {}) {
   proc.stdout.on('data', d => console.log(`[${name}]`, d.toString().trim()));
   proc.stderr.on('data', d => console.error(`[${name}]`, d.toString().trim()));
   proc.on('exit', (code) => {
+    if (serviceRegistry[name]) serviceRegistry[name].starting = false;
     console.error(`[Router] ${name} 退出 (code=${code}), 5秒后重启`);
     setTimeout(() => startService(name, scriptPath, cwd, extraEnv), 5000);
   });
+
+  // 注册服务信息
+  serviceRegistry[name] = { proc, scriptPath, cwd, extraEnv, port, starting: true };
+
+  // 监听端口就绪
+  waitForPort(port, 30000).then(ok => {
+    if (serviceRegistry[name]) serviceRegistry[name].starting = false;
+    if (ok) console.log(`[Router] ${name} 端口 ${port} 已就绪`);
+  });
+
   return proc;
 }
 
@@ -36,9 +58,93 @@ if (fs.existsSync(jcPath)) startService('JC', jcPath, path.join(__dirname, 'JC')
 else console.warn('[Router] JC服务文件不存在:', jcPath);
 
 // ============================
-// 反向代理
+// 端口探测（TCP connect 检测）
 // ============================
+function checkPort(port) {
+  return new Promise(resolve => {
+    const sock = new net.Socket();
+    sock.setTimeout(800);
+    sock.on('connect', () => { sock.destroy(); resolve(true); });
+    sock.on('timeout', () => { sock.destroy(); resolve(false); });
+    sock.on('error', () => { sock.destroy(); resolve(false); });
+    sock.connect(port, '127.0.0.1');
+  });
+}
+
+// 等待端口就绪（轮询）
+function waitForPort(port, maxWaitMs) {
+  const start = Date.now();
+  return new Promise(resolve => {
+    const tick = async () => {
+      if (await checkPort(port)) return resolve(true);
+      if (Date.now() - start >= maxWaitMs) return resolve(false);
+      setTimeout(tick, 500);
+    };
+    tick();
+  });
+}
+
+// ============================
+// 确保子服务存活（代理层触发拉起）
+// ============================
+const healCooldowns = {};
+function ensureServiceAlive(name) {
+  const svc = serviceRegistry[name];
+  if (!svc) return;
+  // 冷却：30秒内不重复触发
+  if (healCooldowns[name] && Date.now() - healCooldowns[name] < 30000) return;
+  healCooldowns[name] = Date.now();
+
+  // 检查进程是否还在
+  if (svc.proc && !svc.proc.killed) {
+    // 进程在但端口没起来，可能还在启动中，不干预
+    return;
+  }
+  // 进程不在了，主动拉起
+  console.log(`[Router] 自愈: ${name} 进程不在，主动拉起`);
+  startService(name, svc.scriptPath, svc.cwd, svc.extraEnv);
+}
+
+// ============================
+// 健壮反向代理（带重试 + 503兜底）
+// ============================
+const PROXY_MAX_WAIT = 12000;   // 最长等待12秒
+const PROXY_RETRY_MS = 500;     // 每500ms重试一次
+
 function proxy(req, res, targetPort) {
+  const serviceName = targetPort === CT_PORT ? 'CT' : targetPort === JC_PORT ? 'JC' : 'unknown';
+
+  // 先收集请求体（POST/PUT等需要重放）
+  const chunks = [];
+  req.on('data', chunk => chunks.push(chunk));
+  req.on('end', () => {
+    const bodyBuf = Buffer.concat(chunks);
+    doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, Date.now());
+  });
+  // 如果请求没有body（GET），end事件可能不会触发
+  // 对于GET请求，req.on('end') 在 stream 结束时触发，http.IncomingMessage 会在无body时立即触发end
+}
+
+function doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, startTime) {
+  const elapsed = Date.now() - startTime;
+
+  // 超时：返回503
+  if (elapsed >= PROXY_MAX_WAIT) {
+    console.error(`[Router] ${serviceName}(${targetPort}) 等待${PROXY_MAX_WAIT}ms仍不可用，返回503`);
+    if (!res.headersSent) {
+      res.writeHead(503, {
+        'Content-Type': 'application/json',
+        'Retry-After': '5'
+      });
+      res.end(JSON.stringify({
+        success: false,
+        message: '服务正在启动，请5秒后刷新重试',
+        retry_after: 5
+      }));
+    }
+    return;
+  }
+
   const opt = {
     hostname: '127.0.0.1',
     port: targetPort,
@@ -46,16 +152,37 @@ function proxy(req, res, targetPort) {
     method: req.method,
     headers: { ...req.headers, host: `127.0.0.1:${targetPort}` }
   };
+  if (bodyBuf.length > 0) {
+    opt.headers['content-length'] = bodyBuf.length;
+    delete opt.headers['transfer-encoding'];
+  }
+
   const proxyReq = http.request(opt, (proxyRes) => {
     res.writeHead(proxyRes.statusCode, proxyRes.headers);
     proxyRes.pipe(res);
   });
+
   proxyReq.on('error', (e) => {
-    console.error(`[Router] 代理到 ${targetPort} 失败:`, e.message);
-    res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Service unavailable', port: targetPort }));
+    if (e.code === 'ECONNREFUSED' || e.code === 'ECONNRESET') {
+      // 目标不可用，触发拉起并等待重试
+      ensureServiceAlive(serviceName);
+      console.log(`[Router] ${serviceName}(${targetPort}) 连接被拒，等待重试... (${Math.round(elapsed/1000)}s/${PROXY_MAX_WAIT/1000}s)`);
+      setTimeout(() => {
+        doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, startTime);
+      }, PROXY_RETRY_MS);
+    } else {
+      // 其他错误（如 ETIMEDOUT），也重试
+      console.error(`[Router] 代理到 ${targetPort} 失败: ${e.code || e.message}`);
+      setTimeout(() => {
+        doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, startTime);
+      }, PROXY_RETRY_MS);
+    }
   });
-  req.pipe(proxyReq);
+
+  if (bodyBuf.length > 0) {
+    proxyReq.write(bodyBuf);
+  }
+  proxyReq.end();
 }
 
 // ============================
