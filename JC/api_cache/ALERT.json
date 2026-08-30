@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-21T17:45:18.770867",
-  "url": "https://webapi.sporttery.cn/gateway/uniform/football/getMatchListV1.qry?matchPage=1&matchBeginDate=2026-08-19&matchEndDate=2026-08-19",
+  "timestamp": "2026-08-30T14:45:40.042045",
+  "url": "/gateway/uniform/football/getMatchListV1.qry",
   "message": "四层容错全部失败，需要人工介入"
 }
