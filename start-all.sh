@@ -54,7 +54,10 @@ if [ "$NEED_RESTART" = true ]; then
     echo ""
     echo "=== 重启服务 ==="
     
-    cd /workspace/projects
+    # 获取脚本所在目录作为项目根目录（兼容沙箱/FaaS环境）
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    cd "$SCRIPT_DIR"
+    echo "  工作目录: $(pwd)"
     
     # 启动根服务（会自动拉起CT和JC子服务）
     echo "  启动 Router (5000)..."
