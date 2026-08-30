@@ -462,20 +462,21 @@ def generate_brief_html(date_str: str, brief_type: str, matches: List[Dict], pre
     return html
 
 
-def save_brief_to_db(conn, date_str: str, brief_type: str, matches: List[Dict], commentary: str):
+def save_brief_to_db(conn, date_str: str, brief_type: str, matches: List[Dict], commentary: str, content_html: str = ''):
     """保存简报到数据库"""
     brief_id = f"brief-{date_str}"
     match_ids = [m['id'] for m in matches]
     
     with conn.cursor() as cur:
         cur.execute('''
-            INSERT INTO briefs (id, date, type, title, summary, match_ids, match_count, ai_analysis, sport_type)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO briefs (id, date, type, title, summary, match_ids, match_count, ai_analysis, sport_type, content_html)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
                 summary = EXCLUDED.summary,
                 match_ids = EXCLUDED.match_ids,
                 match_count = EXCLUDED.match_count,
-                ai_analysis = EXCLUDED.ai_analysis
+                ai_analysis = EXCLUDED.ai_analysis,
+                content_html = EXCLUDED.content_html
         ''', (
             brief_id,
             date_str,
@@ -485,7 +486,8 @@ def save_brief_to_db(conn, date_str: str, brief_type: str, matches: List[Dict], 
             json.dumps(match_ids),
             len(matches),
             json.dumps({'generated_at': datetime.now().isoformat()}),
-            'football'
+            'football',
+            content_html
         ))
     conn.commit()
 
@@ -536,8 +538,8 @@ def main():
         
         if args.output in ['db', 'both']:
             commentary = generate_commentary(matches, predictions, args.type)
-            save_brief_to_db(conn, date_str, args.type, matches, commentary)
-            print(f"简报已保存到数据库")
+            save_brief_to_db(conn, date_str, args.type, matches, commentary, content_html=html)
+            print(f"简报已保存到数据库(含content_html {len(html)}字符)")
         
         print("简报生成完成!")
         

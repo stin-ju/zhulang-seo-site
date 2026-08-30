@@ -540,6 +540,86 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
 
   try {
+    // ======== 简报动态页（绕开FaaS静态快照白名单：DB渲染，运行时可外网访问） ========
+    if (req.method === 'GET' && /^\/brief-\d{4}-\d{2}-\d{2}\.html$/.test(pathname)) {
+      const briefDate = pathname.match(/^\/brief-(\d{4}-\d{2}-\d{2})\.html$/)[1];
+      const { rows } = await pgPool.query(
+        `SELECT id, date, title, summary, match_count, content_html FROM briefs WHERE id = $1`,
+        [`brief-${briefDate}`]
+      );
+      if (rows.length === 0 || !rows[0].content_html) {
+        res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>简报不存在</title></head><body style="font-family:sans-serif;padding:40px;text-align:center;color:#374151"><h2>📭 ${briefDate} 简报尚未生成</h2><p>该日期暂无简报内容。</p><p><a href="/brief.html" style="color:#2563eb">← 返回简报列表</a></p></body></html>`);
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(rows[0].content_html);
+      return;
+    }
+
+    if (pathname === '/brief.html' && req.method === 'GET') {
+      const { rows } = await pgPool.query(
+        `SELECT id, date, title, summary, match_count FROM briefs WHERE content_html IS NOT NULL AND content_html != '' ORDER BY date DESC LIMIT 60`
+      );
+      const now = new Date();
+      const pageGen = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+      const items = rows.map(r => {
+        const d = new Date(r.date + 'T00:00:00');
+        const label = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+        const summary = String(r.summary || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        return `<a href="/brief-${r.date}.html" class="brief-item">
+          <span class="date">${label}</span>
+          <span class="title">${r.match_count || 0}场赛事 · 7AI预测</span>
+          <span class="arrow">→</span>
+        </a>`;
+      }).join('\n');
+      const listHtml = items || '<div class="empty">暂无简报，每日预测完成后自动生成</div>';
+      const html = `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全部简报 · AI实验室</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f5f7fa;color:#1f2937}
+.navbar{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);position:sticky;top:0;z-index:10}
+.navbar .container{max-width:960px;margin:0 auto;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:18px;font-weight:700;color:#111827;text-decoration:none}
+.logo .accent{color:#2563eb}
+.nav-links a{color:#4b5563;text-decoration:none;margin-left:20px;font-size:15px}
+.nav-links a:hover{color:#2563eb}
+main.container{max-width:960px;margin:0 auto;padding:28px 20px 60px}
+.breadcrumb{font-size:13px;color:#9ca3af;margin-bottom:16px}
+.breadcrumb a{color:#2563eb;text-decoration:none}
+.page-title{font-size:26px;margin-bottom:6px}
+.page-sub{color:#6b7280;font-size:13px;margin-bottom:24px}
+.brief-item{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 22px;margin-bottom:12px;text-decoration:none;color:inherit;transition:box-shadow .15s,border-color .15s}
+.brief-item:hover{border-color:#2563eb;box-shadow:0 4px 14px rgba(37,99,235,.10)}
+.brief-item .date{font-size:17px;font-weight:600;min-width:130px;color:#111827}
+.brief-item .title{flex:1;color:#4b5563;font-size:14px}
+.brief-item .arrow{color:#2563eb;font-size:18px}
+.empty{background:#fff;border-radius:12px;padding:40px;text-align:center;color:#9ca3af}
+.footer{text-align:center;color:#9ca3af;font-size:13px;padding:30px 20px 40px}
+</style></head><body>
+<nav class="navbar"><div class="container">
+<a href="/" class="logo"><span>🧪</span> <span>AI实验室 <span class="accent">·</span> <span class="accent">体彩</span>好伙伴</span></a>
+<div class="nav-links">
+<a href="/">首页</a><a href="/football.html">足球</a><a href="/bb2.html">篮球</a><a href="/ca2.html">计算器</a><a href="/rank.html">排行</a>
+</div></div></nav>
+<main class="container">
+<div class="breadcrumb"><a href="/">首页</a> <span>/</span> <span>全部简报</span></div>
+<h1 class="page-title">📋 全部简报</h1>
+<div class="page-sub">每日赛事预测简报 · 页面更新于 ${pageGen}</div>
+<div id="briefList">
+${listHtml}
+</div>
+</main>
+<footer class="footer"><p>🧪 AI实验室 · 体彩好伙伴 · 数据仅供研究参考</p></footer>
+</body></html>`;
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+      return;
+    }
+
     // ======== GET /api/matches ========
     if (pathname === '/api/matches' && req.method === 'GET') {
       const date = parsedUrl.searchParams.get('date');
