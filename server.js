@@ -4,6 +4,18 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
+// ============================
+// 全局异常捕获（防止进程崩溃）
+// ============================
+process.on('uncaughtException', (err) => {
+  console.error('[Router] 未捕获异常（进程保持运行）:', err.message);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Router] 未处理的Promise拒绝（进程保持运行）:', reason);
+});
+
 const PORT = 5000;
 const JC_PORT = 5002;
 const CT_PORT = 5001;
@@ -117,6 +129,11 @@ const PROXY_RETRY_MS = 500;     // 每500ms重试一次
 function proxy(req, res, targetPort) {
   const serviceName = targetPort === CT_PORT ? 'CT' : targetPort === JC_PORT ? 'JC' : 'unknown';
 
+  // 防止客户端提前断开导致未捕获错误
+  let clientAborted = false;
+  req.on('close', () => { clientAborted = true; });
+  res.on('error', () => { clientAborted = true; });
+
   // 先收集请求体（POST/PUT等需要重放）
   const chunks = [];
   req.on('data', chunk => chunks.push(chunk));
@@ -124,7 +141,9 @@ function proxy(req, res, targetPort) {
     const bodyBuf = Buffer.concat(chunks);
     doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, Date.now());
   });
-  // 如果请求没有body（GET），end事件可能不会触发
+  req.on('error', () => {
+    try { res.writeHead(502); res.end('Bad Gateway'); } catch (_) {}
+  });
   // 对于GET请求，req.on('end') 在 stream 结束时触发，http.IncomingMessage 会在无body时立即触发end
 }
 
@@ -161,8 +180,13 @@ function doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, startTime)
   }
 
   const proxyReq = http.request(opt, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    if (!res.headersSent) {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    }
     proxyRes.pipe(res);
+    proxyRes.on('error', () => {
+      try { res.end(); } catch (_) {}
+    });
   });
 
   proxyReq.on('error', (e) => {
