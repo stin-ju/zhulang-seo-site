@@ -61,7 +61,14 @@ if [ "$NEED_RESTART" = true ]; then
     
     # 启动根服务（会自动拉起CT和JC子服务）
     echo "  启动 Router (5000)..."
-    nohup node server.js > /app/work/logs/bypass/router.log 2>&1 &
+    # 确保日志目录存在（兼容沙箱/FaaS环境）
+    LOG_DIR="/app/work/logs/bypass"
+    if [ ! -d "$LOG_DIR" ]; then
+        # FaaS环境：使用临时目录
+        LOG_DIR="/tmp/logs"
+        mkdir -p "$LOG_DIR" 2>/dev/null || LOG_DIR="."
+    fi
+    nohup node server.js > "$LOG_DIR/router.log" 2>&1 &
     
     # 等待服务启动
     sleep 5
@@ -86,7 +93,7 @@ if [ "$NEED_RESTART" = true ]; then
     else
         echo ""
         echo "=== 部分服务启动失败，请检查日志 ==="
-        tail -20 /app/work/logs/bypass/router.log 2>/dev/null
+        tail -20 "$LOG_DIR/router.log" 2>/dev/null || echo "  (日志文件不可用)"
     fi
 else
     echo ""
