@@ -9,6 +9,16 @@ const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
 
+// ============ 全局异常捕获（防止进程崩溃）============
+process.on('uncaughtException', (err) => {
+  console.error('[CT] 未捕获异常（进程保持运行）:', err.message);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[CT] 未处理的Promise拒绝（进程保持运行）:', reason);
+});
+
 // ============ 配置 ============
 const PORT = parseInt(process.env.TRADITIONAL_PORT || '5001', 10);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -412,7 +422,7 @@ app.use((req, res) => {
 });
 
 // ============ 启动服务 ============
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Traditional Lottery server running on port ${PORT}`);
   console.log(`Database: ${dbUrl ? 'connected' : 'NOT CONFIGURED'}`);
   console.log(`Available routes:`);
@@ -422,15 +432,25 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`  GET /ct.html`);
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[CT] 端口 ${PORT} 被占用，等待释放...`);
+    // 不崩溃，让路由器来重启
+    setTimeout(() => process.exit(1), 2000);
+  } else {
+    console.error('[CT] 服务器错误:', err);
+  }
+});
+
 // 优雅关闭
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
-  await pool.end();
+  try { await pool.end(); } catch (_) {}
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
-  await pool.end();
+  try { await pool.end(); } catch (_) {}
   process.exit(0);
 });

@@ -26,6 +26,32 @@ const CT_PORT = 5001;
 const serviceRegistry = {};
 
 // ============================
+// 清理端口占用进程
+// ============================
+function killPortProcess(port, serviceName) {
+  const { execSync } = require('child_process');
+  try {
+    // 使用 ss 查找占用端口的进程
+    const output = execSync(`ss -lptn 'sport = :${port}' 2>/dev/null || true`, { encoding: 'utf8' });
+    const match = output.match(/pid=(\d+)/);
+    if (match) {
+      const pid = parseInt(match[1], 10);
+      // 不杀自己（路由器进程）
+      if (pid !== process.pid) {
+        console.log(`[Router] 清理 ${serviceName} 端口 ${port} 上的残留进程 pid=${pid}`);
+        try {
+          process.kill(pid, 'SIGTERM');
+        } catch (_) {
+          // 进程可能已退出
+        }
+      }
+    }
+  } catch (_) {
+    // ss 命令失败，忽略
+  }
+}
+
+// ============================
 // 启动子服务
 // ============================
 function startService(name, scriptPath, cwd, extraEnv = {}) {
@@ -34,6 +60,9 @@ function startService(name, scriptPath, cwd, extraEnv = {}) {
 
   // 标记为启动中
   if (serviceRegistry[name]) serviceRegistry[name].starting = true;
+
+  // 重启前先清理可能残留的端口占用
+  killPortProcess(port, name);
 
   const proc = spawn('node', [scriptPath], {
     cwd,
@@ -47,8 +76,10 @@ function startService(name, scriptPath, cwd, extraEnv = {}) {
       serviceRegistry[name].starting = false;
       serviceRegistry[name].exited = true;  // 标记进程已退出，供ensureServiceAlive判断
     }
-    console.error(`[Router] ${name} 退出 (code=${code}), 5秒后重启`);
-    setTimeout(() => startService(name, scriptPath, cwd, extraEnv), 5000);
+    // EADDRINUSE 时等待更长时间再重启
+    const delay = code === 1 ? 8000 : 5000;
+    console.error(`[Router] ${name} 退出 (code=${code}), ${delay/1000}秒后重启`);
+    setTimeout(() => startService(name, scriptPath, cwd, extraEnv), delay);
   });
 
   // 注册服务信息
