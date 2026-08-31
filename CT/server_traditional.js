@@ -87,7 +87,7 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
     const issueFilter = req.query.issue;
 
     // 查询所有数据，包含issue字段
-    let query = `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info FROM traditional_predictions`;
+    let query = `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info, is_settled, hit_details FROM traditional_predictions`;
     let params = [];
 
     if (issueFilter) {
@@ -225,7 +225,9 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         matchRecord[aiName] = {
           prediction: prediction,
           confidence: row.confidence || null,
-          is_r9: isR9
+          is_r9: isR9,
+          is_settled: row.is_settled || false,
+          hit_details: row.hit_details || null
         };
       }
     }
@@ -280,6 +282,38 @@ app.get('/api/traditional-lottery/latest', async (req, res) => {
   } catch (err) {
     console.error('[TraditionalLottery] /latest error:', err.message);
     res.status(500).json({ error: 'Internal server error', message: err.message });
+  }
+});
+
+/**
+ * GET /api/traditional-lottery/scores
+ * 查询CT比赛的实际比分（用于赛果列显示）
+ */
+app.get('/api/traditional-lottery/scores', async (req, res) => {
+  try {
+    const issueFilter = req.query.issue;
+    let query = `SELECT id, home_team, away_team, metadata->>'home_score' as home_score, metadata->>'away_score' as away_score, metadata->>'half_home_score' as half_home, metadata->>'half_away_score' as half_away, status FROM matches WHERE id LIKE 'CT%'`;
+    const params = [];
+    if (issueFilter) {
+      query += ` AND id LIKE $1`;
+      params.push(`CT${issueFilter}_%`);
+    }
+    query += ` ORDER BY id`;
+    const result = await pool.query(query, params);
+    const scores = {};
+    for (const row of result.rows) {
+      scores[row.id] = {
+        home_score: row.home_score ? parseInt(row.home_score) : null,
+        away_score: row.away_score ? parseInt(row.away_score) : null,
+        half_home: row.half_home ? parseInt(row.half_home) : null,
+        half_away: row.half_away ? parseInt(row.half_away) : null,
+        status: row.status
+      };
+    }
+    res.json({ success: true, data: scores });
+  } catch (err) {
+    console.error('[TraditionalLottery] /scores error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

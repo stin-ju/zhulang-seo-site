@@ -226,6 +226,15 @@ a:hover{text-decoration:underline}
 .jqc-val { display: inline-block; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 12px; min-width: 20px; text-align: center; }
 .jqc-val.home { background: rgba(76,175,80,0.15); border: 1px solid #4caf50; color: #4caf50; }
 .jqc-val.away { background: rgba(244,67,54,0.15); border: 1px solid #f44336; color: #f44336; }
+
+/* 结算状态颜色 */
+.col-ai.settled-hit { background: rgba(16,185,129,0.18) !important; }
+.col-ai.settled-miss { background: rgba(239,68,68,0.15) !important; }
+.col-ai.settled-hit .ai-val, .col-ai.settled-hit .bqc-val { color: #10b981; }
+.col-ai.settled-miss .ai-val, .col-ai.settled-miss .bqc-val { color: #ef4444; }
+/* 赛果列 */
+.col-result { text-align: center; font-size: 12px; font-weight: 600; color: #ffd700; min-width: 60px; white-space: nowrap; }
+.col-result.empty { color: #445; }
 </style>
 </head>
 <body>
@@ -342,6 +351,10 @@ let r9Picks = new Set();          // 任选9场选中的场次号
 let mult = 1;                     // 倍数
 let activeTab = "sfc";            // 当前Tab
 let activeIssue = {sfc:null, htf:null, jqc:null}; // 子期号
+// 结算数据: {tab: {predKey: {aiName: {hit: bool, actual: string}}}}
+let settlement = {sfc:{}, htf:{}, jqc:{}};
+// 比赛实际比分: {matchId: {home_score, away_score, half_home, half_away, status}}
+let matchScores = {};
 
 const HF_OPTS = ["33","31","30","13","11","10","03","01","00"];
 const HF_CLS  = ["w","w","w","d","d","d","l","l","l"];
@@ -396,6 +409,12 @@ async function loadData(){
     // 恢复状态 & 渲染
     restoreState();
     renderAll();
+
+    // 异步加载比分数据（不阻塞主渲染）
+    fetch("/api/traditional-lottery/scores")
+      .then(r => r.json())
+      .then(j => { if(j.success) { matchScores = j.data || {}; renderAll(); } })
+      .catch(()=>{});
   }catch(e){
     console.error("加载数据失败:", e);
     document.querySelectorAll(".loading").forEach(el => {
@@ -485,6 +504,15 @@ function buildPreds(items, keyFn, issueFilter){
           if(!preds[key]._r9) preds[key]._r9 = {};
           preds[key]._r9[aiName] = true;
         }
+        // 提取结算数据
+        if(aiData.is_settled && aiData.hit_details) {
+          if(!preds[key]._settled) preds[key]._settled = {};
+          const matchNum = String(parseInt(key.split("_")[1])).padStart(2, '0');
+          const hd = Array.isArray(aiData.hit_details) ? aiData.hit_details.find(h => String(h.match).replace(/^0+/,'') === String(parseInt(key.split("_")[1]))) : null;
+          if(hd) {
+            preds[key]._settled[aiName] = { hit: hd.hit, actual: hd.actual };
+          }
+        }
       }
     });
   });
@@ -505,6 +533,15 @@ function buildPredsAll(items, keyFn){
       const aiData = it[aiName];
       if(aiData && aiData.prediction !== undefined && aiData.prediction !== null) {
         preds[key][aiName] = aiData.prediction;
+        // 提取结算数据
+        if(aiData.is_settled && aiData.hit_details) {
+          if(!preds[key]._settled) preds[key]._settled = {};
+          const matchNumStr = String(parseInt(key.split("_")[1]));
+          const hd = Array.isArray(aiData.hit_details) ? aiData.hit_details.find(h => String(h.match).replace(/^0+/,'') === matchNumStr) : null;
+          if(hd) {
+            preds[key]._settled[aiName] = { hit: hd.hit, actual: hd.actual };
+          }
+        }
       }
     });
   });
@@ -550,7 +587,7 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
   const tbl = document.getElementById(tid);
   const ans = aiNames.sfc;
   // thead
-  let thRow = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th><th>选项<br>胜平负</th>";
+  let thRow = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th><th>赛果</th><th>选项<br>胜平负</th>";
   ans.forEach(n => { thRow += "<th>"+shortAI(n)+"</th>"; });
   thRow += "</tr>";
   tbl.querySelector("thead").innerHTML = thRow;
@@ -561,6 +598,20 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
     const key = (isR9 ? "sfc" : tab) + "_" + m.num;
     const s = sel[tab][key] || new Set();
     const p = preds[key] || {};
+    const settled = p._settled || {};
+    
+    // 获取赛果
+    const matchId = m.match_id;
+    const sc = matchScores[matchId];
+    let resultText = '-';
+    let resultClass = 'col-result empty';
+    if(sc && sc.home_score !== null && sc.away_score !== null) {
+      const hs = sc.home_score, as_ = sc.away_score;
+      const spfResult = hs > as_ ? '3(胜)' : (hs === as_ ? '1(平)' : '0(负)');
+      resultText = `${hs}:${as_} ${spfResult}`;
+      resultClass = 'col-result';
+    }
+    
     html += `<tr>`;
     html += `<td class="col-num">${m.num}</td>`;
     html += `<td class="col-league">${m.league}</td>`;
@@ -568,6 +619,7 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
     html += `<td class="col-home">${m.home}</td>`;
     html += `<td class="col-vs">VS</td>`;
     html += `<td class="col-away">${m.away}</td>`;
+    html += `<td class="${resultClass}">${resultText}</td>`;
     // 选项
     html += `<td><div class="opts">`;
     html += `<span class="ob w ${s.has("3")?"sel":""}" onclick="togOpt('${tab}','${key}','3',this)">3</span>`;
@@ -583,7 +635,12 @@ function renderSFCTable(tid, tab, ms, preds, isR9){
           v = "-";
         }
       }
-      html += `<td class="col-ai${v && v!=="-"?" has":""}">${v||"暂无"}</td>`;
+      const aiSettled = settled[n];
+      let cellClass = 'col-ai' + (v && v!=="-" ? " has" : "");
+      if(aiSettled) {
+        cellClass += aiSettled.hit ? ' settled-hit' : ' settled-miss';
+      }
+      html += `<td class="${cellClass}"><span class="ai-val">${v||"暂无"}</span></td>`;
     });
     html += "</tr>";
   });
@@ -607,12 +664,12 @@ function renderHTF(){
 
   const tbl = document.getElementById("t-htf");
   // thead: 单行表头
-  let th1 = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th>";
+  let th1 = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th><th>赛果</th>";
   th1 += `<th style='font-size:10px;color:#666' colspan="9">半全场 (半场/全场)</th>`;
   ans.forEach(n => { th1 += `<th>${shortAI(n)}</th>`; });
   th1 += "</tr>";
   // 第二行：9个组合选项标签
-  let th2 = "<tr><th></th><th></th><th></th><th></th><th></th><th></th>";
+  let th2 = "<tr><th></th><th></th><th></th><th></th><th></th><th></th><th></th>";
   combos.forEach((c,i) => { th2 += `<th style="font-size:10px;padding:2px;color:#99a;background:#12122a">${comboLabels[i]}<br><small style="color:#667">${c}</small></th>`; });
   ans.forEach(n => { th2 += "<th></th>"; });
   th2 += "</tr>";
@@ -623,11 +680,22 @@ function renderHTF(){
   sortedIssues.forEach((issue, idx) => {
     const ms = groups[issue];
     if(!ms || !ms.length) return;
-    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${10+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
+    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${11+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
     
     ms.forEach(m => {
       const predKey = issue + "_htf_" + m.num;
       const p = allPreds[predKey] || {};
+      const settled = p._settled || {};
+      
+      // 获取赛果
+      const matchId = m.match_id || `CT${issue}_${String(m.num).padStart(2,'0')}`;
+      const sc = matchScores[matchId];
+      let resultText = '-';
+      let resultClass = 'col-result empty';
+      if(sc && sc.home_score !== null && sc.away_score !== null) {
+        resultText = `${sc.home_score}:${sc.away_score}`;
+        resultClass = 'col-result';
+      }
       
       html += `<tr>`;
       html += `<td class="col-num">${m.num}</td>`;
@@ -636,6 +704,7 @@ function renderHTF(){
       html += `<td class="col-home">${m.home}</td>`;
       html += `<td class="col-vs">VS</td>`;
       html += `<td class="col-away">${m.away}</td>`;
+      html += `<td class="${resultClass}">${resultText}</td>`;
       
       // 9个组合选项（展示用）
       combos.forEach(c => {
@@ -646,7 +715,12 @@ function renderHTF(){
       ans.forEach(n => {
         const v = p[n] || "";
         const hasVal = v && v.length >= 2;
-        html += `<td class="col-ai${hasVal?' has':''}">`;
+        const aiSettled = settled[n];
+        let cellClass = 'col-ai' + (hasVal ? ' has' : '');
+        if(aiSettled) {
+          cellClass += aiSettled.hit ? ' settled-hit' : ' settled-miss';
+        }
+        html += `<td class="${cellClass}">`;
         html += hasVal ? `<span class="bqc-val">${v}</span>` : '<span style="color:#556">-</span>';
         html += `</td>`;
       });
@@ -668,12 +742,10 @@ function renderJQC(){
   }
   const allPreds = aiPreds.jqc || {};
   const ans = aiNames.jqc;
-  const GOAL = ['0','1','2','3+'];
 
   const tbl = document.getElementById("t-jqc");
   // thead
-  let th1 = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th>";
-  th1 += `<th style='font-size:10px;color:#666' colspan="4">进球数 (0/1/2/3+)</th>`;
+  let th1 = "<tr><th>场次</th><th>联赛</th><th>开赛</th><th>主队</th><th></th><th>客队</th><th>赛果</th>";
   ans.forEach(n => { th1 += `<th>${shortAI(n)}</th>`; });
   th1 += "</tr>";
   tbl.querySelector("thead").innerHTML = th1;
@@ -683,56 +755,54 @@ function renderJQC(){
   sortedIssues.forEach((issue, idx) => {
     const ms = groups[issue];
     if(!ms || !ms.length) return;
-    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${9+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
+    html += `<tr class="grp-label${idx>0?' grp-sep':''}"><td colspan="${8+ans.length}" style="background:rgba(90,184,240,.04);color:#5ab8f0;font-weight:600;font-size:13px;text-align:left;padding:6px 14px;border-bottom:2px solid #252555">${issue}期（${ms.length}场）</td></tr>`;
     
     ms.forEach(m => {
       const predKey = issue + "_jqc_" + m.num;
       const p = allPreds[predKey] || {};
+      const settled = p._settled || {};
       
-      // 主队行
+      // 获取赛果
+      const matchId = m.match_id || `CT${issue}_${String(m.num).padStart(2,'0')}`;
+      const sc = matchScores[matchId];
+      let resultText = '-';
+      let resultClass = 'col-result empty';
+      if(sc && sc.home_score !== null && sc.away_score !== null) {
+        resultText = `主${sc.home_score} 客${sc.away_score}`;
+        resultClass = 'col-result';
+      }
+      
       html += `<tr>`;
-      html += `<td class="col-num" rowspan="2">${m.num}</td>`;
-      html += `<td class="col-league" rowspan="2">${m.league}</td>`;
-      html += `<td class="col-time" rowspan="2">${fmtDate(m.time)}</td>`;
-      html += `<td class="col-home" rowspan="2">${m.home}</td>`;
-      html += `<td class="col-vs" rowspan="2">VS</td>`;
-      html += `<td class="col-away" rowspan="2">${m.away}</td>`;
-      html += `<td style="font-size:11px;color:#888;text-align:center">主</td>`;
-      GOAL.forEach(g => {
-        html += `<td class="col-htf"><span class="ob gs">${g}</span></td>`;
-      });
-      // AI预测：主队进球
+      html += `<td class="col-num">${m.num}</td>`;
+      html += `<td class="col-league">${m.league}</td>`;
+      html += `<td class="col-time">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-home">${m.home}</td>`;
+      html += `<td class="col-vs">VS</td>`;
+      html += `<td class="col-away">${m.away}</td>`;
+      html += `<td class="${resultClass}">${resultText}</td>`;
+      
+      // AI预测：合并主客为一行
       ans.forEach(n => {
         const pred = p[n] || {};
-        let v = '';
+        let homeV = '', awayV = '';
         if(typeof pred === 'object' && pred !== null) {
-          // 只显示主队独立预测，如果没有则显示"-"（总进球数不应显示在单队列）
-          v = pred.zjq_home || '';
+          homeV = pred.zjq_home || '';
+          awayV = pred.zjq_away || '';
+        }
+        
+        const aiSettled = settled[n];
+        let cellClass = 'col-ai';
+        let displayText = '';
+        
+        if(homeV || awayV) {
+          displayText = `主${homeV||'?'} 客${awayV||'?'}`;
+          if(aiSettled) {
+            cellClass += aiSettled.hit ? ' settled-hit' : ' settled-miss';
+          }
+          html += `<td class="${cellClass}"><span class="ai-val">${displayText}</span></td>`;
         } else {
-          v = pred || '';
+          html += `<td class="${cellClass}"><span style="color:#556">-</span></td>`;
         }
-        html += `<td class="col-ai${v?' has':''}">`;
-        html += v ? `<span class="jqc-val home">${v}</span>` : '<span style="color:#556">-</span>';
-        html += `</td>`;
-      });
-      html += `</tr>`;
-      
-      // 客队行
-      html += `<tr>`;
-      html += `<td style="font-size:11px;color:#888;text-align:center">客</td>`;
-      GOAL.forEach(g => {
-        html += `<td class="col-htf"><span class="ob gs">${g}</span></td>`;
-      });
-      // AI预测：客队进球
-      ans.forEach(n => {
-        const pred = p[n] || {};
-        let v = '';
-        if(typeof pred === 'object' && pred !== null) {
-          v = pred.zjq_away || '';
-        }
-        html += `<td class="col-ai${v?' has':''}">`;
-        html += v ? `<span class="jqc-val away">${v}</span>` : '<span style="color:#556">-</span>';
-        html += `</td>`;
       });
       html += `</tr>`;
     });
