@@ -99,6 +99,22 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
     const result = await pool.query(query, params);
     const rows = result.rows;
 
+    // 查询所有CT比赛的比分
+    const scoresResult = await pool.query(`
+      SELECT id, metadata->>'home_score' as home_score, metadata->>'away_score' as away_score,
+             metadata->>'half_home_score' as half_home, metadata->>'half_away_score' as half_away
+      FROM matches WHERE id LIKE 'CT%'
+    `);
+    const scoresMap = {};
+    for (const row of scoresResult.rows) {
+      scoresMap[row.id] = {
+        home_score: row.home_score ? parseInt(row.home_score) : null,
+        away_score: row.away_score ? parseInt(row.away_score) : null,
+        half_home: row.half_home ? parseInt(row.half_home) : null,
+        half_away: row.half_away ? parseInt(row.half_away) : null
+      };
+    }
+
     // game_type 到前端key的映射（任9不单独映射，作为胜负彩的标记）
     const typeMap = { '胜负彩': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
     // 前端key到预测字段的映射
@@ -207,6 +223,32 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         // 获取或创建比赛记录
         const currentMap = matchMap[frontendKey];
         if (!currentMap.has(matchId)) {
+          // 获取比分
+          const scores = scoresMap[matchId] || {};
+          const homeScore = scores.home_score;
+          const awayScore = scores.away_score;
+          
+          // 计算官方彩果
+          let officialResult = null;
+          if (homeScore !== null && awayScore !== null) {
+            if (frontendKey === 'sfc') {
+              // 胜负彩：3=主胜，1=平，0=主负
+              officialResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
+            } else if (frontendKey === 'htf') {
+              // 半全场：两位数字，如33=胜胜
+              const halfHome = scores.half_home;
+              const halfAway = scores.half_away;
+              if (halfHome !== null && halfAway !== null) {
+                const halfResult = halfHome > halfAway ? '3' : (halfHome === halfAway ? '1' : '0');
+                const fullResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
+                officialResult = halfResult + fullResult;
+              }
+            } else if (frontendKey === 'jqc') {
+              // 进球彩：主客进球数
+              officialResult = { home: homeScore, away: awayScore };
+            }
+          }
+          
           currentMap.set(matchId, {
             match_id: matchId,
             match_num: String(matchNum),
@@ -215,18 +257,36 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
             away_team: m.away || m.away_team || '',
             league: m.league || '',
             match_time: m.time || m.match_time || '',
-            lottery_type: frontendKey
+            lottery_type: frontendKey,
+            home_score: homeScore,
+            away_score: awayScore,
+            result: officialResult
           });
         }
 
         // 添加该AI的预测到比赛记录中
         const matchRecord = currentMap.get(matchId);
         const aiName = row.ai_name || 'system';
+        
+        // 从hit_details中提取该场的命中状态
+        let hit = null;
+        if (row.is_settled && row.hit_details && Array.isArray(row.hit_details)) {
+          const matchNumPadded = matchNumStripped.padStart(2, '0');
+          const hitEntry = row.hit_details.find(h => {
+            const hMatch = String(h.match).replace(/^0+/, '').padStart(2, '0');
+            return hMatch === matchNumPadded;
+          });
+          if (hitEntry) {
+            hit = hitEntry.hit;
+          }
+        }
+        
         matchRecord[aiName] = {
           prediction: prediction,
           confidence: row.confidence || null,
           is_r9: isR9,
           is_settled: row.is_settled || false,
+          hit: hit,
           hit_details: row.hit_details || null
         };
       }

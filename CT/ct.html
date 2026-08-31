@@ -427,7 +427,7 @@ async function loadData(){
 function buildMatches(items, issueFilter){
   const map = new Map();
   // 动态提取AI名称
-  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type', 'home_score', 'away_score', 'result']);
   const aiKeysSet = new Set();
   items.forEach(it => {
     Object.keys(it).forEach(k => {
@@ -500,7 +500,7 @@ function buildMatchesAll(items, maxMatches){
 function buildPreds(items, keyFn, issueFilter){
   const preds = {};
   // 动态提取AI名称（只从过滤后的数据中提取）
-  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type', 'home_score', 'away_score', 'result']);
   const aiKeysSet = new Set();
   const filteredItems = issueFilter ? items.filter(it => it.issue === issueFilter) : items;
   filteredItems.forEach(it => {
@@ -526,14 +526,10 @@ function buildPreds(items, keyFn, issueFilter){
           if(!preds[key]._r9) preds[key]._r9 = {};
           preds[key]._r9[aiName] = true;
         }
-        // 提取结算数据
-        if(aiData.is_settled && aiData.hit_details) {
+        // 提取结算数据（直接使用API返回的hit字段）
+        if(aiData.is_settled && aiData.hit !== null && aiData.hit !== undefined) {
           if(!preds[key]._settled) preds[key]._settled = {};
-          const matchNum = String(parseInt(key.split("_")[1])).padStart(2, '0');
-          const hd = Array.isArray(aiData.hit_details) ? aiData.hit_details.find(h => String(h.match).replace(/^0+/,'') === String(parseInt(key.split("_")[1]))) : null;
-          if(hd) {
-            preds[key]._settled[aiName] = { hit: hd.hit, actual: hd.actual };
-          }
+          preds[key]._settled[aiName] = { hit: aiData.hit };
         }
       }
     });
@@ -545,7 +541,7 @@ function buildPreds(items, keyFn, issueFilter){
 function buildPredsAll(items, keyFn){
   const preds = {};
   // 动态提取AI名称
-  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type', 'home_score', 'away_score', 'result']);
   const aiKeysSet = new Set();
   items.forEach(it => {
     Object.keys(it).forEach(k => {
@@ -565,14 +561,10 @@ function buildPredsAll(items, keyFn){
       const aiData = it[aiName];
       if(aiData && aiData.prediction !== undefined && aiData.prediction !== null) {
         preds[key][aiName] = aiData.prediction;
-        // 提取结算数据
-        if(aiData.is_settled && aiData.hit_details) {
+        // 提取结算数据（直接使用API返回的hit字段）
+        if(aiData.is_settled && aiData.hit !== null && aiData.hit !== undefined) {
           if(!preds[key]._settled) preds[key]._settled = {};
-          const matchNumStr = String(parseInt(key.split("_")[1]));
-          const hd = Array.isArray(aiData.hit_details) ? aiData.hit_details.find(h => String(h.match).replace(/^0+/,'') === matchNumStr) : null;
-          if(hd) {
-            preds[key]._settled[aiName] = { hit: hd.hit, actual: hd.actual };
-          }
+          preds[key]._settled[aiName] = { hit: aiData.hit };
         }
       }
     });
@@ -582,7 +574,7 @@ function buildPredsAll(items, keyFn){
 
 function uniqueAIs(items){
   // 从数据中动态提取AI名称（排除非AI字段）
-  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type', 'home_score', 'away_score', 'result']);
   const aiSet = new Set();
   items.forEach(it => {
     Object.keys(it).forEach(k => {
