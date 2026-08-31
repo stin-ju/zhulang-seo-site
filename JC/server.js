@@ -564,7 +564,10 @@ const server = http.createServer(async (req, res) => {
       const now = new Date();
       const pageGen = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
       const items = rows.map(r => {
-        const d = new Date(r.date + 'T00:00:00');
+        const dateStr = r.date instanceof Date
+          ? `${r.date.getFullYear()}-${String(r.date.getMonth()+1).padStart(2,'0')}-${String(r.date.getDate()).padStart(2,'0')}`
+          : String(r.date);
+        const d = new Date(dateStr + 'T00:00:00');
         const label = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
         const summary = String(r.summary || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
         return `<a href="/brief-${r.date}.html" class="brief-item">

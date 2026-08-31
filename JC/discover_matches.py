@@ -657,7 +657,11 @@ def upsert_match(match_data, odds=None):
             _hdc = _extract_handicap(old_odds)
             if _hdc is not None:
                 old_meta['handicap'] = _hdc
-            old_meta['status'] = selling_status
+            # 保留已完赛状态：如果比赛已有比分且metadata标记为已完赛，不覆盖
+            if old_meta.get('status') == '已完赛' and old_meta.get('home_score') is not None:
+                pass  # 保持已完赛不变
+            else:
+                old_meta['status'] = selling_status
             old_meta['source'] = match_data.get('source', old_meta.get('source', 'unknown'))
             old_meta['lastOddsUpdate'] = datetime.now().strftime('%Y-%m-%d %H:%M') if new_format_odds else old_meta.get('lastOddsUpdate')
             
@@ -758,7 +762,7 @@ def update_odds_for_uids(odds_map, target_uids=None, sport_type_hint='football')
             _hdc = _extract_handicap(old_odds)
             if _hdc is not None:
                 meta['handicap'] = _hdc
-            if meta.get('status') not in ('on_sale', 'pending'):
+            if meta.get('status') not in ('on_sale', 'pending') and not (meta.get('status') == '已完赛' and meta.get('home_score') is not None):
                 meta['status'] = 'on_sale'
             
             cur.execute("UPDATE matches SET metadata = %s WHERE id = %s",
