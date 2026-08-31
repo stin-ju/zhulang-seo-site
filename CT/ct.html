@@ -376,7 +376,9 @@ async function loadData(){
     // 整理 SFC（按期号过滤）
     matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
     aiPreds.sfc = buildPreds(j.data.sfc, k => "sfc_"+parseInt(k.split("_")[1]), activeIssue.sfc);
-    aiNames.sfc = uniqueAIs(j.data.sfc);
+    // 只从当前期号的数据中提取AI名称
+    const sfcFiltered = j.data.sfc.filter(i => i.issue === activeIssue.sfc);
+    aiNames.sfc = uniqueAIs(sfcFiltered);
 
     // 整理 HTF（半全场显示最近3期）
     const htfItems = j.data.htf;
@@ -424,7 +426,18 @@ async function loadData(){
 
 function buildMatches(items, issueFilter){
   const map = new Map();
-  const aiKeys = ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
+  // 动态提取AI名称
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const aiKeysSet = new Set();
+  items.forEach(it => {
+    Object.keys(it).forEach(k => {
+      if(!nonAIKeys.has(k) && it[k] && typeof it[k] === 'object' && it[k].prediction !== undefined) {
+        aiKeysSet.add(k);
+      }
+    });
+  });
+  const aiKeys = Array.from(aiKeysSet);
+  
   items.forEach(it => {
     if(issueFilter && it.issue !== issueFilter) return;
     const mid = it.match_id;
@@ -486,10 +499,11 @@ function buildMatchesAll(items, maxMatches){
 
 function buildPreds(items, keyFn, issueFilter){
   const preds = {};
-  // 动态提取AI名称
+  // 动态提取AI名称（只从过滤后的数据中提取）
   const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
   const aiKeysSet = new Set();
-  items.forEach(it => {
+  const filteredItems = issueFilter ? items.filter(it => it.issue === issueFilter) : items;
+  filteredItems.forEach(it => {
     Object.keys(it).forEach(k => {
       if(!nonAIKeys.has(k) && it[k] && typeof it[k] === 'object' && it[k].prediction !== undefined) {
         aiKeysSet.add(k);
@@ -498,8 +512,7 @@ function buildPreds(items, keyFn, issueFilter){
   });
   const aiKeys = Array.from(aiKeysSet);
   
-  items.forEach(it => {
-    if(issueFilter && it.issue !== issueFilter) return;
+  filteredItems.forEach(it => {
     const key = keyFn(it.match_id);
     if(!preds[key]) preds[key] = {};
     
