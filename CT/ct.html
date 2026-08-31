@@ -220,18 +220,17 @@ a:hover{text-decoration:underline}
 /* 半全场组合码样式 */
 .col-bqc { padding: 2px 3px; text-align: center; background: rgba(20,20,40,0.5); }
 .bqc-opt { display: inline-block; font-size: 10px; color: #778; background: #1a1a30; border: 1px solid #2a2a50; border-radius: 3px; padding: 2px 4px; }
-.bqc-val { display: inline-block; padding: 3px 8px; background: rgba(90,184,240,0.15); border: 1px solid #5ab8f0; border-radius: 4px; color: #5ab8f0; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
+.bqc-val { display: inline-block; font-size: 12px; letter-spacing: 1px; }
 
-/* 进球彩预测值样式 */
-.jqc-val { display: inline-block; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 12px; min-width: 20px; text-align: center; }
-.jqc-val.home { background: rgba(76,175,80,0.15); border: 1px solid #4caf50; color: #4caf50; }
-.jqc-val.away { background: rgba(244,67,54,0.15); border: 1px solid #f44336; color: #f44336; }
+/* 进球彩预测值样式 - 简洁 */
+.jqc-val { display: inline-block; font-size: 12px; text-align: center; }
 
-/* 结算状态颜色 */
-.col-ai.settled-hit { background: rgba(16,185,129,0.18) !important; }
-.col-ai.settled-miss { background: rgba(239,68,68,0.15) !important; }
-.col-ai.settled-hit .ai-val, .col-ai.settled-hit .bqc-val { color: #10b981; }
-.col-ai.settled-miss .ai-val, .col-ai.settled-miss .bqc-val { color: #ef4444; }
+/* 结算状态颜色 - 简洁文字标记 */
+.col-ai.settled-hit .ai-val, .col-ai.settled-hit .bqc-val, .col-ai.settled-hit .jqc-val { color: #10b981; }
+.col-ai.settled-miss .ai-val, .col-ai.settled-miss .bqc-val, .col-ai.settled-miss .jqc-val { color: #ef4444; }
+.col-ai:not(.settled-hit):not(.settled-miss) .ai-val, 
+.col-ai:not(.settled-hit):not(.settled-miss) .bqc-val,
+.col-ai:not(.settled-hit):not(.settled-miss) .jqc-val { color: #667; }
 /* 赛果列 */
 .col-result { text-align: center; font-size: 12px; font-weight: 600; color: #ffd700; min-width: 60px; white-space: nowrap; }
 .col-result.empty { color: #445; }
@@ -731,7 +730,7 @@ function renderHTF(){
 }
 
 /* ==========================================================
-   渲染: 进球彩（显示最近3期）
+   渲染: 进球彩（显示最近3期）- 主客两行显示
    ========================================================== */
 function renderJQC(){
   const groups = matches.jqc;
@@ -772,37 +771,52 @@ function renderJQC(){
         resultClass = 'col-result';
       }
       
+      // 主队行
       html += `<tr>`;
-      html += `<td class="col-num">${m.num}</td>`;
-      html += `<td class="col-league">${m.league}</td>`;
-      html += `<td class="col-time">${fmtDate(m.time)}</td>`;
-      html += `<td class="col-home">${m.home}</td>`;
-      html += `<td class="col-vs">VS</td>`;
-      html += `<td class="col-away">${m.away}</td>`;
-      html += `<td class="${resultClass}">${resultText}</td>`;
+      html += `<td class="col-num" rowspan="2">${m.num}</td>`;
+      html += `<td class="col-league" rowspan="2">${m.league}</td>`;
+      html += `<td class="col-time" rowspan="2">${fmtDate(m.time)}</td>`;
+      html += `<td class="col-home" rowspan="2">${m.home}</td>`;
+      html += `<td class="col-vs" rowspan="2">VS</td>`;
+      html += `<td class="col-away" rowspan="2">${m.away}</td>`;
+      html += `<td class="${resultClass}" rowspan="2">${resultText}</td>`;
       
-      // AI预测：合并主客为一行
+      // 主队标签 + AI预测
+      html += `<td style="font-size:11px;color:#888;text-align:center;background:rgba(255,255,255,0.02)">主</td>`;
       ans.forEach(n => {
         const pred = p[n] || {};
-        let homeV = '', awayV = '';
+        let v = '';
         if(typeof pred === 'object' && pred !== null) {
-          homeV = pred.zjq_home || '';
-          awayV = pred.zjq_away || '';
+          v = pred.zjq_home || '';
         }
         
         const aiSettled = settled[n];
         let cellClass = 'col-ai';
-        let displayText = '';
-        
-        if(homeV || awayV) {
-          displayText = `主${homeV||'?'} 客${awayV||'?'}`;
-          if(aiSettled) {
-            cellClass += aiSettled.hit ? ' settled-hit' : ' settled-miss';
-          }
-          html += `<td class="${cellClass}"><span class="ai-val">${displayText}</span></td>`;
-        } else {
-          html += `<td class="${cellClass}"><span style="color:#556">-</span></td>`;
+        if(aiSettled) {
+          cellClass += aiSettled.hit ? ' settled-hit' : ' settled-miss';
         }
+        
+        html += `<td class="${cellClass}"><span class="ai-val">${v || '-'}</span></td>`;
+      });
+      html += `</tr>`;
+      
+      // 客队行
+      html += `<tr>`;
+      html += `<td style="font-size:11px;color:#888;text-align:center;background:rgba(255,255,255,0.02)">客</td>`;
+      ans.forEach(n => {
+        const pred = p[n] || {};
+        let v = '';
+        if(typeof pred === 'object' && pred !== null) {
+          v = pred.zjq_away || '';
+        }
+        
+        const aiSettled = settled[n];
+        let cellClass = 'col-ai';
+        if(aiSettled) {
+          cellClass += aiSettled.hit ? ' settled-hit' : ' settled-miss';
+        }
+        
+        html += `<td class="${cellClass}"><span class="ai-val">${v || '-'}</span></td>`;
       });
       html += `</tr>`;
     });
