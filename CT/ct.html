@@ -486,7 +486,17 @@ function buildMatchesAll(items, maxMatches){
 
 function buildPreds(items, keyFn, issueFilter){
   const preds = {};
-  const aiKeys = ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
+  // 动态提取AI名称
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const aiKeysSet = new Set();
+  items.forEach(it => {
+    Object.keys(it).forEach(k => {
+      if(!nonAIKeys.has(k) && it[k] && typeof it[k] === 'object' && it[k].prediction !== undefined) {
+        aiKeysSet.add(k);
+      }
+    });
+  });
+  const aiKeys = Array.from(aiKeysSet);
   
   items.forEach(it => {
     if(issueFilter && it.issue !== issueFilter) return;
@@ -521,7 +531,17 @@ function buildPreds(items, keyFn, issueFilter){
 // 不按期号过滤，全部返回
 function buildPredsAll(items, keyFn){
   const preds = {};
-  const aiKeys = ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
+  // 动态提取AI名称
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const aiKeysSet = new Set();
+  items.forEach(it => {
+    Object.keys(it).forEach(k => {
+      if(!nonAIKeys.has(k) && it[k] && typeof it[k] === 'object' && it[k].prediction !== undefined) {
+        aiKeysSet.add(k);
+      }
+    });
+  });
+  const aiKeys = Array.from(aiKeysSet);
   
   items.forEach(it => {
     const key = it.issue + "_" + keyFn(it.match_id);
@@ -548,8 +568,22 @@ function buildPredsAll(items, keyFn){
 }
 
 function uniqueAIs(items){
-  // 固定显示7个AI（新数据结构下不需要从items中提取）
-  return ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
+  // 从数据中动态提取AI名称（排除非AI字段）
+  const nonAIKeys = new Set(['match_id', 'match_num', 'issue', 'home_team', 'away_team', 'league', 'match_time', 'lottery_type']);
+  const aiSet = new Set();
+  items.forEach(it => {
+    Object.keys(it).forEach(k => {
+      if(!nonAIKeys.has(k) && it[k] && typeof it[k] === 'object' && it[k].prediction !== undefined) {
+        aiSet.add(k);
+      }
+    });
+  });
+  // 按固定顺序排序（已知的AI优先），未知的排在后面
+  const knownOrder = ["扣子","豆包","文心","混元","DeepSeek","智谱清言","MiniMax"];
+  const result = [];
+  knownOrder.forEach(name => { if(aiSet.has(name)) result.push(name); });
+  aiSet.forEach(name => { if(!knownOrder.includes(name)) result.push(name); });
+  return result.length > 0 ? result : knownOrder;
 }
 
 function calcDeadline(){
