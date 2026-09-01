@@ -499,6 +499,9 @@ def fill_missing_scores(conn):
             md["home_score"] = found["home_score"]
             md["away_score"] = found["away_score"]
             md["status"] = "已完赛"
+            # Fix A: 有真实比分时清除 score_unavailable 脏标记
+            md.pop("score_unavailable", None)
+            md.pop("score_unavailable_reason", None)
             if found.get("home_half") is not None:
                 md["half_home_score"] = found["home_half"]
             if found.get("away_half") is not None:
@@ -546,6 +549,9 @@ def fill_missing_scores(conn):
             md["home_score"] = found["home_score"]
             md["away_score"] = found["away_score"]
             md["status"] = "已完赛"
+            # Fix A: 有真实比分时清除 score_unavailable 脏标记
+            md.pop("score_unavailable", None)
+            md.pop("score_unavailable_reason", None)
             if found.get("home_half") is not None:
                 md["half_home_score"] = found["home_half"]
             if found.get("away_half") is not None:
@@ -626,12 +632,15 @@ def settle_score_unavailable_predictions(conn):
     """处理无法获取比分的比赛：将预测标记为已结算，hit_status='score_unavailable'
     这些比赛被标记为 score_unavailable=true，无法从数据源获取比分，
     因此无法判断预测是否正确，统一标记为已结算但不计入命中。
+    
+    Fix B: 结算前再次检查是否有真实比分。如果有，用真实比分结算而非 score_unavailable。
+    同时清除 metadata 中的 score_unavailable 脏标记。
     """
     cur = conn.cursor()
     
     # 查找 score_unavailable=true 且有未结算预测的比赛
     cur.execute("""
-        SELECT DISTINCT m.id, m.home_team, m.away_team, m.sport_type
+        SELECT DISTINCT m.id, m.home_team, m.away_team, m.sport_type, m.metadata
         FROM matches m
         JOIN predictions p ON m.id = p.match_id
         WHERE (m.metadata->>'score_unavailable')::boolean = true
@@ -646,10 +655,55 @@ def settle_score_unavailable_predictions(conn):
     print(f"[无法比分结算] 找到 {len(matches)} 场 score_unavailable 比赛")
     
     settled_count = 0
-    hit_json = json.dumps({"reason": "score_unavailable"}, ensure_ascii=False)
+    rescued_count = 0
+    hit_json_unavailable = json.dumps({"reason": "score_unavailable"}, ensure_ascii=False)
     
-    for match_id, home_team, away_team, sport_type in matches:
-        # 获取该比赛所有未结算的预测
+    for match_id, home_team, away_team, sport_type, metadata in matches:
+        md = metadata if isinstance(metadata, dict) else (json.loads(metadata) if metadata else {})
+        home_score = md.get("home_score")
+        away_score = md.get("away_score")
+        
+        # Fix B: 如果有真实比分，用真实比分结算，不用 score_unavailable
+        if home_score is not None and away_score is not None:
+            print(f"  [ rescue ] {match_id}: 有真实比分 {home_score}-{away_score}，用真实比分结算")
+            # 清除脏标记
+            md.pop("score_unavailable", None)
+            md.pop("score_unavailable_reason", None)
+            cur.execute("UPDATE matches SET metadata = %s::jsonb WHERE id = %s",
+                       [json.dumps(md, ensure_ascii=False), match_id])
+            # 用真实比分结算该比赛的所有未结算预测
+            cur.execute("""
+                SELECT p.id, p.ai_name, p.sport_type,
+                       p.spf, p.handicap_spf, p.goals, p.score, p.half_full,
+                       p.win_loss, p.handicap_win_loss, 
+                       p.prediction->>'handicap_result' as handicap_result,
+                       p.total_points, p.score_diff_range, p.half_win_loss
+                FROM predictions p
+                WHERE p.match_id = %s AND p.is_settled = false
+            """, [match_id])
+            preds = cur.fetchall()
+            for row in preds:
+                p_sport = row[2] or sport_type
+                full_row = (match_id, p_sport, home_team, away_team, md) + row
+                if p_sport == "basketball":
+                    hit_dict, hit_cols = settle_basketball(full_row)
+                else:
+                    hit_dict, hit_cols = settle_football(full_row)
+                if hit_dict is None:
+                    continue
+                hit_json = json.dumps(hit_dict, ensure_ascii=False)
+                set_clauses = ["hit_status = %s::jsonb", "is_settled = true"]
+                params = [hit_json]
+                for col, val in hit_cols.items():
+                    set_clauses.append(f"{col} = %s")
+                    params.append(val)
+                params.append(row[0])  # pred id
+                sql = f"UPDATE predictions SET {', '.join(set_clauses)} WHERE id = %s"
+                cur.execute(sql, params)
+                rescued_count += 1
+            continue
+        
+        # 确实没有比分，标记为 score_unavailable
         cur.execute("""
             SELECT id, ai_name 
             FROM predictions 
@@ -663,13 +717,16 @@ def settle_score_unavailable_predictions(conn):
                 SET is_settled = true,
                     hit_status = %s::jsonb
                 WHERE id = %s
-            """, [hit_json, pred_id])
+            """, [hit_json_unavailable, pred_id])
             settled_count += 1
             print(f"  [无法比分] {ai_name}: {match_id} {home_team} vs {away_team}")
     
     conn.commit()
-    print(f"[无法比分结算] 完成，标记 {settled_count} 条预测为已结算(score_unavailable)")
-    return settled_count
+    if rescued_count > 0:
+        print(f"[无法比分结算] 完成：{rescued_count} 条用真实比分结算(rescued)，{settled_count} 条标记为score_unavailable")
+    else:
+        print(f"[无法比分结算] 完成，标记 {settled_count} 条预测为已结算(score_unavailable)")
+    return settled_count + rescued_count
 
 
 def get_unsettled(conn, match_id=None):
