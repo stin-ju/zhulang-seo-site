@@ -166,9 +166,9 @@ def save_prediction(match_id, ai_name, prediction):
         print("更新已有记录")
     else:
         cur.execute("""
-            INSERT INTO predictions (match_id, ai_name, prediction)
-            VALUES (%s, %s, %s)
-        """, (match_id, ai_name, json.dumps(prediction, ensure_ascii=False)))
+            INSERT INTO predictions (match_id, ai_name, prediction, match_date)
+            VALUES (%s, %s, %s, %s)
+        """, (match_id, ai_name, json.dumps(prediction, ensure_ascii=False), match_id[:8] if len(match_id) >= 8 else None))
         print("插入新记录")
     
     conn.commit()

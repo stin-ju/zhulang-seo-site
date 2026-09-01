@@ -229,7 +229,7 @@ def write_prediction(match_id, ai_name, pred_data, raw_response):
             next_id, match_id, ai_name,
             json.dumps(pred_data, ensure_ascii=False),
             pred_data.get("analysis", ""), "football",
-            str(pred_data.get("confidence", "")), None,
+            str(pred_data.get("confidence", "")), match_id[:8] if len(match_id) >= 8 else None,
             pred_data["spf"], pred_data["handicap_spf"],
             pred_data["goals"], pred_data["score"],
             pred_data["half_full"], raw_response,

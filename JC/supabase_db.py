@@ -269,6 +269,15 @@ def upsert_prediction(pred_data, on_conflict="match_id,ai_name"):
     match_id = pred_data.get("match_id")
     ai_name = pred_data.get("ai_name")
     
+    # 从 match_id 提取 match_date（格式：20260901_周一004 → 2026-09-01）
+    match_date = pred_data.get("match_date")
+    if not match_date and match_id and len(match_id) >= 8:
+        date_str = match_id[:8]  # "20260901"
+        try:
+            match_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+        except:
+            match_date = None
+    
     # 处理 JSON 字段
     prediction = pred_data.get("prediction")
     if isinstance(prediction, dict):
@@ -280,14 +289,15 @@ def upsert_prediction(pred_data, on_conflict="match_id,ai_name"):
     
     # 使用 INSERT ... ON CONFLICT 实现原子性 UPSERT
     execute_query(
-        """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled) 
-           VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s)
+        """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled, match_date) 
+           VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
            ON CONFLICT (match_id, ai_name) 
            DO UPDATE SET prediction = EXCLUDED.prediction, 
                          hit_status = EXCLUDED.hit_status, 
-                         is_settled = EXCLUDED.is_settled""",
+                         is_settled = EXCLUDED.is_settled,
+                         match_date = EXCLUDED.match_date""",
         [match_id, ai_name, pred_data.get("sport_type"), prediction, hit_status, 
-         pred_data.get("is_settled", False)],
+         pred_data.get("is_settled", False), match_date],
         fetch=False
     )
     return [pred_data]

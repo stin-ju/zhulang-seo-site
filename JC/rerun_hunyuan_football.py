@@ -193,9 +193,9 @@ def save_prediction(match_id, ai_name, prediction):
         """, (json.dumps(prediction, ensure_ascii=False), match_id, ai_name))
     else:
         cur.execute("""
-            INSERT INTO predictions (match_id, ai_name, prediction, created_at)
-            VALUES (%s, %s, %s, NOW())
-        """, (match_id, ai_name, json.dumps(prediction, ensure_ascii=False)))
+            INSERT INTO predictions (match_id, ai_name, prediction, match_date, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+        """, (match_id, ai_name, json.dumps(prediction, ensure_ascii=False), match_id[:8] if len(match_id) >= 8 else None))
     
     conn.commit()
     conn.close()
