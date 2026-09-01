@@ -627,7 +627,7 @@ ${listHtml}
     if (pathname === '/api/matches' && req.method === 'GET') {
       const date = parsedUrl.searchParams.get('date');
       const sport = parsedUrl.searchParams.get('sport'); // null means all sports
-      const includePredictions = parsedUrl.searchParams.get('include_predictions') === 'true';
+      const includePredictions = parsedUrl.searchParams.get('include_predictions') !== 'false'; // 默认包含预测数据
 
       const days = parseInt(parsedUrl.searchParams.get('days')) || 30;
       let query = `SELECT * FROM matches`;
