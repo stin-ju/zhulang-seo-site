@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-09-01T12:18:10.473851",
+  "timestamp": "2026-09-02T00:22:17.646159",
   "handicap_fixed": 0,
   "handicap_missing": 347,
-  "scores_missing": 80,
+  "scores_missing": 8,
   "unsettled_predictions": 0,
-  "incomplete_predictions": 269,
-  "upcoming_no_handicap": 77,
+  "incomplete_predictions": 266,
+  "upcoming_no_handicap": 76,
   "errors": []
 }
