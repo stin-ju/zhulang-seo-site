@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { execFile } = require('child_process');
 const { Pool } = require('pg');
 
@@ -42,6 +43,37 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+// 发送 JSON 响应（支持 gzip 压缩，解决 CDN 响应大小限制）
+const RESPONSE_VERSION = 'v20260901b'; // 用于缓存失效
+function sendJsonResponse(req, res, data, statusCode = 200) {
+  const json = JSON.stringify(data);
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  const baseHeaders = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'X-Response-Version': RESPONSE_VERSION,
+    'Vary': 'Accept-Encoding, Cookie, X-Request-Id',
+    ...CORS_HEADERS
+  };
+  
+  if (acceptEncoding.includes('gzip') && json.length > 1024) {
+    zlib.gzip(Buffer.from(json, 'utf8'), (err, compressed) => {
+      if (err) {
+        res.writeHead(statusCode, { ...baseHeaders, 'Content-Length': Buffer.byteLength(json) });
+        res.end(json);
+        return;
+      }
+      res.writeHead(statusCode, { ...baseHeaders, 'Content-Encoding': 'gzip', 'Content-Length': compressed.length });
+      res.end(compressed);
+    });
+  } else {
+    res.writeHead(statusCode, { ...baseHeaders, 'Content-Length': Buffer.byteLength(json) });
+    res.end(json);
+  }
+}
 
 // ============ Task Status Tracking ============
 const taskStatus = {
@@ -247,8 +279,17 @@ function normalizeMatch(match) {
     matchTime = `${matchDate} ${hhmm}`;
   }
   
+  // 精简 metadata：列表接口去掉大文本字段和不必要的嵌套
+  // 保留 match_time, match_date, status, home_score, away_score 等已提取到顶层
+  const slimMeta = {};
+  // 只保留前端可能需要的少量 metadata 字段
+  if (meta.match_type) slimMeta.match_type = meta.match_type;
+  if (meta.league) slimMeta.league = meta.league;
+  if (meta.status) slimMeta.status = meta.status;
+  
   return {
     ...match,
+    metadata: slimMeta,
     match_date: matchDate,
     match_time: matchTime,
     teams: match.home_team && match.away_team ? `${match.home_team} vs ${match.away_team}` : '',
@@ -281,34 +322,61 @@ function normalizePrediction(pred, matchMap) {
   const normalizedHwl = prediction.handicap_win_loss || pred.handicap_win_loss || pred.handicap_win_loss_pred || null;
   const normalizedTp = prediction.total_points || pred.total_points || pred.total_points_pred || null;
 
-  return {
-    ...pred,
-    spf: prediction.spf || null,
-    handicap_spf: prediction.handicap_spf || null,
-    score: prediction.score || null,
-    goals: prediction.goals || null,
-    half_full: prediction.half_full || null,
-    score_diff_range: normalizedSdr,
-    score_diff_range_pred: normalizedSdr,
-    win_loss: normalizedWl,
-    win_loss_pred: normalizedWl,
-    handicap_win_loss: normalizedHwl,
-    handicap_win_loss_pred: normalizedHwl,
-    total_points: normalizedTp,
-    total_points_pred: normalizedTp,
-    hit_spf: hitStatus.spf === true ? '✅' : hitStatus.spf === false ? '❌' : null,
-    hit_handicap: hitStatus.handicap_spf === true ? '✅' : hitStatus.handicap_spf === false ? '❌' : null,
-    hit_score: hitStatus.score === true ? '✅' : hitStatus.score === false ? '❌' : null,
-    hit_goals: hitStatus.goals === true ? '✅' : hitStatus.goals === false ? '❌' : null,
-    hit_half: hitStatus.half_full === true ? '✅' : hitStatus.half_full === false ? '❌' : null,
-    hit_win_loss: hitStatus.win_loss === true ? '✅' : hitStatus.win_loss === false ? '❌' : null,
-    hit_handicap_win_loss: hitStatus.handicap_win_loss === true ? '✅' : hitStatus.handicap_win_loss === false ? '❌' : null,
-    hit_total_points: hitStatus.total_points === true ? '✅' : hitStatus.total_points === false ? '❌' : null,
-    hit_score_diff_range: hitStatus.score_diff_range === true ? '✅' : hitStatus.score_diff_range === false ? '❌' : null,
-    hit_half_win_loss: hitStatus.half_win_loss === true ? '✅' : hitStatus.half_win_loss === false ? '❌' : null,
+  // 精简输出：只保留核心字段，去掉 raw_response/analysis/冗余pred列 以减小响应体积
+  const sportType = pred.sport_type || (match ? match.sport_type : null);
+  
+  // 精简 prediction JSONB：只保留前端需要的字段
+  const slimPrediction = {};
+  if (prediction.spf) slimPrediction.spf = prediction.spf;
+  if (prediction.handicap_spf) slimPrediction.handicap_spf = prediction.handicap_spf;
+  if (prediction.score) slimPrediction.score = prediction.score;
+  if (prediction.goals) slimPrediction.goals = prediction.goals;
+  if (prediction.half_full) slimPrediction.half_full = prediction.half_full;
+  if (prediction.win_loss) slimPrediction.win_loss = prediction.win_loss;
+  if (prediction.handicap_win_loss) slimPrediction.handicap_win_loss = prediction.handicap_win_loss;
+  if (prediction.total_points) slimPrediction.total_points = prediction.total_points;
+  if (prediction.score_diff_range) slimPrediction.score_diff_range = prediction.score_diff_range;
+  if (prediction.half_win_loss) slimPrediction.half_win_loss = prediction.half_win_loss;
+  if (prediction.handicap_result) slimPrediction.handicap_result = prediction.handicap_result;
+  if (prediction.score_diff) slimPrediction.score_diff = prediction.score_diff;
+
+  // 精简 hit_status JSONB：只保留 true/false 值
+  const slimHitStatus = {};
+  for (const k of hitFields) {
+    if (hitStatus[k] === true || hitStatus[k] === false) slimHitStatus[k] = hitStatus[k];
+  }
+  if (hitStatus.reason) slimHitStatus.reason = hitStatus.reason;
+
+  const result = {
+    ai_name: pred.ai_name,
+    sport_type: sportType,
+    is_settled: pred.is_settled,
+    prediction: slimPrediction,
+    hit_status: slimHitStatus,
     total_hits: totalHits,
-    sport_type: match ? match.sport_type : null
   };
+  // 只添加非null的预测值，减少响应体积
+  if (prediction.spf) result.spf = prediction.spf;
+  if (prediction.handicap_spf) result.handicap_spf = prediction.handicap_spf;
+  if (prediction.score) result.score = prediction.score;
+  if (prediction.goals) result.goals = prediction.goals;
+  if (prediction.half_full) result.half_full = prediction.half_full;
+  if (normalizedSdr) result.score_diff_range = normalizedSdr;
+  if (normalizedWl) result.win_loss = normalizedWl;
+  if (normalizedHwl) result.handicap_win_loss = normalizedHwl;
+  if (normalizedTp) result.total_points = normalizedTp;
+  // 只添加非null的命中标记
+  if (hitStatus.spf !== undefined && hitStatus.spf !== null) result.hit_spf = hitStatus.spf === true ? '✅' : '❌';
+  if (hitStatus.handicap_spf !== undefined && hitStatus.handicap_spf !== null) result.hit_handicap = hitStatus.handicap_spf === true ? '✅' : '❌';
+  if (hitStatus.score !== undefined && hitStatus.score !== null) result.hit_score = hitStatus.score === true ? '✅' : '❌';
+  if (hitStatus.goals !== undefined && hitStatus.goals !== null) result.hit_goals = hitStatus.goals === true ? '✅' : '❌';
+  if (hitStatus.half_full !== undefined && hitStatus.half_full !== null) result.hit_half = hitStatus.half_full === true ? '✅' : '❌';
+  if (hitStatus.win_loss !== undefined && hitStatus.win_loss !== null) result.hit_win_loss = hitStatus.win_loss === true ? '✅' : '❌';
+  if (hitStatus.handicap_win_loss !== undefined && hitStatus.handicap_win_loss !== null) result.hit_handicap_win_loss = hitStatus.handicap_win_loss === true ? '✅' : '❌';
+  if (hitStatus.total_points !== undefined && hitStatus.total_points !== null) result.hit_total_points = hitStatus.total_points === true ? '✅' : '❌';
+  if (hitStatus.score_diff_range !== undefined && hitStatus.score_diff_range !== null) result.hit_score_diff_range = hitStatus.score_diff_range === true ? '✅' : '❌';
+  if (hitStatus.half_win_loss !== undefined && hitStatus.half_win_loss !== null) result.hit_half_win_loss = hitStatus.half_win_loss === true ? '✅' : '❌';
+  return result;
 }
 
 // ============ Commentary Generator ============
@@ -721,8 +789,8 @@ ${listHtml}
         });
 
         const predictionsByMatch = {};
-        allPreds.forEach(p => {
-          const matchId = String(p.match_id);
+        allPreds.forEach((p, idx) => {
+          const matchId = String(predResult.rows[idx].match_id);
           if (!predictionsByMatch[matchId]) predictionsByMatch[matchId] = [];
           predictionsByMatch[matchId].push(p);
         });
@@ -732,12 +800,7 @@ ${listHtml}
         });
       }
 
-      res.writeHead(200, { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-        ...CORS_HEADERS 
-      });
-      res.end(JSON.stringify(enriched));
+      sendJsonResponse(req, res, enriched);
       return;
     }
 
