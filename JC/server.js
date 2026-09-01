@@ -45,7 +45,7 @@ const CORS_HEADERS = {
 };
 
 // 发送 JSON 响应（支持 gzip 压缩，解决 CDN 响应大小限制）
-const RESPONSE_VERSION = 'v20260901b'; // 用于缓存失效
+const RESPONSE_VERSION = 'v20260901c'; // 用于缓存失效 v3
 function sendJsonResponse(req, res, data, statusCode = 200) {
   const json = JSON.stringify(data);
   const acceptEncoding = req.headers['accept-encoding'] || '';
