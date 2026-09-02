@@ -840,6 +840,7 @@ ${listHtml}
 
     // ======== GET /api/predictions ========
     if (pathname === '/api/predictions' && req.method === 'GET') {
+      try {
       const sport = parsedUrl.searchParams.get('sport') || 'football';
       const days = parseInt(parsedUrl.searchParams.get('days')) || 30;
 
@@ -877,6 +878,14 @@ ${listHtml}
       });
       res.end(JSON.stringify(enriched));
       return;
+      } catch (err) {
+        console.error('[/api/predictions] 错误:', err.message);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        }
+        res.end(JSON.stringify({ error: 'Internal Server Error', message: err.message }));
+        return;
+      }
     }
 
     // ======== GET /api/chain_bets ========

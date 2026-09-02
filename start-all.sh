@@ -1,7 +1,7 @@
 #!/bin/bash
 # 一键启动脚本 - 带端口自愈功能
 # 容器启动时检测5000/5001/5002端口，若未监听则清理残留进程并重启
-# rebuild: 20260902-003
+# rebuild: 20260902-004
 
 set -e
 
@@ -17,16 +17,11 @@ echo "时间: $(date)"
 # 检查每个端口
 for i in "${!PORTS[@]}"; do
     port=${PORTS[$i]}
-    if ss -tuln 2>/dev/null | grep -qE ":${port}[[:space:]]" | grep -q LISTEN; then
+    if ss -tuln 2>/dev/null | grep -qE "LISTEN.*:${port}([[:space:]]|$)"; then
         echo "  端口 $port (${SERVICE_NAMES[$i]}) ✓ 已监听"
     else
-        # 双重检查
-        if ss -tuln 2>/dev/null | grep -qE ":${port}[[:space:]].*LISTEN"; then
-            echo "  端口 $port (${SERVICE_NAMES[$i]}) ✓ 已监听"
-        else
-            echo "  端口 $port (${SERVICE_NAMES[$i]}) ✗ 未监听"
-            NEED_RESTART=true
-        fi
+        echo "  端口 $port (${SERVICE_NAMES[$i]}) ✗ 未监听"
+        NEED_RESTART=true
     fi
 done
 
@@ -45,7 +40,7 @@ if [ "$NEED_RESTART" = true ]; then
     
     # 确认端口已释放
     for port in "${PORTS[@]}"; do
-        if ss -tuln 2>/dev/null | grep -qE ":${port}[[:space:]].*LISTEN"; then
+        if ss -tuln 2>/dev/null | grep -qE "LISTEN.*:${port}([[:space:]]|$)"; then
             echo "  警告: 端口 $port 仍被占用，尝试强制释放..."
             fuser -k ${port}/tcp 2>/dev/null || true
             sleep 1
@@ -80,7 +75,7 @@ if [ "$NEED_RESTART" = true ]; then
     ALL_OK=true
     for i in "${!PORTS[@]}"; do
         port=${PORTS[$i]}
-        if ss -tuln 2>/dev/null | grep -qE ":${port}[[:space:]].*LISTEN"; then
+        if ss -tuln 2>/dev/null | grep -qE "LISTEN.*:${port}([[:space:]]|$)"; then
             echo "  端口 $port (${SERVICE_NAMES[$i]}) ✓ 已监听"
         else
             echo "  端口 $port (${SERVICE_NAMES[$i]}) ✗ 启动失败"
