@@ -218,6 +218,24 @@ function doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, startTime)
     proxyRes.on('error', () => {
       try { res.end(); } catch (_) {}
     });
+    // 防止响应挂死：30秒超时
+    const proxyTimeout = setTimeout(() => {
+      console.error(`[Router] 代理响应超时(30s): ${serviceName}(${targetPort}) ${req.url}`);
+      try { res.end(); } catch (_) {}
+      proxyReq.destroy();
+    }, 30000);
+    res.on('close', () => { clearTimeout(proxyTimeout); });
+    res.on('finish', () => { clearTimeout(proxyTimeout); });
+  });
+
+  // 代理请求超时：10秒
+  proxyReq.setTimeout(10000, () => {
+    console.error(`[Router] 代理请求超时(10s): ${serviceName}(${targetPort}) ${req.url}`);
+    proxyReq.destroy();
+    if (!res.headersSent) {
+      res.writeHead(504);
+      res.end('Gateway Timeout');
+    }
   });
 
   proxyReq.on('error', (e) => {
@@ -248,6 +266,13 @@ function doProxyWithRetry(req, res, targetPort, serviceName, bodyBuf, startTime)
 // ============================
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
+
+  // 健康检查端点（FaaS用，立即返回，不依赖后端服务）
+  if (url === '/health' || url === '/_health') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() }));
+    return;
+  }
 
   // 根路径直接返回ix.html内容（不代理不重定向，避免CDN/代理层404或缓存问题）
   if (url === '/') {
