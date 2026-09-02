@@ -100,14 +100,14 @@ AI_CONFIGS = {
         ],
     },
     "AI-混元": {
-        "url": "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",
+        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "",
-        "model": "hunyuan-pro",
+        "model": "hy-mt2-plus",               # ✅ TokenHub端点实测200
         "format": "openai",
         "fallback_models": [
-            "hunyuan-standard",
-            "hunyuan-lite",
+            "hy-mt2-pro",                      # ✅ TokenHub实测200
+            "hy4-preview",                     # ✅ TokenHub实测可用
         ],
     },
     "AI-豆包": {
