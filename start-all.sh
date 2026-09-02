@@ -14,6 +14,18 @@ NEED_RESTART=false
 echo "=== 服务自愈检查 ==="
 echo "时间: $(date)"
 
+# Python 依赖保护：确保容器重启后 psycopg2 等模块可用
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/JC/requirements.txt" ]; then
+    echo "=== 检查 Python 依赖 ==="
+    if python3 -c "import psycopg2" 2>/dev/null; then
+        echo "  psycopg2 ✓ 已安装"
+    else
+        echo "  psycopg2 ✗ 缺失，安装中..."
+        pip3 install -r "$SCRIPT_DIR/JC/requirements.txt" --quiet 2>&1 || echo "  ⚠ Python 依赖安装失败（非致命，auto_predict 可能不可用）"
+    fi
+fi
+
 # 检查每个端口
 for i in "${!PORTS[@]}"; do
     port=${PORTS[$i]}
