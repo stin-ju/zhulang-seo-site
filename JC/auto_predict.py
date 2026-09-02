@@ -128,10 +128,10 @@ AI_CONFIGS = {
 AI_CALL_ORDER = [
     "AI-DeepSeek",
     "AI-MiniMax", 
-    # "AI-扣子",  # 暂时禁用：COZE_PROJECT_API_TOKEN 未配置(401)，需配置有效token后启用
+    "AI-扣子",
     "AI-文心",
     "AI-智谱清言",
-    # "AI-混元",  # 暂时禁用：HUNYUAN_API_KEY 无效(401)，需重新配置有效密钥后启用
+    "AI-混元",
     "AI-豆包",
 ]
 
