@@ -1,7 +1,7 @@
 [project]
 entrypoint = "index.html"
 requires = [ "nodejs-24" ]
-# rebuild-trigger: 20260902-004
+# rebuild-trigger: 20260902-005-force-redeploy
 
 [dev]
 build = ["pnpm", "install"]
