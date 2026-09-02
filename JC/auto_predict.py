@@ -103,11 +103,12 @@ AI_CONFIGS = {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "key_env": "ZHIPU_API_KEY",
         "key_default": "REMOVED",
-        "model": "glm-4-flash-250414",
+        "model": "hy-mt2-plus",
         "format": "openai",
         "fallback_models": [
-            "glm-4-flash",
-            "hy3-preview",
+            "hy-mt2-pro",
+            "hy-role",
+            "hy4-preview",
         ],
     },
     "AI-豆包": {
