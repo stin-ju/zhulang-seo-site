@@ -1369,10 +1369,7 @@ def _call_ai_single(ai_name, match, sport, prompt, intel_data):
     for attempt in range(max_retries):
         try:
             t0 = time.time()
-            if ai_name == "AI-混元" and sport == "football":
-                result = call_hunyuan_with_retry(match, intel_data)
-            else:
-                result = call_ai(ai_name, prompt, sport)
+            result = call_ai(ai_name, prompt, sport)
             elapsed = time.time() - t0
             
             if result is not None:
