@@ -100,15 +100,14 @@ AI_CONFIGS = {
         ],
     },
     "AI-混元": {
-        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        "key_env": "ZHIPU_API_KEY",
-        "key_default": "REMOVED",
-        "model": "hy-mt2-plus",
+        "url": "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",
+        "key_env": "HUNYUAN_API_KEY",
+        "key_default": "",
+        "model": "hunyuan-pro",
         "format": "openai",
         "fallback_models": [
-            "hy-mt2-pro",
-            "hy-role",
-            "hy4-preview",
+            "hunyuan-standard",
+            "hunyuan-lite",
         ],
     },
     "AI-豆包": {
