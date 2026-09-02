@@ -551,6 +551,11 @@ def _normalize_hunyuan_format(data):
             "analysis": data.get("analysis", ""),
         }
         return normalized
+    # 即使有spf字段，如果handicap_spf不是标准值也清空，交给校验函数计算
+    if isinstance(data, dict) and "spf" in data:
+        hspf = data.get("handicap_spf", "")
+        if hspf and hspf not in ("让胜", "让平", "让负", ""):
+            data["handicap_spf"] = ""
     return data
 
 
@@ -1452,8 +1457,10 @@ def _process_and_store(ai_name, result, match, sport):
             handicap_spf_raw = result.get("handicap_spf", "")
             handicap_map = {"让球胜": "让胜", "让球平": "让平", "让球负": "让负"}
             handicap_spf = handicap_map.get(handicap_spf_raw, handicap_spf_raw)
-            if handicap_spf not in ("让胜", "让平", "让负"):
-                return False, f"handicap非法({handicap_spf_raw})"
+            # 非标准值清空，由 validate_football_consistency 根据比分和让球值自动计算
+            if handicap_spf not in ("让胜", "让平", "让负", ""):
+                handicap_spf = ""
+                result["handicap_spf"] = ""
             
             score = result.get("score", "")
             if not re.match(r'^\d+-\d+$', str(score)):
