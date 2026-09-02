@@ -15,7 +15,7 @@ echo "=== 服务自愈检查 ==="
 echo "时间: $(date)"
 
 # Python 依赖保护：确保容器重启后 psycopg2 等模块可用
-# 关键：检查 C 扩展 _psycopg，不仅仅是 Python wrapper
+# 关键：必须用 psycopg2-binary（自带预编译wheel），不能用源码版（需libpq/编译工具）
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/JC/requirements.txt" ]; then
     echo "=== 检查 Python 依赖 ==="
@@ -31,29 +31,45 @@ if [ -f "$SCRIPT_DIR/JC/requirements.txt" ]; then
     if python3 -c "import psycopg2._psycopg" 2>/dev/null; then
         echo "  psycopg2._psycopg ✓ C扩展正常"
     else
-        echo "  psycopg2._psycopg ✗ C扩展缺失或损坏，重新安装..."
+        echo "  psycopg2._psycopg ✗ C扩展缺失或损坏，彻底清理并重装..."
         
+        # Step 1: 彻底删除旧版 psycopg2（源码版 + binary版 + dist-info）
+        echo "  Step 1: 清理旧版 psycopg2..."
         if [ -n "$PIP_TARGET" ]; then
-            echo "  安装到: $PIP_TARGET"
-            pip3 install -r "$SCRIPT_DIR/JC/requirements.txt" --target "$PIP_TARGET" --quiet --force-reinstall 2>&1 || true
-            # 确保 PYTHONPATH 包含目标目录
-            export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
+            rm -rf "$PIP_TARGET"/psycopg2 "$PIP_TARGET"/psycopg2_binary* "$PIP_TARGET"/psycopg2-*.dist-info "$PIP_TARGET"/psycopg2_binary-*.dist-info 2>/dev/null || true
+            echo "  已清理: $PIP_TARGET/psycopg2*"
         else
-            echo "  安装到: 默认位置"
-            pip3 install -r "$SCRIPT_DIR/JC/requirements.txt" --quiet --force-reinstall 2>&1 || true
+            pip3 uninstall psycopg2 psycopg2-binary -y 2>/dev/null || true
         fi
         
-        # 验证安装结果
+        # Step 2: 安装 psycopg2-binary（预编译wheel，不依赖libpq）
+        echo "  Step 2: 安装 psycopg2-binary..."
+        if [ -n "$PIP_TARGET" ]; then
+            pip3 install --upgrade --force-reinstall --no-cache-dir 'psycopg2-binary>=2.9.0' --target "$PIP_TARGET" 2>&1 | tail -3
+        else
+            pip3 install --upgrade --force-reinstall --no-cache-dir 'psycopg2-binary>=2.9.0' 2>&1 | tail -3
+        fi
+        
+        # Step 3: 安装其他依赖（跳过 psycopg2，已单独处理）
+        echo "  Step 3: 安装其他依赖..."
+        if [ -n "$PIP_TARGET" ]; then
+            pip3 install --no-cache-dir 'requests>=2.31.0' 'aiohttp>=3.9.0' --target "$PIP_TARGET" --quiet 2>&1 || true
+        else
+            pip3 install --no-cache-dir 'requests>=2.31.0' 'aiohttp>=3.9.0' --quiet 2>&1 || true
+        fi
+        
+        # 确保 PYTHONPATH 包含目标目录
+        if [ -n "$PIP_TARGET" ]; then
+            export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
+        fi
+        
+        # Step 4: 验证
         if python3 -c "import psycopg2._psycopg; print('  ✓ psycopg2 C扩展验证通过')" 2>/dev/null; then
             echo "  ✓ 依赖安装成功"
         else
-            echo "  ⚠ psycopg2 安装后仍无法导入，尝试补充安装 psycopg2-binary..."
-            if [ -n "$PIP_TARGET" ]; then
-                pip3 install psycopg2-binary --target "$PIP_TARGET" --quiet --force-reinstall 2>&1 || true
-            else
-                pip3 install psycopg2-binary --quiet --force-reinstall 2>&1 || true
-            fi
-            python3 -c "import psycopg2._psycopg" 2>/dev/null && echo "  ✓ 补充安装成功" || echo "  ⚠ psycopg2 仍不可用（auto_predict 可能无法运行）"
+            echo "  ⚠ psycopg2 仍不可用，列出已安装版本："
+            pip3 list 2>/dev/null | grep -i psycopg || true
+            ls -la "$PIP_TARGET"/psycopg2* 2>/dev/null | head -5 || true
         fi
     fi
     
