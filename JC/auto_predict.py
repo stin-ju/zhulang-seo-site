@@ -762,6 +762,85 @@ def validate_basketball_consistency(pred, spread_line):
     return corrected
 
 
+def _get_match_handicap(match):
+    """从 match dict 中获取让球值（float），兼容 metadata 嵌套结构"""
+    md = match.get("metadata") or {}
+    if isinstance(md, str):
+        try:
+            md = json.loads(md)
+        except:
+            md = {}
+    raw = md.get("handicap") or match.get("handicap") or "0"
+    try:
+        return float(raw)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def validate_football_consistency(pred, match):
+    """校验并修正足球预测的逻辑一致性：
+    1. handicap_spf 必须与 score + 让球盘口 一致
+    2. half_full 必须与 score 一致
+    以比分为准，覆盖不一致的字段。
+    """
+    corrected = dict(pred)
+    score_str = str(pred.get("score", ""))
+    m = re.match(r'^(\d+)-(\d+)$', score_str)
+    if not m:
+        return corrected
+
+    home_goals = int(m.group(1))
+    away_goals = int(m.group(2))
+    handicap = _get_match_handicap(match)
+
+    # ---- 1. 校验 handicap_spf ----
+    # 让球后净胜球 = 主进球 - 客进球 + 让球值
+    net = home_goals - away_goals + handicap
+    if net > 0.01:
+        correct_handicap = "让胜"
+    elif net < -0.01:
+        correct_handicap = "让负"
+    else:
+        correct_handicap = "让平"
+
+    current_handicap = pred.get("handicap_spf", "")
+    if current_handicap != correct_handicap:
+        print(f"  [修正] handicap_spf: {current_handicap} -> {correct_handicap} "
+              f"(比分{score_str}, 盘口{handicap:+.1f}, 净胜{net:+.1f})")
+        corrected["handicap_spf"] = correct_handicap
+
+    # ---- 2. 校验 half_full ----
+    current_hf = pred.get("half_full") or ""
+    if len(current_hf) == 2:
+        half_char = current_hf[0]   # 胜/平/负
+        full_char = current_hf[1]   # 胜/平/负
+
+        # 全场结果修正
+        if home_goals > away_goals:
+            correct_full = "胜"
+        elif home_goals < away_goals:
+            correct_full = "负"
+        else:
+            correct_full = "平"
+
+        if full_char != correct_full:
+            print(f"  [修正] half_full全场: {full_char} -> {correct_full} (比分{score_str})")
+            full_char = correct_full
+
+        # 半场结果修正：0-0 半场必须是 "平"
+        if home_goals == 0 and away_goals == 0:
+            correct_half = "平"
+            if half_char != correct_half:
+                print(f"  [修正] half_full半场: {half_char} -> {correct_half} (比分0-0)")
+                half_char = correct_half
+
+        corrected_hf = half_char + full_char
+        if corrected_hf != current_hf:
+            corrected["half_full"] = corrected_hf
+
+    return corrected
+
+
 # ============ Prompt构建 ============
 
 def build_intel_prompt(match, sport="football"):
@@ -1469,9 +1548,10 @@ def phase2_predict(sport="football"):
                     }
                     
                     # 立即入库
+                    pred = validate_football_consistency(pred, match)
                     insert_football_prediction(pred)
                     match_pred_count += 1
-                    print(f"OK -> {spf}/{handicap_spf}/{score}")
+                    print(f"OK -> {pred.get('spf')}/{pred.get('handicap_spf')}/{pred.get('score')}")
                 
             except Exception as e:
                 print(f"失败: {str(e)[:50]}")
@@ -1575,7 +1655,7 @@ def phase3_quality_check(sport="football", max_retries=1):
     
     # 获取今天及最近7天的比赛（优先检查今天的）
     rows = execute_query("""
-        SELECT m.id, m.home_team, m.away_team, m.sport_type,
+        SELECT m.id, m.home_team, m.away_team, m.sport_type, m.metadata,
                CASE WHEN (m.metadata->>'match_time')::date = CURRENT_DATE THEN 1 ELSE 0 END as is_today
         FROM matches m
         WHERE m.sport_type = %s
@@ -1584,7 +1664,8 @@ def phase3_quality_check(sport="football", max_retries=1):
         ORDER BY is_today DESC, (m.metadata->>'match_time')::timestamp DESC
     """, (sport,), fetch=True) or []
     
-    matches = [{"id": row["id"], "home_team": row["home_team"], "away_team": row["away_team"]} 
+    matches = [{"id": row["id"], "home_team": row["home_team"], "away_team": row["away_team"],
+                "metadata": row.get("metadata", {})} 
                for row in rows]
     
     if not matches:
@@ -1774,9 +1855,10 @@ def phase3_quality_check(sport="football", max_retries=1):
                         "analysis": result.get("analysis", "")[:500],
                     }
                     
+                    pred = validate_football_consistency(pred, match)
                     insert_football_prediction(pred)
                     total_retries += 1
-                    print(f"OK -> {spf}/{handicap_spf}/{score}")
+                    print(f"OK -> {pred.get('spf')}/{pred.get('handicap_spf')}/{pred.get('score')}")
                 
             except Exception as e:
                 print(f"失败: {str(e)[:50]}")

@@ -1397,6 +1397,42 @@ def build_prediction_record(match, ai_name, parsed, raw_text):
     sport_type = match["sport_type"]
 
     if sport_type == "football":
+        # ---- 逻辑一致性校验：handicap_spf 与 score ----
+        score_str = str(parsed.get("score", ""))
+        import re as _re
+        _m = _re.match(r'^(\d+)-(\d+)$', score_str)
+        if _m:
+            _hg, _ag = int(_m.group(1)), int(_m.group(2))
+            # 获取让球值
+            _md = match.get("metadata") or {}
+            if isinstance(_md, str):
+                try: _md = json.loads(_md)
+                except: _md = {}
+            _hdc_raw = _md.get("handicap") or "0"
+            try: _hdc = float(_hdc_raw)
+            except: _hdc = 0.0
+            _net = _hg - _ag + _hdc
+            if _net > 0.01: _correct_hdc = "让胜"
+            elif _net < -0.01: _correct_hdc = "让负"
+            else: _correct_hdc = "让平"
+            if parsed.get("handicap_spf") != _correct_hdc:
+                print(f"  [修正] {ai_name} handicap_spf: {parsed.get('handicap_spf')} -> {_correct_hdc} (比分{score_str}, 盘口{_hdc:+.1f})")
+                parsed["handicap_spf"] = _correct_hdc
+
+        # ---- 逻辑一致性校验：half_full 与 score ----
+        _hf = parsed.get("half_full", "")
+        if isinstance(_hf, str) and len(_hf) == 2 and _m:
+            _half_c, _full_c = _hf[0], _hf[1]
+            _correct_full = "胜" if _hg > _ag else ("负" if _hg < _ag else "平")
+            if _full_c != _correct_full:
+                _full_c = _correct_full
+            if _hg == 0 and _ag == 0 and _half_c != "平":
+                _half_c = "平"
+            _corrected_hf = _half_c + _full_c
+            if _corrected_hf != _hf:
+                print(f"  [修正] {ai_name} half_full: {_hf} -> {_corrected_hf} (比分{score_str})")
+                parsed["half_full"] = _corrected_hf
+
         prediction_json = {
             "spf": parsed["spf"],
             "handicap_spf": parsed["handicap_spf"],
