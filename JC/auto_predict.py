@@ -626,13 +626,11 @@ def parse_ai_response(text, sport="football"):
 
 
 def get_coze_token():
-    """获取扣子API令牌：优先COZE_PROJECT_API_TOKEN(长度>20)，其次COZE_API_TOKEN(sat_令牌)，最后key_default"""
-    proj_token = os.environ.get("COZE_PROJECT_API_TOKEN", "")
-    if len(proj_token) > 20:
-        return proj_token
-    faas_token = os.environ.get("COZE_API_TOKEN", "")
-    if len(faas_token) > 20:
-        return faas_token
+    """获取扣子API令牌：按优先级尝试多个环境变量"""
+    for env_name in ["COZE_PROJECT_API_TOKEN", "COZE_API_TOKEN", "COZE_WORKLOAD_API_TOKEN"]:
+        token = os.environ.get(env_name, "")
+        if len(token) > 20:
+            return token
     return AI_CONFIGS["AI-扣子"].get("key_default", "")
 
 
