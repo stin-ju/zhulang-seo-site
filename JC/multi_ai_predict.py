@@ -66,10 +66,11 @@ AI_CONFIGS = {
         "max_tokens": 800,
     },
     "混元": {
-        "base_url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
-        "api_key": os.environ.get("HUNYUAN_API_KEY", "REMOVED"),
-        "model": "hy-mt2-lite",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "api_key": os.environ.get("ZHIPU_API_KEY", "REMOVED"),
+        "model": "glm-4-flash-250414",
         "max_tokens": 800,
+        "fallback_models": ["glm-4-flash", "hy-mt2-lite"],
     },
     "豆包": {
         "base_url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",

@@ -100,14 +100,14 @@ AI_CONFIGS = {
         ],
     },
     "AI-混元": {
-        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
-        "key_env": "HUNYUAN_API_KEY",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "key_env": "ZHIPU_API_KEY",
         "key_default": "REMOVED",
-        "model": "hy3",                        # ✅ Hy3(主模型)
+        "model": "glm-4-flash-250414",
         "format": "openai",
         "fallback_models": [
-            "hy-mt2-plus",                   # MT2 Plus
-            "hy-mt2-pro",                    # MT2 Pro
+            "glm-4-flash",
+            "hy3-preview",
         ],
     },
     "AI-豆包": {
