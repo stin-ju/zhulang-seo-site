@@ -143,6 +143,11 @@ function runPython(scriptName, args = []) {
     const scriptPath = path.join(__dirname, scriptName);
     const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
+    // 确保 Python 能找到 FaaS 环境的 site-packages
+    if (fs.existsSync('/opt/bytefaas/site-packages')) {
+      const extra = '/opt/bytefaas/site-packages';
+      env.PYTHONPATH = env.PYTHONPATH ? `${extra}:${env.PYTHONPATH}` : extra;
+    }
     
     const child = execFile('/usr/bin/python3', [scriptPath, ...args], {
       cwd: __dirname,

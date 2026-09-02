@@ -15,14 +15,52 @@ echo "=== 服务自愈检查 ==="
 echo "时间: $(date)"
 
 # Python 依赖保护：确保容器重启后 psycopg2 等模块可用
+# 关键：检查 C 扩展 _psycopg，不仅仅是 Python wrapper
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/JC/requirements.txt" ]; then
     echo "=== 检查 Python 依赖 ==="
-    if python3 -c "import psycopg2" 2>/dev/null; then
-        echo "  psycopg2 ✓ 已安装"
+    
+    # 确定安装目标目录（FaaS 环境用 /opt/bytefaas/site-packages）
+    if [ -d "/opt/bytefaas/site-packages" ]; then
+        PIP_TARGET="/opt/bytefaas/site-packages"
     else
-        echo "  psycopg2 ✗ 缺失，安装中..."
-        pip3 install -r "$SCRIPT_DIR/JC/requirements.txt" --quiet 2>&1 || echo "  ⚠ Python 依赖安装失败（非致命，auto_predict 可能不可用）"
+        PIP_TARGET=""
+    fi
+    
+    # 检查 psycopg2 C 扩展是否可用
+    if python3 -c "import psycopg2._psycopg" 2>/dev/null; then
+        echo "  psycopg2._psycopg ✓ C扩展正常"
+    else
+        echo "  psycopg2._psycopg ✗ C扩展缺失或损坏，重新安装..."
+        
+        if [ -n "$PIP_TARGET" ]; then
+            echo "  安装到: $PIP_TARGET"
+            pip3 install -r "$SCRIPT_DIR/JC/requirements.txt" --target "$PIP_TARGET" --quiet --force-reinstall 2>&1 || true
+            # 确保 PYTHONPATH 包含目标目录
+            export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
+        else
+            echo "  安装到: 默认位置"
+            pip3 install -r "$SCRIPT_DIR/JC/requirements.txt" --quiet --force-reinstall 2>&1 || true
+        fi
+        
+        # 验证安装结果
+        if python3 -c "import psycopg2._psycopg; print('  ✓ psycopg2 C扩展验证通过')" 2>/dev/null; then
+            echo "  ✓ 依赖安装成功"
+        else
+            echo "  ⚠ psycopg2 安装后仍无法导入，尝试补充安装 psycopg2-binary..."
+            if [ -n "$PIP_TARGET" ]; then
+                pip3 install psycopg2-binary --target "$PIP_TARGET" --quiet --force-reinstall 2>&1 || true
+            else
+                pip3 install psycopg2-binary --quiet --force-reinstall 2>&1 || true
+            fi
+            python3 -c "import psycopg2._psycopg" 2>/dev/null && echo "  ✓ 补充安装成功" || echo "  ⚠ psycopg2 仍不可用（auto_predict 可能无法运行）"
+        fi
+    fi
+    
+    # 确保 PYTHONPATH 已设置（即使检查通过也要 export，供子进程使用）
+    if [ -n "$PIP_TARGET" ]; then
+        export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
+        echo "  PYTHONPATH=$PYTHONPATH"
     fi
 fi
 
