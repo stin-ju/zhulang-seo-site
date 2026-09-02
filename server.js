@@ -306,3 +306,4 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Router]   CT(传统彩) → 127.0.0.1:${CT_PORT}`);
   console.log(`[Router]   JC竞彩 → 127.0.0.1:${JC_PORT}`);
 });
+// force-redeploy: 1788343553

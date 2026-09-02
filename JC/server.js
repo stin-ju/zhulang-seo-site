@@ -1805,3 +1805,4 @@ server.listen(PORT, HOST, () => {
   // 初始化比赛级别定时结算（不阻塞启动）
   initializeSettleTimers().catch(err => console.error('[AutoSettle] 启动初始化失败:', err.message));
 });
+// force-redeploy: 1788343553
