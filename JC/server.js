@@ -348,6 +348,7 @@ function normalizePrediction(pred, matchMap) {
   if (hitStatus.reason) slimHitStatus.reason = hitStatus.reason;
 
   const result = {
+    match_id: pred.match_id,
     ai_name: pred.ai_name,
     sport_type: sportType,
     is_settled: pred.is_settled,
