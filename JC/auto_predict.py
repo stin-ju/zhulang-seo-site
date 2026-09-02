@@ -522,6 +522,38 @@ def call_minimax(url, key, model, prompt, timeout=AI_CALL_TIMEOUT):
     return data["choices"][0]["message"]["content"]
 
 
+def _normalize_hunyuan_format(data):
+    """将混元的非标准JSON格式转换为标准预测格式"""
+    if not isinstance(data, dict):
+        return data
+    # 混元格式: {"winner":"平局","home_goals":0,"away_goals":0,"half_leader":"平局","analysis":"..."}
+    if "winner" in data and "spf" not in data:
+        winner_map = {"胜": "胜", "平局": "平", "负": "负", "平": "平"}
+        spf = winner_map.get(data.get("winner", ""), "")
+        hg = data.get("home_goals", 0)
+        ag = data.get("away_goals", 0)
+        if isinstance(hg, (int, float)) and isinstance(ag, (int, float)):
+            score = f"{int(hg)}-{int(ag)}"
+        else:
+            score = ""
+        # half_leader → half_full 的第一位
+        half_map = {"胜": "胜", "平局": "平", "负": "负", "平": "平"}
+        half_result = half_map.get(data.get("half_leader", ""), "平")
+        full_result = spf if spf else "平"
+        half_full = f"{half_result}{full_result}"
+        # 让球需要后续根据实际让球值计算，先设为空
+        normalized = {
+            "spf": spf,
+            "handicap_spf": "",  # 由 validate_football_consistency 自动计算
+            "score": score,
+            "goals": int(hg) + int(ag),
+            "half_full": half_full,
+            "analysis": data.get("analysis", ""),
+        }
+        return normalized
+    return data
+
+
 def parse_ai_response(text, sport="football"):
     """从AI回复中提取JSON预测结果"""
     if not text:
@@ -546,6 +578,11 @@ def parse_ai_response(text, sport="football"):
                 return data
             elif sport == "football" and "spf" in data:
                 return data
+            # 混元格式: 有 winner 字段但无 spf
+            elif sport == "football" and "winner" in data:
+                normalized = _normalize_hunyuan_format(data)
+                if normalized and normalized.get("spf"):
+                    return normalized
             # 情报格式
             if "intel_summary" in data or "home_form" in data:
                 return data
@@ -557,6 +594,18 @@ def parse_ai_response(text, sport="football"):
         json_match = re.search(r'\{[^}]*"win_loss"[^}]*\}', text, re.DOTALL)
     else:
         json_match = re.search(r'\{[^}]*"spf"[^}]*\}', text, re.DOTALL)
+        if not json_match:
+            # 尝试混元格式
+            json_match = re.search(r'\{[^}]*"winner"[^}]*\}', text, re.DOTALL)
+            if json_match:
+                try:
+                    data = json.loads(json_match.group(0))
+                    normalized = _normalize_hunyuan_format(data)
+                    if normalized and normalized.get("spf"):
+                        return normalized
+                except json.JSONDecodeError:
+                    pass
+                json_match = None
         if not json_match:
             # 尝试匹配情报格式
             json_match = re.search(r'\{[^}]*"intel_summary"[^}]*\}', text, re.DOTALL)
