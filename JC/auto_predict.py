@@ -625,6 +625,17 @@ def parse_ai_response(text, sport="football"):
     return None
 
 
+def get_coze_token():
+    """获取扣子API令牌：优先COZE_PROJECT_API_TOKEN(长度>20)，其次COZE_API_TOKEN(sat_令牌)，最后key_default"""
+    proj_token = os.environ.get("COZE_PROJECT_API_TOKEN", "")
+    if len(proj_token) > 20:
+        return proj_token
+    faas_token = os.environ.get("COZE_API_TOKEN", "")
+    if len(faas_token) > 20:
+        return faas_token
+    return AI_CONFIGS["AI-扣子"].get("key_default", "")
+
+
 def call_coze_code(url, token, prompt, project_id=None, timeout=INTEL_TIMEOUT):
     """调用扣子编程API"""
     headers = {
@@ -639,6 +650,7 @@ def call_coze_code(url, token, prompt, project_id=None, timeout=INTEL_TIMEOUT):
         },
         "type": "query",
         "session_id": f"predict_{int(time.time())}",
+        "partial": True,
     }
     if project_id:
         payload["project_id"] = project_id
@@ -699,7 +711,7 @@ def call_ai(ai_name, prompt, sport="football"):
     fmt = config["format"]
     
     if fmt == "coze_code":
-        token = os.environ.get(config.get("key_env", ""), "") or config.get("key_default", "")
+        token = get_coze_token()
         if not token:
             raise Exception(f"{ai_name} Token未配置")
         raw = call_coze_code(config["url"], token, prompt, config.get("project_id"))
@@ -1252,7 +1264,7 @@ def phase1_collect_intel(sport="football"):
             print(f"  调用扣子情报智能体...")
             result = call_coze_code(
                 AI_CONFIGS["AI-扣子"]["url"],
-                os.environ.get("COZE_PROJECT_API_TOKEN", "") or AI_CONFIGS["AI-扣子"]["key_default"],
+                get_coze_token(),
                 prompt,
                 AI_CONFIGS["AI-扣子"].get("project_id"),
                 timeout=INTEL_TIMEOUT
