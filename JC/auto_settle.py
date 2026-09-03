@@ -27,7 +27,10 @@ except Exception:
             if __import__('os').path.isdir(_p): shutil.rmtree(_p, ignore_errors=True)
         _pip += ['--target', _target]
         if _target not in __import__('sys').path: __import__('sys').path.insert(0, _target)
-    subprocess.check_call(_pip, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _result = subprocess.run(_pip, capture_output=True, text=True)
+    if _result.returncode != 0:
+        print(f'[psycopg2-self-heal] pip failed({_result.returncode}): {_result.stderr[:500]}', file=sys.stderr)
+        raise RuntimeError(f'psycopg2 install failed: {_result.stderr[:200]}')
     for _m in list(__import__('sys').modules):
         if 'psycopg2' in _m: del __import__('sys').modules[_m]
     import psycopg2
