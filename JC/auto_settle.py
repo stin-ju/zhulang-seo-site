@@ -14,23 +14,21 @@ predictions表关键列：
 """
 
 # ====== psycopg2 自愈逻辑 ======
-import importlib, subprocess, shutil
+import subprocess
 try:
     import psycopg2
     psycopg2.__version__
     from psycopg2._psycopg import __file__ as _test
 except Exception:
-    _target = '/opt/bytefaas/site-packages' if __import__('os').path.exists('/opt/bytefaas/site-packages') else None
-    _pip = ['pip3', 'install', 'psycopg2-binary', '--no-cache-dir', '--force-reinstall']
-    if _target:
-        for _p in [_target+'/psycopg2', _target+'/psycopg2_binary']:
-            if __import__('os').path.isdir(_p): shutil.rmtree(_p, ignore_errors=True)
-        _pip += ['--target', _target]
-        if _target not in __import__('sys').path: __import__('sys').path.insert(0, _target)
-    _result = subprocess.run(_pip, capture_output=True, text=True)
+    import shutil as _shutil
+    # 清理所有可能的旧版psycopg2
+    for _d in ['/opt/bytefaas/site-packages/psycopg2', '/opt/bytefaas/site-packages/psycopg2_binary']:
+        if __import__('os').path.isdir(_d): _shutil.rmtree(_d, ignore_errors=True)
+    # 不用--target，让pip3装到Python默认位置
+    _result = subprocess.run(['pip3', 'install', 'psycopg2-binary', '--no-cache-dir', '--force-reinstall'], capture_output=True, text=True)
     if _result.returncode != 0:
-        print(f'[psycopg2-self-heal] pip failed({_result.returncode}): {_result.stderr[:500]}', file=sys.stderr)
-        raise RuntimeError(f'psycopg2 install failed: {_result.stderr[:200]}')
+        raise RuntimeError(f'psycopg2 install failed: {_result.stderr[:500]}')
+    # 清理缓存重新导入
     for _m in list(__import__('sys').modules):
         if 'psycopg2' in _m: del __import__('sys').modules[_m]
     import psycopg2
