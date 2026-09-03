@@ -3,7 +3,27 @@
 """
 import os
 import json
-import psycopg2
+
+# ====== psycopg2 自愈逻辑 ======
+import importlib, subprocess, shutil
+try:
+    import psycopg2
+    psycopg2.__version__
+    from psycopg2._psycopg import __file__ as _test
+except Exception:
+    _target = '/opt/bytefaas/site-packages' if __import__('os').path.exists('/opt/bytefaas/site-packages') else None
+    _pip = [__import__('sys').executable, '-m', 'pip', 'install', 'psycopg2-binary', '--no-cache-dir', '--force-reinstall']
+    if _target:
+        for _p in [_target+'/psycopg2', _target+'/psycopg2_binary']:
+            if __import__('os').path.isdir(_p): shutil.rmtree(_p, ignore_errors=True)
+        _pip += ['--target', _target]
+        if _target not in __import__('sys').path: __import__('sys').path.insert(0, _target)
+    subprocess.check_call(_pip, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _m in list(__import__('sys').modules):
+        if 'psycopg2' in _m: del __import__('sys').modules[_m]
+    import psycopg2
+# ====== psycopg2 自愈结束 ======
+
 from psycopg2.extras import RealDictCursor
 
 # 数据库连接配置
