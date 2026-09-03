@@ -3,15 +3,18 @@
 # 由crontab每日0点和12点调用
 set -e
 
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+PROJECT_ROOT="$(cd .. && pwd)"
+
 # PYTHONPATH：优先 FaaS site-packages（psycopg2-binary 安装位置）
 if [ -d "/opt/bytefaas/site-packages" ]; then
-    export PYTHONPATH=/opt/bytefaas/site-packages:"$(pwd)":/workspace/projects/scripts:/workspace/projects:${PYTHONPATH:-}
+    export PYTHONPATH=/opt/bytefaas/site-packages:"$SCRIPT_DIR":"$PROJECT_ROOT/scripts":"$PROJECT_ROOT":${PYTHONPATH:-}
 else
-    export PYTHONPATH="$(pwd)":/workspace/projects/scripts:/workspace/projects:${PYTHONPATH:-}
+    export PYTHONPATH="$SCRIPT_DIR":"$PROJECT_ROOT/scripts":"$PROJECT_ROOT":${PYTHONPATH:-}
 fi
-LOG_DIR=/workspace/projects/JC/logs
-mkdir -p $LOG_DIR
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
 DATE=$(date +%Y%m%d_%H%M)
 
 echo '=== 赛事数据流水线开始 ==='
