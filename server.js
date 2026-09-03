@@ -275,6 +275,32 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // 临时诊断端点：psycopg2 环境诊断（排查完删除）
+  if (url === '/api/debug-psycopg2') {
+    const { execSync } = require('child_process');
+    const cmds = [
+      'python3 --version',
+      'python3 -c "import sys; print(chr(10).join(sys.path))"',
+      'echo PYTHONPATH=$PYTHONPATH',
+      'ls -la /opt/bytefaas/site-packages/psycopg2/ 2>&1 || echo NOT_FOUND',
+      'ls -la /opt/bytefaas/site-packages/psycopg2/_psycopg* 2>&1 || echo NO_C_EXT',
+      'pip3 list 2>/dev/null | grep -i psycopg || echo NO_PIP3_PSYCOPG2',
+      'find /usr/lib/python3* /usr/local/lib/python3* -name psycopg2 -type d 2>/dev/null || echo NO_SYSTEM_PSYCOPG2',
+      'find /usr/lib/python3* /usr/local/lib/python3* -name _psycopg*.so 2>/dev/null || echo NO_SYSTEM_C_EXT',
+      'head -30 /opt/bytefaas/site-packages/psycopg2/__init__.py 2>&1 || echo NO_INIT',
+      'python3 -c "import psycopg2; print(psycopg2.__version__); print(psycopg2.__file__)" 2>&1',
+      'echo ENV_PYTHONPATH=$PYTHONPATH',
+      'cat /workspace/projects/start-all.sh | grep -n psycopg2 2>&1 || echo NO_START_ALL'
+    ];
+    const results = cmds.map(c => {
+      try { return execSync(c, { encoding: 'utf-8', timeout: 10000, env: { ...process.env } }); }
+      catch(e) { return 'ERROR: ' + (e.stderr || e.message); }
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({ results }, null, 2));
+    return;
+  }
+
   // 根路径直接返回ix.html内容（不代理不重定向，避免CDN/代理层404或缓存问题）
   if (url === '/') {
     const ixPath = path.join(__dirname, 'JC', 'ix.html');
