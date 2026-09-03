@@ -19,6 +19,7 @@ import aiohttp
 import json
 import re
 import time
+import psycopg2
 from datetime import datetime
 
 DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres")

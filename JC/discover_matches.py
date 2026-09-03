@@ -26,6 +26,7 @@ import sys
 import json
 import time
 import re
+import psycopg2
 
 from datetime import datetime, timedelta
 

@@ -17,6 +17,7 @@ import json
 import sys
 import re
 import requests
+import psycopg2
 from datetime import datetime, timedelta
 
 DEFAULT_DB_URL = "postgresql://postgres:1538PQKpnIj0buIb6Y@cp-alive-flake-931e9663.pg2.aidap-global.cn-beijing.volces.com:5432/postgres"

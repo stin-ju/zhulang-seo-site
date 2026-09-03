@@ -25,6 +25,7 @@ import time
 import traceback
 import requests
 import math
+import psycopg2
 from datetime import datetime
 
 from supabase_db import (
