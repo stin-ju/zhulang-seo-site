@@ -367,7 +367,8 @@ def insert_football_prediction(pred):
         "ai_name": pred["ai_name"],
         "prediction": prediction_json,
         "analysis": pred.get("analysis", ""),
-        "sport_type": "football"
+        "sport_type": "football",
+        "raw_response": pred.get("raw_response", ""),
     })
     
     # 同时更新单独的足球列（upsert_prediction只更新prediction JSONB）
@@ -387,7 +388,7 @@ def insert_football_prediction(pred):
             pred.get("score"),
             pred.get("goals"),
             pred.get("half_full"),
-            json.dumps(prediction_json, ensure_ascii=False),
+            pred.get("raw_response", ""),
             pred["match_id"],
             pred["ai_name"]
         ), fetch=False)
@@ -460,7 +461,8 @@ def insert_basketball_prediction(pred):
         "ai_name": pred["ai_name"],
         "sport_type": "basketball",
         "prediction": prediction_json,
-        "analysis": pred.get("analysis", "")
+        "analysis": pred.get("analysis", ""),
+        "raw_response": pred.get("raw_response", ""),
     })
     
     # 同时更新单独的篮球列（upsert_prediction只更新prediction JSONB）
@@ -471,7 +473,8 @@ def insert_basketball_prediction(pred):
                 handicap_win_loss = %s,
                 total_points = %s,
                 score_diff_range = %s,
-                half_win_loss = %s
+                half_win_loss = %s,
+                raw_response = %s
             WHERE match_id = %s AND ai_name = %s
         """, (
             pred.get("win_loss"),
@@ -479,6 +482,7 @@ def insert_basketball_prediction(pred):
             pred.get("total_points"),
             pred.get("score_diff_range"),
             pred.get("half_win_loss"),
+            pred.get("raw_response", ""),
             pred["match_id"],
             pred["ai_name"]
         ))
@@ -703,7 +707,7 @@ def call_coze_code(url, token, prompt, project_id=None, timeout=INTEL_TIMEOUT):
 
 
 def call_ai(ai_name, prompt, sport="football"):
-    """调用指定AI，支持fallback模型"""
+    """调用指定AI，支持fallback模型。返回 (parsed_result, raw_text) 元组"""
     config = AI_CONFIGS.get(ai_name)
     if not config:
         raise Exception(f"未知AI: {ai_name}")
@@ -715,7 +719,7 @@ def call_ai(ai_name, prompt, sport="football"):
         if not token:
             raise Exception(f"{ai_name} Token未配置")
         raw = call_coze_code(config["url"], token, prompt, config.get("project_id"))
-        return parse_ai_response(raw, sport)
+        return parse_ai_response(raw, sport), raw
     
     key = os.environ.get(config["key_env"], "")
     if not key:
@@ -726,6 +730,7 @@ def call_ai(ai_name, prompt, sport="football"):
         models_to_try.extend(config["fallback_models"])
     
     last_error = None
+    last_raw = None
     for i, model in enumerate(models_to_try):
         try:
             if fmt == "openai":
@@ -734,6 +739,8 @@ def call_ai(ai_name, prompt, sport="football"):
                 raw = call_minimax(config["url"], key, model, prompt)
             else:
                 raise Exception(f"未知格式: {fmt}")
+            
+            last_raw = raw
             
             # 检查返回内容是否为空或明显异常
             if not raw or len(raw.strip()) < 1:
@@ -748,7 +755,7 @@ def call_ai(ai_name, prompt, sport="football"):
             
             if i > 0:
                 print(f"    [fallback] 已切换到 {model}")
-            return result
+            return result, raw
             
         except Exception as e:
             error_str = str(e)
@@ -1381,34 +1388,34 @@ def call_hunyuan_with_retry(match, intel_data, max_retries=3, retry_interval=5):
 
 
 def _call_ai_single(ai_name, match, sport, prompt, intel_data):
-    """调用单个AI对单场比赛进行预测（含3次重试），返回 (result, retries, error_msg)"""
+    """调用单个AI对单场比赛进行预测（含3次重试），返回 (result, raw_text, retries, error_msg)"""
     max_retries = 3
     for attempt in range(max_retries):
         try:
             t0 = time.time()
-            result = call_ai(ai_name, prompt, sport)
+            result, raw = call_ai(ai_name, prompt, sport)
             elapsed = time.time() - t0
             
             if result is not None:
-                return result, attempt, None
+                return result, raw, attempt, None
             else:
                 err = "返回无法解析"
                 if attempt < max_retries - 1:
                     print(f"    [重试{attempt+1}/{max_retries}] {err}，{AI_CALL_INTERVAL+5}s后重试...")
                     time.sleep(5)
                 else:
-                    return None, attempt, err
+                    return None, raw or "", attempt, err
         except Exception as e:
             err = str(e)[:60]
             if attempt < max_retries - 1:
                 print(f"    [重试{attempt+1}/{max_retries}] {err}，5s后重试...")
                 time.sleep(5)
             else:
-                return None, attempt, err
-    return None, max_retries - 1, "max retries"
+                return None, "", attempt, err
+    return None, "", max_retries - 1, "max retries"
 
 
-def _process_and_store(ai_name, result, match, sport):
+def _process_and_store(ai_name, result, match, sport, raw_text=""):
     """处理AI返回结果并入库。返回 (success: bool, summary: str)"""
     match_id = match["id"]
     ai_short_name = ai_name.replace("AI-", "", 1) if ai_name.startswith("AI-") else ai_name
@@ -1455,6 +1462,7 @@ def _process_and_store(ai_name, result, match, sport):
                 "total_points": tp, "score_diff_range": sdr,
                 "half_win_loss": hwl_half,
                 "analysis": result.get("analysis", "")[:500],
+                "raw_response": raw_text[:5000] if raw_text else "",
             }
             insert_basketball_prediction(pred)
             return True, f"{wl}/{hwl}/{tp}"
@@ -1523,6 +1531,7 @@ def _process_and_store(ai_name, result, match, sport):
                 "spf": spf, "handicap_spf": handicap_spf,
                 "score": score, "goals": goals, "half_full": half_full,
                 "analysis": result.get("analysis", "")[:500],
+                "raw_response": raw_text[:5000] if raw_text else "",
             }
             pred = validate_football_consistency(pred, match)
             insert_football_prediction(pred)
@@ -1616,11 +1625,11 @@ def phase2_predict(sport="football"):
                 start_time = datetime.now().strftime("%H:%M:%S")
                 print(f"  [{task['index']+1}/{total_matches}] {home} vs {away} × {ai_short}...", end=" ", flush=True)
                 
-                result, retries, error = _call_ai_single(ai_name, match, sport, prompt, intel_data)
+                result, raw_text, retries, error = _call_ai_single(ai_name, match, sport, prompt, intel_data)
                 total_retries += retries
                 
                 if result is not None:
-                    success, summary = _process_and_store(ai_name, result, match, sport)
+                    success, summary = _process_and_store(ai_name, result, match, sport, raw_text=raw_text)
                     end_time = datetime.now().strftime("%H:%M:%S")
                     if success:
                         total_predictions += 1
@@ -1816,11 +1825,11 @@ def phase3_quality_check(sport="football", max_retries=1):
                 start_time = datetime.now().strftime("%H:%M:%S")
                 print(f"  [{task['index']+1}/{len(matches)}] {home} vs {away} × {ai_short} (缺:{','.join(task['missing'][:3])})...", end=" ", flush=True)
                 
-                result, retries, error = _call_ai_single(ai_name_full, match, sport, prompt, intel_data)
+                result, raw_text, retries, error = _call_ai_single(ai_name_full, match, sport, prompt, intel_data)
                 total_retry_count += retries
                 
                 if result is not None:
-                    ok, summary = _process_and_store(ai_name_full, result, match, sport)
+                    ok, summary = _process_and_store(ai_name_full, result, match, sport, raw_text=raw_text)
                     end_time = datetime.now().strftime("%H:%M:%S")
                     if ok:
                         success_count += 1

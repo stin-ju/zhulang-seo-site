@@ -288,17 +288,21 @@ def upsert_prediction(pred_data, on_conflict="match_id,ai_name"):
     if isinstance(hit_status, dict):
         hit_status = json.dumps(hit_status, ensure_ascii=False)
     
+    # 原始返回文本
+    raw_response = pred_data.get("raw_response", "")
+    
     # 使用 INSERT ... ON CONFLICT 实现原子性 UPSERT
     execute_query(
-        """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled, match_date) 
-           VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
+        """INSERT INTO predictions (match_id, ai_name, sport_type, prediction, hit_status, is_settled, match_date, raw_response) 
+           VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s)
            ON CONFLICT (match_id, ai_name) 
            DO UPDATE SET prediction = EXCLUDED.prediction, 
                          hit_status = EXCLUDED.hit_status, 
                          is_settled = EXCLUDED.is_settled,
-                         match_date = EXCLUDED.match_date""",
+                         match_date = EXCLUDED.match_date,
+                         raw_response = EXCLUDED.raw_response""",
         [match_id, ai_name, pred_data.get("sport_type"), prediction, hit_status, 
-         pred_data.get("is_settled", False), match_date],
+         pred_data.get("is_settled", False), match_date, raw_response],
         fetch=False
     )
     return [pred_data]
