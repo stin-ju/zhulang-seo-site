@@ -353,8 +353,10 @@ def get_intel(match_id):
     return None
 
 
-def insert_football_prediction(pred):
-    """插入足球预测（立即入库）"""
+def insert_football_prediction(pred, raw_text=None):
+    """插入足球预测（立即入库）。raw_text 为AI原始返回文本，写入 raw_response 字段。"""
+    if raw_text is None:
+        raw_text = pred.get("raw_response", "")
     prediction_json = {
         "spf": pred.get("spf"),
         "handicap_spf": pred.get("handicap_spf"),
@@ -368,7 +370,7 @@ def insert_football_prediction(pred):
         "prediction": prediction_json,
         "analysis": pred.get("analysis", ""),
         "sport_type": "football",
-        "raw_response": pred.get("raw_response", ""),
+        "raw_response": raw_text[:5000] if raw_text else "",
     })
     
     # 同时更新单独的足球列（upsert_prediction只更新prediction JSONB）
@@ -388,7 +390,7 @@ def insert_football_prediction(pred):
             pred.get("score"),
             pred.get("goals"),
             pred.get("half_full"),
-            pred.get("raw_response", ""),
+            raw_text[:5000] if raw_text else "",
             pred["match_id"],
             pred["ai_name"]
         ), fetch=False)
@@ -445,9 +447,11 @@ def normalize_basketball_fields(pred):
     return normalized
 
 
-def insert_basketball_prediction(pred):
-    """插入篮球预测（立即入库，同时更新单独列）"""
+def insert_basketball_prediction(pred, raw_text=None):
+    """插入篮球预测（立即入库，同时更新单独列）。raw_text 为AI原始返回文本。"""
     pred = normalize_basketball_fields(pred)
+    if raw_text is None:
+        raw_text = pred.get("raw_response", "")
     
     prediction_json = {
         "win_loss": pred.get("win_loss"),
@@ -462,7 +466,7 @@ def insert_basketball_prediction(pred):
         "sport_type": "basketball",
         "prediction": prediction_json,
         "analysis": pred.get("analysis", ""),
-        "raw_response": pred.get("raw_response", ""),
+        "raw_response": raw_text[:5000] if raw_text else "",
     })
     
     # 同时更新单独的篮球列（upsert_prediction只更新prediction JSONB）
@@ -482,7 +486,7 @@ def insert_basketball_prediction(pred):
             pred.get("total_points"),
             pred.get("score_diff_range"),
             pred.get("half_win_loss"),
-            pred.get("raw_response", ""),
+            raw_text[:5000] if raw_text else "",
             pred["match_id"],
             pred["ai_name"]
         ))
@@ -707,7 +711,7 @@ def call_coze_code(url, token, prompt, project_id=None, timeout=INTEL_TIMEOUT):
 
 
 def call_ai(ai_name, prompt, sport="football"):
-    """调用指定AI，支持fallback模型。返回 (parsed_result, raw_text) 元组"""
+    """调用指定AI，支持fallback模型。返回 (raw_text, parsed_result) 元组"""
     config = AI_CONFIGS.get(ai_name)
     if not config:
         raise Exception(f"未知AI: {ai_name}")
@@ -719,7 +723,7 @@ def call_ai(ai_name, prompt, sport="football"):
         if not token:
             raise Exception(f"{ai_name} Token未配置")
         raw = call_coze_code(config["url"], token, prompt, config.get("project_id"))
-        return parse_ai_response(raw, sport), raw
+        return raw, parse_ai_response(raw, sport)
     
     key = os.environ.get(config["key_env"], "")
     if not key:
@@ -755,7 +759,7 @@ def call_ai(ai_name, prompt, sport="football"):
             
             if i > 0:
                 print(f"    [fallback] 已切换到 {model}")
-            return result, raw
+            return raw, result
             
         except Exception as e:
             error_str = str(e)
@@ -1365,7 +1369,7 @@ def call_hunyuan_with_retry(match, intel_data, max_retries=3, retry_interval=5):
                 time.sleep(retry_interval)
             
             # 调用混元API
-            raw_result = call_ai("AI-混元", full_prompt, "football")
+            _, raw_result = call_ai("AI-混元", full_prompt, "football")
             
             if raw_result is None:
                 continue
@@ -1393,7 +1397,7 @@ def _call_ai_single(ai_name, match, sport, prompt, intel_data):
     for attempt in range(max_retries):
         try:
             t0 = time.time()
-            result, raw = call_ai(ai_name, prompt, sport)
+            raw, result = call_ai(ai_name, prompt, sport)
             elapsed = time.time() - t0
             
             if result is not None:
