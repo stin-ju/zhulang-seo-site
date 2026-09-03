@@ -13,7 +13,7 @@ if [ -d "/opt/bytefaas/site-packages" ]; then
 else
     export PYTHONPATH="$SCRIPT_DIR":"$PROJECT_ROOT/scripts":"$PROJECT_ROOT":${PYTHONPATH:-}
 fi
-LOG_DIR="$SCRIPT_DIR/logs"
+LOG_DIR="/tmp/pipeline_logs"
 mkdir -p "$LOG_DIR"
 DATE=$(date +%Y%m%d_%H%M)
 
