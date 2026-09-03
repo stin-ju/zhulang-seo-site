@@ -3,8 +3,13 @@
 # 由crontab每日0点和12点调用
 set -e
 
-cd /workspace/projects/JC
-export PYTHONPATH=/workspace/projects/JC:/workspace/projects/scripts:/workspace/projects:$PYTHONPATH
+cd "$(dirname "$0")"
+# PYTHONPATH：优先 FaaS site-packages（psycopg2-binary 安装位置）
+if [ -d "/opt/bytefaas/site-packages" ]; then
+    export PYTHONPATH=/opt/bytefaas/site-packages:"$(pwd)":/workspace/projects/scripts:/workspace/projects:${PYTHONPATH:-}
+else
+    export PYTHONPATH="$(pwd)":/workspace/projects/scripts:/workspace/projects:${PYTHONPATH:-}
+fi
 LOG_DIR=/workspace/projects/JC/logs
 mkdir -p $LOG_DIR
 DATE=$(date +%Y%m%d_%H%M)

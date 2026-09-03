@@ -21,62 +21,85 @@ if [ -f "$SCRIPT_DIR/JC/requirements.txt" ]; then
     echo "=== 检查 Python 依赖 ==="
     
     # 确定安装目标目录（FaaS 环境用 /opt/bytefaas/site-packages）
-    if [ -d "/opt/bytefaas/site-packages" ]; then
+    PIP_TARGET=""
+    if [ -d "/opt/bytefaas" ]; then
         PIP_TARGET="/opt/bytefaas/site-packages"
-    else
-        PIP_TARGET=""
+        mkdir -p "$PIP_TARGET" 2>/dev/null || true
+        # 立即设置 PYTHONPATH，确保后续所有 python3 调用都能找到包
+        export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
     fi
     
-    # 检查 psycopg2 C 扩展是否可用
+    # 检查 psycopg2 C 扩展是否可用（此时 PYTHONPATH 已设置）
     if python3 -c "import psycopg2._psycopg" 2>/dev/null; then
         echo "  psycopg2._psycopg ✓ C扩展正常"
     else
-        echo "  psycopg2._psycopg ✗ C扩展缺失或损坏，彻底清理并重装..."
+        echo "  psycopg2._psycopg ✗ 缺失，开始修复..."
+        # 关闭 set -e，避免 pip 失败导致脚本退出
+        set +e
         
-        # Step 1: 彻底删除旧版 psycopg2（源码版 + binary版 + dist-info）
-        echo "  Step 1: 清理旧版 psycopg2..."
+        # Step 1: 彻底删除所有旧版 psycopg2
+        echo "  [1/4] 清理旧版 psycopg2..."
         if [ -n "$PIP_TARGET" ]; then
-            rm -rf "$PIP_TARGET"/psycopg2 "$PIP_TARGET"/psycopg2_binary* "$PIP_TARGET"/psycopg2-*.dist-info "$PIP_TARGET"/psycopg2_binary-*.dist-info 2>/dev/null || true
-            echo "  已清理: $PIP_TARGET/psycopg2*"
+            rm -rf "$PIP_TARGET"/psycopg2 "$PIP_TARGET"/psycopg2_binary* 2>/dev/null
+            rm -rf "$PIP_TARGET"/psycopg2-*.dist-info "$PIP_TARGET"/psycopg2_binary-*.dist-info 2>/dev/null
+            # 也清理系统级残留（如果有权限）
+            pip3 uninstall psycopg2 psycopg2-binary -y 2>/dev/null || true
         else
             pip3 uninstall psycopg2 psycopg2-binary -y 2>/dev/null || true
         fi
+        echo "  清理完成"
         
         # Step 2: 安装 psycopg2-binary（预编译wheel，不依赖libpq）
-        echo "  Step 2: 安装 psycopg2-binary..."
+        echo "  [2/4] 安装 psycopg2-binary..."
         if [ -n "$PIP_TARGET" ]; then
-            pip3 install --upgrade --force-reinstall --no-cache-dir 'psycopg2-binary>=2.9.0' --target "$PIP_TARGET" 2>&1 | tail -3
+            pip3 install --no-cache-dir --force-reinstall 'psycopg2-binary>=2.9.0' --target "$PIP_TARGET" 2>&1
         else
-            pip3 install --upgrade --force-reinstall --no-cache-dir 'psycopg2-binary>=2.9.0' 2>&1 | tail -3
+            pip3 install --no-cache-dir --force-reinstall 'psycopg2-binary>=2.9.0' 2>&1
         fi
+        PIP_RC=$?
+        echo "  pip install 返回码: $PIP_RC"
         
-        # Step 3: 安装其他依赖（跳过 psycopg2，已单独处理）
-        echo "  Step 3: 安装其他依赖..."
+        # Step 3: 安装其他依赖
+        echo "  [3/4] 安装其他依赖..."
         if [ -n "$PIP_TARGET" ]; then
             pip3 install --no-cache-dir 'requests>=2.31.0' 'aiohttp>=3.9.0' --target "$PIP_TARGET" --quiet 2>&1 || true
         else
             pip3 install --no-cache-dir 'requests>=2.31.0' 'aiohttp>=3.9.0' --quiet 2>&1 || true
         fi
         
-        # 确保 PYTHONPATH 包含目标目录
-        if [ -n "$PIP_TARGET" ]; then
-            export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
-        fi
-        
         # Step 4: 验证
-        if python3 -c "import psycopg2._psycopg; print('  ✓ psycopg2 C扩展验证通过')" 2>/dev/null; then
-            echo "  ✓ 依赖安装成功"
+        echo "  [4/4] 验证安装..."
+        echo "  PYTHONPATH=$PYTHONPATH"
+        python3 -c "
+import sys
+print('  sys.path:', [p for p in sys.path if 'psycopg' in p or 'bytefaas' in p or 'site-packages' in p])
+import psycopg2
+print('  psycopg2 版本:', psycopg2.__version__)
+print('  psycopg2 文件:', psycopg2.__file__)
+import psycopg2._psycopg
+print('  _psycopg 文件:', psycopg2._psycopg.__file__)
+print('  PSYCOPG2_OK')
+" 2>&1
+        VERIFY_RC=$?
+        echo "  验证返回码: $VERIFY_RC"
+        
+        # 恢复 set -e
+        set -e
+        
+        if [ $VERIFY_RC -eq 0 ]; then
+            echo "  ✓ psycopg2 修复成功"
         else
-            echo "  ⚠ psycopg2 仍不可用，列出已安装版本："
-            pip3 list 2>/dev/null | grep -i psycopg || true
-            ls -la "$PIP_TARGET"/psycopg2* 2>/dev/null | head -5 || true
+            echo "  ✗ psycopg2 修复失败！尝试列出已安装内容："
+            pip3 list 2>/dev/null | grep -i psycopg || echo "  pip3 list 无 psycopg 相关条目"
+            ls -la "$PIP_TARGET"/psycopg2* 2>/dev/null | head -10 || echo "  $PIP_TARGET 无 psycopg2 文件"
+            python3 -c "import sys; print('  Python路径:', sys.path)" 2>/dev/null || true
         fi
     fi
     
-    # 确保 PYTHONPATH 已设置（即使检查通过也要 export，供子进程使用）
+    # 最终确认 PYTHONPATH（无论检查是否通过都要 export）
     if [ -n "$PIP_TARGET" ]; then
         export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
-        echo "  PYTHONPATH=$PYTHONPATH"
+        echo "  最终 PYTHONPATH=$PYTHONPATH"
     fi
 fi
 

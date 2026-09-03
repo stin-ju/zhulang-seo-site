@@ -1337,7 +1337,7 @@ ${listHtml}
       const scriptPath = path.join(process.cwd(), 'generate_brief.py');
       execFile('/usr/bin/python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
         cwd: process.cwd(),
-        env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL }
+        env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL, ...(fs.existsSync('/opt/bytefaas/site-packages') ? { PYTHONPATH: `/opt/bytefaas/site-packages:${process.env.PYTHONPATH || ''}` } : {}) }
       }, (error, stdout, stderr) => {
         if (error) {
           console.error(`[Briefing] Failed:`, error.message);
@@ -1726,6 +1726,10 @@ async function runDailySettle() {
     const ctScriptPath = path.join(__dirname, '..', 'CT', 'ct_auto_settle.py');
     const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
+    if (fs.existsSync('/opt/bytefaas/site-packages')) {
+      const extra = '/opt/bytefaas/site-packages';
+      env.PYTHONPATH = env.PYTHONPATH ? `${extra}:${env.PYTHONPATH}` : extra;
+    }
     
     const ctResult = await new Promise((resolve, reject) => {
       execFile('/usr/bin/python3', [ctScriptPath], {
@@ -1760,6 +1764,10 @@ async function runDailyBackup() {
   const scriptPath = path.join(__dirname, '..', 'scripts', 'daily_backup.py');
   const env = { ...process.env, PATH: '/usr/bin:/usr/local/bin:' + (process.env.PATH || '') };
   if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
+  if (fs.existsSync('/opt/bytefaas/site-packages')) {
+    const extra = '/opt/bytefaas/site-packages';
+    env.PYTHONPATH = env.PYTHONPATH ? `${extra}:${env.PYTHONPATH}` : extra;
+  }
 
   return new Promise((resolve, reject) => {
     execFile('/usr/bin/python3', [scriptPath], {
