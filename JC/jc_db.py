@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 jc_db.py - 数据库访问层（直连 PostgreSQL via psycopg2）
 

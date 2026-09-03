@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 一次性数据修复脚本 v2：清除 score_unavailable 脏标记 + 重算命中（足球+篮球）
 

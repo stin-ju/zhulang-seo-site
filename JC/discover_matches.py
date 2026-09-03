@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -26,37 +26,6 @@ import sys
 import json
 import time
 import re
-
-# ====== psycopg2 自愈逻辑（wheel 解压方案） ======
-import sys, os, subprocess, shutil, urllib.request, zipfile, glob as _glob
-try:
-    import psycopg2
-    psycopg2.__version__
-    from psycopg2._psycopg import __file__ as _test
-except Exception as _e:
-    _dir = '/tmp/_psycopg2_heal'
-    # 清理旧的
-    for _d in ['/opt/bytefaas/site-packages/psycopg2', '/opt/bytefaas/site-packages/psycopg2_binary']:
-        if os.path.isdir(_d): shutil.rmtree(_d, ignore_errors=True)
-    if os.path.isdir(_dir): shutil.rmtree(_dir, ignore_errors=True)
-    os.makedirs(_dir, exist_ok=True)
-
-    # 用 pip3 download 下载 wheel（pip3 仍可用），再手动解压绕过 install
-    subprocess.run(['pip3', 'download', 'psycopg2-binary', '-d', _dir, '--no-deps', '--no-cache-dir'],
-                   capture_output=True, timeout=90)
-    _wheels = _glob.glob(os.path.join(_dir, 'psycopg2_binary-*.whl'))
-    if not _wheels:
-        raise RuntimeError(f'psycopg2-binary wheel download failed: {_e}')
-    # 解压 wheel 到临时目录
-    with zipfile.ZipFile(_wheels[0], 'r') as _z:
-        _z.extractall(_dir)
-    # 加入 sys.path 最前面
-    sys.path.insert(0, _dir)
-    # 清理模块缓存
-    for _m in list(sys.modules):
-        if 'psycopg2' in _m: del sys.modules[_m]
-    import psycopg2
-# ====== psycopg2 自愈结束 ======
 
 from datetime import datetime, timedelta
 

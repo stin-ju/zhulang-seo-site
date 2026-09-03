@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """zgzcw.com (中国足彩网) 赔率数据源 - 备选源
 
 JSON API接口，无需WAF绕过。使用竞彩编号(matchNo)与数据库精确匹配。

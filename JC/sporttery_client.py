@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 sporttery_client.py - 体彩API统一请求客户端（四层容错 v2）
 

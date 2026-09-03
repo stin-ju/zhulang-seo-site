@@ -149,7 +149,7 @@ function runPython(scriptName, args = []) {
       env.PYTHONPATH = env.PYTHONPATH ? `${extra}:${env.PYTHONPATH}` : extra;
     }
     
-    const child = execFile('/usr/bin/python3', [scriptPath, ...args], {
+    const child = execFile('/usr/local/bin/python3', [scriptPath, ...args], {
       cwd: __dirname,
       env,
       timeout: 300000,

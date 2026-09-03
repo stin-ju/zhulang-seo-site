@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 修复篮球预测中胜负与胜分差方向矛盾的96条记录
 规则：

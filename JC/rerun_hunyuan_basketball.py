@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 补跑混元篮球预测 - 强制prompt版本
 解决混元在情报为空时回复"无任何情报无法预测"的问题

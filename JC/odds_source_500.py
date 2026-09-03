@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """500.com (500彩票网) 赔率数据源 - 备选源
 
 同时支持足球和篮球。HTML页面GBK/GB2312编码，curl直接抓取后正则解析。

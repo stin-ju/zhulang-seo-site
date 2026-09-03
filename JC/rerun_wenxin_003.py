@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 周六003文心补跑脚本
 补跑大宫松鼠vs湘南海洋的文心预测

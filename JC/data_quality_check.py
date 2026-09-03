@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 data_quality_check.py - 赛事数据完整性检查与自动补救
 运行时机：每日抓取比赛后 + 每日结算后

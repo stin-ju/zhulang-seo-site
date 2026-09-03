@@ -71,7 +71,7 @@ function runPython(scriptName, args = []) {
     const env = { ...process.env };
     if (!env.DATABASE_URL) env.DATABASE_URL = DATABASE_URL;
     
-    const child = execFile('python3', [scriptPath, ...args], {
+    const child = execFile('/usr/local/bin/python3', [scriptPath, ...args], {
       cwd: path.join(__dirname, 'scripts'),
       env,
       timeout: 300000,

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """
 JC足球混元补跑脚本
 补跑15场缺混元预测的比赛

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """okooo.com赔率数据源 - 备用源
 
 当sporttery.cn被WAF封锁时，从okooo.com获取足球赔率作为备选。

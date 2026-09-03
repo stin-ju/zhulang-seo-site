@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 """补跑缺失AI预测 - 只补混元(6场)和扣子(1场)"""
 import os, sys, json, re, requests
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
