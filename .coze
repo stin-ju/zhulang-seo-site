@@ -10,3 +10,4 @@ run = ["bash", "start-all.sh"]
 [deploy]
 build = ["pnpm", "install"]
 run = ["bash", "start-all.sh"]
+# rebuild-trigger: 20260903122942-urgent-psycopg2
