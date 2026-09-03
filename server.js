@@ -280,17 +280,21 @@ const server = http.createServer((req, res) => {
     const { execSync } = require('child_process');
     const cmds = [
       'python3 --version',
-      'python3 -c "import sys; print(chr(10).join(sys.path))"',
-      'echo PYTHONPATH=$PYTHONPATH',
-      'ls -la /opt/bytefaas/site-packages/psycopg2/ 2>&1 || echo NOT_FOUND',
-      'ls -la /opt/bytefaas/site-packages/psycopg2/_psycopg* 2>&1 || echo NO_C_EXT',
-      'pip3 list 2>/dev/null | grep -i psycopg || echo NO_PIP3_PSYCOPG2',
-      'find /usr/lib/python3* /usr/local/lib/python3* -name psycopg2 -type d 2>/dev/null || echo NO_SYSTEM_PSYCOPG2',
-      'find /usr/lib/python3* /usr/local/lib/python3* -name _psycopg*.so 2>/dev/null || echo NO_SYSTEM_C_EXT',
-      'head -30 /opt/bytefaas/site-packages/psycopg2/__init__.py 2>&1 || echo NO_INIT',
       'python3 -c "import psycopg2; print(psycopg2.__version__); print(psycopg2.__file__)" 2>&1',
-      'echo ENV_PYTHONPATH=$PYTHONPATH',
-      'cat /workspace/projects/start-all.sh | grep -n psycopg2 2>&1 || echo NO_START_ALL'
+      'file /opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so 2>&1',
+      'ldd /opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so 2>&1',
+      'python3 -c "import ctypes; ctypes.CDLL(\\"/opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so\\")" 2>&1',
+      'python3 -c "import importlib.util; spec=importlib.util.find_spec(\\"psycopg2._psycopg\\"); print(spec)" 2>&1',
+      'python3 -c "import psycopg2._psycopg" 2>&1',
+      'strace -e openat python3 -c "import psycopg2._psycopg" 2>&1 | grep -i psycopg | tail -20',
+      'ls -la /opt/bytefaas/JC/discover_matches.py 2>&1',
+      'head -60 /opt/bytefaas/JC/discover_matches.py 2>&1',
+      'ls -la /tmp/_psycopg2_heal/ 2>&1',
+      'ls -la /tmp/_psycopg2_heal/psycopg2/ 2>&1',
+      'md5sum /opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so 2>&1',
+      'python3 -c "import sys; sys.path.insert(0,\\"/opt/bytefaas/site-packages\\"); import psycopg2; print(sys.modules.get(\\"psycopg2._psycopg\\"))" 2>&1',
+      'ls -la /workspace/projects/start-all.sh 2>&1 && grep -n psycopg2 /workspace/projects/start-all.sh 2>&1',
+      'env | sort 2>&1'
     ];
     const results = cmds.map(c => {
       try { return execSync(c, { encoding: 'utf-8', timeout: 10000, env: { ...process.env } }); }
