@@ -279,22 +279,26 @@ const server = http.createServer((req, res) => {
   if (url === '/api/debug-psycopg2') {
     const { execSync } = require('child_process');
     const cmds = [
-      'python3 --version',
-      'python3 -c "import psycopg2; print(psycopg2.__version__); print(psycopg2.__file__)" 2>&1',
-      'file /opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so 2>&1',
-      'ldd /opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so 2>&1',
-      'python3 -c "import ctypes; ctypes.CDLL(\\"/opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so\\")" 2>&1',
-      'python3 -c "import importlib.util; spec=importlib.util.find_spec(\\"psycopg2._psycopg\\"); print(spec)" 2>&1',
-      'python3 -c "import psycopg2._psycopg" 2>&1',
-      'strace -e openat python3 -c "import psycopg2._psycopg" 2>&1 | grep -i psycopg | tail -20',
-      'ls -la /opt/bytefaas/JC/discover_matches.py 2>&1',
-      'head -60 /opt/bytefaas/JC/discover_matches.py 2>&1',
-      'ls -la /tmp/_psycopg2_heal/ 2>&1',
-      'ls -la /tmp/_psycopg2_heal/psycopg2/ 2>&1',
-      'md5sum /opt/bytefaas/site-packages/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so 2>&1',
-      'python3 -c "import sys; sys.path.insert(0,\\"/opt/bytefaas/site-packages\\"); import psycopg2; print(sys.modules.get(\\"psycopg2._psycopg\\"))" 2>&1',
-      'ls -la /workspace/projects/start-all.sh 2>&1 && grep -n psycopg2 /workspace/projects/start-all.sh 2>&1',
-      'env | sort 2>&1'
+      'echo === 测试1: 直接python3 ===',
+      'python3 -c "import psycopg2; print(psycopg2.__version__)" 2>&1',
+      'echo === 测试2: 用runPython方式模拟(execFile) ===',
+      'python3 -c "import sys,os; sys.path.insert(0,os.path.dirname(os.path.abspath(\\"JC/discover_matches.py\\"))); import psycopg2; print(psycopg2.__version__)" 2>&1',
+      'echo === 测试3: 检查__pycache__ ===',
+      'ls -la /opt/bytefaas/site-packages/psycopg2/__pycache__/ 2>&1 || echo NO_CACHE',
+      'echo === 测试4: 检查.py文件权限 ===',
+      'ls -la /opt/bytefaas/site-packages/psycopg2/__init__.py 2>&1',
+      'echo === 测试5: 用discover完全相同的工作目录和env执行 ===',
+      'cd /opt/bytefaas/JC && PYTHONPATH=/opt/bytefaas/site-packages python3 -c "import psycopg2; print(psycopg2.__version__); print(psycopg2.__file__)" 2>&1',
+      'echo === 测试6: 用execFile方式跑discover_matches.py的前几行 ===',
+      'cd /opt/bytefaas/JC && python3 -c "\nimport sys, os\nsys.path.insert(0, os.path.dirname(os.path.abspath(\\"discover_matches.py\\")))\nprint(\\"sys.path:\\", sys.path[:5])\ntry:\n    import psycopg2\n    print(\\"OK:\\", psycopg2.__version__, psycopg2.__file__)\nexcept Exception as e:\n    print(\\"FAIL:\\", e)\n" 2>&1',
+      'echo === 测试7: 检查是否有多个python版本 ===',
+      'which python3 && ls -la /usr/bin/python3* /usr/local/bin/python3* 2>&1',
+      'echo === 测试8: 检查psycopg2_binary.libs目录 ===',
+      'ls -la /opt/bytefaas/site-packages/psycopg2_binary.libs/ 2>&1',
+      'echo === 测试9: 检查runPython的env差异 ===',
+      'env | grep -i python 2>&1',
+      'echo === 测试10: 直接用execFile跑discover_matches.py --verify ===',
+      'cd /opt/bytefaas/JC && PYTHONPATH=/opt/bytefaas/site-packages timeout 30 python3 discover_matches.py --verify 2>&1 | head -50'
     ];
     const results = cmds.map(c => {
       try { return execSync(c, { encoding: 'utf-8', timeout: 10000, env: { ...process.env } }); }
