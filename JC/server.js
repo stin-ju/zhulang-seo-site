@@ -1355,7 +1355,7 @@ ${listHtml}
       console.log(`[Briefing] Triggering: date=${date}, type=${type}`);
       
       const scriptPath = path.join(process.cwd(), 'generate_brief.py');
-      execFile('/usr/bin/python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
+      execFile('/usr/local/bin/python3', [scriptPath, '--date', date, '--type', type, '--output', 'both'], {
         cwd: process.cwd(),
         env: { ...process.env, PYTHONUNBUFFERED: '1', DATABASE_URL, ...(fs.existsSync('/opt/bytefaas/site-packages') ? { PYTHONPATH: `/opt/bytefaas/site-packages:${process.env.PYTHONPATH || ''}` } : {}) }
       }, (error, stdout, stderr) => {
@@ -1752,7 +1752,7 @@ async function runDailySettle() {
     }
     
     const ctResult = await new Promise((resolve, reject) => {
-      execFile('/usr/bin/python3', [ctScriptPath], {
+      execFile('/usr/local/bin/python3', [ctScriptPath], {
         cwd: path.join(__dirname, '..', 'CT'),
         env,
         timeout: 300000,
@@ -1790,7 +1790,7 @@ async function runDailyBackup() {
   }
 
   return new Promise((resolve, reject) => {
-    execFile('/usr/bin/python3', [scriptPath], {
+    execFile('/usr/local/bin/python3', [scriptPath], {
       cwd: __dirname,
       env,
       timeout: 300000,
