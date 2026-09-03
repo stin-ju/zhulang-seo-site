@@ -13,24 +13,34 @@ predictions表关键列：
   汇总: hit_status(jsonb), is_settled(bool)
 """
 
-# ====== psycopg2 自愈逻辑 ======
-import subprocess
+# ====== psycopg2 自愈逻辑（wheel 解压方案） ======
+import sys, os, subprocess, shutil, urllib.request, zipfile, glob as _glob
 try:
     import psycopg2
     psycopg2.__version__
     from psycopg2._psycopg import __file__ as _test
-except Exception:
-    import shutil as _shutil
-    # 清理所有可能的旧版psycopg2
+except Exception as _e:
+    _dir = '/tmp/_psycopg2_heal'
+    # 清理旧的
     for _d in ['/opt/bytefaas/site-packages/psycopg2', '/opt/bytefaas/site-packages/psycopg2_binary']:
-        if __import__('os').path.isdir(_d): _shutil.rmtree(_d, ignore_errors=True)
-    # 不用--target，让pip3装到Python默认位置
-    _result = subprocess.run(['pip3', 'install', 'psycopg2-binary', '--no-cache-dir', '--force-reinstall'], capture_output=True, text=True)
-    if _result.returncode != 0:
-        raise RuntimeError(f'psycopg2 install failed: {_result.stderr[:500]}')
-    # 清理缓存重新导入
-    for _m in list(__import__('sys').modules):
-        if 'psycopg2' in _m: del __import__('sys').modules[_m]
+        if os.path.isdir(_d): shutil.rmtree(_d, ignore_errors=True)
+    if os.path.isdir(_dir): shutil.rmtree(_dir, ignore_errors=True)
+    os.makedirs(_dir, exist_ok=True)
+
+    # 用 pip3 download 下载 wheel（pip3 仍可用），再手动解压绕过 install
+    subprocess.run(['pip3', 'download', 'psycopg2-binary', '-d', _dir, '--no-deps', '--no-cache-dir'],
+                   capture_output=True, timeout=90)
+    _wheels = _glob.glob(os.path.join(_dir, 'psycopg2_binary-*.whl'))
+    if not _wheels:
+        raise RuntimeError(f'psycopg2-binary wheel download failed: {_e}')
+    # 解压 wheel 到临时目录
+    with zipfile.ZipFile(_wheels[0], 'r') as _z:
+        _z.extractall(_dir)
+    # 加入 sys.path 最前面
+    sys.path.insert(0, _dir)
+    # 清理模块缓存
+    for _m in list(sys.modules):
+        if 'psycopg2' in _m: del sys.modules[_m]
     import psycopg2
 # ====== psycopg2 自愈结束 ======
 
