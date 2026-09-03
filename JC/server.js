@@ -1259,6 +1259,26 @@ ${listHtml}
       return;
     }
 
+    // POST /api/admin/run-pipeline - 触发完整流水线（临时诊断用）
+    if (pathname === '/api/admin/run-pipeline' && req.method === 'POST') {
+      const { execFile } = require('child_process');
+      const pipelineScript = path.join(__dirname, 'run_pipeline.sh');
+      execFile('bash', [pipelineScript], {
+        cwd: __dirname,
+        timeout: 600000,
+        maxBuffer: 10 * 1024 * 1024,
+        env: { ...process.env }
+      }, (err, stdout, stderr) => {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+        if (err) {
+          res.end(JSON.stringify({ error: true, message: err.message, stdout: stdout?.slice(-3000), stderr: stderr?.slice(-2000) }));
+        } else {
+          res.end(JSON.stringify({ success: true, output: stdout?.slice(-3000) }));
+        }
+      });
+      return;
+    }
+
     // GET /api/ct-review/:file - 提供审阅文件内容
     if (pathname.startsWith('/api/ct-review/') && req.method === 'GET') {
       const fileKey = pathname.split('/').pop();

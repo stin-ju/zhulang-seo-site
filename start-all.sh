@@ -25,12 +25,12 @@ if [ -f "$SCRIPT_DIR/JC/requirements.txt" ]; then
     if [ -d "/opt/bytefaas" ]; then
         PIP_TARGET="/opt/bytefaas/site-packages"
         mkdir -p "$PIP_TARGET" 2>/dev/null || true
-        # 立即设置 PYTHONPATH，确保后续所有 /usr/local/bin/python3 调用都能找到包
+        # 立即设置 PYTHONPATH，确保后续所有 python3 调用都能找到包
         export PYTHONPATH="$PIP_TARGET:${PYTHONPATH:-}"
     fi
     
     # 检查 psycopg2 C 扩展是否可用（此时 PYTHONPATH 已设置）
-    if /usr/local/bin/python3 -c "import psycopg2._psycopg" 2>/dev/null; then
+    if python3 -c "import psycopg2._psycopg" 2>/dev/null; then
         echo "  psycopg2._psycopg ✓ C扩展正常"
     else
         echo "  psycopg2._psycopg ✗ 缺失，开始修复..."
@@ -70,7 +70,7 @@ if [ -f "$SCRIPT_DIR/JC/requirements.txt" ]; then
         # Step 4: 验证
         echo "  [4/4] 验证安装..."
         echo "  PYTHONPATH=$PYTHONPATH"
-        /usr/local/bin/python3 -c "
+        python3 -c "
 import sys
 print('  sys.path:', [p for p in sys.path if 'psycopg' in p or 'bytefaas' in p or 'site-packages' in p])
 import psycopg2
@@ -92,7 +92,7 @@ print('  PSYCOPG2_OK')
             echo "  ✗ psycopg2 修复失败！尝试列出已安装内容："
             pip3 list 2>/dev/null | grep -i psycopg || echo "  pip3 list 无 psycopg 相关条目"
             ls -la "$PIP_TARGET"/psycopg2* 2>/dev/null | head -10 || echo "  $PIP_TARGET 无 psycopg2 文件"
-            /usr/local/bin/python3 -c "import sys; print('  Python路径:', sys.path)" 2>/dev/null || true
+            python3 -c "import sys; print('  Python路径:', sys.path)" 2>/dev/null || true
         fi
     fi
     
