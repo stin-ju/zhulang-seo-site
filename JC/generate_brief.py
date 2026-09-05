@@ -527,13 +527,16 @@ def main():
         # 生成HTML
         html = generate_brief_html(date_str, args.type, matches, predictions)
         
-        # 输出
+        # 输出（FaaS代码目录只读，HTML写入/tmp；数据库仍正常保存）
         if args.output in ['html', 'both']:
             filename = f"brief-{date_str}.html"
-            filepath = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), filename)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(html)
-            print(f"HTML已保存: {filepath}")
+            filepath = os.path.join('/tmp', filename)
+            try:
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(html)
+                print(f"HTML已保存: {filepath}")
+            except Exception as e:
+                print(f"⚠️ HTML文件保存失败(不阻断，已存数据库): {e}")
         
         if args.output in ['db', 'both']:
             commentary = generate_commentary(matches, predictions, args.type)

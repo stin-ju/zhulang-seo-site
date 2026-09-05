@@ -144,3 +144,8 @@ node-compile-cache/
 
 # Timestamped JS files (auto-generated)
 *.20[0-9][0-9][0-9][0-9][0-9]*.js
+
+# Pipeline runtime outputs (FaaS: written to /tmp at runtime)
+JC/api_cache/
+JC/data_quality_report.json
+brief-*.html

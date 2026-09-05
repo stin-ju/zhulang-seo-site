@@ -330,11 +330,14 @@ def run_quality_check(skip_remediation=False):
     finally:
         conn.close()
     
-    # 保存报告
-    report_path = os.path.join(SCRIPT_DIR, 'data_quality_report.json')
-    with open(report_path, 'w', encoding='utf-8') as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-    log(f'📄 报告已保存: {report_path}')
+    # 保存报告（FaaS代码目录只读，写入/tmp可写目录）
+    report_path = os.path.join('/tmp', 'data_quality_report.json')
+    try:
+        with open(report_path, 'w', encoding='utf-8') as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        log(f'📄 报告已保存: {report_path}')
+    except Exception as e:
+        log(f'⚠️ 报告保存失败(不阻断): {e}')
     
     return report
 

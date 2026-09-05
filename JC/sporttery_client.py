@@ -49,7 +49,7 @@ REQUEST_HEADERS_ODDS = {
     'Origin': 'https://www.sporttery.cn',
 }
 
-CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'api_cache')
+CACHE_DIR = os.path.join('/tmp', 'jc_api_cache')
 CACHE_TTL = 86400  # 24小时
 MAX_RETRIES = 2  # 每种方式最多重试2次
 RETRY_DELAYS = [1, 3]  # 重试间隔（秒）
