@@ -489,7 +489,7 @@ def insert_basketball_prediction(pred, raw_text=None):
             raw_text[:5000] if raw_text else "",
             pred["match_id"],
             pred["ai_name"]
-        ))
+        ), fetch=False)
     except Exception as e:
         print(f"[WARN] 更新篮球单独列失败: {e}")
 
