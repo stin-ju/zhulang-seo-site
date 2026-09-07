@@ -767,6 +767,92 @@ def settle_score_unavailable_predictions(conn):
     return settled_count + rescued_count
 
 
+def settle_su_with_score(conn, match_id=None):
+    """根因兜底：凡 matches 已有真实比分（home_score/away_score 非空、未取消/未stopped），
+    但 predictions.hit_status 仍为 score_unavailable 的预测，一律重算。
+    这类预测可能已被提前置为 is_settled=true（伪已结算），普通结算筛选(is_settled=false)会漏掉，
+    因此专门按 hit_status->>'reason'='score_unavailable' 捞取，复用现有 settle 函数复活。
+    """
+    sql = """
+    SELECT m.id, m.sport_type, m.home_team, m.away_team, m.metadata,
+           p.id as pred_id, p.ai_name, p.sport_type as p_sport,
+           COALESCE(p.prediction->>'spf', p.spf) as spf,
+           COALESCE(p.prediction->>'handicap_spf', p.handicap_spf) as handicap_spf,
+           COALESCE(p.prediction->>'goals', p.goals::text) as goals,
+           COALESCE(p.prediction->>'score', p.score) as score,
+           COALESCE(p.prediction->>'half_full', p.half_full) as half_full,
+           COALESCE(p.prediction->>'win_loss', p.win_loss) as win_loss,
+           COALESCE(p.prediction->>'handicap_win_loss', p.handicap_win_loss) as handicap_win_loss,
+           COALESCE(p.prediction->>'handicap_result') as handicap_result,
+           COALESCE(p.prediction->>'total_points', p.total_points) as total_points,
+           COALESCE(p.prediction->>'score_diff_range', p.score_diff_range,
+                    p.prediction->>'score_diff') as score_diff_range,
+           COALESCE(p.prediction->>'half_win_loss', p.half_win_loss) as half_win_loss
+    FROM matches m
+    JOIN predictions p ON p.match_id = m.id
+    WHERE m.metadata->>'home_score' IS NOT NULL
+      AND m.metadata->>'home_score' != ''
+      AND m.metadata->>'away_score' IS NOT NULL
+      AND m.metadata->>'away_score' != ''
+      AND m.metadata->>'status' NOT IN ('stopped', '已取消')
+      AND p.hit_status->>'reason' = 'score_unavailable'
+    """
+    params = []
+    if match_id:
+        sql += " AND m.id = %s"
+        params.append(match_id)
+
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+    if not rows:
+        print("[su兜底救援] 无'有比分但仍score_unavailable'的预测，跳过")
+        return 0
+
+    print(f"[su兜底救援] 发现 {len(rows)} 条有比分但仍为 score_unavailable 的预测，开始重算")
+    import datetime as _dt
+    rescued = 0
+    with conn.cursor() as cur:
+        for row in rows:
+            match_id = row[0]
+            sport_type = row[1]
+            pred_id = row[5]
+            p_sport = row[7]
+            st = (p_sport or sport_type or "").lower()
+            if st == "basketball":
+                hit_dict, hit_cols = settle_basketball(row)
+            else:
+                hit_dict, hit_cols = settle_football(row)
+            if hit_dict is None:
+                continue
+            hit_json = json.dumps(hit_dict, ensure_ascii=False)
+            set_clauses = ["hit_status = %s::jsonb", "is_settled = true"]
+            params = [hit_json]
+            for col, val in hit_cols.items():
+                set_clauses.append(f"{col} = %s")
+                params.append(val)
+            # prediction JSON 补 actual_score / settled_at
+            md = row[4] if isinstance(row[4], dict) else (json.loads(row[4]) if row[4] else {})
+            actual = f"{md.get('home_score')}-{md.get('away_score')}"
+            settled_ts = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))).replace(microsecond=0).isoformat()
+            params.append(actual)
+            params.append(settled_ts)
+            params.append(pred_id)
+            sql_upd = (
+                f"UPDATE predictions SET {', '.join(set_clauses)}, "
+                f"prediction = jsonb_set(jsonb_set(prediction, '{{actual_score}}', to_jsonb(%s::text)), "
+                f"'{{settled_at}}', to_jsonb(%s::text)) WHERE id = %s"
+            )
+            cur.execute(sql_upd, params)
+            rescued += 1
+            print(f"  [su兜底] {row[6]}: {match_id} {row[2]} vs {row[3]} -> {hit_json}")
+
+    conn.commit()
+    print(f"[su兜底救援] 完成，重算 {rescued} 条")
+    return rescued
+
+
 def get_unsettled(conn, match_id=None):
     """获取所有已完赛但未结算的比赛及其预测
     同时从 prediction jsonb 和顶层列读取，优先 jsonb
@@ -1109,6 +1195,16 @@ def main():
             print()
     except Exception as e:
         print(f"[WARN] 无法比分结算失败: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+
+    # su兜底救援：matches已有比分但仍score_unavailable的预测，一律重算（根因修复）
+    try:
+        su_rescue_count = settle_su_with_score(conn)
+        if su_rescue_count > 0:
+            print()
+    except Exception as e:
+        print(f"[WARN] su兜底救援失败: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
     
