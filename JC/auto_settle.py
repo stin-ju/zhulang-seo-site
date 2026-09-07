@@ -44,6 +44,8 @@ ALIASES = {
     '瓦萨': ['VPS瓦萨'],
     '国际图尔': ['英特土尔库', '国际图尔库'],
     '巴竞技': ['巴拉纳竞技'],
+    '萨索洛': ['森索罗', '萨索罗'],
+    '森索罗': ['萨索洛', '萨索罗'],
 }
 
 def _safe_int(val, default=0):
@@ -447,16 +449,32 @@ def fill_missing_scores(conn):
         print(f"[比分补全] 完成，补全 0 场")
         return 0
 
-    # 查询近期比赛的 titan007 数据
+    # 查询近期比赛的 titan007 数据（含前一天回退：凌晨场次比分常归档到前一天）
     titan_data = {}
     for ds in dates_needed:
         parts = ds.split("-")
+        try:
+            base_dt = datetime.strptime(ds, "%Y-%m-%d")
+        except ValueError:
+            base_dt = None
         titan_date = f"{parts[0]}-{int(parts[1])}-{int(parts[2])}"
-        matches = fetch_scores("football", titan_date)
+        # 需要查询的日期：目标日期 + 前一天（titan007 凌晨场次跨日归档）
+        query_dates = [titan_date]
+        if base_dt is not None:
+            prev_d = base_dt - timedelta(days=1)
+            query_dates.append(f"{prev_d.year}-{prev_d.month}-{prev_d.day}")
+
+        # 去重合并：同一场比赛可能在两天接口都出现，按 主队_客队_比分 去重
+        merged = {}
+        for qd in query_dates:
+            for tm in fetch_scores("football", qd):
+                key = f"{tm['home_team']}|{tm['away_team']}|{tm['home_score']}|{tm['away_score']}"
+                merged[key] = tm
+        matches = list(merged.values())
         if matches:
             titan_data[ds] = matches
             # Debug: 打印 titan007 返回的队伍名
-            print(f"  [titan007] {ds} 共{len(matches)}场完场:")
+            print(f"  [titan007] {ds} 共{len(matches)}场完场(含前一天回退):")
             for tm in matches:
                 print(f"    {tm['home_team']}({tm.get('home_team_official','')}) vs {tm['away_team']}({tm.get('away_team_official','')}) {tm['home_score']}-{tm['away_score']}")
 
