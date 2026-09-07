@@ -46,6 +46,19 @@ ALIASES = {
     '巴竞技': ['巴拉纳竞技'],
     '萨索洛': ['森索罗', '萨索罗'],
     '森索罗': ['萨索洛', '萨索罗'],
+    # 世女杯 竞彩3字简称 → titan007 女篮全称（数据源用"南韩"不用"韩国"）
+    '韩国女': ['南韩女篮', '南韓女籃', '南韩', '韩国女篮', '韓國女籃'],
+    '尼日利女': ['尼日利亚女篮', '尼日利亞女籃'],
+    '西班牙女': ['西班牙女篮', '西班牙女籃'],
+    '德国女': ['德国女篮', '德國女籃'],
+    '土耳其女': ['土耳其女篮', '土耳其女籃'],
+    '马里女': ['马里女篮', '馬里女籃'],
+    '匈牙利女': ['匈牙利女篮', '匈牙利女籃'],
+    '中国女': ['中国女篮', '中國女籃'],
+    '捷克女': ['捷克女篮', '捷克女籃'],
+    '波多黎女': ['波多黎各女篮', '波多黎各女籃'],
+    '比利时女': ['比利时女篮', '比利時女籃'],
+    '澳大利女': ['澳大利亚女篮', '澳洲女籃', '澳洲女篮'],
 }
 
 def _safe_int(val, default=0):
@@ -182,7 +195,9 @@ def _fetch_basketball_scores(date_str):
     except Exception:
         base = _dt.strptime(date_str, "%Y-%m-%d")
     prev = base - _td(days=1)
-    dates_to_try = [base.strftime("%Y-%m-%d"), prev.strftime("%Y-%m-%d")]
+    nxt = base + _td(days=1)
+    # 世女杯等凌晨/跨境场次：titan007 会归档到后一天页面（D+1），同时保留前一天兜底（D-1）
+    dates_to_try = [base.strftime("%Y-%m-%d"), nxt.strftime("%Y-%m-%d"), prev.strftime("%Y-%m-%d")]
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
@@ -197,12 +212,17 @@ def _fetch_basketball_scores(date_str):
             resp.encoding = "gb18030"
             matches = _parse_basketball_xml(resp.text)
             for m in matches:
-                key = (m.get("home_team_official", ""), m.get("away_team_official", ""))
+                # 去重键：队名（简+繁）+比分，避免三天窗口内同队多场/重复
+                key = (
+                    m.get("home_team", ""), m.get("away_team", ""),
+                    m.get("home_team_trad", ""), m.get("away_team_trad", ""),
+                    m.get("home_score"), m.get("away_score"),
+                )
                 all_by_id[key] = m
         except Exception as e:
             print(f"[titan007] 篮球请求失败 date={ds}: {e}", file=sys.stderr)
     completed = [m for m in all_by_id.values() if m["status_code"] == "4"]
-    print(f"[titan007] basketball {date_str}: {len(all_by_id)}场, 完场{len(completed)}场 (含前一日兜底)", file=sys.stderr)
+    print(f"[titan007] basketball {date_str}: {len(all_by_id)}场, 完场{len(completed)}场 (含D-1/D/D+1三日)", file=sys.stderr)
     return completed
 
 
