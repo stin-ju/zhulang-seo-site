@@ -62,13 +62,16 @@ AI_CONFIGS = {
         "base_url": "https://tokenhub.tencentmaas.com/v1/chat/completions",  # ✅ 腾讯TokenHub端点
         "api_key": os.environ.get("HUNYUAN_API_KEY", "REMOVED"),
         "model": "hy3",                       # 主模型
-        # 降级链：hy3失败→hy-mt2-plus→hy-mt2-pro（hy-mt2-pro实测200稳定可用）
+        # 降级链（TokenHub 全量实测 2026-09）：hy3/plus/lite=402额度耗尽(有效), pro=200稳定,
+        # hy4-preview=200(推理模型需大max_tokens，429需重试), hy-role/role-latest=200文本兜底
         "fallback_models": [
-            "hy-mt2-plus",
-            "hy-mt2-pro",
-            "hy4-preview",
+            "hy-mt2-plus",                    # 402(额度耗尽)
+            "hy-mt2-pro",                     # ✅ 实测 200 稳定，主力降级
+            "hy4-preview",                    # 200 推理模型(需大max_tokens，429重试)
+            "hy-role",                        # ✅ 实测 200 文本兜底
+            "hunyuan-role-latest",            # ✅ 实测 200 文本兜底
         ],
-        "max_tokens": 1500,
+        "max_tokens": 4000,                   # 调大：hy4-preview 是推理模型需足够推理空间
     },
     "豆包": {
         "base_url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",

@@ -71,11 +71,16 @@ AI_CONFIGS = {
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "REMOVED",
         "model": "hy3",                       # 主模型
-        # 降级链：hy3失败→hy-mt2-plus→hy-mt2-pro（hy-mt2-pro实测200稳定可用）
+        # 降级链（TokenHub /v1/models 全量实测 2026-09）：
+        #   hy3/hy-mt2-plus/hy-mt2-lite = 402 免费额度耗尽(模型有效，开后付费可用)
+        #   hy-mt2-pro = 200 稳定可用；hy4-preview = 200(推理模型，429限流需重试)
+        #   hy-role / hunyuan-role-latest = 200 角色扮演文本模型，作兜底备选
         "fallback_models": [
-            "hy-mt2-plus",                    # TokenHub 实测可用
-            "hy-mt2-pro",                     # TokenHub 实测200稳定
-            "hy4-preview",                    # 兜底（429限流时重试可成）
+            "hy-mt2-plus",                    # 402(额度耗尽) - 有效模型，开后付费可用
+            "hy-mt2-pro",                     # ✅ 实测 200 稳定，主力降级
+            "hy4-preview",                    # 200(推理模型，需大max_tokens，429时重试)
+            "hy-role",                        # ✅ 实测 200，角色扮演文本模型兜底
+            "hunyuan-role-latest",            # ✅ 实测 200，角色扮演文本模型兜底
         ],
     },
     "扣子": {
