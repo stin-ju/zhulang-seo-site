@@ -59,9 +59,15 @@ AI_CONFIGS = {
         "max_tokens": 1500,
     },
     "混元": {
-        "base_url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
+        "base_url": "https://tokenhub.tencentmaas.com/v1/chat/completions",  # ✅ 腾讯TokenHub端点
         "api_key": os.environ.get("HUNYUAN_API_KEY", "REMOVED"),
-        "model": "hy-mt2-lite",
+        "model": "hy3",                       # 主模型
+        # 降级链：hy3失败→hy-mt2-plus→hy-mt2-pro（hy-mt2-pro实测200稳定可用）
+        "fallback_models": [
+            "hy-mt2-plus",
+            "hy-mt2-pro",
+            "hy4-preview",
+        ],
         "max_tokens": 1500,
     },
     "豆包": {
@@ -552,33 +558,49 @@ async def call_ai_api(session, ai_name, prompt, sem):
 
                     return await resp.text()
 
-            # 标准OpenAI格式
+            # 标准OpenAI格式（支持模型降级链）
             headers = {
                 "Authorization": f"Bearer {config['api_key']}",
                 "Content-Type": "application/json",
             }
-            payload = {
-                "model": config["model"],
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": config["max_tokens"],
-                "temperature": 0.7,
-            }
 
+            models = [config["model"]] + config.get("fallback_models", [])
             timeout = aiohttp.ClientTimeout(total=config.get("timeout", 60))
-            async with session.post(
-                config["base_url"],
-                headers=headers,
-                json=payload,
-                timeout=timeout,
-            ) as resp:
-                if resp.status != 200:
-                    text = await resp.text()
-                    print(f"  [WARN] {ai_name} HTTP {resp.status}: {text[:200]}")
-                    return None
-
-                data = await resp.json()
-                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                return content if content else None
+            last_status = None
+            for idx, model in enumerate(models):
+                payload = {
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": config["max_tokens"],
+                    "temperature": 0.7,
+                }
+                tag = model if idx == 0 else f"{model}(降级{idx})"
+                try:
+                    async with session.post(
+                        config["base_url"],
+                        headers=headers,
+                        json=payload,
+                        timeout=timeout,
+                    ) as resp:
+                        if resp.status != 200:
+                            text = await resp.text()
+                            last_status = resp.status
+                            print(f"  [WARN] {ai_name}[{tag}] HTTP {resp.status}: {text[:150]}")
+                            continue
+                        data = await resp.json()
+                        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        if content:
+                            if idx > 0:
+                                print(f"  [{ai_name}] 已降级到 {tag} 调用成功")
+                            return content
+                        last_status = 204
+                        continue
+                except Exception as e:
+                    last_status = str(e)
+                    print(f"  [WARN] {ai_name}[{tag}] 异常: {str(e)[:120]}")
+                    continue
+            print(f"  [WARN] {ai_name} 所有模型均失败: {last_status}")
+            return None
 
         except asyncio.TimeoutError:
             print(f"  [WARN] {ai_name} 超时")

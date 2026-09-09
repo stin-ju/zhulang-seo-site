@@ -67,10 +67,16 @@ AI_CONFIGS = {
         "model": "ernie-4.0-8k-latest",
     },
     "混元": {
-        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
+        "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",  # ✅ 腾讯TokenHub端点（非api.hunyuan.cloud.tencent.com）
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "REMOVED",
-        "model": "hy-mt2-plus",
+        "model": "hy3",                       # 主模型
+        # 降级链：hy3失败→hy-mt2-plus→hy-mt2-pro（hy-mt2-pro实测200稳定可用）
+        "fallback_models": [
+            "hy-mt2-plus",                    # TokenHub 实测可用
+            "hy-mt2-pro",                     # TokenHub 实测200稳定
+            "hy4-preview",                    # 兜底（429限流时重试可成）
+        ],
     },
     "扣子": {
         "url": "https://7hsjv6c4cn.coze.site/stream_run",
@@ -449,25 +455,42 @@ def call_ai_api(ai_name, prompt, timeout=120):
     }
     # 文心API max_tokens最大2048，其他AI用4000
     max_tok = 2048 if ai_name == "文心" else 4000
-    payload = {
-        "model": config["model"],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": max_tok,
-    }
 
-    try:
-        resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        error_str = str(e)
-        if any(kw in error_str for kw in RATE_LIMIT_KEYWORDS):
-            print(f"  [{ai_name}] 额度/限流: {error_str[:100]}")
-        else:
-            print(f"  [{ai_name}] 调用失败: {error_str[:100]}")
-        return None
+    # 模型降级链：主模型 + fallback_models，依次尝试直到成功
+    models = [config["model"]] + config.get("fallback_models", [])
+    last_err = ""
+    for idx, model in enumerate(models):
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_tokens": max_tok,
+        }
+        tag = model if idx == 0 else f"{model}(降级{idx})"
+        try:
+            resp = requests.post(config["url"], headers=headers, json=payload, timeout=timeout)
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            if idx > 0:
+                print(f"  [{ai_name}] 已降级到 {tag} 调用成功")
+            return content
+        except Exception as e:
+            error_str = str(e)
+            last_err = error_str
+            # 提取HTTP状态码/网关错误用于判断
+            if any(kw in error_str for kw in RATE_LIMIT_KEYWORDS):
+                print(f"  [{ai_name}][{tag}] 额度/限流，尝试下一个模型: {error_str[:80]}")
+            else:
+                print(f"  [{ai_name}][{tag}] 调用失败，尝试下一个模型: {error_str[:80]}")
+            continue
+
+    # 所有模型均失败
+    if any(kw in last_err for kw in RATE_LIMIT_KEYWORDS):
+        print(f"  [{ai_name}] 全部模型额度/限流: {last_err[:100]}")
+    else:
+        print(f"  [{ai_name}] 所有模型调用失败: {last_err[:100]}")
+    return None
 
 
 
