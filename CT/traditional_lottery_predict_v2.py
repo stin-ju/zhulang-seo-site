@@ -73,14 +73,15 @@ AI_CONFIGS = {
         "model": "hy3",                       # 主模型
         # 降级链（TokenHub /v1/models 全量实测 2026-09）：
         #   hy3/hy-mt2-plus/hy-mt2-lite = 402 免费额度耗尽(模型有效，开后付费可用)
-        #   hy-mt2-pro = 200 稳定可用；hy4-preview = 200(推理模型，429限流需重试)
-        #   hy-role / hunyuan-role-latest = 200 角色扮演文本模型，作兜底备选
+        #   hy4-preview = 200(推理模型，分析能力强，需大max_tokens=4000，429限流时自动降级)
+        #   hy-mt2-pro = 200 稳定可用兜底；hy-role / hunyuan-role-latest = 200 角色扮演文本兜底
+        #   降级链：hy3(主) → plus(降1) → hy4-preview(降2) → pro(降3) → role(降4) → role-latest(降5)
         "fallback_models": [
-            "hy-mt2-plus",                    # 402(额度耗尽) - 有效模型，开后付费可用
-            "hy-mt2-pro",                     # ✅ 实测 200 稳定，主力降级
-            "hy4-preview",                    # 200(推理模型，需大max_tokens，429时重试)
-            "hy-role",                        # ✅ 实测 200，角色扮演文本模型兜底
-            "hunyuan-role-latest",            # ✅ 实测 200，角色扮演文本模型兜底
+            "hy-mt2-plus",                    # 降级1: 402(额度耗尽) - 有效模型，开后付费可用
+            "hy4-preview",                    # 降级2: ✅ 实测 200 推理模型，分析强于pro，需max_tokens=4000，429时继续降级
+            "hy-mt2-pro",                     # 降级3: ✅ 实测 200 稳定，兜底
+            "hy-role",                        # 降级4: ✅ 实测 200，角色扮演文本模型兜底
+            "hunyuan-role-latest",            # 降级5: ✅ 实测 200，角色扮演文本模型兜底
         ],
     },
     "扣子": {

@@ -62,14 +62,16 @@ AI_CONFIGS = {
         "base_url": "https://tokenhub.tencentmaas.com/v1/chat/completions",  # ✅ 腾讯TokenHub端点
         "api_key": os.environ.get("HUNYUAN_API_KEY", "REMOVED"),
         "model": "hy3",                       # 主模型
-        # 降级链（TokenHub 全量实测 2026-09）：hy3/plus/lite=402额度耗尽(有效), pro=200稳定,
-        # hy4-preview=200(推理模型需大max_tokens，429需重试), hy-role/role-latest=200文本兜底
+        # 降级链（TokenHub 全量实测 2026-09）：hy3/plus/lite=402额度耗尽(有效),
+        # hy4-preview=200(推理模型，分析强于pro，需max_tokens=4000，429自动降级)
+        # hy-mt2-pro=200稳定兜底；hy-role/role-latest=200文本兜底
+        #   顺序：hy3(主) → plus(降1) → hy4-preview(降2) → pro(降3) → role(降4) → role-latest(降5)
         "fallback_models": [
-            "hy-mt2-plus",                    # 402(额度耗尽)
-            "hy-mt2-pro",                     # ✅ 实测 200 稳定，主力降级
-            "hy4-preview",                    # 200 推理模型(需大max_tokens，429重试)
-            "hy-role",                        # ✅ 实测 200 文本兜底
-            "hunyuan-role-latest",            # ✅ 实测 200 文本兜底
+            "hy-mt2-plus",                    # 降级1: 402(额度耗尽)
+            "hy4-preview",                    # 降级2: 200 推理模型(需大max_tokens=4000，429时降级)
+            "hy-mt2-pro",                     # 降级3: ✅ 实测 200 稳定兜底
+            "hy-role",                        # 降级4: ✅ 实测 200 文本兜底
+            "hunyuan-role-latest",            # 降级5: ✅ 实测 200 文本兜底
         ],
         "max_tokens": 4000,                   # 调大：hy4-preview 是推理模型需足够推理空间
     },
