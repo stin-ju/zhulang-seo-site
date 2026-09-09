@@ -26,12 +26,28 @@ echo '【Step 1/6】抓取比赛和赔率...'
 python3 discover_matches.py >> $LOG_DIR/pipeline_$DATE.log 2>&1
 echo '  完成'
 
+# Step 1b: 传统彩赛程发现（CT 期号抓取入库）
+echo '【CT】传统彩赛程发现...'
+if python3 ct_discover.py >> $LOG_DIR/pipeline_$DATE.log 2>&1; then
+    echo '  CT赛程发现完成'
+else
+    echo '  CT赛程发现失败(记录但不阻断)'
+fi
+
 # Step 2: AI预测（足球+篮球）
 echo ''
 echo '【Step 2/6】AI预测...'
 python3 auto_predict.py --sport football >> $LOG_DIR/pipeline_$DATE.log 2>&1 || echo '  足球预测完成(可能有警告)'
 python3 auto_predict.py --sport basketball >> $LOG_DIR/pipeline_$DATE.log 2>&1 || echo '  篮球预测完成(可能有警告)'
 echo '  完成'
+
+# Step 2b: 传统彩 AI 预测（胜负彩）
+echo '【CT】传统彩 AI 预测(胜负彩)...'
+if python3 traditional_lottery_predict_v4.py --game 胜负彩 >> $LOG_DIR/pipeline_$DATE.log 2>&1; then
+    echo '  CT胜负彩预测完成'
+else
+    echo '  CT胜负彩预测失败(记录但不阻断)'
+fi
 
 # Step 3: 数据质量检查（自动补全缺失的让球等）
 echo ''
@@ -44,6 +60,14 @@ echo ''
 echo '【Step 4/6】自动结算...'
 python3 auto_settle.py >> $LOG_DIR/pipeline_$DATE.log 2>&1
 echo '  完成'
+
+# Step 4b: 传统彩自动结算（操作 predictions 表）
+echo '【CT】传统彩自动结算...'
+if python3 "$PROJECT_ROOT/CT/ct_auto_settle_v2.py" >> $LOG_DIR/pipeline_$DATE.log 2>&1; then
+    echo '  CT传统彩结算完成'
+else
+    echo '  CT传统彩结算失败(记录但不阻断)'
+fi
 
 # Step 5: 结算后再跑一次质量检查（确认结算完整）
 echo ''
