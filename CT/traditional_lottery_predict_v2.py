@@ -334,7 +334,22 @@ def build_ct_prompt(matches, game_type="胜负彩", ai_name=None):
     return ""
 
 
-def call_coze_code(url, token, prompt, project_id=None):
+def get_coze_token():
+    """获取扣子API令牌：按优先级尝试多个环境变量（与JC侧auto_predict.py保持一致）
+    - COZE_PROJECT_API_TOKEN（开发环境）
+    - COZE_API_TOKEN（生产FaaS容器自动注入的 sat_ 令牌）
+    - COZE_WORKLOAD_API_TOKEN（workload令牌）
+    - 最后回退硬编码 key_default JWT（可能已轮换失效）
+    占位符（如 'REMOVED' 长度<=20）自动跳过。
+    """
+    for env_name in ["COZE_PROJECT_API_TOKEN", "COZE_API_TOKEN", "COZE_WORKLOAD_API_TOKEN"]:
+        token = os.environ.get(env_name, "")
+        if len(token) > 20:
+            return token
+    return AI_CONFIGS.get("扣子", {}).get("key_default", "")
+
+
+def call_coze_code(url, token, prompt, project_id=None, timeout=120):
     """调用扣子编程（Coze Code）项目部署的API端点
     官方文档: https://docs.coze.cn/dev_how_to_guides_qeesmmos
     请求格式:
@@ -342,6 +357,7 @@ def call_coze_code(url, token, prompt, project_id=None):
       "content": {"query": {"prompt": [{"type": "text", "content": {"text": "..."}}]}},
       "type": "query",
       "session_id": "...",
+      "partial": true,
       "project_id": 7667164681706078217
     }
     """
@@ -364,6 +380,7 @@ def call_coze_code(url, token, prompt, project_id=None):
         },
         "type": "query",
         "session_id": f"ct_predict_{int(time.time())}",
+        "partial": True,
     }
     if project_id:
         payload["project_id"] = project_id
@@ -372,7 +389,7 @@ def call_coze_code(url, token, prompt, project_id=None):
     print(f"  [扣子API] project_id: {project_id}")
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=120)
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     except requests.RequestException as e:
         print(f"  [扣子API] 请求异常: {e}")
         return None
@@ -447,11 +464,11 @@ def call_ai_api(ai_name, prompt, timeout=120):
 
     # 扣子走Coze Code API
     if fmt == "coze_code":
-        token = os.environ.get(config.get("key_env", ""), "") or config.get("key_default", "")
+        token = get_coze_token()
         if not token:
             print(f"  [{ai_name}] API Token未配置")
             return None
-        return call_coze_code(config["url"], token, prompt, config.get("project_id"))
+        return call_coze_code(config["url"], token, prompt, config.get("project_id"), timeout=timeout)
 
     key = os.environ.get(config["key_env"], "")
     if not key:
