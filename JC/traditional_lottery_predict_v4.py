@@ -72,6 +72,9 @@ AI_CONFIGS = {
             "hy-mt2-pro",                     # 降级3: ✅ 实测 200 稳定兜底
             "hunyuan-role-latest",            # 降级4: ✅ 实测 200 文本兜底
             "hy-role",                        # 降级5: ✅ 实测 200 文本兜底
+            "deepseek-v4-pro-202606",         # 降级6: ✅ 实测 200（tokenhub DeepSeek，不带前缀版本新）
+            "deepseek-v4-pro-0813",           # 降级7: ✅ 实测 200（不带前缀写法）
+            "deepseek/deepseek-v4-flash-vision-exp",  # 降级8: ✅ 实测 200（visual，必须带deepseek/前缀）
         ],
         "max_tokens": 4000,                   # 调大：hy4-preview 是推理模型需足够推理空间
     },
