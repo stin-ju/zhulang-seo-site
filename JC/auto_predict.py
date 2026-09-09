@@ -258,6 +258,15 @@ PREDICTION_PROMPT = """你是一个专业的足球比赛预测分析师。请根
 ## 情报数据
 {intel_data}
 
+## 让球胜平负计算规则（务必严格遵守，字段必须自洽）
+让球胜平负 = 主队进球数加上让球数后，再判断胜平负。让球数为负数表示主队让球（主队强），如主队让3球即主队进球减3。
+- 例1：主队让3球（让球-3），猜比分2-0 → 主队调整后 2-3=-1 → 客胜 → handicap_spf=让负
+- 例2：主队让1球（让球-1），猜比分1-0 → 调整后 0-0 平 → handicap_spf=让平
+- 例3：主队让1球（让球-1），猜比分1-1 → 调整后 0-1 客胜 → handicap_spf=让负
+- spf（胜平负）只看原始比分：主队进球多=胜、相等=平、客队多=负，不受让球影响。
+- goals（总进球数）= 主队进球 + 客队进球（如比分2-1则goals=3，比分1-1则goals=2）。
+- half_full 第2个字（全场结果）必须与 spf 一致：比分主胜则第2字为"胜"、平为"平"、主负为"负"。
+
 ## 请严格按以下JSON格式输出预测结果:
 ```json
 {{
@@ -838,81 +847,117 @@ def validate_basketball_consistency(pred, spread_line):
     return corrected
 
 
-def _get_match_handicap(match):
-    """从 match dict 中获取让球值（float），兼容 metadata 嵌套结构"""
+def _get_match_handicap_raw(match):
+    """从 match dict 中获取让球原始值，兼容 metadata 嵌套结构。
+    返回 (raw_value, is_present)。is_present=False 表示盘口缺失（禁伪造）。"""
     md = match.get("metadata") or {}
     if isinstance(md, str):
         try:
             md = json.loads(md)
         except:
             md = {}
-    raw = md.get("handicap") or match.get("handicap") or "0"
+    raw = md.get("handicap", None)
+    if raw is None:
+        raw = match.get("handicap", None)
+    if raw is None or raw == "":
+        return None, False
     try:
-        return float(raw)
+        return float(raw), True
     except (ValueError, TypeError):
-        return 0.0
+        return None, False
+
+
+def _get_match_handicap(match):
+    """从 match dict 中获取让球值（float），兼容 metadata 嵌套结构；缺失返回 0.0"""
+    val, present = _get_match_handicap_raw(match)
+    return val if present else 0.0
+
+
+def _fix_log(pred, field, old, new):
+    """打印确定性重算审计日志：[FIX] match_id ai名 字段名 原值→新值"""
+    print(f"  [FIX] {pred.get('match_id','')} {pred.get('ai_name','')} "
+          f"{field} {old!r}→{new!r}")
 
 
 def validate_football_consistency(pred, match):
-    """校验并修正足球预测的逻辑一致性：
-    1. handicap_spf 必须与 score + 让球盘口 一致
-    2. half_full 必须与 score 一致
-    以比分为准，覆盖不一致的字段。
+    """确定性重算层（以 score 为锚点，保证单 AI 字段 100% 自洽）。
+    在 AI 返回解析后、UPSERT 入库前调用，覆盖模型可能自相矛盾的字段：
+      1. score 解析为整数 h,a；解析失败则跳过重算，保留模型原值并告警
+      2. goals = h + a（覆盖模型 goals）
+      3. spf：h>a→胜 / h==a→平 / h<a→负（覆盖模型 spf）
+      4. handicap_spf：adjusted = h + handicap；adjusted>a→让胜 / ==a→让平 / <a→让负
+         （handicap 为负=主队让球，如 -3；handicap 缺失则置空，禁伪造）
+      5. half_full：第2字（全场）必须与重算后 spf 一致，不一致替换第2字，
+         第1字（半场）保留模型原值；half_full 缺失留空
     """
     corrected = dict(pred)
-    score_str = str(pred.get("score", ""))
+    score_str = str(pred.get("score", "")).strip()
     m = re.match(r'^(\d+)-(\d+)$', score_str)
     if not m:
+        # score 缺失/格式错误：跳过重算，保留模型原值
+        print(f"  [WARN] {pred.get('match_id','')} {pred.get('ai_name','')} "
+              f"score解析失败({score_str!r})，跳过确定性重算，保留模型原值")
         return corrected
 
     home_goals = int(m.group(1))
     away_goals = int(m.group(2))
-    handicap = _get_match_handicap(match)
 
-    # ---- 1. 校验 handicap_spf ----
-    # 让球后净胜球 = 主进球 - 客进球 + 让球值
-    net = home_goals - away_goals + handicap
-    if net > 0.01:
-        correct_handicap = "让胜"
-    elif net < -0.01:
-        correct_handicap = "让负"
+    # ---- 1. goals = h + a ----
+    correct_goals = home_goals + away_goals
+    old_goals = pred.get("goals")
+    try:
+        old_goals_int = int(old_goals) if old_goals is not None and old_goals != "" else None
+    except (ValueError, TypeError):
+        old_goals_int = None
+    if old_goals_int != correct_goals:
+        _fix_log(pred, "goals", old_goals, correct_goals)
+        corrected["goals"] = correct_goals
+
+    # ---- 2. spf：以比分重算 ----
+    if home_goals > away_goals:
+        correct_spf = "胜"
+    elif home_goals == away_goals:
+        correct_spf = "平"
     else:
-        correct_handicap = "让平"
+        correct_spf = "负"
+    old_spf = pred.get("spf")
+    if old_spf != correct_spf:
+        _fix_log(pred, "spf", old_spf, correct_spf)
+        corrected["spf"] = correct_spf
 
-    current_handicap = pred.get("handicap_spf", "")
-    if current_handicap != correct_handicap:
-        print(f"  [修正] handicap_spf: {current_handicap} -> {correct_handicap} "
-              f"(比分{score_str}, 盘口{handicap:+.1f}, 净胜{net:+.1f})")
-        corrected["handicap_spf"] = correct_handicap
-
-    # ---- 2. 校验 half_full ----
-    current_hf = pred.get("half_full") or ""
-    if len(current_hf) == 2:
-        half_char = current_hf[0]   # 胜/平/负
-        full_char = current_hf[1]   # 胜/平/负
-
-        # 全场结果修正
-        if home_goals > away_goals:
-            correct_full = "胜"
-        elif home_goals < away_goals:
-            correct_full = "负"
+    # ---- 3. handicap_spf：主队进球加上让球数后再判胜平负 ----
+    handicap, hc_present = _get_match_handicap_raw(match)
+    if hc_present:
+        adjusted = home_goals + handicap
+        if adjusted > away_goals + 0.01:
+            correct_handicap = "让胜"
+        elif adjusted < away_goals - 0.01:
+            correct_handicap = "让负"
         else:
-            correct_full = "平"
+            correct_handicap = "让平"
+        old_handicap = pred.get("handicap_spf", "")
+        if old_handicap != correct_handicap:
+            _fix_log(pred, "handicap_spf", old_handicap,
+                     f"{correct_handicap}(比分{score_str},盘口{handicap:+.0f},调整{home_goals}+({handicap:+.0f})={adjusted:g})")
+            corrected["handicap_spf"] = correct_handicap
+    else:
+        # 盘口缺失：handicap_spf 置空，禁伪造
+        old_handicap = pred.get("handicap_spf", "")
+        if old_handicap:
+            _fix_log(pred, "handicap_spf", old_handicap, "(盘口缺失置空)")
+        corrected["handicap_spf"] = ""
 
+    # ---- 4. half_full：全场字（第2字）必须与重算 spf 一致，半场字保留 ----
+    current_hf = str(pred.get("half_full") or "").strip()
+    if len(current_hf) == 2:
+        half_char = current_hf[0]   # 半场，保留模型原值
+        full_char = current_hf[1]
+        correct_full = correct_spf  # 全场胜/平/负
         if full_char != correct_full:
-            print(f"  [修正] half_full全场: {full_char} -> {correct_full} (比分{score_str})")
-            full_char = correct_full
-
-        # 半场结果修正：0-0 半场必须是 "平"
-        if home_goals == 0 and away_goals == 0:
-            correct_half = "平"
-            if half_char != correct_half:
-                print(f"  [修正] half_full半场: {half_char} -> {correct_half} (比分0-0)")
-                half_char = correct_half
-
-        corrected_hf = half_char + full_char
-        if corrected_hf != current_hf:
-            corrected["half_full"] = corrected_hf
+            new_hf = half_char + correct_full
+            _fix_log(pred, "half_full", current_hf, new_hf)
+            corrected["half_full"] = new_hf
+    # half_full 缺失/非法：留空（不伪造）
 
     return corrected
 
