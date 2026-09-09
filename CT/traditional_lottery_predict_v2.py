@@ -356,13 +356,17 @@ def call_coze_code(url, token, prompt, project_id=None):
     print(f"  [扣子API] 请求URL: {url}")
     print(f"  [扣子API] project_id: {project_id}")
 
-    resp = requests.post(url, headers=headers, json=payload, timeout=120)
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=120)
+    except requests.RequestException as e:
+        print(f"  [扣子API] 请求异常: {e}")
+        return None
 
-    # 详细记录错误信息
+    # 非200（如401 token失效/5xx）不抛异常，返回None，保证其它AI可继续跑
     if resp.status_code != 200:
         error_body = resp.text[:500]
         print(f"  [扣子API] HTTP {resp.status_code}: {error_body}")
-        resp.raise_for_status()
+        return None
 
     content_type = resp.headers.get("Content-Type", "")
     print(f"  [扣子API] 响应Content-Type: {content_type}")
