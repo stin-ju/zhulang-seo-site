@@ -156,7 +156,9 @@ def load_jc_scores(conn):
 
 
 def load_ct_scores(conn):
-    """预加载CT彩已完赛有比分的比赛到内存，按 id（即 match_id）索引"""
+    """预加载CT彩有比分的比赛到内存，按 id（即 match_id）索引。
+    注意：CT 比赛即使已有比分，status 往往仍是 'on_sale'（不像竞彩会变'已完赛'），
+    因此这里【不能】用 status='已完赛' 过滤，只看 metadata 里是否有比分。"""
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cur.execute("""
         SELECT id, home_team, away_team,
@@ -167,7 +169,6 @@ def load_ct_scores(conn):
                metadata->>'match_date' as match_date
         FROM matches
         WHERE id LIKE 'CT%%'
-          AND status = '已完赛'
           AND metadata->>'home_score' IS NOT NULL
           AND metadata->>'away_score' IS NOT NULL
     """)
@@ -319,27 +320,40 @@ def find_in_titan(home, away, date_str, titan_cache):
 
 # ============ 数据库操作 ============
 
-def get_unsettled_predictions(conn, issue=None):
-    """从 predictions 表查询未结算的 CT 预测记录。
+def get_unsettled_predictions(conn, issue=None, recheck_bad_settled=False):
+    """从 predictions 表查询待结算的 CT 预测记录。
 
-    - WHERE ct_issue IS NOT NULL AND (is_settled = FALSE OR is_settled IS NULL)
-    - LEFT JOIN matches 获取球队名与比赛时间
-    - 按 ct_issue 分组返回，每组含 records 列表（每条 = 一个 match_id + ai_name 记录）
+    常规（recheck_bad_settled=False）：
+      WHERE ct_issue IS NOT NULL AND (is_settled = FALSE OR is_settled IS NULL)
+    重算模式（recheck_bad_settled=True，额外纳入"错误已结算"记录）：
+      - is_settled=TRUE 但 spf IS NULL（实际结果缺失，属错误结算，必须回填纠正）
+      - is_settled=TRUE 且 hit_status->>'reason'='score_unavailable'（无比分却被标已结算）
+    LEFT JOIN matches 获取球队名与比赛时间；按 ct_issue 分组返回。
 
     Returns:
-        dict: {ct_issue: {"game_types": set, "records": [ {match_id, ai_name, game_type,
-               spf_pred, half_full_pred, prediction, home, away, match_time} ]}}
+        dict: {ct_issue: {"game_types": set, "records": [...]}}
     """
-    sql = """
+    where = ["p.ct_issue IS NOT NULL"]
+    if recheck_bad_settled:
+        where.append("""(
+              p.is_settled = FALSE OR p.is_settled IS NULL
+              OR (p.is_settled = TRUE AND p.spf IS NULL)
+              OR (p.is_settled = TRUE AND p.hit_status->>'reason' = 'score_unavailable')
+          )""")
+    else:
+        where.append("(p.is_settled = FALSE OR p.is_settled IS NULL)")
+
+    sql = f"""
         SELECT p.match_id, p.ai_name,
                p.ct_game_type AS game_type,
                p.spf_pred, p.half_full_pred, p.prediction,
+               p.is_settled AS was_settled,
+               p.spf AS spf,
                m.home_team AS home, m.away_team AS away,
                m.metadata->>'match_time' AS match_time
         FROM predictions p
         LEFT JOIN matches m ON m.id = p.match_id
-        WHERE p.ct_issue IS NOT NULL
-          AND (p.is_settled = FALSE OR p.is_settled IS NULL)
+        WHERE {' AND '.join(where)}
     """
     params = []
     if issue:
@@ -366,6 +380,7 @@ def get_unsettled_predictions(conn, issue=None):
                 "half_full_pred": row['half_full_pred'],
                 "prediction": row['prediction'] if isinstance(row['prediction'], dict)
                               else (json.loads(row['prediction']) if row['prediction'] else {}),
+                "was_settled": bool(row['was_settled']) if row['was_settled'] is not None else False,
                 "home": row['home'] or "",
                 "away": row['away'] or "",
                 "match_time": row['match_time'] or "",
@@ -423,8 +438,9 @@ def collect_scores(conn, group_records, jc_scores, ct_scores, titan_cache):
     for rid in match_ids:
         row = precise.get(rid)
 
-        # Level 1: 精确关联已完赛且有比分
-        if row and row['status'] == '已完赛' and row['home_score'] is not None and row['away_score'] is not None:
+        # Level 1: 精确关联——只要 metadata 里有比分即可（CT 比赛有比分时 status 常为 on_sale，不能要求'已完赛'）
+        is_ct = str(rid).startswith("CT")
+        if row and row['home_score'] is not None and row['away_score'] is not None and (is_ct or row['status'] == '已完赛'):
             scores_map[rid] = _row_to_score(row, f"db:match_id")
             stats["db_ct_exact"] += 1
             continue
@@ -479,35 +495,47 @@ def _score_to_hit(score, reason_prefix=""):
 def settle_record(rec, score):
     """计算单场 (match_id, ai_name) 记录的命中判定。
 
+    CT 胜负彩只结算【胜平负 3/1/0】这 1 个维度：
+      - 让球 handicap_spf / 进球数 goals / 半全场 half_full 在 CT 胜负彩【不适用】，不判。
+      - 比分只用于推导实际胜平负，不比预测比分。
     Returns:
-        hit_status dict: {hit, actual, score, reason}
+        hit_status dict: {spf_hit, hit, actual, score, pred, reason}
+        - reason='ok'：有比分且有预测，可判定
+        - reason='score_unavailable'：无比分（不结算，保持 is_settled=false）
+        - reason='no_pred'：有比分但模型没给胜平负预测
     """
     if not score:
-        return {"hit": None, "actual": None, "score": None, "reason": "no_score"}
+        return {"spf_hit": None, "hit": None, "actual": None, "score": None,
+                "pred": rec.get("spf_pred"), "reason": "score_unavailable"}
 
     game_type = (rec.get("game_type") or "胜负彩")
     actual, score_str = _score_to_hit(score)
 
-    if game_type in ("胜负彩", "任9"):
+    # 胜负彩 & 任9：只结胜平负 3/1/0
+    if game_type in ("胜负彩", "任9", ""):
         pred = rec.get("spf_pred")
-        if pred is None or pred == "" or pred == "-":
-            return {"hit": None, "actual": actual, "score": score_str, "reason": "no_pred"}
+        if pred is None or str(pred).strip() in ("", "-"):
+            return {"spf_hit": None, "hit": None, "actual": actual, "score": score_str,
+                    "pred": pred, "reason": "no_pred"}
         is_hit = str(pred).strip() == str(actual)
-        return {"hit": is_hit, "actual": actual, "score": score_str, "reason": "ok"}
+        return {"spf_hit": is_hit, "hit": is_hit, "actual": actual,
+                "score": score_str, "pred": str(pred).strip(), "reason": "ok"}
 
     if game_type == "半全场":
         pred = rec.get("half_full_pred")
         half_home = score.get("half_home")
         half_away = score.get("half_away")
-        if pred is None or pred == "" or pred == "-":
-            return {"hit": None, "actual": None, "score": score_str, "reason": "no_pred"}
+        if pred is None or str(pred).strip() in ("", "-"):
+            return {"spf_hit": None, "hit": None, "actual": None, "score": score_str,
+                    "reason": "no_pred"}
         if half_home is None or half_away is None:
-            return {"hit": None, "actual": None, "score": score_str, "reason": "no_half_score"}
+            return {"spf_hit": None, "hit": None, "actual": None, "score": score_str,
+                    "reason": "score_unavailable"}
         half_result = get_result_code(half_home, half_away)
         full_result = actual
         actual_hf = (half_result or "") + (full_result or "")
         is_hit = str(pred).strip() == str(actual_hf)
-        return {"hit": is_hit, "actual": actual_hf,
+        return {"spf_hit": None, "hit": is_hit, "actual": actual_hf,
                 "score": f"{half_home}-{half_away}/{score['home']}-{score['away']}", "reason": "ok"}
 
     # 进球彩：进到 raw prediction JSONB 里取 zjq_home/zjq_away（无则 fallback 总进球）
@@ -516,39 +544,36 @@ def settle_record(rec, score):
         zjq_home = pred.get("zjq_home")
         zjq_away = pred.get("zjq_away")
         if zjq_home is not None and zjq_away is not None:
-            hits = []
-            reasons = []
-            if _safe_int(zjq_home) == _safe_int(score["home"]):
-                hits.append(True)
-            else:
-                hits.append(False)
-            if _safe_int(zjq_away) == _safe_int(score["away"]):
-                hits.append(True)
-            else:
-                hits.append(False)
-            is_hit = all(hits)
-            return {"hit": is_hit, "actual": f"{score['home']}-{score['away']}",
+            is_hit = (_safe_int(zjq_home) == _safe_int(score["home"]) and
+                      _safe_int(zjq_away) == _safe_int(score["away"]))
+            return {"spf_hit": None, "hit": is_hit, "actual": f"{score['home']}-{score['away']}",
                     "score": score_str, "reason": "ok"}
-        # fallback 总进球
         total_pred = pred.get("zjq")
         if total_pred is None:
-            return {"hit": None, "actual": None, "score": score_str, "reason": "no_pred"}
+            return {"spf_hit": None, "hit": None, "actual": None, "score": score_str,
+                    "reason": "no_pred"}
         actual_total = get_total_goals(score["home"], score["away"])
-        return {"hit": str(total_pred).strip() == actual_total, "actual": actual_total,
-                "score": score_str, "reason": "ok"}
+        return {"spf_hit": None, "hit": str(total_pred).strip() == actual_total,
+                "actual": actual_total, "score": score_str, "reason": "ok"}
 
     # 未知玩法按胜平负兜底
     pred = rec.get("spf_pred")
-    if pred is None or pred == "" or pred == "-":
-        return {"hit": None, "actual": actual, "score": score_str, "reason": "no_pred"}
-    return {"hit": str(pred).strip() == str(actual), "actual": actual, "score": score_str, "reason": "ok"}
+    if pred is None or str(pred).strip() in ("", "-"):
+        return {"spf_hit": None, "hit": None, "actual": actual, "score": score_str,
+                "reason": "no_pred"}
+    is_hit = str(pred).strip() == str(actual)
+    return {"spf_hit": is_hit, "hit": is_hit, "actual": actual,
+            "score": score_str, "pred": str(pred).strip(), "reason": "ok"}
 
 
 def settle_issue(conn, ct_issue, group, scores_map, dry_run=False):
     """对该期号下每个 (match_id, ai_name) 记录单独结算更新。
 
-    只有 reason != no_score/no_half_score 且 hit 判定完成的记录才标记 is_settled=TRUE；
-    无比分记录保持未结算（比分补齐后再次运行本脚本即可自动结算）。
+    判定规则：
+      - 有比分且可判定（reason=ok）：回填 spf=实际3/1/0，is_settled=TRUE，hit_status 带 spf_hit。
+      - 无比分（reason=score_unavailable）：hit_status 标 score_unavailable，【is_settled=FALSE】，
+        比分到位后再次运行自动结算；若之前被误标为 TRUE，这里纠正回 FALSE。
+      - 有比分但无预测（reason=no_pred）：回填 spf，标记已结算但不计命中。
     """
     updated = 0
     skipped = 0
@@ -557,27 +582,46 @@ def settle_issue(conn, ct_issue, group, scores_map, dry_run=False):
         for rec in group["records"]:
             score = scores_map.get(rec["match_id"])
             hit_status = settle_record(rec, score)
+            reason = hit_status.get("reason")
 
-            if score is None:
+            # 无比分：标记 score_unavailable，强制 is_settled=FALSE（纠正可能的误标 TRUE）
+            if reason == "score_unavailable":
                 no_score += 1
-
-            # 无比分 / 无比分信息 / 缺预测值 → 不标记已结算
-            if hit_status.get("reason") in ("no_score", "no_half_score"):
                 skipped += 1
+                if dry_run:
+                    print(f"  [DRY] {rec['match_id']} {rec['ai_name']:12s} "
+                          f"{rec['home'] or '?'} vs {rec['away'] or '?'}: "
+                          f"无比分→score_unavailable, is_settled=FALSE(待比分)")
+                    continue
+                cur.execute("""
+                    UPDATE predictions
+                    SET is_settled = FALSE,
+                        hit_status = %s::jsonb
+                    WHERE match_id = %s AND ai_name = %s
+                """, (json.dumps(hit_status, ensure_ascii=False),
+                      rec["match_id"], rec["ai_name"]))
                 continue
 
+            actual = hit_status.get("actual")
+            spf_hit = hit_status.get("spf_hit")
+
             if dry_run:
-                flag = f"hit={hit_status.get('hit')} actual={hit_status.get('actual')}"
                 print(f"  [DRY] {rec['match_id']} {rec['ai_name']:12s} "
-                      f"{rec['home'] or '?'} vs {rec['away'] or '?'}: {flag} reason={hit_status.get('reason')}")
+                      f"{rec['home'] or '?'} vs {rec['away'] or '?'}: "
+                      f"比分{hit_status.get('score')} 实际spf={actual} pred={rec.get('spf_pred')} "
+                      f"spf_hit={spf_hit} reason={reason}")
                 updated += 1
                 continue
 
+            # 有比分：回填 spf=实际结果，写 is_settled + hit_status
             cur.execute("""
                 UPDATE predictions
-                SET is_settled = TRUE, hit_status = %s::jsonb
+                SET spf = %s,
+                    is_settled = TRUE,
+                    hit_status = %s::jsonb
                 WHERE match_id = %s AND ai_name = %s
-            """, (json.dumps(hit_status, ensure_ascii=False),
+            """, (actual,
+                  json.dumps(hit_status, ensure_ascii=False),
                   rec["match_id"], rec["ai_name"]))
             updated += 1
     if not dry_run:
@@ -591,21 +635,29 @@ def main():
     parser = argparse.ArgumentParser(description="CT彩自动结算 v2 (操作 predictions 表)")
     parser.add_argument("--issue", help="指定期号（纯数字或 CT 前缀均可）")
     parser.add_argument("--dry-run", action="store_true", help="试运行，不更新数据库")
+    parser.add_argument("--recheck", action="store_true",
+                        help="重算模式：纳入 is_settled=TRUE 但 spf IS NULL 或 reason=score_unavailable 的错误已结算记录并纠正")
     args = parser.parse_args()
 
     print("=" * 60)
-    print("CT彩自动结算 v2 (predictions 表, 按 match_id 精确关联比分)")
+    if args.recheck:
+        print("CT彩自动结算 v2 [RECHECK重算模式] (predictions 表, 纠正错误已结算记录)")
+    else:
+        print("CT彩自动结算 v2 (predictions 表, 按 match_id 精确关联比分)")
     print("=" * 60)
 
     conn = get_db()
 
-    groups = get_unsettled_predictions(conn, args.issue)
+    groups = get_unsettled_predictions(conn, args.issue, recheck_bad_settled=args.recheck)
     total_records = sum(len(g["records"]) for g in groups.values())
     if not groups:
-        print("没有未结算的 CT 预测")
+        print("没有待结算的 CT 预测")
         conn.close()
         return
-    print(f"发现 {len(groups)} 个期号, {total_records} 条未结算记录")
+    bad_settled = sum(1 for g in groups.values() for r in g["records"] if r.get("was_settled"))
+    if args.recheck:
+        print(f"[RECHECK] 其中已错误结算(is_settled=TRUE但实际结果缺失/score_unavailable): {bad_settled} 条")
+    print(f"发现 {len(groups)} 个期号, {total_records} 条待结算记录")
 
     # 预加载比分数据
     jc_scores = load_jc_scores(conn)

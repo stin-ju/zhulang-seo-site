@@ -63,7 +63,7 @@ echo '  完成'
 
 # Step 4b: 传统彩自动结算（操作 predictions 表）
 echo '【CT】传统彩自动结算...'
-if python3 "$PROJECT_ROOT/CT/ct_auto_settle.py" >> $LOG_DIR/pipeline_$DATE.log 2>&1; then
+if python3 "$PROJECT_ROOT/CT/ct_auto_settle.py" --recheck >> $LOG_DIR/pipeline_$DATE.log 2>&1; then
     echo '  CT传统彩结算完成'
 else
     echo '  CT传统彩结算失败(记录但不阻断)'
