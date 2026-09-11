@@ -115,6 +115,8 @@ a:hover{text-decoration:underline}
 .sub-btn{padding:4px 14px;border-radius:4px;font-size:12px;border:1px solid #333;background:#1a1a30;color:#999;cursor:pointer;transition:.15s}
 .sub-btn:hover{border-color:#555;color:#ccc}
 .sub-btn.on{background:#2a2a55;color:#fff;border-color:#5ab8f0}
+.sub-btn .done-badge,.sub-btn em{font-style:normal;margin-left:3px;font-size:10px;color:#9ca3af;border:1px solid #444;border-radius:3px;padding:0 4px;vertical-align:1px}
+.sub-btn.on .done-badge{color:#e0b34a;border-color:#c9a23a}
 .sub-right{margin-left:auto;font-size:12px;color:#666}
 
 /* ===== 内容区 ===== */
@@ -354,6 +356,8 @@ let activeIssue = {sfc:null, htf:null, jqc:null}; // 子期号
 let settlement = {sfc:{}, htf:{}, jqc:{}};
 // 比赛实际比分: {matchId: {home_score, away_score, half_home, half_away, status}}
 let matchScores = {};
+// 每期元信息: {issue: {on_sale: bool, sell_end: string, first_time: string}}
+let issueMeta = {};
 
 const HF_OPTS = ["33","31","30","13","11","10","03","01","00"];
 const HF_CLS  = ["w","w","w","d","d","d","l","l","l"];
@@ -369,9 +373,38 @@ async function loadData(){
     if(!j.success) throw new Error("API返回失败");
     rawData = j.data;
 
-    // 提取所有期号（新→旧排序）
-    issues.sfc  = [...new Set((j.data.sfc||[]).map(i=>i.issue))].filter(Boolean).sort().reverse();
-    activeIssue.sfc = issues.sfc[0] || null; // 默认最新期
+    // 提取所有期号：在售期(onn_sale)优先按期号倒序，其次历史期（已完赛）
+    issueMeta = {};
+    (j.data.sfc||[]).forEach(i => {
+      if (!i.issue) return;
+      if (!issueMeta[i.issue]) issueMeta[i.issue] = { on_sale: false, sell_end: null, first_time: null };
+      if (i.on_sale) issueMeta[i.issue].on_sale = true;
+      if (i.sell_end && !issueMeta[i.issue].sell_end) issueMeta[i.issue].sell_end = i.sell_end;
+      if (i.match_time && (!issueMeta[i.issue].first_time || i.match_time < issueMeta[i.issue].first_time)) {
+        issueMeta[i.issue].first_time = i.match_time;
+      }
+    });
+    const nowTs = Date.now();
+    const isFuture = k => {
+      const se = (issueMeta[k].sell_end || "").replace(" ", "T");
+      if (se && !isNaN(new Date(se).getTime())) return new Date(se).getTime() >= nowTs;
+      const ft = (issueMeta[k].first_time || "").replace(" ", "T");
+      return !!(ft && !isNaN(new Date(ft).getTime()) && new Date(ft).getTime() >= nowTs);
+    };
+    // 在售期 = on_sale 且尚未截止（未来可投注）；已过期 on_sale 归入历史期
+    const issueOnSale = Object.keys(issueMeta).filter(k => issueMeta[k].on_sale && isFuture(k)).sort().reverse();
+    const issueHistory = Object.keys(issueMeta).filter(k => !(issueMeta[k].on_sale && isFuture(k))).sort().reverse();
+    issues.sfc = [...issueOnSale, ...issueHistory]; // 在售在前，历史在后
+    // 默认展示「在售期中最先开赛」的一期（即最早截止投注、最紧迫的一期，当前为 CT26122）
+    activeIssue.sfc = (issueOnSale.length
+      // 默认「在售期中最先开赛」：先按首场比赛时间升序，同期再按期号升序（CT26122 优先于 CT26123）
+      ? issueOnSale.slice().sort((a, b) => {
+          const ta = String(issueMeta[a].first_time || "");
+          const tb = String(issueMeta[b].first_time || "");
+          if (ta !== tb) return ta.localeCompare(tb);
+          return String(a).localeCompare(String(b));
+        })[0]
+      : issues.sfc[0] || null);
 
     // 整理 SFC（按期号过滤）
     matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
@@ -592,17 +625,29 @@ function uniqueAIs(items){
 }
 
 function calcDeadline(){
-  // 取最晚比赛日期前一天 22:00
-  let allDates = [];
-  matches.sfc.forEach(m => { if(m.time) allDates.push(m.time); });
-  if(!allDates.length) return;
-  allDates.sort();
-  const latest = allDates[allDates.length-1];
-  const d = new Date(latest + "T22:00:00+08:00");
-  d.setDate(d.getDate() - 1);
-  const mm = String(d.getMonth()+1).padStart(2,"0");
-  const dd = String(d.getDate()).padStart(2,"0");
-  document.getElementById("deadlineTxt").textContent = mm+"-"+dd+" 22:00";
+  // 用当前在售期的投注截止时间计算截止，Date 对象处理，避免 NaN
+  const issue = activeIssue.sfc;
+  const meta = (issue && issueMeta) ? issueMeta[issue] : null;
+  let target = null;
+  if (meta && meta.sell_end) {
+    // 投注截止时间已由后端提供，直接用
+    target = new Date(String(meta.sell_end).replace(" ", "T") + "+08:00");
+  } else if (meta && meta.first_time) {
+    // 无 sell_end：取最早开赛时间减投注截止（1 小时）作为保守截止
+    target = new Date(String(meta.first_time).replace(" ", "T") + "+08:00");
+    target.setMinutes(target.getMinutes() - 60);
+  }
+  if (!target || isNaN(target.getTime())) {
+    document.getElementById("deadlineTxt").textContent = "--";
+    return;
+  }
+  const pad = n => String(n).padStart(2, "0");
+  const yyyy = target.getFullYear();
+  const mm = pad(target.getMonth()+1);
+  const dd = pad(target.getDate());
+  const hh = pad(target.getHours());
+  const mi = pad(target.getMinutes());
+  document.getElementById("deadlineTxt").textContent = `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
 /* ==========================================================
@@ -869,18 +914,24 @@ function renderJQC(){
 function renderSubBtns(tab){
   const iss = issues[tab];
   if(!iss || iss.length <= 1){
-    document.getElementById("subBtns").innerHTML = (iss && iss.length && iss[0]) ? `<span class="sub-btn on">${iss[0]}期</span>` : "";
+    const item = (iss && iss.length) ? iss[0] : null;
+    if(item){
+      const on = activeIssue[tab]===item ? " on" : "";
+      const badge = issueMeta[item] && !issueMeta[item].on_sale ? ' <em class="done-badge">已开奖</em>' : "";
+      document.getElementById("subBtns").innerHTML = `<span class="sub-btn${on}">${item}期${badge}</span>`;
+    } else {
+      document.getElementById("subBtns").innerHTML = "";
+    }
     return;
   }
   let html = "";
-  // 只显示最近3个期号
   const showCount = Math.min(3, iss.length);
   for(let i = 0; i < showCount; i++){
     const item = iss[i];
     const on = activeIssue[tab]===item ? " on" : "";
-    html += `<span class="sub-btn${on}" onclick="switchIssue('${tab}','${item}')">${item}期</span>`;
+    const badge = issueMeta[item] && !issueMeta[item].on_sale ? ' <em class="done-badge">已开奖</em>' : "";
+    html += `<span class="sub-btn${on}" onclick="switchIssue('${tab}','${item}')">${item}期${badge}</span>`;
   }
-  // 多余的折叠
   if(iss.length > 3){
     html += `<div class="more-dropdown" style="position:relative;display:inline-block">
       <span class="sub-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">更多期号 ▾</span>
@@ -888,7 +939,8 @@ function renderSubBtns(tab){
     for(let i = 3; i < iss.length; i++){
       const item = iss[i];
       const on = activeIssue[tab]===item ? " on" : "";
-      html += `<div class="sub-btn${on}" style="display:block;width:100%;border-radius:0;border:none;text-align:left" onclick="switchIssue('${tab}','${item}');this.parentElement.style.display='none'">${item}期</div>`;
+      const badge = issueMeta[item] && !issueMeta[item].on_sale ? ' <em class="done-badge">已开奖</em>' : "";
+      html += `<div class="sub-btn${on}" style="display:block;width:100%;border-radius:0;border:none;text-align:left" onclick="switchIssue('${tab}','${item}');this.parentElement.style.display='none'">${item}期${badge}</div>`;
     }
     html += `</div></div>`;
   }
