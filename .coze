@@ -2,6 +2,7 @@
 entrypoint = "index.html"
 requires = [ "nodejs-24" ]
 # rebuild-trigger: 20260903-006-psycopg2-fix
+project_id = "7652750153115320372"
 
 [dev]
 build = ["pnpm", "install"]
