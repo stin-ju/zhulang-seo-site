@@ -84,51 +84,60 @@ app.use(express.json());
  */
 app.get('/api/traditional-lottery/predict', async (req, res) => {
   try {
-    const issueFilter = req.query.issue;
+    const issueFilter = req.query.issue
+      ? String(req.query.issue).replace(/^CT/i, '')
+      : null;
 
-    // 查询所有 CT 比赛（统一 matches 表）
+    // ---------- 1) 从统一 matches 表构建全部 CT 场次骨架（胜负彩） ----------
+    // 在售期（CT26122+）尚无 traditional_predictions 预测记录，
+    // 必须从 matches 表补齐，前端才能得到完整的期号下拉 / 默认期 / 截止时间。
     const matchesRes = await pool.query(`
       SELECT id, home_team, away_team, status,
              metadata->>'match_time' as match_time,
              metadata->>'league' as league,
              metadata->>'home_score' as home_score,
              metadata->>'away_score' as away_score,
+             metadata->>'half_home_score' as half_home,
+             metadata->>'half_away_score' as half_away,
              metadata->>'sell_end' as sell_end,
-             metadata->>'issue' as issue
+             metadata->>'issue' as issue,
+             metadata->>'status' as meta_status
       FROM matches
-      WHERE id LIKE 'CT%'
+      WHERE id ~ '^CT[0-9]+_[0-9]+$'
       ORDER BY id
     `);
 
-    // 查询所有 CT 预测（统一 predictions 表）
-    const predsRes = await pool.query(`
-      SELECT match_id, ai_name, spf_pred, ct_ren9, is_settled, hit_status, spf_hit, confidence
-      FROM predictions
-      WHERE match_id LIKE 'CT%' AND spf_pred IS NOT NULL
-      ORDER BY match_id, ai_name
-    `);
+    const scoreMap = {};
+    const matchMap = { sfc: new Map(), htf: new Map(), jqc: new Map() };
 
-    // 建立 比赛id -> 比赛信息 映射
-    const matchMap = new Map();
+    const parseScore = (v) => (v != null && v !== '' ? parseInt(v, 10) : null);
+
     for (const r of matchesRes.rows) {
-      const id = r.id;
-      const numMatch = id.match(/^CT\d+_(\d+)$/);
+      const numMatch = r.id.match(/^CT(\d+)_(\d+)$/);
       if (!numMatch) continue;
-      const numRaw = numMatch[1];
-      const numStripped = String(parseInt(numRaw, 10));
-      const issue = (r.issue ? 'CT' + r.issue : id.replace(/_\d+$/, ''));
+      const issueNum = r.issue || numMatch[1];
+      const issueKey = 'CT' + issueNum;
+      const numStripped = String(parseInt(numMatch[2], 10));
 
-      const hs = r.home_score != null && r.home_score !== '' ? parseInt(r.home_score, 10) : null;
-      const as_ = r.away_score != null && r.away_score !== '' ? parseInt(r.away_score, 10) : null;
+      const hs = parseScore(r.home_score);
+      const as_ = parseScore(r.away_score);
+      const hh = parseScore(r.half_home);
+      const ha = parseScore(r.half_away);
+
+      scoreMap[r.id] = { home_score: hs, away_score: as_, half_home: hh, half_away: ha };
+
       let officialResult = null;
       if (hs !== null && as_ !== null) {
         officialResult = hs > as_ ? '3' : (hs === as_ ? '1' : '0');
       }
 
-      matchMap.set(id, {
-        match_id: id,
+      // 投注状态：metadata.status === 'on_sale'（在售/未开赛）
+      const onSale = (r.meta_status === 'on_sale' || r.status === '未开赛');
+
+      matchMap.sfc.set(r.id, {
+        match_id: r.id,
         match_num: numStripped,
-        issue: issue,
+        issue: issueKey,
         home_team: r.home_team || '',
         away_team: r.away_team || '',
         league: r.league || '',
@@ -138,57 +147,186 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
         away_score: as_,
         result: officialResult,
         sell_end: r.sell_end || '',
-        // 该场比赛的投注状态（on_sale=在售/未开赛）
-        on_sale: (r.status === '未开赛')
+        on_sale: onSale
       });
     }
 
-    // 追加 AI 预测到对应比赛
-    for (const p of predsRes.rows) {
-      const rec = matchMap.get(p.match_id);
-      if (!rec) continue;
+    // ---------- 2) traditional_predictions 表的 AI 预测（含 htf/jqc/任9） ----------
+    let query = `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info, is_settled, hit_details FROM traditional_predictions`;
+    const params = [];
+    if (issueFilter) {
+      query += ` WHERE issue = $1`;
+      params.push(issueFilter);
+    }
+    query += ` ORDER BY game_type, issue DESC, id`;
 
-      // 任9：该场是否在 AI 的任9推荐中
-      const numStripped = String(parseInt(p.match_id.replace(/^CT\d+_/, ''), 10));
-      let isR9 = false;
-      if (Array.isArray(p.ct_ren9)) {
-        isR9 = p.ct_ren9.some(n => String(n).replace(/^0+/, '') === numStripped);
+    const result = await pool.query(query, params);
+    const rows = result.rows;
+
+    const typeMap = { '胜负彩': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
+    const predFieldMap = { 'sfc': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
+
+    // 预收集所有任9记录的推荐场次
+    const ren9Map = new Map();
+    for (const row of rows) {
+      if (row.game_type !== '任9') continue;
+      const ri = row.issue;
+      if (!ren9Map.has(ri)) ren9Map.set(ri, new Map());
+      const am = ren9Map.get(ri);
+      if (!am.has(row.ai_name)) am.set(row.ai_name, new Set());
+      const ms = am.get(row.ai_name);
+      let pp = row.predictions;
+      if (typeof pp === 'string') {
+        try { pp = JSON.parse(pp); } catch (e) { pp = []; }
       }
-
-      // 命中状态：优先 hit_status.spf_hit，其次 hit_status.hit，再次 spf_hit 列
-      let hit = null;
-      if (p.is_settled) {
-        const hs = p.hit_status && typeof p.hit_status === 'object' ? p.hit_status : {};
-        hit = (hs.spf_hit != null) ? hs.spf_hit
-            : (hs.hit != null) ? hs.hit
-            : (hs.spf != null) ? hs.spf
-            : (p.spf_hit != null) ? p.spf_hit
-            : null;
+      if (Array.isArray(pp)) {
+        pp.forEach(p => {
+          if (p.match) ms.add(String(p.match).replace(/^0+/, '') || '0');
+        });
       }
-
-      rec[p.ai_name] = {
-        prediction: p.spf_pred != null ? String(p.spf_pred) : null,
-        confidence: p.confidence || null,
-        is_r9: isR9,
-        is_settled: p.is_settled || false,
-        hit: hit,
-        hit_details: p.hit_status || null
-      };
     }
 
-    // 胜负彩：全部比赛（含 in-sale + 历史）
-    let sfc = Array.from(matchMap.values());
+    const parseJson = (v, fallback) => {
+      if (typeof v === 'string') {
+        try { return JSON.parse(v); } catch (e) { return fallback; }
+      }
+      return v != null ? v : fallback;
+    };
 
-    // 期号过滤：支持 ?issue=CT26122 或 ?issue=26122
+    for (const row of rows) {
+      const frontendKey = typeMap[row.game_type];
+      if (!frontendKey) continue;
+
+      let matchesArr = parseJson(row.matches_info, null);
+      if (matchesArr && !Array.isArray(matchesArr) && Array.isArray(matchesArr.matches)) {
+        matchesArr = matchesArr.matches;
+      }
+      if (!Array.isArray(matchesArr)) continue;
+
+      const predictionsArr = parseJson(row.predictions, null);
+      const predField = predFieldMap[frontendKey] || 'spf';
+
+      let ren9Set = new Set();
+      if (row.ren9) {
+        const ren9Arr = parseJson(row.ren9, []);
+        if (Array.isArray(ren9Arr)) {
+          ren9Arr.forEach(item => {
+            if (item && typeof item === 'object' && item.match) {
+              ren9Set.add(String(item.match).replace(/^0+/, '') || '0');
+            } else if (typeof item === 'string' || typeof item === 'number') {
+              ren9Set.add(String(item).replace(/^0+/, '') || '0');
+            }
+          });
+        }
+      }
+
+      for (const m of matchesArr) {
+        const matchNum = m.num || m.match_num || 0;
+        const issue = row.issue || m.issue || '';
+        const matchNumStripped = String(matchNum).replace(/^0+/, '') || '0';
+        const matchId = `CT${issue}_${matchNumStripped.padStart(2, '0')}`;
+
+        let prediction = null;
+        if (Array.isArray(predictionsArr)) {
+          const pred = predictionsArr.find(p => {
+            const pMatch = String(p.match).replace(/^0+/, '') || '0';
+            return pMatch === matchNumStripped;
+          });
+          if (pred) {
+            if (frontendKey === 'jqc') {
+              prediction = {
+                zjq_home: pred.zjq_home || pred.zjq || '',
+                zjq_away: pred.zjq_away || ''
+              };
+            } else {
+              prediction = pred[predField] !== undefined ? pred[predField] : null;
+            }
+          }
+        }
+
+        if (ren9Set.size === 0 && ren9Map.has(issue)) {
+          const arm = ren9Map.get(issue);
+          if (arm && arm.has(row.ai_name)) {
+            arm.get(row.ai_name).forEach(n => ren9Set.add(n));
+          }
+        }
+        const isR9 = ren9Set.size > 0 ? ren9Set.has(matchNumStripped) : false;
+
+        const currentMap = matchMap[frontendKey];
+        if (!currentMap.has(matchId)) {
+          const scores = scoreMap[matchId] || {};
+          const homeScore = scores.home_score != null ? scores.home_score : null;
+          const awayScore = scores.away_score != null ? scores.away_score : null;
+
+          let officialResult = null;
+          if (homeScore !== null && awayScore !== null) {
+            if (frontendKey === 'sfc') {
+              officialResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
+            } else if (frontendKey === 'htf') {
+              const halfHome = scores.half_home;
+              const halfAway = scores.half_away;
+              if (halfHome !== null && halfAway !== null) {
+                const halfResult = halfHome > halfAway ? '3' : (halfHome === halfAway ? '1' : '0');
+                const fullResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
+                officialResult = halfResult + fullResult;
+              }
+            } else if (frontendKey === 'jqc') {
+              officialResult = { home: homeScore, away: awayScore };
+            }
+          }
+
+          // 复用 matches 骨架的在售/截止元数据（若该场在骨架中）
+          const skeleton = matchMap.sfc.get(matchId);
+          currentMap.set(matchId, {
+            match_id: matchId,
+            match_num: String(matchNum),
+            issue: 'CT' + issue,
+            home_team: m.home || m.home_team || (skeleton ? skeleton.home_team : ''),
+            away_team: m.away || m.away_team || (skeleton ? skeleton.away_team : ''),
+            league: m.league || (skeleton ? skeleton.league : ''),
+            match_time: m.time || m.match_time || (skeleton ? skeleton.match_time : ''),
+            lottery_type: frontendKey,
+            home_score: homeScore,
+            away_score: awayScore,
+            result: officialResult,
+            sell_end: skeleton ? skeleton.sell_end : '',
+            on_sale: skeleton ? skeleton.on_sale : false
+          });
+        }
+
+        const matchRecord = currentMap.get(matchId);
+        const aiName = row.ai_name || 'system';
+
+        let hit = null;
+        if (row.is_settled && Array.isArray(row.hit_details)) {
+          const matchNumPadded = matchNumStripped.padStart(2, '0');
+          const hitEntry = row.hit_details.find(h => {
+            const hMatch = String(h.match).replace(/^0+/, '').padStart(2, '0');
+            return hMatch === matchNumPadded;
+          });
+          if (hitEntry) hit = hitEntry.hit;
+        }
+
+        matchRecord[aiName] = {
+          prediction: prediction,
+          confidence: row.confidence || null,
+          is_r9: isR9,
+          is_settled: row.is_settled || false,
+          hit: hit,
+          hit_details: row.hit_details || null
+        };
+      }
+    }
+
+    let sfc = Array.from(matchMap.sfc.values());
     if (issueFilter) {
-      const f = String(issueFilter).replace(/^CT/i, '');
-      sfc = sfc.filter(it => String(it.issue).replace(/^CT/i, '') === f);
+      sfc = sfc.filter(it => String(it.issue).replace(/^CT/i, '') === issueFilter);
     }
 
     const responseData = {
       sfc: sfc,
-      htf: [],
-      jqc: []
+      htf: Array.from(matchMap.htf.values()),
+      jqc: Array.from(matchMap.jqc.values())
     };
 
     res.json({ success: true, data: responseData });
