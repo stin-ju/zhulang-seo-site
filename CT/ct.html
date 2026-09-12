@@ -384,27 +384,33 @@ async function loadData(){
         issueMeta[i.issue].first_time = i.match_time;
       }
     });
-    const nowTs = Date.now();
-    const isFuture = k => {
-      const se = (issueMeta[k].sell_end || "").replace(" ", "T");
-      if (se && !isNaN(new Date(se).getTime())) return new Date(se).getTime() >= nowTs;
-      const ft = (issueMeta[k].first_time || "").replace(" ", "T");
-      return !!(ft && !isNaN(new Date(ft).getTime()) && new Date(ft).getTime() >= nowTs);
-    };
-    // 在售期 = on_sale 且尚未截止（未来可投注）；已过期 on_sale 归入历史期
-    const issueOnSale = Object.keys(issueMeta).filter(k => issueMeta[k].on_sale && isFuture(k)).sort().reverse();
-    const issueHistory = Object.keys(issueMeta).filter(k => !(issueMeta[k].on_sale && isFuture(k))).sort().reverse();
-    issues.sfc = [...issueOnSale, ...issueHistory]; // 在售在前，历史在后
-    // 默认展示「在售期中最先开赛」的一期（即最早截止投注、最紧迫的一期，当前为 CT26122）
-    activeIssue.sfc = (issueOnSale.length
-      // 默认「在售期中最先开赛」：先按首场比赛时间升序，同期再按期号升序（CT26122 优先于 CT26123）
-      ? issueOnSale.slice().sort((a, b) => {
-          const ta = String(issueMeta[a].first_time || "");
-          const tb = String(issueMeta[b].first_time || "");
-          if (ta !== tb) return ta.localeCompare(tb);
-          return String(a).localeCompare(String(b));
-        })[0]
-      : issues.sfc[0] || null);
+    // 在售期 = on_sale 期号中「最新连续下降批次」：从最大期号连续向下，遇断裂（该期无 on_sale）即停。
+    // 该批次即 CT26122~CT26128（CT26117/19/20 的 on_sale 残留因期号断裂被排除，归入历史期）。
+    const onSaleNums = Object.keys(issueMeta)
+      .filter(k => issueMeta[k].on_sale)
+      .map(k => parseInt(String(k).replace(/^CT/, ""), 10))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => b - a);
+    const issueOnSale = [];
+    if (onSaleNums.length) {
+      const maxN = onSaleNums[0];
+      for (let n = maxN; n >= maxN - 200; n--) {
+        const k = "CT" + n;
+        if (issueMeta[k] && issueMeta[k].on_sale) issueOnSale.push(k);
+        else break; // 断裂即停
+      }
+    }
+    // 在售期按期号升序：期号最小（=最早开赛/最早截止投注）的在最前，作为默认展示（即 CT26122）
+    issueOnSale.sort((a, b) =>
+      parseInt(String(a).replace(/^CT/, ""), 10) - parseInt(String(b).replace(/^CT/, ""), 10)
+    );
+    const issueHistory = Object.keys(issueMeta)
+      .filter(k => !issueOnSale.includes(k))
+      .sort()
+      .reverse();
+    issues.sfc = [...issueOnSale, ...issueHistory]; // 在售在前（CT26122 起），历史在后
+    // 默认展示「第一个在售的未来期」= 最新连续在售批次中期号最小的一期（CT26122）
+    activeIssue.sfc = (issueOnSale.length ? issueOnSale[0] : (issues.sfc[0] || null));
 
     // 整理 SFC（按期号过滤）
     matches.sfc = buildMatches(j.data.sfc, activeIssue.sfc);
@@ -625,17 +631,14 @@ function uniqueAIs(items){
 }
 
 function calcDeadline(){
-  // 用当前在售期的投注截止时间计算截止，Date 对象处理，避免 NaN
+  // 截止时间 = 当前在售期最早一场开赛时间 − 投注截止分钟（默认 10 分钟），Date 对象处理，避免 NaN
   const issue = activeIssue.sfc;
   const meta = (issue && issueMeta) ? issueMeta[issue] : null;
   let target = null;
-  if (meta && meta.sell_end) {
-    // 投注截止时间已由后端提供，直接用
-    target = new Date(String(meta.sell_end).replace(" ", "T") + "+08:00");
-  } else if (meta && meta.first_time) {
-    // 无 sell_end：取最早开赛时间减投注截止（1 小时）作为保守截止
+  if (meta && meta.first_time) {
     target = new Date(String(meta.first_time).replace(" ", "T") + "+08:00");
-    target.setMinutes(target.getMinutes() - 60);
+    if (isNaN(target.getTime())) target = null;
+    else target.setMinutes(target.getMinutes() - 10); // 投注截止：开赛前 10 分钟
   }
   if (!target || isNaN(target.getTime())) {
     document.getElementById("deadlineTxt").textContent = "--";
