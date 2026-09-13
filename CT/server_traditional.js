@@ -89,7 +89,7 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
       : null;
 
     // ---------- 1) 从统一 matches 表构建全部 CT 场次骨架（胜负彩） ----------
-    // 在售期（CT26122+）尚无 traditional_predictions 预测记录，
+    // 在售期（CT26122+）数据来自 predictions 表（胜负彩按场×AI粒度），
     // 必须从 matches 表补齐，前端才能得到完整的期号下拉 / 默认期 / 截止时间。
     const matchesRes = await pool.query(`
       SELECT id, home_team, away_team, status,
@@ -151,39 +151,38 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
       });
     }
 
-    // ---------- 2) traditional_predictions 表的 AI 预测（含 htf/jqc/任9） ----------
-    let query = `SELECT id, game_type, ai_name, issue, predictions, ren9, confidence, matches_info, is_settled, hit_details FROM traditional_predictions`;
+    // ---------- 2) predictions 表的 AI 预测（单场 × AI 粒度，含 ct_issue/ct_game_type/spf_pred） ----------
+    let query = `
+      SELECT match_id, ai_name, ct_issue, ct_game_type, ct_ren9,
+             spf_pred, goals_pred, half_full_pred, score_pred,
+             prediction, confidence, hit_status, is_settled
+      FROM predictions
+      WHERE ct_issue IS NOT NULL AND ct_game_type IS NOT NULL
+    `;
     const params = [];
     if (issueFilter) {
-      query += ` WHERE issue = $1`;
-      params.push(issueFilter);
+      query += ` AND ct_issue = $1`;
+      params.push('CT' + issueFilter);
     }
-    query += ` ORDER BY game_type, issue DESC, id`;
+    query += ` ORDER BY ct_game_type, ct_issue DESC, match_id`;
 
     const result = await pool.query(query, params);
     const rows = result.rows;
 
     const typeMap = { '胜负彩': 'sfc', '半全场': 'htf', '进球彩': 'jqc' };
-    const predFieldMap = { 'sfc': 'spf', 'htf': 'bqc', 'jqc': 'zjq' };
 
-    // 预收集所有任9记录的推荐场次
-    const ren9Map = new Map();
+    // 预收集所有任9推荐的场次（ct_ren9，jsonb 数组）
+    const ren9Map = new Map(); // key: issue, value: Map(ai_name -> Set(matchNum))
     for (const row of rows) {
-      if (row.game_type !== '任9') continue;
-      const ri = row.issue;
+      if (!row.ct_ren9) continue;
+      const ri = row.ct_issue.replace(/^CT/i, '');
       if (!ren9Map.has(ri)) ren9Map.set(ri, new Map());
       const am = ren9Map.get(ri);
       if (!am.has(row.ai_name)) am.set(row.ai_name, new Set());
       const ms = am.get(row.ai_name);
-      let pp = row.predictions;
-      if (typeof pp === 'string') {
-        try { pp = JSON.parse(pp); } catch (e) { pp = []; }
-      }
-      if (Array.isArray(pp)) {
-        pp.forEach(p => {
-          if (p.match) ms.add(String(p.match).replace(/^0+/, '') || '0');
-        });
-      }
+      const r9 = row.ct_ren9;
+      const arr = Array.isArray(r9) ? r9 : (typeof r9 === 'string' ? (() => { try { return JSON.parse(r9); } catch { return []; } })() : []);
+      arr.forEach(n => ms.add(String(n).replace(/^0+/, '') || '0'));
     }
 
     const parseJson = (v, fallback) => {
@@ -193,129 +192,105 @@ app.get('/api/traditional-lottery/predict', async (req, res) => {
       return v != null ? v : fallback;
     };
 
+    // predictions 表为单场 × AI 粒度，按 match_id 归并多 AI
     for (const row of rows) {
-      const frontendKey = typeMap[row.game_type];
+      const frontendKey = typeMap[row.ct_game_type];
       if (!frontendKey) continue;
 
-      let matchesArr = parseJson(row.matches_info, null);
-      if (matchesArr && !Array.isArray(matchesArr) && Array.isArray(matchesArr.matches)) {
-        matchesArr = matchesArr.matches;
-      }
-      if (!Array.isArray(matchesArr)) continue;
+      const mid = row.match_id;
+      const numMatch = mid && mid.match(/^CT\d+_(\d+)$/);
+      if (!numMatch) continue;
+      const matchNumStripped = String(parseInt(numMatch[1], 10)); // 01 -> 1
+      const issue = row.ct_issue.replace(/^CT/i, '');
+      const matchId = mid;
 
-      const predictionsArr = parseJson(row.predictions, null);
-      const predField = predFieldMap[frontendKey] || 'spf';
-
-      let ren9Set = new Set();
-      if (row.ren9) {
-        const ren9Arr = parseJson(row.ren9, []);
-        if (Array.isArray(ren9Arr)) {
-          ren9Arr.forEach(item => {
-            if (item && typeof item === 'object' && item.match) {
-              ren9Set.add(String(item.match).replace(/^0+/, '') || '0');
-            } else if (typeof item === 'string' || typeof item === 'number') {
-              ren9Set.add(String(item).replace(/^0+/, '') || '0');
-            }
-          });
-        }
-      }
-
-      for (const m of matchesArr) {
-        const matchNum = m.num || m.match_num || 0;
-        const issue = row.issue || m.issue || '';
-        const matchNumStripped = String(matchNum).replace(/^0+/, '') || '0';
-        const matchId = `CT${issue}_${matchNumStripped.padStart(2, '0')}`;
-
-        let prediction = null;
-        if (Array.isArray(predictionsArr)) {
-          const pred = predictionsArr.find(p => {
-            const pMatch = String(p.match).replace(/^0+/, '') || '0';
-            return pMatch === matchNumStripped;
-          });
-          if (pred) {
-            if (frontendKey === 'jqc') {
-              prediction = {
-                zjq_home: pred.zjq_home || pred.zjq || '',
-                zjq_away: pred.zjq_away || ''
-              };
-            } else {
-              prediction = pred[predField] !== undefined ? pred[predField] : null;
-            }
-          }
-        }
-
-        if (ren9Set.size === 0 && ren9Map.has(issue)) {
-          const arm = ren9Map.get(issue);
-          if (arm && arm.has(row.ai_name)) {
-            arm.get(row.ai_name).forEach(n => ren9Set.add(n));
-          }
-        }
-        const isR9 = ren9Set.size > 0 ? ren9Set.has(matchNumStripped) : false;
-
-        const currentMap = matchMap[frontendKey];
-        if (!currentMap.has(matchId)) {
-          const scores = scoreMap[matchId] || {};
-          const homeScore = scores.home_score != null ? scores.home_score : null;
-          const awayScore = scores.away_score != null ? scores.away_score : null;
-
-          let officialResult = null;
-          if (homeScore !== null && awayScore !== null) {
-            if (frontendKey === 'sfc') {
-              officialResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
-            } else if (frontendKey === 'htf') {
-              const halfHome = scores.half_home;
-              const halfAway = scores.half_away;
-              if (halfHome !== null && halfAway !== null) {
-                const halfResult = halfHome > halfAway ? '3' : (halfHome === halfAway ? '1' : '0');
-                const fullResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
-                officialResult = halfResult + fullResult;
-              }
-            } else if (frontendKey === 'jqc') {
-              officialResult = { home: homeScore, away: awayScore };
-            }
-          }
-
-          // 复用 matches 骨架的在售/截止元数据（若该场在骨架中）
-          const skeleton = matchMap.sfc.get(matchId);
-          currentMap.set(matchId, {
-            match_id: matchId,
-            match_num: String(matchNum),
-            issue: 'CT' + issue,
-            home_team: m.home || m.home_team || (skeleton ? skeleton.home_team : ''),
-            away_team: m.away || m.away_team || (skeleton ? skeleton.away_team : ''),
-            league: m.league || (skeleton ? skeleton.league : ''),
-            match_time: m.time || m.match_time || (skeleton ? skeleton.match_time : ''),
-            lottery_type: frontendKey,
-            home_score: homeScore,
-            away_score: awayScore,
-            result: officialResult,
-            sell_end: skeleton ? skeleton.sell_end : '',
-            on_sale: skeleton ? skeleton.on_sale : false
-          });
-        }
-
-        const matchRecord = currentMap.get(matchId);
-        const aiName = row.ai_name || 'system';
-
-        let hit = null;
-        if (row.is_settled && Array.isArray(row.hit_details)) {
-          const matchNumPadded = matchNumStripped.padStart(2, '0');
-          const hitEntry = row.hit_details.find(h => {
-            const hMatch = String(h.match).replace(/^0+/, '').padStart(2, '0');
-            return hMatch === matchNumPadded;
-          });
-          if (hitEntry) hit = hitEntry.hit;
-        }
-
-        matchRecord[aiName] = {
-          prediction: prediction,
-          confidence: row.confidence || null,
-          is_r9: isR9,
-          is_settled: row.is_settled || false,
-          hit: hit,
-          hit_details: row.hit_details || null
+      let prediction = null;
+      if (frontendKey === 'sfc') {
+        prediction = row.spf_pred != null ? String(row.spf_pred) : null;
+      } else if (frontendKey === 'htf') {
+        prediction = row.half_full_pred != null ? String(row.half_full_pred) : null;
+      } else if (frontendKey === 'jqc') {
+        const predObj = parseJson(row.prediction, {});
+        prediction = {
+          zjq_home: predObj.zjq_home || predObj.zjq_home || '',
+          zjq_away: predObj.zjq_away || ''
         };
       }
+
+      // 任9：某 AI 的推荐场次集合
+      let isR9 = false;
+      if (ren9Map.has(issue)) {
+        const arm = ren9Map.get(issue);
+        if (arm && arm.has(row.ai_name)) {
+          isR9 = arm.get(row.ai_name).has(matchNumStripped);
+        }
+      } else {
+        // 兜底：本条 ct_ren9 若含当前场序号也视为任9
+        const r9 = row.ct_ren9;
+        const arr = Array.isArray(r9) ? r9 : (typeof r9 === 'string' ? (() => { try { return JSON.parse(r9); } catch { return []; } })() : []);
+        isR9 = arr.some(n => String(n).replace(/^0+/, '') === matchNumStripped);
+      }
+
+      const currentMap = matchMap[frontendKey];
+      if (!currentMap.has(matchId)) {
+        const skeleton = matchMap.sfc.get(matchId);
+        const scores = scoreMap[matchId] || {};
+        const homeScore = scores.home_score != null ? scores.home_score : null;
+        const awayScore = scores.away_score != null ? scores.away_score : null;
+
+        let officialResult = null;
+        if (homeScore !== null && awayScore !== null) {
+          if (frontendKey === 'sfc') {
+            officialResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
+          } else if (frontendKey === 'htf') {
+            const halfHome = scores.half_home;
+            const halfAway = scores.half_away;
+            if (halfHome !== null && halfAway !== null) {
+              const halfResult = halfHome > halfAway ? '3' : (halfHome === halfAway ? '1' : '0');
+              const fullResult = homeScore > awayScore ? '3' : (homeScore === awayScore ? '1' : '0');
+              officialResult = halfResult + fullResult;
+            }
+          } else if (frontendKey === 'jqc') {
+            officialResult = { home: homeScore, away: awayScore };
+          }
+        }
+
+        currentMap.set(matchId, {
+          match_id: matchId,
+          match_num: matchNumStripped,
+          issue: 'CT' + issue,
+          home_team: skeleton ? skeleton.home_team : '',
+          away_team: skeleton ? skeleton.away_team : '',
+          league: skeleton ? skeleton.league : '',
+          match_time: skeleton ? skeleton.match_time : '',
+          lottery_type: frontendKey,
+          home_score: homeScore,
+          away_score: awayScore,
+          result: officialResult,
+          sell_end: skeleton ? skeleton.sell_end : '',
+          on_sale: skeleton ? skeleton.on_sale : false
+        });
+      }
+
+      const matchRecord = currentMap.get(matchId);
+      const aiName = row.ai_name || 'system';
+
+      let hit = null;
+      if (row.is_settled) {
+        const hs = parseJson(row.hit_status, null);
+        if (hs && typeof hs === 'object') {
+          hit = hs[frontendKey] != null ? hs[frontendKey] : (hs.spf != null ? hs.spf : null);
+        }
+      }
+
+      matchRecord[aiName] = {
+        prediction: prediction,
+        confidence: row.confidence || null,
+        is_r9: isR9,
+        is_settled: row.is_settled || false,
+        hit: hit,
+        hit_details: row.hit_status || null
+      };
     }
 
     let sfc = Array.from(matchMap.sfc.values());
