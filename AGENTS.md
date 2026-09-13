@@ -129,3 +129,26 @@ node CT/server_traditional.js
 # 一键启动
 bash start-all.sh
 ```
+
+## 部署流程（固化，必须严格遵守）
+
+部署统一由**主会话**执行，执行命令为 `coze code deploy 7652750153115320372`（project ID 是位置参数），目标是 `zhulang.coze.site` 正式站。
+
+Agent 的工作边界（强制执行，勿越界）：
+
+1. **只做**：改代码 + `git commit` + `git push`。
+2. **禁止**：
+   - 调用任何 Coze app API（`coze deploy`、`coze deploy app ...` 等一律不执行）
+   - 执行 `coze code deploy`（部署归主会话）
+   - 让用户点授权链接或手动发布
+   - 碰 `zhulang.coze.site` 正式站 / 创建 / 误删 app
+3. 改完并 commit + push 后，回复固定话术：「代码已提交，commit hash: xxx，等待主会话部署」
+4. 部署由主会话统一触发。
+
+> 历史教训：曾因 `--yes` 误触发 `coze deploy` 创建了多余 service app 并写入 `.coze` 的 `app_id`，造成污染。绝不重复。
+
+## 数据一致性待办
+
+- 数据库 `matches.metadata->>'status'` 中，CT26122 / CT26120 / CT26119 等**已完赛**历史期仍残留 `on_sale=true` 标记（数据层不干净）。
+- 前端已通过"连续批次"逻辑规避展示问题，但底层数据需清理。
+- **下次流水线 CT 结算时**，把已完赛期的 `on_sale` 标记正确置为废弃/完赛状态（如 `off_sale` 或清除该标记）。
