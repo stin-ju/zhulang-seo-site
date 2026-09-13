@@ -400,16 +400,16 @@ async function loadData(){
         else break; // 断裂即停
       }
     }
-    // 在售期按期号升序：期号最小（=最早开赛/最早截止投注）的在最前，作为默认展示（即 CT26122）
+    // 在售期按期号降序：最新期（期号最大）在最前，作为默认展示（即最新期）
     issueOnSale.sort((a, b) =>
-      parseInt(String(a).replace(/^CT/, ""), 10) - parseInt(String(b).replace(/^CT/, ""), 10)
+      parseInt(String(b).replace(/^CT/, ""), 10) - parseInt(String(a).replace(/^CT/, ""), 10)
     );
     const issueHistory = Object.keys(issueMeta)
       .filter(k => !issueOnSale.includes(k))
       .sort()
       .reverse();
-    issues.sfc = [...issueOnSale, ...issueHistory]; // 在售在前（CT26122 起），历史在后
-    // 默认展示「第一个在售的未来期」= 最新连续在售批次中期号最小的一期（CT26122）
+    issues.sfc = [...issueOnSale, ...issueHistory]; // 在售在前（最新期起，降序）；历史在后
+    // 默认展示「第一个在售的未来期」= 最新连续在售批次中期号最大的一期（最新期）
     activeIssue.sfc = (issueOnSale.length ? issueOnSale[0] : (issues.sfc[0] || null));
 
     // 整理 SFC（按期号过滤）
