@@ -629,6 +629,84 @@ def settle_issue(conn, ct_issue, group, scores_map, dry_run=False):
     return updated, skipped, no_score
 
 
+# ============ 已完赛期 on_sale 标记清理 ============
+
+def cleanup_finished_issues_on_sale(conn, dry_run=False, only_issue=None):
+    """清理已停售（已完赛）CT 期残留的 on_sale 标记。
+
+    背景：CT 比赛开赛后 matches.metadata 的 status/sell_status 常残留 'on_sale'，
+    即便该期所有场次已踢完也不会自动复位，导致数据层脏（前端靠"连续批次"逻辑规避）。
+
+    判定规则：一个期内 max(sell_end) 已早于当前时间，即视为停售/完赛期。
+      - metadata->>'sell_status'='on_sale' → 置为 'off_sale'
+      - metadata->>'status'='on_sale'      → 置为 'off_sale'（已是"已完赛"等真实态的保持不动）
+      - 顶层 status 列若为 'on_sale' 一并置 'off_sale'
+    未来在售期（sell_end 在当前时间之后）不动。
+
+    only_issue: 仅处理指定期号（'CT26122' 或 '26122' 均可），None=全部。
+    返回被清理的行数。
+    """
+    cur = conn.cursor()
+    issue_filter = ""
+    params = []
+    if only_issue:
+        issue = only_issue if only_issue.startswith("CT") else f"CT{only_issue}"
+        issue_filter = "AND substring(id from '^CT[0-9]+') = %s"
+        params.append(issue)
+
+    # 找出"期内最大 sell_end 已过当前时间"且仍残留 on_sale 的期
+    cur.execute(f"""
+        WITH iss AS (
+            SELECT substring(id from '^CT[0-9]+') AS issue,
+                   MAX(metadata->>'sell_end') AS max_sell_end,
+                   COUNT(*) FILTER (
+                       WHERE metadata->>'sell_status' = 'on_sale'
+                          OR metadata->>'status'      = 'on_sale'
+                   ) AS stale_rows
+            FROM matches
+            WHERE id ~ '^CT[0-9]+_[0-9]+$'
+              {issue_filter}
+            GROUP BY 1
+        )
+        SELECT issue, max_sell_end, stale_rows
+        FROM iss
+        WHERE stale_rows > 0
+          AND max_sell_end IS NOT NULL
+          AND (max_sell_end || ':00+08:00')::timestamptz < now()
+        ORDER BY issue DESC
+    """, params)
+    finished = cur.fetchall()
+    if not finished:
+        print("[on_sale清理] 无已停售期残留 on_sale 标记")
+        cur.close()
+        return 0
+
+    total_rows = 0
+    for issue, max_sell_end, stale_rows in finished:
+        cur.execute("""
+            UPDATE matches
+            SET metadata = metadata
+                  || CASE WHEN metadata->>'sell_status' = 'on_sale'
+                          THEN '{"sell_status":"off_sale"}'::jsonb ELSE '{}'::jsonb END
+                  || CASE WHEN metadata->>'status' = 'on_sale'
+                          THEN '{"status":"off_sale"}'::jsonb ELSE '{}'::jsonb END,
+                status = CASE WHEN status = 'on_sale' THEN 'off_sale' ELSE status END
+            WHERE id ~ %s
+              AND (metadata->>'sell_status' = 'on_sale' OR metadata->>'status' = 'on_sale')
+        """, (f'^{issue}_[0-9]+$',))
+        total_rows += cur.rowcount
+        print(f"[on_sale清理] {issue} (停售于 {max_sell_end}) 置 off_sale {cur.rowcount} 行")
+
+    if dry_run:
+        conn.rollback()
+        print(f"[on_sale清理][DRY-RUN] 共 {len(finished)} 期 / {total_rows} 行将被清理（未提交）")
+    else:
+        conn.commit()
+        print(f"[on_sale清理] 完成：{len(finished)} 期 / {total_rows} 行已置 off_sale")
+    cur.close()
+    return total_rows
+
+
 # ============ 主流程 ============
 
 def main():
@@ -647,6 +725,10 @@ def main():
     print("=" * 60)
 
     conn = get_db()
+
+    # 先清理已停售（已完赛）期残留的 on_sale 标记（独立于预测结算，确保即使本期无待结算预测也执行）
+    print("\n【数据清理】已停售期 on_sale 标记清理...")
+    cleanup_finished_issues_on_sale(conn, dry_run=args.dry_run, only_issue=args.issue)
 
     groups = get_unsettled_predictions(conn, args.issue, recheck_bad_settled=args.recheck)
     total_records = sum(len(g["records"]) for g in groups.values())
