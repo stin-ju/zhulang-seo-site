@@ -1809,25 +1809,25 @@ async function runDailyBackup() {
 }
 
 // 注册定时任务
-scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
-scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
-scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
-scheduleDaily(0, 30, '每日凌晨结算', runDailySettle);
-scheduleDaily(12, 30, '每日午间结算', runDailySettle);
-scheduleDaily(2, 0, '每日数据备份', runDailyBackup);
+// scheduleDaily(10, 0, 'JC上午抓取', runJcDiscover);
+// scheduleDaily(18, 0, 'JC下午抓取', runJcDiscover);
+// scheduleDaily(10, 30, 'CT每日抓取', runCtDiscover);
+// scheduleDaily(0, 30, '每日凌晨结算', runDailySettle);
+// scheduleDaily(12, 30, '每日午间结算', runDailySettle);
+// scheduleDaily(2, 0, '每日数据备份', runDailyBackup);
 
 // ============ 自监控看门狗 ============
 // 每3分钟自检，确保server.js在容器唤醒后能自动恢复
-setInterval(async () => {
-  try {
-    const client = await pgPool.connect();
-    try { await client.query('SELECT 1'); } finally { client.release(); }
-    console.log(`[Watchdog] OK - ${new Date().toISOString()} - settle_running=${taskStatus.settle.running} discover_running=${taskStatus.discover.running}`);
-  } catch (err) {
-    console.error('[Watchdog] 数据库异常，尝试恢复...');
-    await checkAndRecoverDB();
-  }
-}, 3 * 60 * 1000);
+// setInterval(async () => {
+//   try {
+//     const client = await pgPool.connect();
+//     try { await client.query('SELECT 1'); } finally { client.release(); }
+//     console.log(`[Watchdog] OK - ${new Date().toISOString()} - settle_running=${taskStatus.settle.running} discover_running=${taskStatus.discover.running}`);
+//   } catch (err) {
+//     console.error('[Watchdog] 数据库异常，尝试恢复...');
+//     await checkAndRecoverDB();
+//   }
+// }, 3 * 60 * 1000);
 
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
