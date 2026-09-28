@@ -603,7 +603,7 @@ async function checkAndGenerateCommentary(options = {}) {
 }
 
 // ============ HTTP Server ============
-const server = http.createServer(async (req, res) => {
+const jcServer = http.createServer(async (req, res) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, CORS_HEADERS);
@@ -1829,15 +1829,15 @@ async function runDailyBackup() {
 //   }
 // }, 3 * 60 * 1000);
 
-server.listen(PORT, HOST, () => {
-  console.log(`Server running at http://${HOST}:${PORT}`);
-  console.log(`API endpoints: /api/matches, /api/predictions, /api/chain_bets, /api/ai_stats, /api/betting_daily, /api/betting_summary, /api/briefs`);
-  
-  // 启动时检查数据库连接（容器唤醒后连接可能已失效）
-  checkAndRecoverDB().catch(e => console.error('[Server] 启动DB检查失败:', e.message));
-  
-  // 初始化比赛级别定时结算（不阻塞启动）
-  initializeSettleTimers().catch(err => console.error('[AutoSettle] 启动初始化失败:', err.message));
-});
+jcServer.on('request', () => {});
+module.exports = jcServer;
+if (require.main && require.main.filename && require('path').basename(require.main.filename).indexOf('server.js') === 0 && require.main.filename === __filename) {
+  const PORT_RUN = process.env.DEPLOY_RUN_PORT || 5000;
+  jcServer.listen(PORT_RUN, HOST, () => {
+    console.log(`[JC] standalone running ${PORT_RUN}`);
+    checkAndRecoverDB().catch(e => console.error('[Server] 启动DB检查失败:', e.message));
+    initializeSettleTimers().catch(err => console.error('[AutoSettle] 启动初始化失败:', err.message));
+  });
+}
 // force-redeploy: 1788343553
 // force-redeploy-1788344139

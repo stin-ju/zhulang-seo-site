@@ -520,7 +520,7 @@ app.use((req, res) => {
   });
 });
 
-// ============ 启动服务 ============
+/* ============ 启动服务（合并改造：注释独立监听，改为导出 app） ============
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Traditional Lottery server running on port ${PORT}`);
   console.log(`Database: ${dbUrl ? 'connected' : 'NOT CONFIGURED'}`);
@@ -540,6 +540,8 @@ server.on('error', (err) => {
     console.error('[CT] 服务器错误:', err);
   }
 });
+*/
+module.exports = app;
 
 // 优雅关闭
 process.on('SIGTERM', async () => {
