@@ -69,7 +69,7 @@ if curl -s -m 3 http://127.0.0.1:5000/health >/dev/null 2>&1; then
     echo "  unified 已在 5000 健康运行，跳过启动"
 else
     echo "=== 清理旧的多进程残留 ==="
-    for pid in $(ps aux | grep--E "node (server\.js|unified\.js)|node.*server_traditional" | grep -v grep | grep -v codegraph | awk '{print $2}'); do
+    for pid in $(ps aux | grep -E "node (server\.js|unified\.js)|node.*server_traditional" | grep -v grep | grep -v codegraph | awk '{print $2}'); do
         echo "  结束旧进程 $pid"
         kill "$pid" 2>/dev/null || true
     done
