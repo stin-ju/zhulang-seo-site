@@ -1,0 +1,371 @@
+// ============================================================
+// 公共 API 模块 - 所有页面共享
+// 适配新schema: matches(odds/metadata JSONB), predictions(prediction/hit_status JSONB)
+// ============================================================
+
+// Supabase 配置
+const SUPABASE_URL = 'https://br-hip-deer-b1d17b48.supabase2.aidap-global.cn-beijing.volces.com';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsbHSIjoiMzczNjI0MDA4NjgsInJvbGUiOiJhbG91In0.I2p7Z5mHZ0xHa0zQ8sashnT6QYhW2_ilgdPxAuPXwtM';
+
+// 缓存配置
+const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+let dataCache = {};
+let cacheTimestamp = {};
+
+// ============================================================
+// Schema 解码工具：新schema JSONB → 兼容旧字段
+// ============================================================
+
+/**
+ * 解码 match 数据：从新 schema 的 odds/metadata JSONB 展开为兼容字段
+ * 新schema: id, sport_type, match_date, match_time, status, home_team, away_team,
+ *           home_score, away_score, handicap, odds(JSONB), metadata(JSONB)
+ * 
+ * 展开后字段:
+ *   teams: "主队 VS 客队" (新schema非必填)
+ *   win_odds, draw_odds, lose_odds (从 odds.spf 展开)
+ *   handicap_win_odds, handicap_draw_odds, handicap_lose_odds (从 odds.handicap_spf 展开)
+ *   score_odds, goals_odds, half_full_odds (从 odds 展开)
+ *   selling_status (从 metadata 展开)
+ *   half_home_score, half_away_score (从 metadata 展开)
+ *   spread_line, total_line (从 metadata 展开)
+ *   league (从 metadata.league 展开)
+ */
+export function normalizeMatch(m) {
+    if (!m) return m;
+    
+    const odds = m.odds || {};
+    const metadata = m.metadata || {};
+    
+    // 构造 teams 字段（新schema非必填）
+    const homeTeam = m.home_team || '';
+    const awayTeam = m.away_team || '';
+    if (!m.teams && (homeTeam || awayTeam)) {
+        m.teams = homeTeam + ' VS ' + awayTeam;
+    }
+    
+    // 从 odds.spf 展开：胜平负赔率
+    if (odds.spf) {
+        if (m.win_odds === undefined) m.win_odds = odds.spf.win;
+        if (m.draw_odds === undefined) m.draw_odds = odds.spf.draw;
+        if (m.lose_odds === undefined) m.lose_odds = odds.spf.lose;
+    }
+    
+    // 从 odds.handicap_spf 展开让球（含让球数）
+    if (odds.handicap_spf) {
+        if (m.handicap_win_odds === undefined) m.handicap_win_odds = odds.handicap_spf.win;
+        if (m.handicap_draw_odds === undefined) m.handicap_draw_odds = odds.handicap_spf.draw;
+        if (m.handicap_lose_odds === undefined) m.handicap_lose_odds = odds.handicap_spf.lose;
+        if (m.handicap === undefined || m.handicap === null) m.handicap = odds.handicap_spf.handicap;
+    }
+    
+    // 从 odds.hdc 展开让球（备用）
+    if (odds.hdc) {
+        if (m.handicap_win_odds === undefined) m.handicap_win_odds = odds.hdc.win;
+        if (m.handicap_lose_odds === undefined) m.handicap_lose_odds = odds.hdc.lose;
+        if (m.handicap === undefined || m.handicap === null) m.handicap = odds.hdc.line;
+    }
+    
+    // 从 odds 展开其他赔率
+    if (m.score_odds === undefined && odds.score) m.score_odds = odds.score;
+    if (m.goals_odds === undefined && odds.goals) m.goals_odds = odds.goals;
+    if (m.half_full_odds === undefined && odds.half_full) m.half_full_odds = odds.half_full;
+    
+    // 展开指数，从 odds 展开
+    if (odds.spread) {
+        if (m.spread_odds === undefined) m.spread_odds = odds.spread;
+    }
+    if (odds.total) {
+        if (m.total_odds === undefined) m.total_odds = odds.total;
+    }
+    
+    // 从 metadata 展开
+    if (m.selling_status === undefined && metadata.selling_status) m.selling_status = metadata.selling_status;
+    if (m.half_home_score === undefined && metadata.half_home_score !== undefined) m.half_home_score = metadata.half_home_score;
+    if (m.half_away_score === undefined && metadata.half_away_score !== undefined) m.half_away_score = metadata.half_away_score;
+    if (m.spread_line === undefined && metadata.spread_line !== undefined) m.spread_line = metadata.spread_line;
+    if (m.total_line === undefined && metadata.total_line !== undefined) m.total_line = metadata.total_line;
+    if (m.league === undefined && metadata.league) m.league = metadata.league;
+    if (m.total_points_odds === undefined && metadata.total_points_odds !== undefined) m.total_points_odds = metadata.total_points_odds;
+    
+    // match_date 兼容
+    if (!m.match_date && m.match_time) {
+        m.match_date = m.match_time.substring(0, 10);
+    }
+    
+    return m;
+}
+
+/**
+ * 解码 prediction 数据：从新 schema 的 prediction/hit_status JSONB 展开为 9 种字段
+ * 新schema: id, match_id, ai_name, prediction(JSONB), hit_status(JSONB), analysis, is_settled
+ * 
+ * prediction结构: {"spf":"胜","handicap_spf":"让胜","score":"3-1","goals":4,"half_full":"胜胜",
+ *                  "win_lose":"胜","handicap_win_lose":"让胜","total_points":"大","score_diff_range":"6-10","half_win_lose":"胜胜"}
+ * hit_status结构: {"spf":true,"handicap_spf":false,"score":null,"goals":null,"half_full":null,
+ *                  "win_lose":true,"handicap_win_lose":false,"total_points":null,"score_diff_range":null,"half_win_lose":null}
+ */
+export function normalizePrediction(p, matchMap) {
+    if (!p) return p;
+    
+    const pred = p.prediction || {};
+    const hits = p.hit_status || {};
+    
+    // 预测字段
+    if (p.spf === undefined && pred.spf !== undefined) p.spf = pred.spf;
+    if (p.handicap_spf === undefined && pred.handicap_spf !== undefined) p.handicap_spf = pred.handicap_spf;
+    if (p.score === undefined && pred.score !== undefined) p.score = pred.score;
+    if (p.goals === undefined && pred.goals !== undefined) p.goals = pred.goals;
+    if (p.half_full === undefined && pred.half_full !== undefined) p.half_full = pred.half_full;
+    
+    // 胜负字段
+    if (p.win_lose === undefined && pred.win_lose !== undefined) p.win_lose = pred.win_lose;
+    if (p.handicap_win_lose === undefined && pred.handicap_win_lose !== undefined) p.handicap_win_lose = pred.handicap_win_lose;
+    if (p.total_points === undefined && pred.total_points !== undefined) p.total_points = pred.total_points;
+    if (p.score_diff_range === undefined && pred.score_diff_range !== undefined) p.score_diff_range = pred.score_diff_range;
+    if (p.half_win_lose === undefined && pred.half_win_lose !== undefined) p.half_win_lose = pred.half_win_lose;
+    
+    // 命中标记（true→'✓' false→'✗'）
+    const hitMap = {
+        'spf': 'hit_spf',
+        'handicap_spf': 'hit_handicap',
+        'score': 'hit_score',
+        'goals': 'hit_goals',
+        'half_full': 'hit_half',
+        'win_lose': 'hit_win_lose',
+        'handicap_win_lose': 'hit_handicap_win_lose',
+        'total_points': 'hit_total_points',
+        'score_diff_range': 'hit_score_diff_range',
+        'half_win_lose': 'hit_half_win_lose'
+    };
+    
+    for (const [predKey, hitKey] of Object.entries(hitMap)) {
+        if (p[hitKey] === undefined && hits[predKey] !== undefined) {
+            const val = hits[predKey];
+            p[hitKey] = val === true ? '✓' : val === false ? '✗' : null;
+        }
+    }
+    
+    // 计算命中数
+    if (p.total_hits === undefined) {
+        const hitKeys = ['hit_spf', 'hit_handicap', 'hit_score', 'hit_goals', 'hit_half',
+                        'hit_win_lose', 'hit_handicap_win_lose', 'hit_total_points', 
+                        'hit_score_diff_range', 'hit_half_win_lose'];
+        p.total_hits = hitKeys.filter(k => p[k] === '✓').length;
+    }
+    
+    // 从 matchMap 获取 sport_type
+    if (p.sport_type === undefined && matchMap && p.match_id) {
+        const match = matchMap[String(p.match_id)];
+        if (match) {
+            p.sport_type = match.sport_type || 'football';
+        }
+    }
+    if (p.sport_type === undefined) p.sport_type = 'football';
+    
+    return p;
+}
+
+// ============================================================
+// 缓存工具
+// ============================================================
+
+export function getCachedData(key) {
+    const timestamp = cacheTimestamp[key];
+    if (timestamp && Date.now() - timestamp < CACHE_DURATION) {
+        return dataCache[key];
+    }
+    return null;
+}
+
+export function setCachedData(key, data) {
+    dataCache[key] = data;
+    cacheTimestamp[key] = Date.now();
+}
+
+// 已结束状态（已赛完）
+export const DONE_STATUSES = ['已确认', '已完成', '已结束', '已完赛'];
+
+// ============================================================
+// Supabase 请求工具
+// ============================================================
+export async function querySupabase(table, select, filters, options = {}) {
+    const params = new URLSearchParams();
+    params.append('select', select);
+    if (filters) {
+        Object.entries(filters).forEach(([key, val]) => {
+            params.append(key, `eq.${val}`);
+        });
+    }
+    if (options.order) {
+        params.append('order', options.order);
+    }
+    if (options.limit) {
+        params.append('limit', options.limit);
+    }
+    if (options.offset) {
+        params.append('offset', options.offset);
+    }
+    const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}`;
+    
+    const headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+    };
+    if (options.range) {
+        headers['Range'] = options.range;
+    }
+    const resp = await fetch(url, { headers });
+    if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${errorText}`);
+    }
+    return resp.json();
+}
+
+// ============================================================
+// 业务请求接口
+// ============================================================
+
+// 获取比赛列表
+export async function fetchMatches(sport = 'football', status = '未开赛') {
+    const cacheKey = `matches_${sport}_${status}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+        console.log(' 使用缓存数据:', cacheKey);
+        return cached;
+    }
+    const data = await querySupabase(
+        'matches',
+        'id,sport_type,match_date,match_time,status,home_team,away_team,home_score,away_score,handicap,odds,metadata',
+        { sport_type: sport },
+        { order: 'match_time.asc', limit: '5000' }
+    );
+    
+    // 解码 + 过滤停售
+    const normalized = data.map(normalizeMatch);
+    const filtered = normalized.filter(m => {
+        if (DONE_STATUSES.includes(m.status)) return false;
+        if (m.selling_status && m.selling_status !== 'on_sale' && m.selling_status !== 'pending') return false;
+        if (m.selling_status === 'on_sale' && m.match_time) {
+            const matchStart = new Date(m.match_time.replace(' ', 'T'));
+            const cutoff = new Date(matchStart.getTime() - 25 * 60 * 1000);
+            if (new Date() >= cutoff) return false;
+        }
+        return true;
+    });
+    
+    setCachedData(cacheKey, filtered);
+    return filtered;
+}
+
+// 获取所有比赛（不过滤停售，供详情页使用）
+export async function fetchAllMatches(sport = null) {
+    const cacheKey = `all_matches_${sport || 'all'}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+        console.log('✅ 使用缓存数据:', cacheKey);
+        return cached;
+    }
+    // 使用本机API替代Supabase REST API
+    const url = sport ? `/api/matches?sport=${sport}` : '/api/matches';
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    
+    setCachedData(cacheKey, data);
+    return data;
+}
+
+// 获取AI预测（提供命中标记与预测字段）
+export async function fetchPredictions(matchIds, sport = 'football') {
+    if (!matchIds || matchIds.length === 0) return [];
+    
+    const cacheKey = `predictions_${sport}_${matchIds.sort().join('_')}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+        console.log('✅ 使用缓存的预测数据:', cacheKey);
+        return cached;
+    }
+
+    // 使用本机API替代Supabase REST API
+    const resp = await fetch(`/api/predictions?sport=${sport}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const allData = await resp.json();
+    console.log(`📞 fetchPredictions: 获取${allData.length}条预测`);
+    
+    // 过滤出匹配的比赛
+    const idSet = new Set(matchIds.map(id => String(id)));
+    const filtered = allData.filter(p => idSet.has(String(p.match_id)));
+    
+    // 解码预测数据字段（本机API已解码，无需再次解码）
+    const normalized = filtered;
+    
+    setCachedData(cacheKey, normalized);
+    return normalized;
+}
+
+// 获取AI统计
+export async function fetchAIStats(sport = 'football') {
+    const cacheKey = 'ai_stats_' + sport;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+        console.log('✅ 使用缓存的AI统计:' + sport + ')');
+        return cached;
+    }
+    // 使用本机API替代Supabase REST API
+    const resp = await fetch(`/api/ai_stats?sport=${sport}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    
+    setCachedData(cacheKey, data);
+    return data;
+}
+
+// ============================================================
+// 通用工具
+// ============================================================
+
+export function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+export function fmtDate(dt) {
+    if (!dt) return '';
+    try {
+        const dateStr = dt.replace(' ', 'T').substring(0, 10);
+        const parts = dateStr.split('-');
+        return parseInt(parts[1], 10) + '月' + parseInt(parts[2], 10) + '日';
+    } catch { return dt.slice(5, 10); }
+}
+
+export function fmtTime(dt) {
+    if (!dt) return '';
+    try { return dt.slice(11, 16); } catch { return ''; }
+}
+
+export function isMatchDone(match) {
+    return DONE_STATUSES.includes(match.status);
+}
+
+export function showError(message) {
+    const existing = document.querySelector('.error-toast');
+    if (existing) existing.remove();
+    
+    const toast = document.createElement('div');
+    toast.className = 'error-toast';
+    toast.innerHTML = `
+        <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:16px 20px;color:#ef4444;font-size:14px;max-width:500px;margin:0 auto;text-align:center;">
+            <span style="font-size:20px;margin-right:8px;">⚠️</span>
+            ${message}
+            <button onclick="this.parentElement.parentElement.remove()" style="margin-left:12px;background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 5000);
+}
+// version: 2026070722
