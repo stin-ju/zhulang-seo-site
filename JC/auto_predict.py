@@ -512,7 +512,7 @@ def call_openai_compatible(url, key, model, prompt, timeout=AI_CALL_TIMEOUT):
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 800,
+        "max_tokens": 4000,
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
@@ -530,7 +530,7 @@ def call_minimax(url, key, model, prompt, timeout=AI_CALL_TIMEOUT):
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 800,
+        "max_tokens": 4000,
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
