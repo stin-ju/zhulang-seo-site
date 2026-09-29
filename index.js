@@ -356,7 +356,7 @@ function renderMatchCard(match) {
 
     // 让球格式化：正数加+号（已有+号则不加）
     const handicapVal = parseFloat(match.handicap);
-    const handicapStr = match.handicap || '';
+    const handicapStr = (match.handicap === null || match.handicap === undefined) ? '' : String(match.handicap);
     const handicapDisplay = !isNaN(handicapVal)
         ? (handicapVal > 0 && !handicapStr.startsWith('+') ? '+' + handicapStr : handicapStr)
         : handicapStr;
