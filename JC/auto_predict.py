@@ -105,12 +105,9 @@ AI_CONFIGS = {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "",
-        "model": "hy-mt2-plus",               # ✅ TokenHub端点实测200
+        "model": "hy4-preview",               # 9/30改为唯一主模型(原hy-mt2-plus/hy-mt2-pro 402欠费)
         "format": "openai",
-        "fallback_models": [
-            "hy-mt2-pro",                      # ✅ TokenHub实测200
-            "hy4-preview",                     # ✅ TokenHub实测可用
-        ],
+        "fallback_models": [],
     },
     "AI-豆包": {
         "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
