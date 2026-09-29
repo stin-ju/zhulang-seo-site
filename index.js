@@ -15,7 +15,7 @@ import {
     setCachedData,
     querySupabase,
     isMatchDone
-} from './api.js';
+} from './coze-api.js';
 
 // ============================================================
 // 固定AI列表（不再从数据库动态获取）
