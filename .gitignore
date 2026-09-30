@@ -149,3 +149,7 @@ node-compile-cache/
 JC/api_cache/
 JC/data_quality_report.json
 brief-*.html
+
+# 临时备份文件不入库
+*.bak*
+*.bak_*
