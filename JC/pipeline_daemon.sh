@@ -28,5 +28,4 @@ while true; do
     sleep 120
   fi
   sleep 50
-donu
 done
