@@ -105,9 +105,9 @@ AI_CONFIGS = {
         "url": "https://tokenhub.tencentmaas.com/v1/chat/completions",
         "key_env": "HUNYUAN_API_KEY",
         "key_default": "",
-        "model": "hy4-preview",               # 9/30改为唯一主模型(原hy-mt2-plus/hy-mt2-pro 402欠费)
+        "model": "hy-role",               # 9/30改为唯一主模型(原hy-mt2-plus/hy-mt2-pro 402欠费)
         "format": "openai",
-        "fallback_models": [],
+        "fallback_models": ["hunyuan-role-latest"],
     },
     "AI-豆包": {
         "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
