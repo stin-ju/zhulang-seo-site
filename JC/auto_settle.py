@@ -615,6 +615,34 @@ def fill_missing_scores(conn):
     return updated
 
 
+def sync_finished_match_status(conn):
+    """把顶层 status 已是。已完赛。、但 metadata->>status 仍残留 on_sale/未开赛 的比赛同步为终态。
+
+    根因（2026-10-29 修复）：fill_missing_scores 的“匹配失败/无数据”分支只回写 metadata 打
+    score_unavailable 脏标记，不动 metadata->>status；之后别的抓取脚本补上比分也不会清，
+    这批比赛就长期挂在“在售”里，污染巡检分母和前端展示。
+    """
+    fixed = 0
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT id FROM matches
+            WHERE status = '\u5df2\u5b8c\u8d5b'
+              AND metadata->>'status' IN ('on_sale', '\u672a\u5f00\u8d5b')
+        """)
+        ids = [r[0] for r in cur.fetchall()]
+        for mid in ids:
+            cur.execute("""
+                UPDATE matches
+                SET metadata = jsonb_set(metadata, '{status}', '"\u5df2\u5b8c\u8d5b"'::jsonb, true)
+                WHERE id = %s
+         """, (mid,))
+            fixed += 1
+    conn.commit()
+    if fixed:
+        print(f"[status-sync] {fixed} finished matches: metadata.status on_sale -> finished")
+    return fixed
+
+
 def settle_cancelled_predictions(conn):
     """处理已取消比赛的预测：标记为已结算，hit_status='cancelled'"""
     sql = """
@@ -1179,6 +1207,12 @@ def main():
         import traceback
         traceback.print_exc()
     
+    # 状态同步：清理 on_sale 残留（2026-10-29 修复）
+    try:
+        sync_finished_match_status(conn)
+    except Exception as e:
+        print(f"[WARN] status sync failed: {e}", file=sys.stderr)
+
     # 处理已取消比赛的预测
     try:
         cancelled_count = settle_cancelled_predictions(conn)
