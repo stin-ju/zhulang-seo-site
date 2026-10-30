@@ -49,7 +49,7 @@ AI_CONFIGS = {
     "文心": {
         "base_url": "https://qianfan.baidubce.com/v2/chat/completions",
         "api_key": os.environ.get("WENXIN_API_KEY", "REMOVED"),
-        "model": "ernie-4.0-8k-latest",
+        "model": "ernie-5.1",
         "max_tokens": 1500,
     },
     "智谱清言": {
