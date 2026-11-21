@@ -500,7 +500,8 @@ def main():
     
     # 确定日期
     if args.date == 'auto':
-        date_str = datetime.now().strftime('%Y-%m-%d')
+        # 北京时间（UTC+8）计算"今天"，避免容器 UTC 时区导致跨日错位
+        date_str = (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d')
     else:
         date_str = args.date
     
@@ -513,9 +514,23 @@ def main():
         # 获取比赛数据
         matches = fetch_matches_by_date(conn, date_str)
         if not matches:
-            print(f"警告: {date_str} 没有比赛数据")
-            # 尝试查找最近的比赛日期
-            return
+            # 回退：找最近一个有比赛的日期（<= 目标日期），避免静默空转
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT metadata->>'match_date' AS d
+                    FROM matches
+                    WHERE sport_type = 'football' AND metadata->>'match_date' IS NOT NULL
+                      AND metadata->>'match_date' <= %s
+                    GROUP BY 1 ORDER BY 1 DESC LIMIT 1
+                ''', (date_str,))
+                row = cur.fetchone()
+            if row and row[0] and row[0] != date_str:
+                print(f"提示: {date_str} 无比赛数据，回退到最近有比赛的日期 {row[0]}")
+                date_str = row[0]
+                matches = fetch_matches_by_date(conn, date_str)
+        if not matches:
+            print(f"错误: {date_str} 及最近日期均无比赛数据，未生成简报")
+            sys.exit(1)
         
         match_ids = [m['id'] for m in matches]
         print(f"找到 {len(matches)} 场比赛")
@@ -527,16 +542,24 @@ def main():
         # 生成HTML
         html = generate_brief_html(date_str, args.type, matches, predictions)
         
-        # 输出（FaaS代码目录只读，HTML写入/tmp；数据库仍正常保存）
+        # 输出（HTML写入项目根目录与DB双保险；写根目录失败时降级 /tmp）
         if args.output in ['html', 'both']:
             filename = f"brief-{date_str}.html"
-            filepath = os.path.join('/tmp', filename)
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            filepath = os.path.join(project_root, filename)
             try:
                 with open(filepath, 'w', encoding='utf-8') as f:
                     f.write(html)
                 print(f"HTML已保存: {filepath}")
             except Exception as e:
-                print(f"⚠️ HTML文件保存失败(不阻断，已存数据库): {e}")
+                print(f"⚠️ 项目根目录写入失败({e})，降级写入 /tmp")
+                filepath = os.path.join('/tmp', filename)
+                try:
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        f.write(html)
+                    print(f"HTML已保存: {filepath}")
+                except Exception as e2:
+                    print(f"⚠️ HTML文件保存失败(不阻断，已存数据库): {e2}")
         
         if args.output in ['db', 'both']:
             commentary = generate_commentary(matches, predictions, args.type)

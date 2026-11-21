@@ -636,8 +636,14 @@ const jcServer = http.createServer(async (req, res) => {
       const { rows } = await pgPool.query(
         `SELECT id, date, title, summary, match_count FROM briefs WHERE content_html IS NOT NULL AND content_html != '' ORDER BY date DESC LIMIT 60`
       );
-      const now = new Date();
-      const pageGen = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+      // 页面日期绑定最新真实简报（禁止用 new Date() 显示当天日期造成"内容已更新"假象）
+      const fmtBriefDate = (d) => {
+        if (d instanceof Date) return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+        const s = String(d).slice(0, 10);
+        const dd = new Date(s + 'T00:00:00');
+        return isNaN(dd.getTime()) ? s : `${dd.getFullYear()}年${dd.getMonth() + 1}月${dd.getDate()}日`;
+      };
+      const pageGen = rows.length > 0 ? fmtBriefDate(rows[0].date) : '暂无简报';
       const items = rows.map(r => {
         const dateStr = r.date instanceof Date
           ? `${r.date.getFullYear()}-${String(r.date.getMonth()+1).padStart(2,'0')}-${String(r.date.getDate()).padStart(2,'0')}`
@@ -645,7 +651,7 @@ const jcServer = http.createServer(async (req, res) => {
         const d = new Date(dateStr + 'T00:00:00');
         const label = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
         const summary = String(r.summary || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-        return `<a href="/brief-${r.date}.html" class="brief-item">
+        return `<a href="/brief-${dateStr}.html" class="brief-item">
           <span class="date">${label}</span>
           <span class="title">${r.match_count || 0}场赛事 · 7AI预测</span>
           <span class="arrow">→</span>
@@ -686,7 +692,7 @@ main.container{max-width:960px;margin:0 auto;padding:28px 20px 60px}
 <main class="container">
 <div class="breadcrumb"><a href="/">首页</a> <span>/</span> <span>全部简报</span></div>
 <h1 class="page-title">📋 全部简报</h1>
-<div class="page-sub">每日赛事预测简报 · 页面更新于 ${pageGen}</div>
+<div class="page-sub">每日赛事预测简报 · 最新简报：${pageGen}</div>
 <div id="briefList">
 ${listHtml}
 </div>

@@ -73,6 +73,7 @@ PostgreSQL 两张表：
 - `GET /api/betting_daily` - 每日投注统计
 - `GET /api/betting_summary` - 投注汇总
 - `GET /api/briefs` - 简报列表
+- `/brief.html` / `/brief-YYYY-MM-DD.html` - 简报索引与详情页（JC/server.js 动态渲染 `briefs` 表 `content_html`，索引日期绑定最新真实简报；根目录 `brief-*.html` 为静态副本，生成命令 `generate_brief.py --date X --output both`）
 - `GET /api/date-tabs` - 日期标签
 - `GET /api/football-recent` - 近期足球
 - `GET /api/football-history` - 足球历史
