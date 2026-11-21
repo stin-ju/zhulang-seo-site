@@ -653,7 +653,7 @@ const jcServer = http.createServer(async (req, res) => {
         const summary = String(r.summary || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
         return `<a href="/brief-${dateStr}.html" class="brief-item">
           <span class="date">${label}</span>
-          <span class="title">${r.match_count || 0}场赛事 · 7AI预测</span>
+          <span class="title">${r.match_count || 0}场赛事 · 多AI预测</span>
           <span class="arrow">→</span>
         </a>`;
       }).join('\n');

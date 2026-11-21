@@ -357,15 +357,22 @@ def generate_commentary(matches: List[Dict], predictions: List[Dict], brief_type
 
 
 def generate_fallback_commentary(match_summary: List[Dict], brief_type: str) -> str:
-    """生成备用评论（当AI API不可用时）"""
+    """生成备用评论（当AI API不可用时）——口径与真实数据严格一致"""
     match_count = len(match_summary)
-    total_preds = sum(len(m['predictions']) for m in match_summary)
-    ai_count = len(set(p['ai'] for m in match_summary for p in m['predictions']))
-    
-    if brief_type == "prediction":
-        return f"""今日共有{match_count}场赛事进入预测视野，{ai_count}个AI给出了各自的判断。
+    covered = [m for m in match_summary if m['predictions']]
+    uncovered = [m for m in match_summary if not m['predictions']]
+    ai_names = sorted(set(p['ai'] for m in covered for p in m['predictions']))
+    ai_count = len(ai_names)
+    ai_label = "、".join(ai_names) if ai_names else "无"
+    uncovered_note = ""
+    if uncovered:
+        names = "、".join(m['teams'] for m in uncovered[:5])
+        uncovered_note = f"另有{len(uncovered)}场暂无AI预测（{names}），本简报对其保留空白，不作猜测。\n\n"
 
-从预测分布来看，AI们在部分场次上形成了共识，但在关键场次上仍存在分歧。这种分歧往往源于对伤停信息、近期状态和赔率走势的不同解读。
+    if brief_type == "prediction":
+        return f"""今日共有{match_count}场赛事进入预测视野，其中{len(covered)}场由{ai_count}个AI（{ai_label}）给出了各自的判断。
+
+{uncovered_note}从预测分布来看，AI们在部分场次上形成了共识，但在关键场次上仍存在分歧。这种分歧往往源于对伤停信息、近期状态和赔率走势的不同解读。
 
 值得关注的几点：
 1. 赔率与市场态度的关联
@@ -374,9 +381,9 @@ def generate_fallback_commentary(match_summary: List[Dict], brief_type: str) -> 
 
 今日金句：数据是理性的，但足球从来不只是理性的游戏。"""
     else:
-        return f"""今日{match_count}场赛事已尘埃落定，{ai_count}个AI的预测表现各有优劣。
+        return f"""今日{match_count}场赛事已尘埃落定，其中{len(covered)}场有{ai_count}个AI（{ai_label}）的预测记录可供复盘。
 
-从整体来看，AI们在高共识场次上表现稳定，但在分歧场次上的预测准确率则参差不齐。这也印证了一个规律：当AI意见高度一致时，往往意味着比赛走势相对明朗；而当分歧加大时，冷门的可能性也在增加。
+{uncovered_note}从整体来看，AI们在高共识场次上表现稳定，但在分歧场次上的预测准确率则参差不齐。这也印证了一个规律：当AI意见高度一致时，往往意味着比赛走势相对明朗；而当分歧加大时，冷门的可能性也在增加。
 
 今日金句：预测的价值不在于每次都准，而在于长期的大数定律。"""
 
@@ -411,12 +418,21 @@ def render_match_card(match: Dict, predictions: List[Dict]) -> str:
                 <div class="pred-value">{p.get('spf', '-')}</div>
             </div>''')
         preds_html = f'<div class="predictions-grid">{"".join(pred_items)}</div>'
-    
+    else:
+        preds_html = '<div style="font-size:12px;color:var(--text-secondary);background:var(--bg-elevated);border:1px dashed var(--divider);border-radius:8px;padding:8px;">暂无AI预测</div>'
+
+    # 时间展示：00:00 为占位值（CT 等尚未公布开赛时间的场次），显示"时间待定"，不猜测不补值
+    match_time_raw = str(metadata.get('match_time', ''))
+    if match_time_raw == '00:00' or match_time_raw.endswith(' 00:00'):
+        time_display = '时间待定'
+    else:
+        time_display = match_time_raw[:16]
+
     return f'''
     <div class="match-card">
         <div class="match-header">
             <span class="match-id">{match['id']}</span>
-            <span class="match-time">{str(metadata.get('match_time', ''))[:16]}</span>
+            <span class="match-time">{time_display}</span>
         </div>
         <div class="teams">{teams}</div>
         {odds_html}
