@@ -77,3 +77,14 @@
 .match-row .odds.selected .check-mark {
     display: inline;
 }
+
+/* ===== 全局移动端兜底（360/390/430 可读性改版）===== */
+@media (max-width: 480px) {
+    html, body { max-width: 100%; overflow-x: clip; }
+    body { font-size: 15px; line-height: 1.5; -webkit-text-size-adjust: 100%; }
+    input, select, textarea { font-size: 16px; max-width: 100%; }
+    button { max-width: 100%; }
+    img, video { max-width: 100%; height: auto; }
+    table { max-width: 100%; }
+    pre, code { white-space: pre-wrap; word-break: break-word; }
+}

@@ -628,7 +628,40 @@ const jcServer = http.createServer(async (req, res) => {
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
-      res.end(rows[0].content_html);
+      // 移动端可读性增强：注入展示层样式（360/390/430），不改 DB 中简报内容与业务数据
+      const MOBILE_BOOST_CSS = `<style id="mobile-boost">
+@media (max-width: 480px) {
+  html, body { max-width: 100%; overflow-x: clip; }
+  body { font-size: 15px; line-height: 1.55; -webkit-text-size-adjust: 100%; }
+  .container { padding: 0 14px; }
+  .navbar { padding: 10px 14px; flex-wrap: wrap; gap: 6px; }
+  .nav-links { flex-wrap: wrap; gap: 6px; }
+  .nav-links a { font-size: 14px; padding: 8px 12px; min-height: 40px; display: inline-flex; align-items: center; }
+  .article-header { padding: 16px 0; }
+  .article-header h1 { font-size: 22px; line-height: 1.4; }
+  .meta { font-size: 13px; line-height: 1.5; flex-wrap: wrap; gap: 8px; }
+  .matches-section { margin-top: 14px; }
+  .match-card { padding: 14px 16px; margin-bottom: 12px; }
+  .match-header { flex-wrap: wrap; gap: 6px 10px; }
+  .teams { font-size: 16px !important; font-weight: 600; line-height: 1.45; }
+  .match-id { font-size: 12px; padding: 3px 8px; }
+  .match-time { font-size: 13px; }
+  .competition { font-size: 13px; }
+  .odds { font-size: 13px; line-height: 1.6; flex-wrap: wrap; gap: 6px; }
+  .predictions-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .prediction-item { padding: 10px 12px; }
+  .ai-name { font-size: 14px; }
+  .pred-value { font-size: 15px; }
+  .commentary { font-size: 15px; line-height: 1.7; }
+  .commentary p { margin-bottom: 1em; }
+  .back-link { font-size: 14px; min-height: 40px; display: inline-flex; align-items: center; }
+  table { max-width: 100%; }
+}
+</style>`;
+      const boostedHtml = rows[0].content_html.includes('</head>')
+        ? rows[0].content_html.replace('</head>', MOBILE_BOOST_CSS + '</head>')
+        : rows[0].content_html + MOBILE_BOOST_CSS;
+      res.end(boostedHtml);
       return;
     }
 
@@ -683,6 +716,19 @@ main.container{max-width:960px;margin:0 auto;padding:28px 20px 60px}
 .brief-item .arrow{color:#2563eb;font-size:18px}
 .empty{background:#fff;border-radius:12px;padding:40px;text-align:center;color:#9ca3af}
 .footer{text-align:center;color:#9ca3af;font-size:13px;padding:30px 20px 40px}
+@media(max-width:480px){
+.navbar .container{padding:10px 14px;flex-wrap:wrap;gap:6px}
+.nav-links{flex-wrap:wrap;gap:6px}
+.nav-links a{margin-left:0;font-size:14px;padding:8px 12px;min-height:40px;display:inline-flex;align-items:center}
+main.container{padding:20px 14px 40px}
+.page-title{font-size:22px}
+.page-sub{font-size:14px}
+.brief-item{padding:14px 16px;margin-bottom:10px;gap:10px;min-height:52px}
+.brief-item .date{font-size:16px;min-width:118px}
+.brief-item .title{font-size:14px;line-height:1.45}
+.breadcrumb{font-size:13px}
+.footer{font-size:13px}
+}
 </style></head><body>
 <nav class="navbar"><div class="container">
 <a href="/" class="logo"><span>🧪</span> <span>AI实验室 <span class="accent">·</span> <span class="accent">体彩</span>好伙伴</span></a>

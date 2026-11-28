@@ -184,6 +184,33 @@
             .slip-middle { order: 3; width: 100%; justify-content: space-between; }
             .slip-right-info { margin-left: auto; }
         }
+        @media (max-width: 480px) {
+            html, body { max-width: 100%; overflow-x: clip; }
+            body { font-size: 15px; line-height: 1.5; }
+            .card { padding: 14px 16px; }
+            .card-title { font-size: 16px; }
+            .sport-tabs .tab { padding: 10px 0; font-size: 15px; min-height: 44px; }
+            .play-tabs { gap: 6px; }
+            .play-tabs .play-tab { padding: 8px 14px; font-size: 13px; min-height: 40px; }
+            .match-header { padding: 10px 0 6px 0; }
+            .match-header .match-meta { font-size: 13px; }
+            .match-header .match-league { font-size: 12px; }
+            .match-item .teams-row { font-size: 16px; line-height: 1.45; gap: 8px; }
+            .match-item .tags-row { gap: 6px; margin-bottom: 8px; }
+            .match-item .handicap-label, .match-item .selected-play-label { font-size: 12px; line-height: 24px; }
+            .match-item .play-row { padding: 4px 0; gap: 8px; }
+            .match-item .play-row .play-label { font-size: 13px; min-width: 56px; }
+            .match-item .play-row .odds-group { gap: 5px; }
+            .match-item .play-row .odds-group .odds-btn { font-size: 13px; padding: 7px 10px; min-height: 36px; }
+            .match-item .play-row .odds-group .odds-btn .label { font-size: 12px; }
+            .match-item .play-row .odds-group.score-diff .odds-btn { font-size: 12px; padding: 5px 3px; min-height: 32px; }
+            .panel-pass-grid { gap: 6px; }
+            .panel-pass-grid button { font-size: 13px; padding: 10px; min-height: 40px; }
+            .panel-empty { font-size: 14px; }
+            .panel-hint { font-size: 12px; }
+            .slip-container { padding: 10px 12px; }
+            input[type="number"], input[type="text"], select { min-height: 44px; font-size: 16px; }
+        }
         .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; padding: 14px 16px; margin-bottom: 12px; }
         .card-title { font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .card-title .badge { background: #eef2ff; color: #1a3c6e; font-size: 12px; padding: 0 12px; border-radius: 12px; line-height: 22px; }

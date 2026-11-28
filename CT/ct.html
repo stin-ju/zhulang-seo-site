@@ -203,20 +203,74 @@ a:hover{text-decoration:underline}
 .loading .spin{display:inline-block;width:24px;height:24px;border:3px solid #2a2a50;border-top-color:#5ab8f0;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ===== 移动端 ===== */
-@media(max-width:768px){
-  .top-bar{padding:8px 12px}
-  .nav-links a{padding:4px 10px;font-size:12px}
-  .main-tab{padding:9px 4px;font-size:13px}
+/* ===== 移动端（可读性改版：正文>=15px 次要>=13px，触控区>=40px）===== */
+@media(max-width:480px){
+  html,body{max-width:100%;overflow-x:clip}
+  body{line-height:1.5}
+  .top-bar{padding:8px 12px;flex-wrap:wrap;gap:6px}
+  .top-bar .logo{font-size:16px}
+  .nav-links{flex-wrap:wrap;gap:6px}
+  .nav-links a{padding:8px 14px;font-size:14px;min-height:40px;display:inline-flex;align-items:center}
+  .breadcrumb{padding:10px 14px;font-size:13px}
+  .breadcrumb a{font-size:13px}
+  .issue-strip{padding:12px 14px;gap:10px}
+  .issue-strip .num{font-size:20px}
+  .issue-strip .badge{font-size:12px;padding:3px 12px}
+  .issue-strip .deadline{font-size:14px}
+  .main-tabs{flex-wrap:wrap}
+  .main-tab{padding:12px 6px;font-size:15px;min-height:44px}
   .prize-badge{display:none}
-  .issue-strip .deadline{margin-left:0;width:100%}
-  .ob{min-width:30px;height:28px;font-size:12px;padding:0 7px}
-  .ob.sm{height:24px;font-size:10px;padding:0 4px}
-  .ob.gs{height:24px;min-width:24px;font-size:10px}
-  .bet-bar{padding:8px 10px;gap:8px}
-  .bet-item{font-size:11px}
-  .bet-item b{font-size:14px}
+  .tip-bar{font-size:13px;padding:10px 14px;line-height:1.5}
+  .sub-bar{padding:10px 12px;gap:8px}
+  .sub-bar .label{font-size:13px}
+  .sub-btn{padding:9px 14px;font-size:13px;min-height:40px}
+  .sub-btn .done-badge,.sub-btn em{font-size:11px}
+  .sub-right{font-size:12px}
+
+  /* 表格：容器局部横向滚动（min-width 已有），增大可读字号与触控 */
+  .tbl-wrap{-webkit-overflow-scrolling:touch;padding:0 4px}
+  .tbl-wrap table{font-size:14px;min-width:820px}
+  .tbl-wrap thead th{padding:10px 4px}
+  .tbl-wrap tbody td{padding:9px 4px}
+  .col-league{font-size:12px}
+  .col-time{font-size:12px}
+  .col-home,.col-away{font-size:13px}
+  .col-vs{font-size:12px}
+  .col-ai{font-size:13px}
+  .grp-label td{font-size:14px;padding:8px 12px!important}
+
+  /* 选项按钮：玩法筛选触控区 */
+  .opts{gap:3px}
+  .ob{min-width:34px;height:36px;font-size:14px;padding:0 7px}
+  .ob.sm{height:30px;font-size:12px;padding:0 6px}
+  .ob.gs{height:30px;min-width:30px;font-size:12px}
+  .row-sub{font-size:11px}
+  .bqc-opt{font-size:11px;padding:3px 5px}
+  .bqc-val,.jqc-val{font-size:13px}
+  .col-result{font-size:13px;min-width:64px}
+
+  /* AI 推荐 / 规则 */
+  .rec-box{margin:12px 12px;padding:14px}
+  .rec-box h3{font-size:15px}
+  .rec-list{gap:8px}
+  .rec-tag{font-size:13px;padding:5px 12px}
+  .rec-empty{font-size:13px}
+  .rules{margin:12px;padding:14px}
+  .rules h3{font-size:15px}
+  .rules ol{font-size:13px;line-height:1.6}
+
+  /* 底部投注模拟器：按钮触控区 */
+  .bet-bar{padding:10px 12px;gap:10px}
+  .bet-item{font-size:13px}
+  .bet-item b{font-size:16px;min-width:32px}
   .bet-sep{display:none}
+  .mult-ctl button{width:36px;height:36px;font-size:18px}
+  .mult-ctl .mv{font-size:17px;min-width:28px}
+  .mult-ctl .mu{font-size:12px}
+  .btn-clear{padding:10px 16px;font-size:14px;min-height:40px}
+  .btn-detail{padding:10px 20px;font-size:14px;min-height:40px}
+
+  .loading{font-size:15px}
 }
 
 /* 半全场组合码样式 */

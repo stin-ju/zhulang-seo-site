@@ -422,33 +422,54 @@ caches.keys().then(function(names) {
 /* 让球列 - 桌面端固定宽度 */
 .handicap-col { width: 160px; flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
 
-@media screen and (max-width: 420px) {
-    .container { padding: 0 8px; }
-    .hero h1 { font-size: 18px; }
-    .hero-stats { gap: 10px; }
-    .hero-stat { font-size: 12px; }
-    .hero-stat .num { font-size: 18px; }
-    .date-tabs { flex-wrap: wrap; gap: 3px; }
-    .date-tab { font-size: 11px; padding: 4px 8px; }
+@media screen and (max-width: 480px) {
+    /* ===== 移动端可读性改版：正文 >=15px，次要 >=13px，行高 >=1.45 ===== */
+    html, body { max-width: 100%; overflow-x: clip; }
+    body { line-height: 1.5; }
+    .container { padding: 0 14px; }
 
-    /* 比赛卡片：手机端改为多行布局，徽章独占一行 */
+    /* 导航：可换行 + 触控区 >= 40px */
+    .navbar { padding: 8px 0; }
+    .navbar .container { flex-wrap: wrap; gap: 6px; }
+    .nav-links { flex-wrap: wrap; gap: 6px; }
+    .nav-links a { font-size: 14px; padding: 8px 14px; min-height: 40px; display: inline-flex; align-items: center; }
+    .logo { font-size: 16px; }
+
+    /* 英雄区 */
+    .hero { padding: 22px 0 16px; }
+    .hero h1 { font-size: 24px; line-height: 1.4; }
+    .hero p { font-size: 14px; }
+    .ai-logo { font-size: 13px; padding: 6px 12px 6px 7px; }
+    .ai-logo .dot { width: 24px; height: 24px; font-size: 11px; }
+    .hero-stats { gap: 22px; }
+    .hero-stats .num { font-size: 22px; }
+    .hero-stats .lbl { font-size: 13px; }
+
+    /* 日期筛选：换行排列 + 触控区 40px */
+    .date-tabs { flex-wrap: wrap; gap: 8px; }
+    .date-tab { font-size: 13px; padding: 9px 14px; min-height: 40px; display: inline-flex; align-items: center; }
+
+    /* 比赛卡片：多行布局，队名/比分突出 */
     .view-item {
         flex-wrap: wrap;
-        padding: 8px 10px;
-        gap: 4px 6px;
-        font-size: 12px;
+        padding: 14px 16px;
+        gap: 6px 8px;
+        font-size: 15px;
+        line-height: 1.5;
         align-items: center;
     }
     .view-item .time {
-        font-size: 11px;
+        font-size: 13px;
         width: auto;
         flex-shrink: 0;
         order: 1;
     }
     .view-item .match-teams,
     .view-item .teams {
-        font-size: 13px;
-        word-break: break-all;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.45;
+        word-break: break-word;
         white-space: normal;
     }
     /* 队名容器：占据剩余宽度，不截断 */
@@ -458,48 +479,68 @@ caches.keys().then(function(names) {
         min-width: 0;
     }
     /* 让球列手机端隐藏，节省空间 */
-    .handicap-col {
-        display: none;
-    }
-    /* 徽章组：独占一行，右对齐 */
+    .handicap-col { display: none; }
+    /* 徽章组：独占一行 */
     .view-item .badge-group {
         order: 3;
         width: 100%;
         display: flex;
-        justify-content: flex-end;
-        gap: 4px;
+        justify-content: flex-start;
+        gap: 8px;
         flex-shrink: 1;
         flex-wrap: wrap;
-        margin-top: 2px;
+        margin-top: 4px;
     }
-    .badge-sm {
-        font-size: 10px;
-        padding: 1px 6px;
-        flex-shrink: 0;
-    }
-    /* 编号标签 */
-    .match-lottery-id {
-        order: 0;
-        flex-shrink: 0;
-    }
-    /* 箭头 */
-    .arrow-sm {
-        order: 4;
-    }
-    .view-item .score { font-size: 14px; }
-    .pred-table { font-size: 10px; }
-    .pred-table th, .pred-table td { padding: 3px 2px; }
-    .pred-table .ai-col { min-width: 45px; font-size: 10px; }
-    .rank-card { padding: 10px 12px; }
-    .rank-row { font-size: 11px; gap: 6px; }
-    .brief-text { font-size: 12px; line-height: 1.6; }
-    .section-title { font-size: 14px; }
-    .bottom-entry { padding: 10px 14px; }
-    .bottom-entry .label { font-size: 12px; }
-    .bottom-entry .desc { font-size: 10px; }
-    .navbar .container { flex-wrap: wrap; gap: 4px; }
-    .nav-links { flex-wrap: wrap; justify-content: center; gap: 4px; }
-    .nav-link { font-size: 12px; }
+    .badge-sm { font-size: 12px; padding: 4px 12px; flex-shrink: 0; }
+    .match-lottery-id { order: 0; flex-shrink: 0; font-size: 12px; padding: 3px 8px; }
+    .arrow-sm { order: 4; font-size: 15px; }
+    .odds-row { font-size: 12px; line-height: 1.6; }
+    .odds-row span { padding: 2px 6px; margin-bottom: 2px; display: inline-block; }
+    .handicap-tag { font-size: 13px; padding: 2px 8px; }
+    .view-item .score, .score-inline { font-size: 16px; }
+
+    /* 展开详情：AI 预测逐家分行卡片 */
+    .match-detail { padding: 14px 16px 16px; }
+    .detail-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .detail-item { padding: 12px; }
+    .detail-item .ai { font-size: 13px; margin-bottom: 4px; }
+    .detail-item .pred { font-size: 15px; }
+    .detail-item .score { font-size: 13px; margin-top: 4px; }
+
+    /* AI 预测对比表：容器局部横向滚动，列宽充足，页面不溢出 */
+    .pred-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 10px 0; }
+    .pred-table { font-size: 13px; min-width: 520px; }
+    .pred-table th, .pred-table td { padding: 10px 10px; line-height: 1.45; }
+    .pred-table .ai-col { min-width: 96px; font-size: 13px; }
+    .inline-predictions-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .inline-predictions-table { font-size: 13px; min-width: 520px; }
+    .inline-predictions-table th, .inline-predictions-table td { padding: 10px 8px; line-height: 1.45; }
+
+    /* 排行榜 */
+    .rank-card { padding: 14px 16px; }
+    .rank-card .head span { font-size: 15px; }
+    .sport-tabs, .rank-tabs { gap: 6px; flex-wrap: wrap; }
+    .sport-tab { font-size: 13px; padding: 8px 14px; min-height: 40px; display: inline-flex; align-items: center; }
+    .rank-tab { font-size: 12px; padding: 7px 12px; min-height: 36px; display: inline-flex; align-items: center; }
+    .rank-row { font-size: 14px; gap: 10px; padding: 9px 0; }
+    .rank-row .pos { font-size: 13px; width: 24px; }
+    .rank-row .name { font-size: 15px; }
+    .rank-row .pnl { font-size: 14px; }
+    .rank-row .rate { font-size: 13px; width: 44px; }
+
+    /* 简报列表与正文 */
+    .brief-item { padding: 10px 12px; gap: 10px; }
+    .brief-item .title { font-size: 15px; line-height: 1.45; }
+    .brief-item .date { font-size: 13px; }
+    .brief-text { font-size: 15px; line-height: 1.7; }
+    .section-title { font-size: 17px; line-height: 1.45; }
+    .section-title .count { font-size: 13px; }
+
+    /* 底部入口 */
+    .bottom-entries { gap: 10px; }
+    .bottom-entry { padding: 14px 16px; min-height: 56px; }
+    .bottom-entry .label { font-size: 15px; }
+    .bottom-entry .desc { font-size: 12px; line-height: 1.5; }
 }
 </style>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>

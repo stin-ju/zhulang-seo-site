@@ -40,10 +40,18 @@
         .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(139,92,246,0.1); border-top-color: #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        @media (max-width: 600px) {
-            .brief-item { flex-wrap: wrap; gap: 4px; }
-            .brief-item .date { width: auto; font-size: 12px; }
-            .brief-item .title { font-size: 13px; }
+        @media (max-width: 480px) {
+            html, body { max-width: 100%; overflow-x: clip; }
+            .container { padding: 0 14px; }
+            .navbar .container { flex-wrap: wrap; gap: 6px; }
+            .nav-links { flex-wrap: wrap; gap: 6px; }
+            .nav-links a { font-size: 14px; padding: 8px 14px; min-height: 40px; display: inline-flex; align-items: center; }
+            .page-title { font-size: 20px; }
+            .card { padding: 14px 16px; }
+            .brief-item { flex-wrap: wrap; gap: 6px 10px; padding: 12px; min-height: 48px; }
+            .brief-item .date { width: auto; font-size: 13px; }
+            .brief-item .title { font-size: 15px; line-height: 1.45; }
+            .breadcrumb { font-size: 13px; }
         }
     </style>
 </head>

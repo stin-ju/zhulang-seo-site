@@ -98,6 +98,24 @@
     /* Date tabs */
     .date-tab{padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;white-space:nowrap;background:rgba(139,92,246,0.08);color:#94a3b8;border:1px solid rgba(139,92,246,0.15)}
     .date-tab.active{background:rgba(139,92,246,0.2);color:#a78bfa;border-color:rgba(139,92,246,0.4);font-weight:600}
+    /* ===== 移动端可读性改版（360/390/430）===== */
+    @media (max-width: 480px) {
+        html, body { max-width: 100%; overflow-x: clip; }
+        body { font-size: 15px; line-height: 1.5; }
+        nav a { min-height: 40px; display: inline-flex; align-items: center; }
+        .text-xs { font-size: 13px !important; }
+        .text-sm { font-size: 14px !important; }
+        .date-tab { font-size: 13px !important; padding: 8px 14px !important; min-height: 40px; display: inline-flex; align-items: center; }
+        .sport-switch { font-size: 14px !important; padding: 8px 16px !important; min-height: 40px; }
+        .ai-logo { font-size: 13px; padding: 6px 12px 6px 7px; }
+        .ai-logo .dot { width: 24px; height: 24px; font-size: 11px; }
+        .commentary-body { font-size: 15px; line-height: 1.7; }
+        .match-lottery-id { font-size: 12px; padding: 3px 8px; }
+        /* 表格容器局部横向滚动，页面不溢出 */
+        .overflow-x-auto, .inline-predictions-table-wrap { -webkit-overflow-scrolling: touch; }
+        .inline-predictions-table { font-size: 13px; min-width: 520px; }
+        .inline-predictions-table th, .inline-predictions-table td { padding: 10px 8px; }
+    }
     </style>
 </head>
 <body class="bg-base text-gray-100 min-h-screen flex flex-col">

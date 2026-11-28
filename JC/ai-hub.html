@@ -72,6 +72,18 @@
             .sport-grid { grid-template-columns: 1fr; gap: 16px; }
             .hero h1 { font-size: 28px; }
         }
+        @media (max-width: 480px) {
+            html, body { max-width: 100%; overflow-x: clip; }
+            body { font-size: 15px; line-height: 1.5; }
+            .container { padding: 0 16px; }
+            .navbar .container { flex-wrap: wrap; gap: 6px; }
+            .nav-links { flex-wrap: wrap; gap: 6px; }
+            .nav-links a { font-size: 14px; padding: 8px 14px; min-height: 40px; display: inline-flex; align-items: center; }
+            .hero h1 { font-size: 24px; line-height: 1.4; }
+            .hero p { font-size: 15px; line-height: 1.5; }
+            .sport-card { padding: 40px 24px; }
+            .sport-name { font-size: 24px; }
+        }
 
         .sport-card {
             display: flex;
